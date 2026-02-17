@@ -1,16 +1,51 @@
 # tuicraft
 
-To install dependencies:
+A headless WoW 3.3.5a client that speaks the binary protocol from a terminal.
+Authenticate via SRP-6, enter the world as a character via your account. Built
+with Bun and TypeScript, zero runtime dependencies.
 
-```bash
-bun install
+tuicraft targets AzerothCore private servers and is designed to be both human
+and LLM friendly.
+
+## Development
+
+Requires [Bun](https://bun.sh) and [mise](https://mise.jdx.dev).
+
+```
+mise trust -y
+mise bundle
 ```
 
-To run:
+## Usage (WIP)
 
-```bash
-bun run index.ts
+```
+mise start --account nesingwary --password hunter2 --character Hemet [--host t1] [--port 3724]
 ```
 
-This project was created using `bun init` in bun v1.3.9. [Bun](https://bun.com)
-is a fast all-in-one JavaScript runtime.
+The client connects to the authserver, authenticates, picks the first realm,
+logs in as the named character, and enters a keepalive loop responding to time
+sync requests and sending pings.
+
+Single binary distribution/packaging via `bun build --compile` is possible, TBD.
+
+## Roadmap
+
+- [x] 🔐 **v1 — Auth & Connect:** SRP-6 auth, Arc4-encrypted world session,
+      character select, keepalive
+- [ ] 💬 **v2 — Chat:** Send/receive whispers, say, guild chat. TUI with
+      interactive and pipe modes
+- [ ] 🌍 **v3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
+      entities
+- [ ] 🏃 **v4 — Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
+- [ ] 🤖 **v5 — Automation:** Scriptable command sequences and event
+      subscriptions
+
+## Prior Art
+
+[wow-chat-client](https://github.com/swiftmatt/wow-chat-client): TypeScript WoW
+3.3.5a protocol implementation, used as reference for packet formats and SRP-6
+flow
+
+## License
+
+[MIT](LICENSE).
