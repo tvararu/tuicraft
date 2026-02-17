@@ -14,8 +14,8 @@ description = "Run all tests"
 run = "bun test"
 
 [tasks."test:live"]
-description = "Run tests including live integration"
-run = "bun test && bun test ./src/test/live.ts"
+description = "Run tests against a live server"
+run = "bun test ./src/test/live.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"

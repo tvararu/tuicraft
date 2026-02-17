@@ -16,6 +16,21 @@ mise trust -y
 mise bundle
 ```
 
+## Testing
+
+```
+mise test
+```
+
+To run live integration tests against a real server, copy the example config and
+fill in your credentials:
+
+```
+cp mise.local.toml.example mise.local.toml
+# edit mise.local.toml with your account details
+mise test:live
+```
+
 ## Usage (WIP)
 
 ```
