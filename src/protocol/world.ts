@@ -1,21 +1,21 @@
-import { createHash } from "node:crypto"
-import { deflateSync } from "node:zlib"
-import { PacketReader, PacketWriter } from "./packet"
-import type { Arc4 } from "../crypto/arc4"
+import { createHash } from "node:crypto";
+import { deflateSync } from "node:zlib";
+import { PacketReader, PacketWriter } from "./packet";
+import type { Arc4 } from "../crypto/arc4";
 
-export const INCOMING_HEADER_SIZE = 4
-export const OUTGOING_HEADER_SIZE = 6
+export const INCOMING_HEADER_SIZE = 4;
+export const OUTGOING_HEADER_SIZE = 6;
 
 export interface CharacterInfo {
-  guidLow: number
-  guidHigh: number
-  name: string
-  race: number
-  classId: number
-  gender: number
-  level: number
-  zone: number
-  map: number
+  guidLow: number;
+  guidHigh: number;
+  name: string;
+  race: number;
+  classId: number;
+  gender: number;
+  level: number;
+  zone: number;
+  map: number;
 }
 
 const ADDON_ENTRIES = [
@@ -42,21 +42,21 @@ const ADDON_ENTRIES = [
   { name: "Blizzard_TokenUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_TradeSkillUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_TrainerUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
-]
+];
 
-const ADDON_LAST_MODIFIED = 1636457673
+const ADDON_LAST_MODIFIED = 1636457673;
 
 function buildAddonInfo(): Uint8Array {
-  const w = new PacketWriter(512)
-  w.uint32LE(ADDON_ENTRIES.length)
+  const w = new PacketWriter(512);
+  w.uint32LE(ADDON_ENTRIES.length);
   for (const addon of ADDON_ENTRIES) {
-    w.cString(addon.name)
-    w.uint8(addon.flags)
-    w.uint32LE(addon.modulusCrc)
-    w.uint32LE(addon.urlCrc)
+    w.cString(addon.name);
+    w.uint8(addon.flags);
+    w.uint32LE(addon.modulusCrc);
+    w.uint32LE(addon.urlCrc);
   }
-  w.uint32LE(ADDON_LAST_MODIFIED)
-  return w.finish()
+  w.uint32LE(ADDON_LAST_MODIFIED);
+  return w.finish();
 }
 
 export async function buildWorldAuthPacket(
@@ -65,8 +65,8 @@ export async function buildWorldAuthPacket(
   serverSeed: Uint8Array,
   realmId: number,
 ): Promise<Uint8Array> {
-  const upperAccount = account.toUpperCase()
-  const clientSeed = crypto.getRandomValues(new Uint8Array(4))
+  const upperAccount = account.toUpperCase();
+  const clientSeed = crypto.getRandomValues(new Uint8Array(4));
 
   const digest = createHash("sha1")
     .update(upperAccount)
@@ -74,131 +74,148 @@ export async function buildWorldAuthPacket(
     .update(clientSeed)
     .update(serverSeed)
     .update(sessionKey)
-    .digest()
+    .digest();
 
-  const addonRaw = buildAddonInfo()
-  const addonCompressed = deflateSync(addonRaw, { level: 9 })
+  const addonRaw = buildAddonInfo();
+  const addonCompressed = deflateSync(addonRaw, { level: 9 });
 
-  const w = new PacketWriter(256)
-  w.uint32LE(12340)
-  w.uint32LE(0)
-  w.cString(upperAccount)
-  w.uint32LE(0)
-  w.rawBytes(clientSeed)
-  w.uint32LE(0)
-  w.uint32LE(0)
-  w.uint32LE(realmId)
-  w.uint32LE(2)
-  w.uint32LE(0)
-  w.rawBytes(new Uint8Array(digest))
-  w.uint32LE(addonRaw.byteLength)
-  w.rawBytes(new Uint8Array(addonCompressed))
+  const w = new PacketWriter(256);
+  w.uint32LE(12340);
+  w.uint32LE(0);
+  w.cString(upperAccount);
+  w.uint32LE(0);
+  w.rawBytes(clientSeed);
+  w.uint32LE(0);
+  w.uint32LE(0);
+  w.uint32LE(realmId);
+  w.uint32LE(2);
+  w.uint32LE(0);
+  w.rawBytes(new Uint8Array(digest));
+  w.rawBytes(new Uint8Array(addonCompressed));
 
-  return w.finish()
+  return w.finish();
 }
 
 export function parseCharacterList(r: PacketReader): CharacterInfo[] {
-  const count = r.uint8()
-  const chars: CharacterInfo[] = []
+  const count = r.uint8();
+  const chars: CharacterInfo[] = [];
   for (let i = 0; i < count; i++) {
-    const guidLow = r.uint32LE()
-    const guidHigh = r.uint32LE()
-    const name = r.cString()
-    const race = r.uint8()
-    const classId = r.uint8()
-    const gender = r.uint8()
-    r.skip(4)
-    r.skip(1)
-    const level = r.uint8()
-    const zone = r.uint32LE()
-    const map = r.uint32LE()
-    r.skip(4 * 3)
-    r.skip(4)
-    r.skip(4)
-    r.skip(4)
-    r.skip(1)
-    r.skip(4 * 3)
+    const guidLow = r.uint32LE();
+    const guidHigh = r.uint32LE();
+    const name = r.cString();
+    const race = r.uint8();
+    const classId = r.uint8();
+    const gender = r.uint8();
+    r.skip(4);
+    r.skip(1);
+    const level = r.uint8();
+    const zone = r.uint32LE();
+    const map = r.uint32LE();
+    r.skip(4 * 3);
+    r.skip(4);
+    r.skip(4);
+    r.skip(4);
+    r.skip(1);
+    r.skip(4 * 3);
     for (let j = 0; j < 23; j++) {
-      r.skip(4 + 1 + 4)
+      r.skip(4 + 1 + 4);
     }
-    chars.push({ guidLow, guidHigh, name, race, classId, gender, level, zone, map })
+    chars.push({
+      guidLow,
+      guidHigh,
+      name,
+      race,
+      classId,
+      gender,
+      level,
+      zone,
+      map,
+    });
   }
-  return chars
+  return chars;
 }
 
 export class OpcodeDispatch {
-  private handlers = new Map<number, (reader: PacketReader) => void>()
-  private expects = new Map<number, (reader: PacketReader) => void>()
+  private handlers = new Map<number, (reader: PacketReader) => void>();
+  private expects = new Map<number, (reader: PacketReader) => void>();
 
   on(opcode: number, handler: (reader: PacketReader) => void) {
-    this.handlers.set(opcode, handler)
+    this.handlers.set(opcode, handler);
   }
 
   expect(opcode: number): Promise<PacketReader> {
     return new Promise((resolve) => {
-      this.expects.set(opcode, resolve)
-    })
+      this.expects.set(opcode, resolve);
+    });
   }
 
   handle(opcode: number, reader: PacketReader) {
-    const expectHandler = this.expects.get(opcode)
+    const expectHandler = this.expects.get(opcode);
     if (expectHandler) {
-      this.expects.delete(opcode)
-      expectHandler(reader)
-      return
+      this.expects.delete(opcode);
+      expectHandler(reader);
+      return;
     }
-    const handler = this.handlers.get(opcode)
-    if (handler) handler(reader)
+    const handler = this.handlers.get(opcode);
+    if (handler) handler(reader);
   }
 }
 
 export class AccumulatorBuffer {
-  private buf = new Uint8Array(0)
+  private buf = new Uint8Array(0);
 
   get length() {
-    return this.buf.byteLength
+    return this.buf.byteLength;
   }
 
   append(data: Uint8Array) {
-    const next = new Uint8Array(this.buf.byteLength + data.byteLength)
-    next.set(this.buf)
-    next.set(data, this.buf.byteLength)
-    this.buf = next
+    const next = new Uint8Array(this.buf.byteLength + data.byteLength);
+    next.set(this.buf);
+    next.set(data, this.buf.byteLength);
+    this.buf = next;
   }
 
   peek(n: number): Uint8Array {
-    return this.buf.slice(0, n)
+    return this.buf.slice(0, n);
   }
 
   drain(n: number): Uint8Array {
-    const drained = this.buf.slice(0, n)
-    this.buf = this.buf.slice(n)
-    return drained
+    const drained = this.buf.slice(0, n);
+    this.buf = this.buf.slice(n);
+    return drained;
   }
 }
 
-export function buildOutgoingPacket(opcode: number, body: Uint8Array, arc4?: Arc4): Uint8Array {
-  const size = body.byteLength + 4
-  const header = new Uint8Array(OUTGOING_HEADER_SIZE)
-  const view = new DataView(header.buffer)
-  view.setUint16(0, size, false)
-  view.setUint32(2, opcode, true)
+export function buildOutgoingPacket(
+  opcode: number,
+  body: Uint8Array,
+  arc4?: Arc4,
+): Uint8Array {
+  const size = body.byteLength + 4;
+  const header = new Uint8Array(OUTGOING_HEADER_SIZE);
+  const view = new DataView(header.buffer);
+  view.setUint16(0, size, false);
+  view.setUint32(2, opcode, true);
 
-  const encrypted = arc4 ? arc4.encrypt(header) : header
+  const encrypted = arc4 ? arc4.encrypt(header) : header;
 
-  const packet = new Uint8Array(OUTGOING_HEADER_SIZE + body.byteLength)
-  packet.set(encrypted)
-  packet.set(body, OUTGOING_HEADER_SIZE)
-  return packet
+  const packet = new Uint8Array(OUTGOING_HEADER_SIZE + body.byteLength);
+  packet.set(encrypted);
+  packet.set(body, OUTGOING_HEADER_SIZE);
+  return packet;
 }
 
 export function decryptIncomingHeader(
   header: Uint8Array,
   arc4?: Arc4,
 ): { size: number; opcode: number } {
-  const decrypted = arc4 ? arc4.decrypt(header) : header
-  const view = new DataView(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength)
-  const size = view.getUint16(0, false)
-  const opcode = view.getUint16(2, true)
-  return { size, opcode }
+  const decrypted = arc4 ? arc4.decrypt(header) : header;
+  const view = new DataView(
+    decrypted.buffer,
+    decrypted.byteOffset,
+    decrypted.byteLength,
+  );
+  const size = view.getUint16(0, false);
+  const opcode = view.getUint16(2, true);
+  return { size, opcode };
 }
