@@ -1,5 +1,6 @@
+import type { Socket } from "bun";
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { SRP } from "crypto/srp";
+import { SRP, type SRPResult } from "crypto/srp";
 import { Arc4 } from "crypto/arc4";
 import { GameOpcode } from "protocol/opcodes";
 import {
@@ -20,7 +21,7 @@ import {
   decryptIncomingHeader,
 } from "protocol/world";
 
-export interface ClientConfig {
+export type ClientConfig = {
   host: string;
   port: number;
   account: string;
@@ -29,18 +30,70 @@ export interface ClientConfig {
   srpPrivateKey?: bigint;
   clientSeed?: Uint8Array;
   pingIntervalMs?: number;
-}
+};
 
-export interface AuthResult {
+export type AuthResult = {
   sessionKey: Uint8Array;
   realmHost: string;
   realmPort: number;
   realmId: number;
-}
+};
 
-export interface WorldHandle {
+export type WorldHandle = {
   closed: Promise<void>;
   close(): void;
+};
+
+type WorldConn = {
+  socket: Socket;
+  dispatch: OpcodeDispatch;
+  buf: AccumulatorBuffer;
+  arc4?: Arc4;
+  startTime: number;
+  pendingHeader?: { size: number; opcode: number };
+};
+
+function handleChallenge(
+  raw: Uint8Array,
+  config: ClientConfig,
+  srp: SRP,
+): SRPResult {
+  const r = new PacketReader(raw);
+  r.skip(1);
+  const result = parseLogonChallengeResponse(r);
+  if (result.status !== 0x00) {
+    throw new Error(
+      `Auth challenge failed: status 0x${result.status.toString(16)}`,
+    );
+  }
+  return srp.calculate(
+    result.g!,
+    result.N!,
+    result.salt!,
+    result.B!,
+    config.srpPrivateKey,
+  );
+}
+
+function handleProof(raw: Uint8Array, srpResult: SRPResult): void {
+  const r = new PacketReader(raw);
+  r.skip(1);
+  const result = parseLogonProofResponse(r);
+  if (result.status !== 0x00) {
+    throw new Error(
+      `Auth proof failed: status 0x${result.status.toString(16)}`,
+    );
+  }
+  if (result.M2 !== srpResult.M2) throw new Error("Server M2 mismatch");
+}
+
+function handleRealms(
+  raw: Uint8Array,
+): Pick<AuthResult, "realmHost" | "realmPort" | "realmId"> {
+  const realms = parseRealmList(new PacketReader(raw, 1));
+  if (realms.length === 0) throw new Error("No realms available");
+  const realm = realms[0]!;
+  return { realmHost: realm.host, realmPort: realm.port, realmId: realm.id };
 }
 
 export function authHandshake(config: ClientConfig): Promise<AuthResult> {
@@ -48,8 +101,14 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
     const buf = new AccumulatorBuffer();
     const srp = new SRP(config.account, config.password);
     let state: "challenge" | "proof" | "realms" = "challenge";
-    let srpResult: ReturnType<SRP["calculate"]>;
+    let srpResult: SRPResult;
     let done = false;
+
+    function fail(err: unknown, socket: Socket) {
+      done = true;
+      reject(err);
+      socket.end();
+    }
 
     Bun.connect({
       hostname: config.host,
@@ -60,73 +119,30 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
         },
         data(socket, data) {
           buf.append(new Uint8Array(data));
+          const raw = buf.drain(buf.length);
 
-          if (state === "challenge") {
-            const raw = buf.drain(buf.length);
-            const r = new PacketReader(raw);
-            r.skip(1);
-            const result = parseLogonChallengeResponse(r);
-            if (result.status !== 0x00) {
+          try {
+            if (state === "challenge") {
+              srpResult = handleChallenge(raw, config, srp);
+              socket.write(buildLogonProof(srpResult));
+              state = "proof";
+            } else if (state === "proof") {
+              handleProof(raw, srpResult);
+              socket.write(buildRealmListRequest());
+              state = "realms";
+            } else if (state === "realms") {
+              const { realmHost, realmPort, realmId } = handleRealms(raw);
               done = true;
-              reject(
-                new Error(
-                  `Auth challenge failed: status 0x${result.status.toString(16)}`,
-                ),
-              );
               socket.end();
-              return;
+              resolve({
+                sessionKey: srpResult.K,
+                realmHost,
+                realmPort,
+                realmId,
+              });
             }
-            srpResult = srp.calculate(
-              result.g!,
-              result.N!,
-              result.salt!,
-              result.B!,
-              config.srpPrivateKey,
-            );
-            socket.write(buildLogonProof(srpResult));
-            state = "proof";
-          } else if (state === "proof") {
-            const raw = buf.drain(buf.length);
-            const r = new PacketReader(raw);
-            r.skip(1);
-            const result = parseLogonProofResponse(r);
-            if (result.status !== 0x00) {
-              done = true;
-              reject(
-                new Error(
-                  `Auth proof failed: status 0x${result.status.toString(16)}`,
-                ),
-              );
-              socket.end();
-              return;
-            }
-            if (result.M2 !== srpResult.M2) {
-              done = true;
-              reject(new Error("Server M2 mismatch"));
-              socket.end();
-              return;
-            }
-            socket.write(buildRealmListRequest());
-            state = "realms";
-          } else if (state === "realms") {
-            const raw = buf.drain(buf.length);
-            const r = new PacketReader(raw, 1);
-            const realms = parseRealmList(r);
-            if (realms.length === 0) {
-              done = true;
-              reject(new Error("No realms available"));
-              socket.end();
-              return;
-            }
-            const realm = realms[0]!;
-            done = true;
-            socket.end();
-            resolve({
-              sessionKey: srpResult.K,
-              realmHost: realm.host,
-              realmPort: realm.port,
-              realmId: realm.id,
-            });
+          } catch (err) {
+            fail(err, socket);
           }
         },
         close() {
@@ -137,122 +153,135 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
   });
 }
 
+function sendPacket(
+  conn: WorldConn,
+  opcode: number,
+  body: Uint8Array = new Uint8Array(0),
+): void {
+  conn.socket.write(buildOutgoingPacket(opcode, body, conn.arc4));
+}
+
+function drainWorldPackets(conn: WorldConn): void {
+  while (true) {
+    if (!conn.pendingHeader) {
+      if (conn.buf.length < INCOMING_HEADER_SIZE) break;
+      conn.pendingHeader = decryptIncomingHeader(
+        conn.buf.drain(INCOMING_HEADER_SIZE),
+        conn.arc4,
+      );
+    }
+    const bodySize = conn.pendingHeader.size - 2;
+    if (conn.buf.length < bodySize) break;
+
+    const { opcode } = conn.pendingHeader;
+    conn.pendingHeader = undefined;
+    conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
+  }
+}
+
+function handleTimeSync(conn: WorldConn, r: PacketReader): void {
+  const counter = r.uint32LE();
+  const elapsed = Date.now() - conn.startTime;
+  const w = new PacketWriter();
+  w.uint32LE(counter);
+  w.uint32LE(elapsed);
+  sendPacket(conn, GameOpcode.CMSG_TIME_SYNC_RESP, w.finish());
+}
+
+async function authenticateWorld(
+  conn: WorldConn,
+  config: ClientConfig,
+  auth: AuthResult,
+): Promise<void> {
+  const challenge = await conn.dispatch.expect(GameOpcode.SMSG_AUTH_CHALLENGE);
+  challenge.uint32LE();
+  const serverSeed = challenge.bytes(4);
+
+  const body = await buildWorldAuthPacket(
+    config.account,
+    auth.sessionKey,
+    serverSeed,
+    auth.realmId,
+    config.clientSeed,
+  );
+  conn.socket.write(buildOutgoingPacket(GameOpcode.CMSG_AUTH_SESSION, body));
+  conn.arc4 = new Arc4(auth.sessionKey);
+
+  const resp = await conn.dispatch.expect(GameOpcode.SMSG_AUTH_RESPONSE);
+  const status = resp.uint8();
+  if (status !== 0x0c)
+    throw new Error(`World auth failed: status 0x${status.toString(16)}`);
+}
+
+async function selectCharacter(
+  conn: WorldConn,
+  config: ClientConfig,
+): Promise<void> {
+  sendPacket(conn, GameOpcode.CMSG_CHAR_ENUM);
+
+  const enumReader = await conn.dispatch.expect(GameOpcode.SMSG_CHAR_ENUM);
+  const chars = parseCharacterList(enumReader);
+  const char = chars.find(
+    (c) => c.name.toLowerCase() === config.character.toLowerCase(),
+  );
+  if (!char) {
+    throw new Error(
+      `Character "${config.character}" not found. Available: ${chars.map((c) => c.name).join(", ")}`,
+    );
+  }
+
+  const w = new PacketWriter();
+  w.uint32LE(char.guidLow);
+  w.uint32LE(char.guidHigh);
+  sendPacket(conn, GameOpcode.CMSG_PLAYER_LOGIN, w.finish());
+
+  await conn.dispatch.expect(GameOpcode.SMSG_LOGIN_VERIFY_WORLD);
+}
+
+function startPingLoop(
+  conn: WorldConn,
+  intervalMs: number,
+): ReturnType<typeof setInterval> {
+  return setInterval(() => {
+    const w = new PacketWriter();
+    w.uint32LE(0);
+    w.uint32LE(0);
+    sendPacket(conn, GameOpcode.CMSG_PING, w.finish());
+  }, intervalMs);
+}
+
 export function worldSession(
   config: ClientConfig,
   auth: AuthResult,
 ): Promise<WorldHandle> {
   return new Promise((resolve, reject) => {
-    const dispatch = new OpcodeDispatch();
-    const buf = new AccumulatorBuffer();
-    let arc4: Arc4 | undefined;
+    const conn: WorldConn = {
+      socket: undefined!,
+      dispatch: new OpcodeDispatch(),
+      buf: new AccumulatorBuffer(),
+      startTime: Date.now(),
+    };
     let pingInterval: ReturnType<typeof setInterval>;
-    let socket: Awaited<ReturnType<typeof Bun.connect>>;
-    const startTime = Date.now();
     let done = false;
     let closedResolve: () => void;
     const closed = new Promise<void>((r) => {
       closedResolve = r;
     });
 
-    dispatch.on(GameOpcode.SMSG_TIME_SYNC_REQ, (r) => {
-      const counter = r.uint32LE();
-      const elapsed = Date.now() - startTime;
-      const w = new PacketWriter();
-      w.uint32LE(counter);
-      w.uint32LE(elapsed);
-      socket.write(
-        buildOutgoingPacket(GameOpcode.CMSG_TIME_SYNC_RESP, w.finish(), arc4),
-      );
-    });
-
-    let pendingHeader: { size: number; opcode: number } | undefined;
-
-    function processPackets() {
-      while (true) {
-        if (!pendingHeader) {
-          if (buf.length < INCOMING_HEADER_SIZE) break;
-          const headerBytes = buf.drain(INCOMING_HEADER_SIZE);
-          pendingHeader = decryptIncomingHeader(headerBytes, arc4);
-        }
-        const bodySize = pendingHeader.size - 2;
-        if (buf.length < bodySize) break;
-        const { opcode } = pendingHeader;
-        pendingHeader = undefined;
-        const body = buf.drain(bodySize);
-        const reader = new PacketReader(body);
-        dispatch.handle(opcode, reader);
-      }
-    }
+    conn.dispatch.on(GameOpcode.SMSG_TIME_SYNC_REQ, (r) =>
+      handleTimeSync(conn, r),
+    );
 
     async function login() {
-      const challengeReader = await dispatch.expect(
-        GameOpcode.SMSG_AUTH_CHALLENGE,
-      );
-      challengeReader.uint32LE();
-      const serverSeed = challengeReader.bytes(4);
-
-      const body = await buildWorldAuthPacket(
-        config.account,
-        auth.sessionKey,
-        serverSeed,
-        auth.realmId,
-        config.clientSeed,
-      );
-      socket.write(buildOutgoingPacket(GameOpcode.CMSG_AUTH_SESSION, body));
-
-      arc4 = new Arc4(auth.sessionKey);
-
-      const authReader = await dispatch.expect(GameOpcode.SMSG_AUTH_RESPONSE);
-      const authStatus = authReader.uint8();
-      if (authStatus !== 0x0c) {
-        throw new Error(
-          `World auth failed: status 0x${authStatus.toString(16)}`,
-        );
-      }
-
-      socket.write(
-        buildOutgoingPacket(GameOpcode.CMSG_CHAR_ENUM, new Uint8Array(0), arc4),
-      );
-
-      const enumReader = await dispatch.expect(GameOpcode.SMSG_CHAR_ENUM);
-      const chars = parseCharacterList(enumReader);
-      const char = chars.find(
-        (c) => c.name.toLowerCase() === config.character.toLowerCase(),
-      );
-      if (!char) {
-        throw new Error(
-          `Character "${config.character}" not found. Available: ${chars.map((c) => c.name).join(", ")}`,
-        );
-      }
-
-      const loginBody = new PacketWriter();
-      loginBody.uint32LE(char.guidLow);
-      loginBody.uint32LE(char.guidHigh);
-      socket.write(
-        buildOutgoingPacket(
-          GameOpcode.CMSG_PLAYER_LOGIN,
-          loginBody.finish(),
-          arc4,
-        ),
-      );
-
-      await dispatch.expect(GameOpcode.SMSG_LOGIN_VERIFY_WORLD);
-
-      pingInterval = setInterval(() => {
-        const w = new PacketWriter();
-        w.uint32LE(0);
-        w.uint32LE(0);
-        socket.write(
-          buildOutgoingPacket(GameOpcode.CMSG_PING, w.finish(), arc4),
-        );
-      }, config.pingIntervalMs ?? 30_000);
-
+      await authenticateWorld(conn, config, auth);
+      await selectCharacter(conn, config);
+      pingInterval = startPingLoop(conn, config.pingIntervalMs ?? 30_000);
       done = true;
       resolve({
         closed,
         close() {
           clearInterval(pingInterval);
-          socket.end();
+          conn.socket.end();
         },
       });
     }
@@ -261,7 +290,7 @@ export function worldSession(
       done = true;
       clearInterval(pingInterval);
       reject(err);
-      socket?.end();
+      conn.socket?.end();
     });
 
     Bun.connect({
@@ -269,11 +298,11 @@ export function worldSession(
       port: auth.realmPort,
       socket: {
         open(s) {
-          socket = s;
+          conn.socket = s;
         },
         data(_s, data) {
-          buf.append(new Uint8Array(data));
-          processPackets();
+          conn.buf.append(new Uint8Array(data));
+          drainWorldPackets(conn);
         },
         close() {
           clearInterval(pingInterval);
