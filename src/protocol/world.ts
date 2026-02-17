@@ -137,8 +137,13 @@ export function parseCharacterList(r: PacketReader): CharacterInfo[] {
 }
 
 export class OpcodeDispatch {
-  private handlers = new Map<number, (reader: PacketReader) => void>();
-  private expects = new Map<number, (reader: PacketReader) => void>();
+  private handlers: Map<number, (reader: PacketReader) => void>;
+  private expects: Map<number, (reader: PacketReader) => void>;
+
+  constructor() {
+    this.handlers = new Map();
+    this.expects = new Map();
+  }
 
   on(opcode: number, handler: (reader: PacketReader) => void) {
     this.handlers.set(opcode, handler);
@@ -163,7 +168,11 @@ export class OpcodeDispatch {
 }
 
 export class AccumulatorBuffer {
-  private buf = new Uint8Array(0);
+  private buf: Uint8Array;
+
+  constructor() {
+    this.buf = new Uint8Array(0);
+  }
 
   get length() {
     return this.buf.byteLength;

@@ -28,6 +28,7 @@ export interface ClientConfig {
   character: string;
   srpPrivateKey?: bigint;
   clientSeed?: Uint8Array;
+  pingIntervalMs?: number;
 }
 
 export interface AuthResult {
@@ -48,6 +49,7 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
     const srp = new SRP(config.account, config.password);
     let state: "challenge" | "proof" | "realms" = "challenge";
     let srpResult: ReturnType<SRP["calculate"]>;
+    let done = false;
 
     Bun.connect({
       hostname: config.host,
@@ -65,12 +67,13 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
             r.skip(1);
             const result = parseLogonChallengeResponse(r);
             if (result.status !== 0x00) {
-              socket.end();
+              done = true;
               reject(
                 new Error(
                   `Auth challenge failed: status 0x${result.status.toString(16)}`,
                 ),
               );
+              socket.end();
               return;
             }
             srpResult = srp.calculate(
@@ -88,17 +91,19 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
             r.skip(1);
             const result = parseLogonProofResponse(r);
             if (result.status !== 0x00) {
-              socket.end();
+              done = true;
               reject(
                 new Error(
                   `Auth proof failed: status 0x${result.status.toString(16)}`,
                 ),
               );
+              socket.end();
               return;
             }
             if (result.M2 !== srpResult.M2) {
-              socket.end();
+              done = true;
               reject(new Error("Server M2 mismatch"));
+              socket.end();
               return;
             }
             socket.write(buildRealmListRequest());
@@ -108,11 +113,13 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
             const r = new PacketReader(raw, 1);
             const realms = parseRealmList(r);
             if (realms.length === 0) {
-              socket.end();
+              done = true;
               reject(new Error("No realms available"));
+              socket.end();
               return;
             }
             const realm = realms[0]!;
+            done = true;
             socket.end();
             resolve({
               sessionKey: srpResult.K,
@@ -122,10 +129,9 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
             });
           }
         },
-        error(_socket, err) {
-          reject(err);
+        close() {
+          if (!done) reject(new Error("Auth connection closed"));
         },
-        close() {},
       },
     }).catch(reject);
   });
@@ -142,6 +148,7 @@ export function worldSession(
     let pingInterval: ReturnType<typeof setInterval>;
     let socket: Awaited<ReturnType<typeof Bun.connect>>;
     const startTime = Date.now();
+    let done = false;
     let closedResolve: () => void;
     const closed = new Promise<void>((r) => {
       closedResolve = r;
@@ -238,8 +245,9 @@ export function worldSession(
         socket.write(
           buildOutgoingPacket(GameOpcode.CMSG_PING, w.finish(), arc4),
         );
-      }, 30_000);
+      }, config.pingIntervalMs ?? 30_000);
 
+      done = true;
       resolve({
         closed,
         close() {
@@ -250,8 +258,10 @@ export function worldSession(
     }
 
     login().catch((err) => {
+      done = true;
       clearInterval(pingInterval);
       reject(err);
+      socket?.end();
     });
 
     Bun.connect({
@@ -265,12 +275,9 @@ export function worldSession(
           buf.append(new Uint8Array(data));
           processPackets();
         },
-        error(_s, err) {
-          clearInterval(pingInterval);
-          reject(err);
-        },
         close() {
           clearInterval(pingInterval);
+          if (!done) reject(new Error("World connection closed"));
           closedResolve();
         },
       },

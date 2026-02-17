@@ -91,3 +91,21 @@ test("PacketReader bytes throws when requesting more than remaining", () => {
   const r = new PacketReader(new Uint8Array([1, 2, 3]));
   expect(() => r.bytes(5)).toThrow(RangeError);
 });
+
+test("PacketReader offset tracks read position", () => {
+  const r = new PacketReader(new Uint8Array(8));
+  expect(r.offset).toBe(0);
+  r.uint16LE();
+  expect(r.offset).toBe(2);
+  r.uint32LE();
+  expect(r.offset).toBe(6);
+});
+
+test("PacketWriter offset tracks write position", () => {
+  const w = new PacketWriter();
+  expect(w.offset).toBe(0);
+  w.uint8(1);
+  expect(w.offset).toBe(1);
+  w.uint32LE(2);
+  expect(w.offset).toBe(5);
+});
