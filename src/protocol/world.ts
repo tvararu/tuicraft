@@ -64,9 +64,10 @@ export async function buildWorldAuthPacket(
   sessionKey: Uint8Array,
   serverSeed: Uint8Array,
   realmId: number,
+  clientSeed?: Uint8Array,
 ): Promise<Uint8Array> {
   const upperAccount = account.toUpperCase();
-  const clientSeed = crypto.getRandomValues(new Uint8Array(4));
+  if (!clientSeed) clientSeed = crypto.getRandomValues(new Uint8Array(4));
 
   const digest = createHash("sha1")
     .update(upperAccount)

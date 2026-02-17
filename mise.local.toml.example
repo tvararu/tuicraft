@@ -1,0 +1,6 @@
+[env]
+WOW_ACCOUNT = "myaccount"
+WOW_PASSWORD = "mypassword"
+WOW_CHARACTER = "Charname"
+# WOW_HOST = "t1"
+# WOW_PORT = "3724"
