@@ -11,9 +11,17 @@ import {
   sessionKey,
 } from "test/fixtures";
 
-describe("canned integration", () => {
+describe("mock integration", () => {
   let authServer: { port: number; stop(): void };
   let worldServer: { port: number; stop(): void };
+
+  const base = {
+    account: FIXTURE_ACCOUNT,
+    password: FIXTURE_PASSWORD,
+    character: FIXTURE_CHARACTER,
+    srpPrivateKey: clientPrivateKey,
+    clientSeed,
+  };
 
   beforeAll(async () => {
     worldServer = await startMockWorldServer();
@@ -29,12 +37,9 @@ describe("canned integration", () => {
 
   test("authHandshake completes SRP and returns session key", async () => {
     const auth = await authHandshake({
+      ...base,
       host: "127.0.0.1",
       port: authServer.port,
-      account: FIXTURE_ACCOUNT,
-      password: FIXTURE_PASSWORD,
-      character: FIXTURE_CHARACTER,
-      srpPrivateKey: clientPrivateKey,
     });
 
     expect(auth.sessionKey).toEqual(sessionKey);
@@ -45,24 +50,12 @@ describe("canned integration", () => {
 
   test("full login flow: auth → world → character select → login", async () => {
     const auth = await authHandshake({
+      ...base,
       host: "127.0.0.1",
       port: authServer.port,
-      account: FIXTURE_ACCOUNT,
-      password: FIXTURE_PASSWORD,
-      character: FIXTURE_CHARACTER,
-      srpPrivateKey: clientPrivateKey,
-      clientSeed,
     });
-
     const handle = await worldSession(
-      {
-        host: "127.0.0.1",
-        port: worldServer.port,
-        account: FIXTURE_ACCOUNT,
-        password: FIXTURE_PASSWORD,
-        character: FIXTURE_CHARACTER,
-        clientSeed,
-      },
+      { ...base, host: "127.0.0.1", port: worldServer.port },
       auth,
     );
 
