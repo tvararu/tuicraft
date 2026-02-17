@@ -9,3 +9,6 @@ run = "bun run start"
 
 [tasks.test]
 run = "bun test"
+
+[tasks.typecheck]
+run = "bun run typecheck"
