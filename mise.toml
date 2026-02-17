@@ -2,18 +2,23 @@
 bun = "latest"
 
 [tasks.bundle]
+description = "Install dependencies"
 run = "bun install"
 
 [tasks.start]
+description = "Run the client"
 run = "bun run start"
 
 [tasks.test]
+description = "Run all tests"
 run = "bun test"
 
 [tasks."test:coverage"]
+description = "Run tests with coverage report"
 run = "bun test --coverage"
 
 [tasks.typecheck]
+description = "Type-check with tsc"
 run = "bun run typecheck"
 
 [tasks.format]
@@ -26,4 +31,7 @@ run = "bunx prettier --write src/"
 
 [tasks."test:live"]
 description = "Run tests including live integration"
-run = "TUICRAFT_LIVE=1 bun test"
+run = "bun test"
+
+[tasks."test:live".env]
+WOW_LIVE = "1"
