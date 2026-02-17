@@ -2,7 +2,7 @@ export const AuthOpcode = {
   LOGON_CHALLENGE: 0x00,
   LOGON_PROOF: 0x01,
   REALM_LIST: 0x10,
-} as const
+} as const;
 
 export const ChallengeResult = {
   SUCCESS: 0x00,
@@ -11,7 +11,7 @@ export const ChallengeResult = {
   PASSWORD_INVALID: 0x05,
   ALREADY_ONLINE: 0x06,
   BUILD_INVALID: 0x09,
-} as const
+} as const;
 
 export const GameOpcode = {
   CMSG_CHAR_ENUM: 0x0037,
@@ -25,4 +25,4 @@ export const GameOpcode = {
   SMSG_AUTH_RESPONSE: 0x01ee,
   SMSG_TIME_SYNC_REQ: 0x0390,
   CMSG_TIME_SYNC_RESP: 0x0391,
-} as const
+} as const;
