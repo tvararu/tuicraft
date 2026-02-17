@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { PacketReader, PacketWriter } from "./packet";
+import { PacketReader, PacketWriter } from "protocol/packet";
 
 test("PacketWriter writes and PacketReader reads uint8", () => {
   const w = new PacketWriter();

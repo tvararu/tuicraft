@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { PacketReader, PacketWriter } from "./packet";
+import { PacketReader, PacketWriter } from "protocol/packet";
 import {
   buildWorldAuthPacket,
   parseCharacterList,
@@ -9,8 +9,8 @@ import {
   decryptIncomingHeader,
   INCOMING_HEADER_SIZE,
   OUTGOING_HEADER_SIZE,
-} from "./world";
-import { Arc4 } from "../crypto/arc4";
+} from "protocol/world";
+import { Arc4 } from "crypto/arc4";
 
 test("buildWorldAuthPacket produces valid packet", async () => {
   const sessionKey = new Uint8Array(40);

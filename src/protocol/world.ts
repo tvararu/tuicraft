@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
-import { PacketReader, PacketWriter } from "./packet";
-import type { Arc4 } from "../crypto/arc4";
+import { PacketReader, PacketWriter } from "protocol/packet";
+import type { Arc4 } from "crypto/arc4";
 
 export const INCOMING_HEADER_SIZE = 4;
 export const OUTGOING_HEADER_SIZE = 6;

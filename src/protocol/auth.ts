@@ -1,10 +1,6 @@
-import { PacketReader, PacketWriter } from "./packet";
-import { AuthOpcode } from "./opcodes";
-import {
-  leBytesToBigInt,
-  beBytesToBigInt,
-  type SRPResult,
-} from "../crypto/srp";
+import { PacketReader, PacketWriter } from "protocol/packet";
+import { AuthOpcode } from "protocol/opcodes";
+import { leBytesToBigInt, beBytesToBigInt, type SRPResult } from "crypto/srp";
 
 export interface LogonChallengeResult {
   status: number;

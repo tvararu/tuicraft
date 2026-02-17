@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { createHmac, createDecipheriv } from "node:crypto";
-import { Arc4 } from "./arc4";
+import { Arc4 } from "crypto/arc4";
 
 test("Arc4 encrypts header bytes", () => {
   const sessionKey = new Uint8Array(40);

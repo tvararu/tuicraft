@@ -1,11 +1,11 @@
 import { test, expect } from "bun:test";
-import { PacketReader, PacketWriter } from "./packet";
-import { leBytesToBigInt } from "../crypto/srp";
+import { PacketReader, PacketWriter } from "protocol/packet";
+import { leBytesToBigInt } from "crypto/srp";
 import {
   buildLogonChallenge,
   parseLogonChallengeResponse,
   parseRealmList,
-} from "./auth";
+} from "protocol/auth";
 
 test("buildLogonChallenge produces correct packet", () => {
   const pkt = buildLogonChallenge("Test");
