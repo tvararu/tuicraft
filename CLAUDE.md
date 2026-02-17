@@ -105,3 +105,18 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+## Commits
+
+Use Tim Pope style:
+
+- Subject line: imperative, ~50 chars, capitalized, no trailing punctuation
+- Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
+- No bullet points, NEVER add "Co-Authored-By" or other footers
+- Check `git log -n 5` first to match existing style
+- Never use `--oneline` — commit bodies carry important context
+
+PRs:
+
+- Write a short essay (1-2 paragraphs) describing why the changes are needed
+- NEVER add a Claude Code attribution footer
