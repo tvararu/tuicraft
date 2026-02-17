@@ -43,7 +43,7 @@ function bigIntToBeBytes(n: bigint): Uint8Array {
   return bytes
 }
 
-function beBytesToBigInt(bytes: Uint8Array): bigint {
+export function beBytesToBigInt(bytes: Uint8Array): bigint {
   const hex: string[] = []
   for (let i = 0; i < bytes.length; i++) {
     hex.push(bytes[i].toString(16).padStart(2, "0"))
