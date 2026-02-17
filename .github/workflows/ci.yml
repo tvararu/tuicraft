@@ -1,0 +1,37 @@
+name: CI
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: format / prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+        with: { cache: true, install: true }
+      - run: mise bundle
+      - run: mise format
+
+  typecheck:
+    name: typecheck / tsc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+        with: { cache: true, install: true }
+      - run: mise bundle
+      - run: mise typecheck
+
+  test:
+    name: test / bun test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+        with: { cache: true, install: true }
+      - run: mise bundle
+      - run: mise test
