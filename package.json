@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun index.ts",
+    "start": "bun src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
