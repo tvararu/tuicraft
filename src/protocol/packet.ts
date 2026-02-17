@@ -46,6 +46,7 @@ export class PacketReader {
   }
 
   bytes(n: number): Uint8Array {
+    if (n > this.remaining) throw new RangeError(`bytes(${n}) exceeds remaining ${this.remaining}`)
     const slice = this.data.slice(this.pos, this.pos + n)
     this.pos += n
     return slice
@@ -55,11 +56,12 @@ export class PacketReader {
     let end = this.pos
     while (end < this.data.byteLength && this.data[end] !== 0) end++
     const str = new TextDecoder().decode(this.data.slice(this.pos, end))
-    this.pos = end + 1
+    this.pos = end < this.data.byteLength ? end + 1 : end
     return str
   }
 
   skip(n: number) {
+    if (n > this.remaining) throw new RangeError(`skip(${n}) exceeds remaining ${this.remaining}`)
     this.pos += n
   }
 }
