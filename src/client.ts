@@ -119,19 +119,22 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
         },
         data(socket, data) {
           buf.append(new Uint8Array(data));
-          const raw = buf.drain(buf.length);
 
           try {
+            const raw = buf.peek(buf.length);
             if (state === "challenge") {
               srpResult = handleChallenge(raw, config, srp);
+              buf.drain(buf.length);
               socket.write(buildLogonProof(srpResult));
               state = "proof";
             } else if (state === "proof") {
               handleProof(raw, srpResult);
+              buf.drain(buf.length);
               socket.write(buildRealmListRequest());
               state = "realms";
             } else if (state === "realms") {
               const { realmHost, realmPort, realmId } = handleRealms(raw);
+              buf.drain(buf.length);
               done = true;
               socket.end();
               resolve({
@@ -142,6 +145,7 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
               });
             }
           } catch (err) {
+            if (err instanceof RangeError) return;
             fail(err, socket);
           }
         },

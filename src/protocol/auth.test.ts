@@ -154,6 +154,50 @@ test("parseRealmList extracts realm info", () => {
   expect(realms[0]!.id).toBe(42);
 });
 
+test("parseRealmList throws on address without port", () => {
+  const w = new PacketWriter();
+  const bodyWriter = new PacketWriter();
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint16LE(1);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.cString("Bad Realm");
+  bodyWriter.cString("127.0.0.1");
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(1);
+  const body = bodyWriter.finish();
+  w.uint16LE(body.length);
+  w.rawBytes(body);
+  expect(() => parseRealmList(new PacketReader(w.finish()))).toThrow(
+    "Invalid realm address",
+  );
+});
+
+test("parseRealmList throws on non-numeric port", () => {
+  const w = new PacketWriter();
+  const bodyWriter = new PacketWriter();
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint16LE(1);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.cString("Bad Realm");
+  bodyWriter.cString("127.0.0.1:abc");
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(1);
+  const body = bodyWriter.finish();
+  w.uint16LE(body.length);
+  w.rawBytes(body);
+  expect(() => parseRealmList(new PacketReader(w.finish()))).toThrow(
+    "Invalid realm port",
+  );
+});
+
 test("parseRealmList skips version info when flags & 0x04", () => {
   const w = new PacketWriter();
 

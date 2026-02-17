@@ -118,9 +118,11 @@ export function parseRealmList(r: PacketReader): Realm[] {
     const flags = r.uint8();
     const name = r.cString();
     const address = r.cString();
-    const parts = address.split(":");
-    const host = parts[0]!;
-    const port = parseInt(parts[1]!, 10);
+    const colonIdx = address.indexOf(":");
+    if (colonIdx === -1) throw new Error(`Invalid realm address: ${address}`);
+    const host = address.slice(0, colonIdx);
+    const port = parseInt(address.slice(colonIdx + 1), 10);
+    if (Number.isNaN(port)) throw new Error(`Invalid realm port: ${address}`);
     const population = r.uint32LE();
     const characters = r.uint8();
     const timezone = r.uint8();
