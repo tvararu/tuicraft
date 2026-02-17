@@ -106,7 +106,7 @@ export class SRP {
     const packetB = beBytesToBigInt(bigIntToLeBytes(B, padLen))
 
     const identityHash = sha1(new TextEncoder().encode(this.account + ":" + this.password))
-    const x = beReverse(beBytesToBigInt(sha1(bigIntToBeBytes(packetSalt), identityHash)))
+    const x = leBytesToBigInt(sha1(bigIntToBeBytes(packetSalt), identityHash))
 
     const A = modPow(g, a, N)
     const A_REV_INT = beReverse(A)
@@ -115,7 +115,7 @@ export class SRP {
     const A_REV = bigIntToBeBytes(A_REV_INT)
 
     const uHash = hashPadded(padLen, A_REV, bigIntToBeBytes(packetB))
-    const u = beReverse(beBytesToBigInt(uHash))
+    const u = leBytesToBigInt(uHash)
 
     const exp = u * x + a
     const kgx = (modPow(g, x, N) * 3n) % N
