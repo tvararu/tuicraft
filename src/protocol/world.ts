@@ -149,9 +149,18 @@ export class OpcodeDispatch {
     this.handlers.set(opcode, handler);
   }
 
-  expect(opcode: number): Promise<PacketReader> {
-    return new Promise((resolve) => {
-      this.expects.set(opcode, resolve);
+  expect(opcode: number, timeoutMs = 10_000): Promise<PacketReader> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.expects.delete(opcode);
+        reject(
+          new Error(`Timed out waiting for opcode 0x${opcode.toString(16)}`),
+        );
+      }, timeoutMs);
+      this.expects.set(opcode, (reader) => {
+        clearTimeout(timer);
+        resolve(reader);
+      });
     });
   }
 

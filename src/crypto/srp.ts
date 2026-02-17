@@ -109,6 +109,8 @@ export class SRP {
     }
 
     const packetSalt = beBytesToBigInt(saltBytes);
+    if (B % N === 0n) throw new Error("SRP: invalid server B value");
+
     const packetB = beBytesToBigInt(bigIntToLeBytes(B, padLen));
 
     const identityHash = sha1(
@@ -124,6 +126,7 @@ export class SRP {
 
     const uHash = hashPadded(padLen, A_REV, bigIntToBeBytes(packetB));
     const u = leBytesToBigInt(uHash);
+    if (u === 0n) throw new Error("SRP: invalid u value");
 
     const exp = u * x + a;
     const kgx = (modPow(g, x, N) * 3n) % N;

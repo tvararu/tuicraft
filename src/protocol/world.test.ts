@@ -96,6 +96,13 @@ test("OpcodeDispatch expect takes priority over persistent handler", async () =>
   expect(persistentCalled).toBe(false);
 });
 
+test("OpcodeDispatch expect rejects after timeout", async () => {
+  const dispatch = new OpcodeDispatch();
+  await expect(dispatch.expect(0xff, 50)).rejects.toThrow(
+    "Timed out waiting for opcode 0xff",
+  );
+});
+
 test("AccumulatorBuffer accumulates and drains", () => {
   const buf = new AccumulatorBuffer();
   buf.append(new Uint8Array([1, 2, 3]));

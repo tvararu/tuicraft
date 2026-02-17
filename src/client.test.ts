@@ -180,6 +180,44 @@ describe("auth error paths", () => {
     }
   });
 
+  test("handles fragmented challenge response", async () => {
+    const challengeData = buildChallengeResponse();
+    const splitAt = 50;
+    const server = Bun.listen({
+      hostname: "127.0.0.1",
+      port: 0,
+      socket: {
+        data(socket, data) {
+          const opcode = new Uint8Array(data)[0];
+          if (opcode === AuthOpcode.LOGON_CHALLENGE) {
+            socket.write(challengeData.slice(0, splitAt));
+            setTimeout(() => socket.write(challengeData.slice(splitAt)), 10);
+          } else if (opcode === AuthOpcode.LOGON_PROOF) {
+            socket.write(buildSuccessProofResponse());
+          } else if (opcode === AuthOpcode.REALM_LIST) {
+            const w = new PacketWriter();
+            w.uint8(AuthOpcode.REALM_LIST);
+            w.uint16LE(8);
+            w.uint32LE(0);
+            w.uint16LE(0);
+            socket.write(w.finish());
+          }
+        },
+        open() {},
+        close() {},
+        error() {},
+      },
+    });
+
+    try {
+      await expect(
+        authHandshake({ ...base, host: "127.0.0.1", port: server.port }),
+      ).rejects.toThrow("No realms available");
+    } finally {
+      server.stop(true);
+    }
+  });
+
   test("rejects when no realms are available", async () => {
     const server = Bun.listen({
       hostname: "127.0.0.1",
