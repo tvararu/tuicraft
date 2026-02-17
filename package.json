@@ -5,10 +5,12 @@
   "private": true,
   "scripts": {
     "start": "bun src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write src/"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "prettier": "^3.8.1"
   },
   "peerDependencies": {
     "typescript": "^5"
