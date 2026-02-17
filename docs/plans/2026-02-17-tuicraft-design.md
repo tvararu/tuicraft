@@ -62,9 +62,83 @@ This works on any AzerothCore 3.3.5a server running mod-playerbots. No fork patc
 
 **TUI Layer** — Human/LLM interface. Interactive readline mode or non-interactive pipe mode. Just one consumer of the session layer.
 
+## v1 Scope: Authenticate and Stay Connected
+
+v1 proves the protocol works end-to-end. No chat, no TUI — just authenticate, enter the world, and stay alive.
+
+### v1 Design Decisions
+
+- **Opcode dispatch**: `Map<number, handler>` for persistent handlers + `expect(opcode): Promise<PacketReader>` for request-response. No EventEmitter.
+- **Packet buffer**: Thin `PacketReader` / `PacketWriter` wrappers over `DataView` on `Uint8Array`. Cursor-based read/write. Writer grows dynamically.
+- **Crypto**: Bun's `node:crypto` compat (`createHash`, `createHmac`, `createCipheriv`). Same API as the wow-chat-client reference.
+- **TCP**: `Bun.connect` native TCP API. Data arrives as `Uint8Array`.
+- **Testing**: Unit tests with known vectors for all modules. Integration test against live server. Tests colocated with implementation.
+- **No session/TUI layer in v1**. `index.ts` drives the flow directly.
+
+### v1 Project Structure
+
+```
+src/
+├── index.ts                — CLI entry, arg parsing, orchestrates auth → world → keepalive
+├── protocol/
+│   ├── auth.ts             — SRP-6 handshake with authserver (port 3724), realm list
+│   ├── auth.test.ts        — Challenge parsing, proof construction, realm list parsing
+│   ├── world.ts            — World session: auth proof, Arc4 enable, packet dispatch, keepalive
+│   ├── world.test.ts       — Auth proof construction, Arc4 timing, dispatch, TCP buffering
+│   ├── packet.ts           — PacketReader / PacketWriter (thin DataView wrappers)
+│   ├── packet.test.ts      — Round-trip read/write, edge cases, cString encoding
+│   └── opcodes.ts          — Opcode constants enum
+├── crypto/
+│   ├── srp.ts              — SRP-6 math (BigInt + SHA-1)
+│   ├── srp.test.ts         — Known challenge/response test vectors
+│   ├── arc4.ts             — RC4 header encryption (HMAC-SHA1 key derivation, drop-1024)
+│   └── arc4.test.ts        — Encrypt/decrypt against known ciphertext
+```
+
+### v1 Connection Flow
+
+1. Parse CLI args: `--host`, `--port`, `--account`, `--password`, `--character`
+2. Connect TCP to authserver (`host:3724`) via `Bun.connect`
+3. Send `LOGON_CHALLENGE` with account name, client build 12340
+4. Compute SRP-6 proof, send `LOGON_PROOF`, validate server's M2 → get session key K
+5. Request realm list, pick first realm
+6. Disconnect authserver, connect TCP to worldserver (`realm.host:realm.port`)
+7. Receive `SMSG_AUTH_CHALLENGE`, compute SHA-1 proof with session key
+8. Send `CMSG_AUTH_SESSION` with compressed addon info
+9. Enable Arc4 encryption (immediately after send, before response)
+10. Request character list (`CMSG_CHAR_ENUM`), pick character by name
+11. Send `CMSG_PLAYER_LOGIN`, wait for `SMSG_LOGIN_VERIFY_WORLD`
+12. Print "Logged in." and enter keepalive loop
+13. Respond to `SMSG_TIME_SYNC_REQ` with `CMSG_TIME_SYNC_RESP`
+14. Send `CMSG_PING` periodically, expect `SMSG_PONG`
+
+### v1 Opcodes
+
+| Direction | Opcode | Purpose |
+|---|---|---|
+| → | `CMSG_AUTH_PROOF` | World auth session |
+| ← | `SMSG_AUTH_CHALLENGE` | World auth challenge |
+| ← | `SMSG_AUTH_RESPONSE` | World auth result |
+| → | `CMSG_CHAR_ENUM` | Request character list |
+| ← | `SMSG_CHAR_ENUM` | Character list response |
+| → | `CMSG_PLAYER_LOGIN` | Enter world |
+| ← | `SMSG_LOGIN_VERIFY_WORLD` | World entry confirmed |
+| ↔ | `SMSG_TIME_SYNC_REQ` / `CMSG_TIME_SYNC_RESP` | Keepalive |
+| ↔ | `CMSG_PING` / `SMSG_PONG` | Keepalive |
+
+### Key Implementation Details
+
+**PacketReader/PacketWriter**: Wraps `Uint8Array` with `DataView` and cursor. Reader methods: `uint8()`, `uint16LE()`, `uint16BE()`, `uint32LE()`, `bytes(n)`, `cString()`. Writer has matching write methods and grows its backing buffer dynamically.
+
+**TCP buffering**: Incoming data arrives in chunks via `Bun.connect`. Accumulator buffer appends new data, tries to parse complete packets (header first to get size, then body), keeps leftovers for next chunk.
+
+**Arc4 timing**: Arc4 is enabled immediately after sending `CMSG_AUTH_SESSION`, before receiving the response. The server's response is already encrypted.
+
+**Password handling**: Read from `--password` flag or prompt via stdin if not provided. Account and password uppercased per WoW convention.
+
 ## Protocol Implementation
 
-### Authentication flow
+### Authentication flow (authserver)
 
 1. Connect to authserver (port 3724)
 2. Send `LOGON_CHALLENGE` with account name, client build 12340 (3.3.5a)
@@ -72,42 +146,38 @@ This works on any AzerothCore 3.3.5a server running mod-playerbots. No fork patc
 4. Compute SRP-6 proof (A, M1) using SHA-1 and BigInt math
 5. Send `LOGON_PROOF`, validate server's M2, get session key K
 6. Request realm list, select realm
-7. Connect to worldserver (port 8085)
-8. Receive `SMSG_AUTH_CHALLENGE`, compute SHA-1 proof using session key
-9. Send `CMSG_AUTH_SESSION` with compressed addon info
-10. Enable Arc4 header encryption (HMAC-SHA1 derived keys, drop-1024)
-11. Request character list, select character, send `CMSG_PLAYER_LOGIN`
 
 ### Packet format
 
-- Outgoing: 6-byte header (2 bytes size BE + 4 bytes opcode LE), Arc4-encrypted
-- Incoming: 4-byte header (2 bytes size BE + 2 bytes opcode LE), Arc4-encrypted
+- Outgoing (client → server): 6-byte header (2 bytes size BE + 4 bytes opcode LE), Arc4-encrypted
+- Incoming (server → client): 4-byte header (2 bytes size BE + 2 bytes opcode LE), Arc4-encrypted
 - Body is always plaintext
 
-### v1 opcodes (chat-only MVP)
+### SRP-6 Implementation
 
-| Direction | Opcode | Purpose |
-|---|---|---|
-| → | `CMSG_MESSAGECHAT` | Send whisper/say/channel |
-| ← | `SMSG_MESSAGECHAT` | Receive chat messages |
-| ← | `SMSG_GM_MESSAGECHAT` | Receive GM messages |
-| → | `CMSG_WHO` | /who query |
-| ← | `SMSG_WHO` | /who response |
-| → | `CMSG_NAME_QUERY` | Resolve GUID to name |
-| ← | `SMSG_NAME_QUERY_RESPONSE` | Name result |
-| ↔ | `SMSG_TIME_SYNC_REQ` / `CMSG_TIME_SYNC_RESP` | Keepalive |
-| ↔ | `CMSG_PING` / `SMSG_PONG` | Keepalive |
-| ← | `SMSG_CHAT_PLAYER_NOT_FOUND` | Error handling |
-| ← | `SMSG_CHANNEL_NOTIFY` | Channel join/leave events |
+BigInt-based. Key steps:
+- Identity hash: `SHA1(account + ":" + password)`
+- Private value `x` from `SHA1(salt || identity_hash)` (little-endian)
+- Client public value `A = g^a mod N`
+- Scrambler `u` from `SHA1(pad(A) || pad(B))` (little-endian)
+- Session key `S` via interleaved hashing: split even/odd bytes of S, SHA1 each half, interleave back into 40-byte key K
+- Proof `M1 = SHA1(H(N) xor H(g) || H(account) || salt || A || B || K)`
+- Server proof `M2 = SHA1(A || M1 || K)` for validation
+- All big numbers stored/transmitted little-endian (reversed from math representation)
 
-~14 opcodes for a working chat client. Hundreds more exist but are not implemented in v1.
+### Arc4 Implementation
 
-## TUI Interface
+- HMAC-SHA1 derived keys from fixed seeds: encrypt key `C2B3723CC6AED9B5343C53EE2F4367CE`, decrypt key `CC98AE04E897EACA12DDC09342915357`
+- RC4 cipher via `createCipheriv("rc4", key, "")`
+- Drop first 1024 bytes of keystream (Arc4-drop1024)
+- Only encrypts/decrypts packet headers, not body
+
+## TUI Interface (post-v1)
 
 ### Interactive mode
 
 ```
-$ tuicraft --host 100.73.138.96 --account XI --character Xi
+$ tuicraft --host t1 --account XI --character Xi
 Password: ****
 Connecting to authserver...
 Authenticating...
@@ -131,16 +201,12 @@ Type /help for commands.
 ### Pipe mode
 
 ```
-$ tuicraft --host ... --account XI --character Xi --pipe
+$ tuicraft --host t1 --account XI --character Xi --pipe
 ```
 
-No prompt, no formatting. Raw lines in (commands) and out (events). For LLM/script consumption:
+No prompt, no formatting. Raw lines in (commands) and out (events). For LLM/script consumption.
 
-```
-$ echo '/w Xiara follow Deity' | tuicraft --pipe --host ...
-```
-
-### Commands
+### Commands (post-v1)
 
 | Command | What it does |
 |---|---|
@@ -151,49 +217,28 @@ $ echo '/w Xiara follow Deity' | tuicraft --pipe --host ...
 | `/help` | List commands |
 | `/quit` | Disconnect and exit |
 
-## Project Structure
-
-```
-tuicraft/
-├── src/
-│   ├── index.ts              — CLI entry point, arg parsing
-│   ├── protocol/
-│   │   ├── auth.ts           — SRP-6 handshake, realm list
-│   │   ├── world.ts          — World session, Arc4 encryption
-│   │   ├── packet.ts         — Packet framing, buffer read/write
-│   │   └── opcodes.ts        — Opcode enum
-│   ├── crypto/
-│   │   ├── srp.ts            — SRP-6 math (BigInt, SHA-1)
-│   │   └── arc4.ts           — RC4 header encryption
-│   ├── session/
-│   │   ├── client.ts         — TuicraftClient, orchestrates auth → world → login
-│   │   ├── chat.ts           — Chat message parsing, sending, routing
-│   │   └── handlers.ts       — Opcode handlers
-│   └── tui/
-│       ├── repl.ts           — Interactive readline interface
-│       └── pipe.ts           — Non-interactive stdin/stdout mode
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-Zero runtime dependencies. Bun provides TCP, crypto, zlib, and readline natively.
-
 ## Prior Art
 
-- **wow-chat-client** (`@timelostprototype/wow-chat-client`) — TypeScript WoW 3.3.5a protocol implementation. Used as reference for packet formats, SRP-6 flow, Arc4 encryption, and opcode structures. Not used as a dependency.
-- **mod-ollama-bot-buddy** — AzerothCore module that shows what game state can be extracted server-side (nearby creatures, spells, quests, positions).
-- **mod-ollama-chat** — AzerothCore module for LLM-powered bot chat with personality and sentiment systems.
-- **namigator** / **AmeisenNavigation** — Client-side pathfinding libraries for WoW using Recast/Detour. Relevant for future movement support.
+- **wow-chat-client** (`@timelostprototype/wow-chat-client`) — TypeScript WoW 3.3.5a protocol implementation at `../wow-chat-client`. Used as reference for packet formats, SRP-6 flow, Arc4 encryption, and opcode structures. Not used as a dependency.
+- **mod-ollama-bot-buddy** — AzerothCore module that shows what game state can be extracted server-side.
+- **namigator** / **AmeisenNavigation** — Client-side pathfinding libraries for WoW. Relevant for future movement support.
 
 ## Future Extensions (not v1)
 
-**v2 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby entities. Status bar, numbered target list. Transition from chat client to MUD client.
+**v2 — Chat:** Send/receive whispers, say, guild chat. TUI layer with interactive and pipe modes. Session layer with `TuicraftClient` API.
 
-**v3 — Movement:** Send `CMSG_MOVE_*` opcodes. Raw coordinate movement, then pathfinding via mmaps (client-side or server helper).
+**v3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby entities. Status bar, numbered target list.
 
-**v4 — Automation:** Scriptable command sequences, event subscriptions, client-side strategy behaviors replacing mod-playerbots' procedural AI for the controlled character.
+**v4 — Movement:** Send `CMSG_MOVE_*` opcodes. Raw coordinate movement, then pathfinding via mmaps.
 
-**v5 — Multi-bot:** Multiple characters per tuicraft instance or coordinated instances.
+**v5 — Automation:** Scriptable command sequences, event subscriptions, client-side strategy behaviors.
+
+**v6 — Multi-bot:** Multiple characters per tuicraft instance or coordinated instances.
 
 The three-layer architecture (protocol / session / TUI) accommodates all extensions without restructuring.
+
+## Constraints
+
+- Zero runtime dependencies. Bun provides TCP, crypto (node:crypto), zlib, and readline natively.
+- Server: AzerothCore 3.3.5a on Tailnet host `t1` (ports 3724/8085).
+- Client build: 12340 (WoW 3.3.5a 12340).
