@@ -12,3 +12,11 @@ run = "bun test"
 
 [tasks.typecheck]
 run = "bun run typecheck"
+
+[tasks.format]
+description = "Check formatting"
+run = "bunx prettier --check src/"
+
+[tasks."format:fix"]
+description = "Fix formatting"
+run = "bunx prettier --write src/"
