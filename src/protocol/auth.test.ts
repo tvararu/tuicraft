@@ -3,9 +3,13 @@ import { PacketReader, PacketWriter } from "protocol/packet";
 import { leBytesToBigInt } from "crypto/srp";
 import {
   buildLogonChallenge,
+  buildLogonProof,
+  buildRealmListRequest,
   parseLogonChallengeResponse,
+  parseLogonProofResponse,
   parseRealmList,
 } from "protocol/auth";
+import { beBytesToBigInt } from "crypto/srp";
 
 test("buildLogonChallenge produces correct packet", () => {
   const pkt = buildLogonChallenge("Test");
@@ -72,6 +76,51 @@ test("parseLogonChallengeResponse returns error status", () => {
   expect(result.B).toBeUndefined();
 });
 
+test("buildLogonProof produces correct packet", () => {
+  const A = new Uint8Array(32).fill(0xaa);
+  const M1 = new Uint8Array(20).fill(0xbb);
+  const K = new Uint8Array(40);
+  const pkt = buildLogonProof({ A, M1, K, M2: 0n });
+
+  expect(pkt[0]).toBe(0x01);
+  expect(pkt.slice(1, 33)).toEqual(A);
+  expect(pkt.slice(33, 53)).toEqual(M1);
+  expect(pkt.byteLength).toBe(75);
+});
+
+test("parseLogonProofResponse extracts M2 on success", () => {
+  const w = new PacketWriter();
+  w.uint8(0x00);
+  const m2Bytes = new Uint8Array(20);
+  m2Bytes[0] = 0xde;
+  m2Bytes[19] = 0xad;
+  w.rawBytes(m2Bytes);
+
+  const r = new PacketReader(w.finish());
+  const result = parseLogonProofResponse(r);
+
+  expect(result.status).toBe(0x00);
+  expect(result.M2).toBe(beBytesToBigInt(m2Bytes));
+});
+
+test("parseLogonProofResponse returns error status", () => {
+  const w = new PacketWriter();
+  w.uint8(0x05);
+
+  const r = new PacketReader(w.finish());
+  const result = parseLogonProofResponse(r);
+
+  expect(result.status).toBe(0x05);
+  expect(result.M2).toBeUndefined();
+});
+
+test("buildRealmListRequest produces correct packet", () => {
+  const pkt = buildRealmListRequest();
+
+  expect(pkt[0]).toBe(0x10);
+  expect(pkt.byteLength).toBe(5);
+});
+
 test("parseRealmList extracts realm info", () => {
   const w = new PacketWriter();
 
@@ -103,4 +152,39 @@ test("parseRealmList extracts realm info", () => {
   expect(realms[0]!.characters).toBe(2);
   expect(realms[0]!.timezone).toBe(1);
   expect(realms[0]!.id).toBe(42);
+});
+
+test("parseRealmList skips version info when flags & 0x04", () => {
+  const w = new PacketWriter();
+
+  const bodyWriter = new PacketWriter();
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint16LE(1);
+
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0x04);
+  bodyWriter.cString("PTR");
+  bodyWriter.cString("10.0.0.1:8085");
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint8(1);
+  bodyWriter.uint8(2);
+  bodyWriter.uint8(7);
+  bodyWriter.uint8(3);
+  bodyWriter.uint8(3);
+  bodyWriter.uint8(5);
+  bodyWriter.uint8(0);
+
+  const body = bodyWriter.finish();
+  w.uint16LE(body.length);
+  w.rawBytes(body);
+
+  const r = new PacketReader(w.finish());
+  const realms = parseRealmList(r);
+
+  expect(realms).toHaveLength(1);
+  expect(realms[0]!.name).toBe("PTR");
+  expect(realms[0]!.host).toBe("10.0.0.1");
+  expect(realms[0]!.port).toBe(8085);
+  expect(realms[0]!.id).toBe(7);
 });

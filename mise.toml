@@ -10,6 +10,9 @@ run = "bun run start"
 [tasks.test]
 run = "bun test"
 
+[tasks."test:coverage"]
+run = "bun test --coverage"
+
 [tasks.typecheck]
 run = "bun run typecheck"
 
@@ -20,3 +23,7 @@ run = "bunx prettier --check src/"
 [tasks."format:fix"]
 description = "Fix formatting"
 run = "bunx prettier --write src/"
+
+[tasks."test:live"]
+description = "Run tests including live integration"
+run = "TUICRAFT_LIVE=1 bun test"
