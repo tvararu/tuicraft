@@ -79,3 +79,15 @@ test("PacketReader floatLE round-trips", () => {
   const r = new PacketReader(w.finish())
   expect(r.floatLE()).toBeCloseTo(3.14, 2)
 })
+
+test("PacketReader cString reads to end when no null terminator", () => {
+  const bytes = new Uint8Array([0x48, 0x69])
+  const r = new PacketReader(bytes)
+  expect(r.cString()).toBe("Hi")
+  expect(r.remaining).toBe(0)
+})
+
+test("PacketReader bytes throws when requesting more than remaining", () => {
+  const r = new PacketReader(new Uint8Array([1, 2, 3]))
+  expect(() => r.bytes(5)).toThrow(RangeError)
+})
