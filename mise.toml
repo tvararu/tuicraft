@@ -3,3 +3,6 @@ bun = "latest"
 
 [tasks.start]
 run = "bun run start"
+
+[tasks.bundle]
+run = "bun install"
