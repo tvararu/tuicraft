@@ -1,10 +1,4 @@
-# tuicraft
-
-A TUI client for World of Warcraft 3.3.5a, implementing the auth and world
-server protocols from scratch in TypeScript.
-
-Reference implementation: `../wow-chat-client` (Node.js/JS version of the same
-protocol). (Upstream: https://github.com/swiftmatt/wow-chat-client)
+# AGENTS.md
 
 ## Commands
 
