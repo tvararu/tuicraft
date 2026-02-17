@@ -1,8 +1,8 @@
 import { parseArgs } from "node:util";
-import { PacketReader, PacketWriter } from "./protocol/packet";
-import { SRP } from "./crypto/srp";
-import { Arc4 } from "./crypto/arc4";
-import { GameOpcode } from "./protocol/opcodes";
+import { PacketReader, PacketWriter } from "protocol/packet";
+import { SRP } from "crypto/srp";
+import { Arc4 } from "crypto/arc4";
+import { GameOpcode } from "protocol/opcodes";
 import {
   buildLogonChallenge,
   parseLogonChallengeResponse,
@@ -10,7 +10,7 @@ import {
   parseLogonProofResponse,
   buildRealmListRequest,
   parseRealmList,
-} from "./protocol/auth";
+} from "protocol/auth";
 import {
   buildWorldAuthPacket,
   parseCharacterList,
@@ -19,7 +19,7 @@ import {
   INCOMING_HEADER_SIZE,
   buildOutgoingPacket,
   decryptIncomingHeader,
-} from "./protocol/world";
+} from "protocol/world";
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
