@@ -80,9 +80,12 @@ function send(
   socket.write(buildServerPacket(opcode, body, socket.data.arc4));
 }
 
-function handleAuthSession(socket: Socket<ConnState>): void {
+function handleAuthSession(
+  socket: Socket<ConnState>,
+  authStatus: number,
+): void {
   socket.data.arc4 = new ServerArc4(sessionKey);
-  send(socket, GameOpcode.SMSG_AUTH_RESPONSE, new Uint8Array([0x0c]));
+  send(socket, GameOpcode.SMSG_AUTH_RESPONSE, new Uint8Array([authStatus]));
 }
 
 function buildCharEnumBody(): Uint8Array {
@@ -120,7 +123,10 @@ function handleCharEnum(socket: Socket<ConnState>): void {
   send(socket, GameOpcode.SMSG_CHAR_ENUM, buildCharEnumBody());
 }
 
-function handlePlayerLogin(socket: Socket<ConnState>): void {
+function handlePlayerLogin(
+  socket: Socket<ConnState>,
+  sendTimeSync: boolean,
+): void {
   const w = new PacketWriter();
   w.uint32LE(0);
   w.floatLE(0);
@@ -128,6 +134,12 @@ function handlePlayerLogin(socket: Socket<ConnState>): void {
   w.floatLE(0);
   w.floatLE(0);
   send(socket, GameOpcode.SMSG_LOGIN_VERIFY_WORLD, w.finish());
+
+  if (sendTimeSync) {
+    const syncW = new PacketWriter();
+    syncW.uint32LE(0);
+    send(socket, GameOpcode.SMSG_TIME_SYNC_REQ, syncW.finish());
+  }
 }
 
 function handlePing(socket: Socket<ConnState>, body: Uint8Array): void {
@@ -141,14 +153,22 @@ function handlePacket(
   socket: Socket<ConnState>,
   opcode: number,
   body: Uint8Array,
+  authStatus: number,
+  sendTimeSync: boolean,
 ): void {
-  if (opcode === GameOpcode.CMSG_AUTH_SESSION) handleAuthSession(socket);
+  if (opcode === GameOpcode.CMSG_AUTH_SESSION)
+    handleAuthSession(socket, authStatus);
   else if (opcode === GameOpcode.CMSG_CHAR_ENUM) handleCharEnum(socket);
-  else if (opcode === GameOpcode.CMSG_PLAYER_LOGIN) handlePlayerLogin(socket);
+  else if (opcode === GameOpcode.CMSG_PLAYER_LOGIN)
+    handlePlayerLogin(socket, sendTimeSync);
   else if (opcode === GameOpcode.CMSG_PING) handlePing(socket, body);
 }
 
-function drainPackets(socket: Socket<ConnState>): void {
+function drainPackets(
+  socket: Socket<ConnState>,
+  authStatus: number,
+  sendTimeSync: boolean,
+): void {
   while (true) {
     if (!socket.data.pendingHeader) {
       if (socket.data.buf.byteLength < 6) break;
@@ -169,7 +189,7 @@ function drainPackets(socket: Socket<ConnState>): void {
     socket.data.buf = socket.data.buf.slice(bodySize);
     socket.data.pendingHeader = undefined;
 
-    handlePacket(socket, opcode, body);
+    handlePacket(socket, opcode, body, authStatus, sendTimeSync);
   }
 }
 
@@ -189,10 +209,16 @@ function appendToBuffer(socket: Socket<ConnState>, data: Uint8Array): void {
   socket.data.buf = next;
 }
 
-export function startMockWorldServer(): Promise<{
+export function startMockWorldServer(opts?: {
+  authStatus?: number;
+  sendTimeSyncAfterLogin?: boolean;
+}): Promise<{
   port: number;
   stop(): void;
 }> {
+  const authStatus = opts?.authStatus ?? 0x0c;
+  const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
+
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
       hostname: "127.0.0.1",
@@ -204,10 +230,9 @@ export function startMockWorldServer(): Promise<{
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
-          drainPackets(socket);
+          drainPackets(socket, authStatus, sendTimeSync);
         },
         close() {},
-        error() {},
       },
     });
 

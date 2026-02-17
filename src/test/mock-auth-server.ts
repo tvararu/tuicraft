@@ -107,7 +107,6 @@ export function startMockAuthServer(opts: {
         },
         open() {},
         close() {},
-        error() {},
       },
     });
 
