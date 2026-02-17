@@ -1,8 +1,11 @@
 [tools]
 bun = "latest"
 
+[tasks.bundle]
+run = "bun install"
+
 [tasks.start]
 run = "bun run start"
 
-[tasks.bundle]
-run = "bun install"
+[tasks.test]
+run = "bun test"
