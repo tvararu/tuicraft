@@ -1,7 +1,7 @@
 import type { Socket, TCPSocketListener } from "bun";
-import { PacketReader, PacketWriter } from "protocol/packet";
-import { AuthOpcode } from "protocol/opcodes";
-import { bigIntToLeBytes } from "crypto/srp";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { AuthOpcode } from "wow/protocol/opcodes";
+import { bigIntToLeBytes } from "wow/crypto/srp";
 import {
   salt,
   g,

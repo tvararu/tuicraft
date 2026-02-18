@@ -1,4 +1,4 @@
-import { leBytesToBigInt, beBytesToBigInt } from "crypto/srp";
+import { leBytesToBigInt, beBytesToBigInt } from "wow/crypto/srp";
 
 function fromHex(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);

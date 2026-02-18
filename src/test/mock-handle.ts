@@ -1,5 +1,5 @@
 import { jest } from "bun:test";
-import type { WorldHandle, ChatMessage } from "client";
+import type { WorldHandle, ChatMessage } from "wow/client";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
