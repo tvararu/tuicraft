@@ -24,6 +24,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   built-in, etc.)
 - `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
   Bun equivalents exist
+- `Bun.file().exists()` only works on regular files — use `fs.access()` for
+  unix sockets and other special files
 - Bun automatically loads `.env`, so don't use dotenv
 
 ## Testing

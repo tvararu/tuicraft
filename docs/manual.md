@@ -1,103 +1,131 @@
-# tuicraft Manual
+# tuicraft(1)
 
-tuicraft is a single binary WoW 3.3.5a chat client. It runs as an interactive
-TUI (no args), background daemon (`--daemon`), or one-shot CLI client
-(subcommands/flags). Same interface for humans and scripts.
+WoW 3.3.5a chat client
 
-## Quick Start
-
-```sh
-tuicraft setup --account XI --password pass --character Xi
-tuicraft                        # interactive TUI
-tuicraft "hello world"          # say (auto-starts daemon)
-tuicraft read --wait 5          # read events, wait 5s
-tuicraft stop                   # stop daemon
-```
-
-## Interactive TUI
-
-Run `tuicraft` with no arguments for a readline prompt. Type commands or plain
-text:
-
-| Command                | Action                          |
-| ---------------------- | ------------------------------- |
-| `hello everyone`       | Say "hello everyone" (no slash) |
-| `/s hello`             | Say (explicit)                  |
-| `/y HELLO`             | Yell                            |
-| `/w Xiara follow me`   | Whisper to Xiara                |
-| `/r on my way`         | Reply to last whisper           |
-| `/g anyone online?`    | Guild chat                      |
-| `/p inv please`        | Party chat                      |
-| `/raid pull in 10`     | Raid chat                       |
-| `/1 looking for group` | Channel 1 (usually General)     |
-| `/2 WTS sword`         | Channel 2 (usually Trade)       |
-| `/who mage`            | Search for online players       |
-| `/quit`                | Disconnect and exit             |
-
-Incoming messages appear above the prompt:
+## Synopsis
 
 ```
-[whisper from Xiara] Following Deity
-[say] Xi: hello
-[guild] Xiara: heading out
-[yell] Xi: HELLO
-[party] Xiara: inv
-[General] Xi: anyone around?
-[system] Welcome to AzerothCore
+tuicraft
+tuicraft <message>
+tuicraft [-w <name> | -y | -g | -p] <message>
+tuicraft [--who [filter]] [--json]
+tuicraft setup [--account NAME] [--password PASS] [--character NAME]
+tuicraft read [--wait N] [--json]
+tuicraft tail [--json]
+tuicraft status | stop | logs | help
 ```
 
-## CLI Subcommands
+## Description
 
-| Command              | Description                   |
-| -------------------- | ----------------------------- |
-| `tuicraft`           | Interactive TUI mode          |
-| `tuicraft setup`     | Configure account credentials |
-| `tuicraft "message"` | Send a say message            |
-| `tuicraft read`      | Read buffered events          |
-| `tuicraft tail`      | Continuous event stream       |
-| `tuicraft status`    | Show daemon connection status |
-| `tuicraft stop`      | Stop the daemon               |
-| `tuicraft logs`      | Print session log (JSONL)     |
-| `tuicraft help`      | Show help text                |
+tuicraft is a single binary that connects to a WoW 3.3.5a server as a player
+character. It runs in three modes: interactive TUI (no args), background daemon
+(`--daemon`), or one-shot CLI client (subcommands and flags).
+
+CLI commands auto-start a background daemon that holds the WoW connection and
+buffers events in a ring buffer. The daemon listens on a unix domain socket. CLI
+clients connect, send one command, read the response, and disconnect. The daemon
+idles out after 30 minutes of inactivity.
+
+## Commands
+
+`tuicraft`
+: Interactive TUI with a readline prompt. Type slash commands or plain text.
+
+`tuicraft` _message_
+: Send a say message. Auto-starts the daemon if needed.
+
+`tuicraft setup` [*flags*]
+: Configure account credentials. With no flags, runs an interactive wizard.
+
+`tuicraft read` [`--wait` *N*] [`--json`]
+: Read buffered events. `--wait` polls for _N_ seconds before returning.
+
+`tuicraft tail` [`--json`]
+: Continuous event stream. Blocks and prints events as they arrive.
+
+`tuicraft status`
+: Print daemon connection status (`CONNECTED` or error).
+
+`tuicraft stop`
+: Graceful daemon shutdown.
+
+`tuicraft logs`
+: Print the JSONL session log to stdout.
+
+`tuicraft help`
+: Print usage summary.
 
 ## Chat Flags
 
-| Flag              | Description |
-| ----------------- | ----------- |
-| `-w <name> "msg"` | Whisper     |
-| `-y "message"`    | Yell        |
-| `-g "message"`    | Guild chat  |
-| `-p "message"`    | Party chat  |
-| `--who [filter]`  | Who query   |
+`-w` _name_ _message_
+: Whisper to a player.
+
+`-y` _message_
+: Yell.
+
+`-g` _message_
+: Guild chat.
+
+`-p` _message_
+: Party chat.
+
+`--who` [*filter*]
+: Who query. Optional name/class/level filter.
 
 ## Options
 
-| Flag       | Description                              |
-| ---------- | ---------------------------------------- |
-| `--json`   | Output events as JSONL (read, tail, who) |
-| `--wait N` | Wait N seconds for events (read)         |
-| `--daemon` | Start as background daemon (internal)    |
-| `--help`   | Show help text                           |
+`--json`
+: Output events as JSONL instead of human-readable format. Works with `read`,
+`tail`, and chat commands.
 
-## Setup
+`--wait` _N_
+: Wait _N_ seconds for events before returning. For use with `read`.
 
-```sh
-tuicraft setup --account XI --password pass --character Xi
-tuicraft setup --host t1 --port 3724
-tuicraft setup                  # interactive wizard
-```
+`--help`
+: Print usage summary.
 
-| Flag               | Default |
-| ------------------ | ------- |
-| `--account NAME`   | —       |
-| `--password PASS`  | —       |
-| `--character NAME` | —       |
-| `--host HOST`      | t1      |
-| `--port PORT`      | 3724    |
+`--daemon`
+: Start as background daemon. Internal — not meant to be called directly.
 
-## Output Formats
+## Setup Flags
 
-### Human (default)
+`--account` _NAME_
+: Account name (required).
+
+`--password` _PASS_
+: Account password (required).
+
+`--character` _NAME_
+: Character name (required).
+
+`--host` _HOST_
+: Auth server hostname. Default: `t1`.
+
+`--port` _PORT_
+: Auth server port. Default: `3724`.
+
+## Interactive Commands
+
+When running in TUI mode, the following slash commands are available:
+
+| Command           | Action                      |
+| ----------------- | --------------------------- |
+| _text_            | Say (no slash needed)       |
+| `/s` _msg_        | Say (explicit)              |
+| `/y` _msg_        | Yell                        |
+| `/w` _name_ _msg_ | Whisper                     |
+| `/r` _msg_        | Reply to last whisper       |
+| `/g` _msg_        | Guild chat                  |
+| `/p` _msg_        | Party chat                  |
+| `/raid` _msg_     | Raid chat                   |
+| `/1` _msg_        | Channel 1 (usually General) |
+| `/2` _msg_        | Channel 2 (usually Trade)   |
+| `/who` _query_    | Who search                  |
+| `/quit`           | Disconnect and exit         |
+
+## Output Format
+
+Human-readable (default):
 
 ```
 [say] Xi: hello world
@@ -106,43 +134,54 @@ tuicraft setup                  # interactive wizard
 [who] 3 results: Xiara (80), Hemet (74), Sanu (14)
 ```
 
-### JSON (`--json`)
+JSONL (`--json`):
 
 ```jsonl
 {"type":"SAY","sender":"Xi","message":"hello world"}
 {"type":"WHISPER_FROM","sender":"Xiara","message":"Following Deity"}
 ```
 
-## Daemon Lifecycle
-
-The daemon starts automatically on the first CLI command and stays running for
-30 minutes of inactivity (configurable via `timeout_minutes` in config). It
-maintains the WoW connection and buffers up to 1000 events in a ring buffer.
-
-```
-tuicraft "hello"    # starts daemon if not running
-tuicraft status     # → CONNECTED
-tuicraft stop       # graceful shutdown
-```
-
-The daemon listens on a unix domain socket. CLI commands connect, send one line,
-read the response, and disconnect.
-
 ## Files
 
-| Path                                  | Description    |
-| ------------------------------------- | -------------- |
-| `~/.config/tuicraft/config.toml`      | Account config |
-| `/tmp/tuicraft-<uid>/sock`            | Daemon socket  |
-| `/tmp/tuicraft-<uid>/pid`             | Daemon pidfile |
-| `~/.local/state/tuicraft/session.log` | Session log    |
+`~/.config/tuicraft/config.toml`
+: Account credentials and settings.
 
-## Tips
+`$TMPDIR/tuicraft-<uid>/sock`
+: Daemon unix domain socket.
 
-- Plain text (no `/` prefix) is sent as say in both TUI and CLI mode
-- `/r` tracks the last person who whispered you (TUI only)
-- Channel numbers (`/1`, `/2`) map to the channels you joined on login (TUI only)
-- Ctrl+C or `/quit` to exit the TUI cleanly
-- Horde characters use language 1 (Orcish) by default — Alliance should set
-  language to 7 in config
-- Add `--json` for machine-readable output from CLI commands
+`$TMPDIR/tuicraft-<uid>/pid`
+: Daemon pidfile.
+
+`~/.local/state/tuicraft/session.log`
+: Persistent JSONL session log.
+
+## Examples
+
+First-time setup:
+
+```sh
+tuicraft setup --account XI --password pass --character Xi
+```
+
+Send a message and read the response:
+
+```sh
+tuicraft "hello world"
+tuicraft read --wait 3
+```
+
+Script integration:
+
+```sh
+tuicraft "follow me"
+tuicraft read --wait 3 --json | jq .
+tuicraft --who mage --json
+```
+
+## Notes
+
+Horde characters use Orcish (language 1) by default. Alliance characters should
+set `language = 7` in the config file.
+
+The daemon buffers up to 1000 events. The idle timeout is configurable via
+`timeout_minutes` in the config file.
