@@ -114,14 +114,14 @@ async function dispatchCommand(
       break;
     case "who": {
       const results = await handle.who(cmd.filter ? { name: cmd.filter } : {});
-      writeLines(socket, formatWhoResults(results, false).split("\n"));
+      writeLines(socket, formatWhoResults(results).split("\n"));
       break;
     }
   }
 }
 
 function onChatMessage(msg: ChatMessage, events: RingBuffer<string>): void {
-  events.push(formatMessage(msg, true));
+  events.push(formatMessage(msg));
 }
 
 export async function startDaemon(): Promise<void> {
