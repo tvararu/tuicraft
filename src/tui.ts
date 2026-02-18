@@ -228,11 +228,16 @@ export function startTui(
     if (interactive) rl.prompt();
 
     rl.on("line", async (input) => {
-      if (await executeCommand(state, parseCommand(input.trim()))) {
-        handle.close();
-        rl.close();
-        resolve();
-        return;
+      try {
+        if (await executeCommand(state, parseCommand(input.trim()))) {
+          handle.close();
+          rl.close();
+          resolve();
+          return;
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        write(formatError(msg, interactive) + "\n");
       }
       if (interactive) rl.prompt();
     });

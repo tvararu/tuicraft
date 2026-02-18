@@ -521,4 +521,25 @@ describe("startTui", () => {
     input.end();
     await done;
   });
+
+  test("command error is caught and displayed", async () => {
+    const handle = createMockHandle();
+    (handle.who as ReturnType<typeof jest.fn>).mockRejectedValue(
+      new Error("Timed out waiting for opcode 0x63"),
+    );
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/who");
+    await flush(2);
+
+    expect(output.join("")).toContain("Timed out waiting for opcode 0x63");
+
+    input.end();
+    await done;
+  });
 });
