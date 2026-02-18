@@ -132,8 +132,29 @@ describe("parseIpcCommand", () => {
     });
   });
 
-  test("unknown command returns undefined", () => {
-    expect(parseIpcCommand("DANCE")).toBeUndefined();
+  test("unrecognized verb becomes chat", () => {
+    expect(parseIpcCommand("DANCE")).toEqual({
+      type: "chat",
+      message: "DANCE",
+    });
+  });
+
+  test("unrecognized text becomes chat command", () => {
+    expect(parseIpcCommand("hello world")).toEqual({
+      type: "chat",
+      message: "hello world",
+    });
+  });
+
+  test("single word becomes chat command", () => {
+    expect(parseIpcCommand("hello")).toEqual({
+      type: "chat",
+      message: "hello",
+    });
+  });
+
+  test("empty string returns undefined", () => {
+    expect(parseIpcCommand("")).toBeUndefined();
   });
 
   test("READ_WAIT with empty argument returns undefined", () => {
@@ -463,6 +484,70 @@ describe("dispatchCommand", () => {
     expect(parsed.count).toBe(1);
     expect(parsed.results[0].name).toBe("Test");
   });
+
+  test("chat sends via sendInCurrentMode and responds with mode", async () => {
+    const handle = createMockHandle();
+    (handle.getLastChatMode as ReturnType<typeof jest.fn>).mockReturnValue({
+      type: "say",
+    });
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    const result = await dispatchCommand(
+      { type: "chat", message: "hello" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(result).toBe(false);
+    expect(handle.sendInCurrentMode).toHaveBeenCalledWith("hello");
+    expect(socket.written()).toBe("OK SAY\n\n");
+  });
+
+  test("chat mode label includes whisper target", async () => {
+    const handle = createMockHandle();
+    (handle.getLastChatMode as ReturnType<typeof jest.fn>).mockReturnValue({
+      type: "whisper",
+      target: "Xiara",
+    });
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "chat", message: "follow me" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("OK WHISPER Xiara\n\n");
+  });
+
+  test("chat mode label includes channel name", async () => {
+    const handle = createMockHandle();
+    (handle.getLastChatMode as ReturnType<typeof jest.fn>).mockReturnValue({
+      type: "channel",
+      channel: "General",
+    });
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "chat", message: "hello general" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("OK CHANNEL General\n\n");
+  });
 });
 
 describe("writeLines", () => {
@@ -585,9 +670,16 @@ describe("IPC round-trip", () => {
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
   });
 
-  test("unknown command returns ERR", async () => {
+  test("bare text sends via sticky mode", async () => {
     startTestServer();
-    const lines = await sendToSocket("DANCE", sockPath);
+    const lines = await sendToSocket("hello world", sockPath);
+    expect(lines[0]).toMatch(/^OK /);
+    expect(handle.sendInCurrentMode).toHaveBeenCalledWith("hello world");
+  });
+
+  test("empty command returns ERR", async () => {
+    startTestServer();
+    const lines = await sendToSocket("", sockPath);
     expect(lines).toEqual(["ERR unknown command"]);
   });
 
