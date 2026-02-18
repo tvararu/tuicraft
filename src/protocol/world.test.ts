@@ -1,4 +1,4 @@
-import { test, expect } from "bun:test";
+import { test, expect, jest } from "bun:test";
 import { PacketReader, PacketWriter } from "protocol/packet";
 import {
   buildWorldAuthPacket,
@@ -97,10 +97,15 @@ test("OpcodeDispatch expect takes priority over persistent handler", async () =>
 });
 
 test("OpcodeDispatch expect rejects after timeout", async () => {
-  const dispatch = new OpcodeDispatch();
-  await expect(dispatch.expect(0xff, 50)).rejects.toThrow(
-    "Timed out waiting for opcode 0xff",
-  );
+  jest.useFakeTimers();
+  try {
+    const dispatch = new OpcodeDispatch();
+    const promise = dispatch.expect(0xff, 50);
+    jest.advanceTimersByTime(50);
+    await expect(promise).rejects.toThrow("Timed out waiting for opcode 0xff");
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test("AccumulatorBuffer accumulates and drains", () => {
