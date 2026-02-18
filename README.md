@@ -45,14 +45,14 @@ Single binary distribution/packaging via `bun build --compile` is possible, TBD.
 
 ## Roadmap
 
-- [x] 🔐 **v1 — Auth & Connect:** SRP-6 auth, Arc4-encrypted world session,
+- [x] 🔐 **0.1 — Auth & Connect:** SRP-6 auth, Arc4-encrypted world session,
       character select, keepalive
-- [ ] 💬 **v2 — Chat:** Send/receive whispers, say, guild chat. TUI with
+- [ ] 💬 **0.2 — Chat:** Send/receive whispers, say, guild chat. TUI with
       interactive and pipe modes
-- [ ] 🌍 **v3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
+- [ ] 🌍 **0.3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
-- [ ] 🏃 **v4 — Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
-- [ ] 🤖 **v5 — Automation:** Scriptable command sequences and event
+- [ ] 🏃 **0.4 — Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
+- [ ] 🤖 **0.5 — Automation:** Scriptable command sequences and event
       subscriptions
 
 ## Prior Art

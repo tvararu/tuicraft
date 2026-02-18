@@ -1,4 +1,4 @@
-# tuicraft v2 Design: Chat, Session API, and TUI
+# tuicraft 0.2 Design: Chat, Session API, and TUI
 
 **Date**: 2026-02-18
 
@@ -11,7 +11,7 @@ interactive and pipe modes. Zero new dependencies.
 
 ## Architecture
 
-Three layers of new code, built bottom-up on v1's protocol foundation:
+Three layers of new code, built bottom-up on 0.1's protocol foundation:
 
 ```
 Protocol layer (src/protocol/chat.ts)
