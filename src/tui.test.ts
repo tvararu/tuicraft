@@ -42,7 +42,11 @@ function writeLine(stream: PassThrough, line: string): void {
   stream.write(line + "\n");
 }
 
-const flush = () => Bun.sleep(0);
+const flush = async (turns = 1): Promise<void> => {
+  for (let i = 0; i < turns; i += 1) {
+    await Bun.sleep(0);
+  }
+};
 
 describe("parseCommand", () => {
   test("bare text becomes say", () => {
@@ -328,8 +332,7 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/who");
-    await flush();
-    await flush();
+    await flush(2);
 
     expect(output.join("")).toContain("WHO\tTest\t80\tG");
 
@@ -490,8 +493,7 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/who");
-    await flush();
-    await flush();
+    await flush(2);
 
     expect(output.join("")).toContain("[who] 1 results: Test (80)");
 
