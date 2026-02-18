@@ -1,6 +1,7 @@
 # Party Management Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** First, create a worktree: `mise worktree party-management`, then `cd` into it.
+> Then use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add group invite/kick/leave/leader opcodes, incoming group event handling, and minimal party member stats parsing.
 

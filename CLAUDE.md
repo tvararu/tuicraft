@@ -13,6 +13,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `MISE_TASK_TIMEOUT=60s mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
+- `mise worktree <branch>` — create a feature worktree under `.worktrees/`
+- `mise worktree:clean <branch>` — remove a worktree and delete the branch
 
 ## Code Style
 
@@ -85,6 +87,11 @@ PRs:
 
 - Write a short essay (1-2 paragraphs) describing why the changes are needed
 - NEVER add a Claude Code attribution footer
+
+## Plans and Design Docs
+
+- Design docs and implementation plans live in
+  `docs/plans/YYYY-MM-DD-<topic>-{design,plan}.md`
 
 ## Reference Codebases
 
