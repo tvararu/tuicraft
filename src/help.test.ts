@@ -1,20 +1,32 @@
 import { test, expect } from "bun:test";
 import { helpText } from "help";
 
+const text = helpText();
+
 test("help text includes all subcommands", () => {
-  const text = helpText();
-  expect(text).toContain("setup");
-  expect(text).toContain("read");
-  expect(text).toContain("tail");
-  expect(text).toContain("logs");
-  expect(text).toContain("stop");
-  expect(text).toContain("status");
-  expect(text).toContain("help");
-  expect(text).toContain("--json");
-  expect(text).toContain("--wait");
-  expect(text).toContain("-w");
-  expect(text).toContain("-y");
-  expect(text).toContain("-g");
-  expect(text).toContain("-p");
-  expect(text).toContain("--who");
+  for (const cmd of ["setup", "read", "tail", "logs", "stop", "status", "help"])
+    expect(text).toContain(cmd);
+});
+
+test("help text includes all chat flags", () => {
+  for (const flag of ["-w", "-y", "-g", "-p", "--who"])
+    expect(text).toContain(flag);
+});
+
+test("help text includes all global flags", () => {
+  for (const flag of ["--json", "--wait", "--daemon"])
+    expect(text).toContain(flag);
+});
+
+test("help text includes all setup flags", () => {
+  for (const flag of [
+    "--account",
+    "--password",
+    "--character",
+    "--host",
+    "--port",
+    "--language",
+    "--timeout_minutes",
+  ])
+    expect(text).toContain(flag);
 });
