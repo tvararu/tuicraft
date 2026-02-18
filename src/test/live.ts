@@ -68,4 +68,50 @@ describe("two-client chat", () => {
     handle1.close();
     await handle1.closed;
   }, 30_000);
+
+  test("whisper to nonexistent player triggers not-found", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+
+    await Bun.sleep(1000);
+
+    const received: ChatMessage[] = [];
+    handle1.onMessage((msg) => received.push(msg));
+
+    handle1.sendWhisper("Nonexistentcharactername", "hello?");
+
+    await Bun.sleep(3000);
+
+    handle1.close();
+    await handle1.closed;
+
+    const notFound = received.find((m) =>
+      m.message.includes("Nonexistentcharactername"),
+    );
+    expect(notFound).toBeDefined();
+  }, 30_000);
+
+  test("say message received by nearby client", async () => {
+    const auth1 = await authHandshake(config1);
+    const auth2 = await authHandshake(config2);
+
+    const handle1 = await worldSession(config1, auth1);
+    const handle2 = await worldSession(config2, auth2);
+
+    await Bun.sleep(1000);
+
+    const received: ChatMessage[] = [];
+    handle2.onMessage((msg) => received.push(msg));
+
+    handle1.sendSay("hello from say test");
+
+    await Bun.sleep(3000);
+
+    handle1.close();
+    handle2.close();
+    await Promise.all([handle1.closed, handle2.closed]);
+
+    const sayMsg = received.find((m) => m.message === "hello from say test");
+    expect(sayMsg).toBeDefined();
+  }, 30_000);
 });
