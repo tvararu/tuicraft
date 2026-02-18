@@ -80,7 +80,7 @@ const CHAT_TYPE_LABELS: Record<number, string> = {
   [ChatType.PARTY_LEADER]: "party leader",
 };
 
-function formatMessage(msg: ChatMessage, interactive: boolean): string {
+export function formatMessage(msg: ChatMessage, interactive: boolean): string {
   if (!interactive) {
     const label =
       CHAT_TYPE_LABELS[msg.type]?.toUpperCase().replace(/ /g, "_") ??
@@ -105,10 +105,17 @@ function formatMessage(msg: ChatMessage, interactive: boolean): string {
   return `[${label}] ${msg.sender}: ${msg.message}`;
 }
 
+export type TuiOptions = {
+  input?: NodeJS.ReadableStream;
+  write?: (s: string) => void;
+};
+
 export function startTui(
   handle: WorldHandle,
   interactive: boolean,
+  opts: TuiOptions = {},
 ): Promise<void> {
+  const write = opts.write ?? ((s: string) => void process.stdout.write(s));
   return new Promise<void>((resolve) => {
     let lastWhisperFrom: string | undefined;
 
@@ -120,15 +127,15 @@ export function startTui(
       const line = formatMessage(msg, interactive);
 
       if (interactive) {
-        process.stdout.write(`\r\x1b[K${line}\n`);
+        write(`\r\x1b[K${line}\n`);
         rl.prompt(true);
       } else {
-        process.stdout.write(line + "\n");
+        write(line + "\n");
       }
     });
 
     const rl = createInterface({
-      input: process.stdin,
+      input: opts.input ?? process.stdin,
       output: interactive ? process.stdout : undefined,
       prompt: interactive ? "> " : "",
       terminal: interactive,
@@ -164,7 +171,7 @@ export function startTui(
             const errLine = interactive
               ? "[system] No one has whispered you yet."
               : "SYSTEM\t\tNo one has whispered you yet.";
-            process.stdout.write(errLine + "\n");
+            write(errLine + "\n");
           } else {
             handle.sendWhisper(lastWhisperFrom, cmd.message);
           }
@@ -177,7 +184,7 @@ export function startTui(
             const errLine = interactive
               ? `[system] Not in channel ${cmd.target}.`
               : `SYSTEM\t\tNot in channel ${cmd.target}.`;
-            process.stdout.write(errLine + "\n");
+            write(errLine + "\n");
           } else {
             handle.sendChannel(channel, cmd.message);
           }
@@ -192,7 +199,7 @@ export function startTui(
             : results
                 .map((r) => `WHO\t${r.name}\t${r.level}\t${r.guild}`)
                 .join("\n") || "WHO\t\t0\t";
-          process.stdout.write(line + "\n");
+          write(line + "\n");
           break;
         }
         case "quit":
