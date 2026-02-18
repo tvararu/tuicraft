@@ -1,5 +1,10 @@
 import { test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
-import { authHandshake, worldSession, type ChatMessage } from "client";
+import {
+  authHandshake,
+  worldSession,
+  type ChatMessage,
+  type WorldHandle,
+} from "client";
 import type { AuthResult } from "client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
@@ -32,6 +37,16 @@ const base = {
   srpPrivateKey: clientPrivateKey,
   clientSeed,
 };
+
+async function waitForEchoProbe(
+  handle: Pick<WorldHandle, "onMessage" | "sendSay">,
+): Promise<void> {
+  const received = new Promise<ChatMessage>((resolve) => {
+    handle.onMessage(resolve);
+  });
+  handle.sendSay("probe");
+  await received;
+}
 
 function buildChallengeResponse(): Uint8Array {
   const w = new PacketWriter();
@@ -276,9 +291,7 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
-      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
-      handle.sendSay("probe");
-      await received;
+      await waitForEchoProbe(handle);
       handle.close();
       await handle.closed;
     } finally {
@@ -366,9 +379,7 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
 
-      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
-      handle.sendSay("probe");
-      await received;
+      await waitForEchoProbe(handle);
 
       expect(handle.getChannel(1)).toBe("General");
       expect(handle.getChannel(2)).toBe("Trade");
@@ -678,9 +689,7 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
 
-      let received = new Promise<ChatMessage>((r) => handle.onMessage(r));
-      handle.sendSay("probe");
-      await received;
+      await waitForEchoProbe(handle);
       expect(handle.getChannel(1)).toBe("General");
 
       const w = new PacketWriter();
@@ -690,9 +699,7 @@ describe("world error paths", () => {
       w.uint8(0);
       ws.inject(GameOpcode.SMSG_CHANNEL_NOTIFY, w.finish());
 
-      received = new Promise<ChatMessage>((r) => handle.onMessage(r));
-      handle.sendSay("probe");
-      await received;
+      await waitForEchoProbe(handle);
       expect(handle.getChannel(1)).toBe("Trade");
 
       handle.close();
@@ -714,9 +721,7 @@ describe("world error paths", () => {
       );
 
       ws.inject(GameOpcode.SMSG_TIME_SYNC_REQ, new Uint8Array(0));
-      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
-      handle.sendSay("probe");
-      await received;
+      await waitForEchoProbe(handle);
 
       expect(stderrSpy).toHaveBeenCalled();
       const output = String(stderrSpy.mock.calls[0]![0]);
