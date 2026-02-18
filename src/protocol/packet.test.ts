@@ -109,3 +109,33 @@ test("PacketWriter offset tracks write position", () => {
   w.uint32LE(2);
   expect(w.offset).toBe(5);
 });
+
+test("PacketReader reads packed GUID with all bytes present", () => {
+  const r = new PacketReader(
+    new Uint8Array([0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]),
+  );
+  const { low, high } = r.packedGuid();
+  expect(low).toBe(0x04030201);
+  expect(high).toBe(0x08070605);
+});
+
+test("PacketReader reads packed GUID with only low bytes", () => {
+  const r = new PacketReader(new Uint8Array([0x01, 0x42]));
+  const { low, high } = r.packedGuid();
+  expect(low).toBe(0x42);
+  expect(high).toBe(0);
+});
+
+test("PacketReader reads packed GUID with no bytes (zero GUID)", () => {
+  const r = new PacketReader(new Uint8Array([0x00]));
+  const { low, high } = r.packedGuid();
+  expect(low).toBe(0);
+  expect(high).toBe(0);
+});
+
+test("PacketReader reads packed GUID with sparse bytes", () => {
+  const r = new PacketReader(new Uint8Array([0x05, 0xaa, 0xbb]));
+  const { low, high } = r.packedGuid();
+  expect(low).toBe(0xaa | (0xbb << 16));
+  expect(high).toBe(0);
+});

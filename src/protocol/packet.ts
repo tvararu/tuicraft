@@ -69,6 +69,20 @@ export class PacketReader {
       throw new RangeError(`skip(${n}) exceeds remaining ${this.remaining}`);
     this.pos += n;
   }
+
+  packedGuid(): { low: number; high: number } {
+    const mask = this.uint8();
+    let low = 0;
+    let high = 0;
+    for (let i = 0; i < 8; i++) {
+      if (mask & (1 << i)) {
+        const byte = this.uint8();
+        if (i < 4) low |= byte << (i * 8);
+        else high |= byte << ((i - 4) * 8);
+      }
+    }
+    return { low, high };
+  }
 }
 
 export class PacketWriter {
