@@ -584,4 +584,13 @@ describe("IPC round-trip", () => {
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi"]);
   });
+
+  test("dispatch error returns ERR internal", async () => {
+    startTestServer();
+    (handle.who as ReturnType<typeof jest.fn>).mockRejectedValue(
+      new Error("db fail"),
+    );
+    const lines = await sendToSocket("WHO", sockPath);
+    expect(lines).toEqual(["ERR internal"]);
+  });
 });

@@ -219,7 +219,10 @@ export function startDaemonServer(
   return { server, events, cleanup };
 }
 
-export async function startDaemon(): Promise<void> {
+export async function startDaemon(client?: {
+  authHandshake: typeof authHandshake;
+  worldSession: typeof worldSession;
+}): Promise<void> {
   const cfg = await readConfig();
   const sock = socketPath();
   const pid = pidPath();
@@ -239,8 +242,8 @@ export async function startDaemon(): Promise<void> {
     language: cfg.language,
   };
 
-  const auth = await authHandshake(clientCfg);
-  const handle = await worldSession(clientCfg, auth);
+  const auth = await (client?.authHandshake ?? authHandshake)(clientCfg);
+  const handle = await (client?.worldSession ?? worldSession)(clientCfg, auth);
 
   let lastActivity = Date.now();
   const timeoutMs = cfg.timeout_minutes * 60 * 1000;
