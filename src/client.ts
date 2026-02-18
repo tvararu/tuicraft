@@ -2,7 +2,17 @@ import type { Socket } from "bun";
 import { PacketReader, PacketWriter } from "protocol/packet";
 import { SRP, type SRPResult } from "crypto/srp";
 import { Arc4 } from "crypto/arc4";
-import { GameOpcode } from "protocol/opcodes";
+import { GameOpcode, ChatType } from "protocol/opcodes";
+import {
+  parseChatMessage,
+  buildChatMessage,
+  buildNameQuery,
+  parseNameQueryResponse,
+  buildWhoRequest,
+  parseWhoResponse,
+  type ChatMessage as RawChatMessage,
+  type WhoResult,
+} from "protocol/chat";
 import {
   buildLogonChallenge,
   parseLogonChallengeResponse,
@@ -39,9 +49,31 @@ export type AuthResult = {
   realmId: number;
 };
 
+export type ChatMessage = {
+  type: number;
+  sender: string;
+  message: string;
+  channel?: string;
+};
+
+export type { WhoResult };
+
 export type WorldHandle = {
   closed: Promise<void>;
   close(): void;
+  onMessage(cb: (msg: ChatMessage) => void): void;
+  sendWhisper(target: string, message: string): void;
+  sendSay(message: string): void;
+  sendYell(message: string): void;
+  sendGuild(message: string): void;
+  sendParty(message: string): void;
+  sendRaid(message: string): void;
+  sendChannel(channel: string, message: string): void;
+  who(opts?: {
+    name?: string;
+    minLevel?: number;
+    maxLevel?: number;
+  }): Promise<WhoResult[]>;
 };
 
 type WorldConn = {
@@ -51,6 +83,9 @@ type WorldConn = {
   arc4?: Arc4;
   startTime: number;
   pendingHeader?: { size: number; opcode: number };
+  nameCache: Map<number, string>;
+  pendingMessages: Map<number, RawChatMessage[]>;
+  onMessage?: (msg: ChatMessage) => void;
 };
 
 function handleChallenge(
@@ -192,6 +227,72 @@ function handleTimeSync(conn: WorldConn, r: PacketReader): void {
   sendPacket(conn, GameOpcode.CMSG_TIME_SYNC_RESP, w.finish());
 }
 
+function deliverMessage(
+  conn: WorldConn,
+  raw: RawChatMessage,
+  name: string,
+): void {
+  conn.onMessage?.({
+    type: raw.type,
+    sender: name,
+    message: raw.message,
+    channel: raw.channel,
+  });
+}
+
+function handleChatMessage(conn: WorldConn, r: PacketReader): void {
+  const raw = parseChatMessage(r);
+
+  if (raw.senderGuidLow === 0) {
+    deliverMessage(conn, raw, "");
+    return;
+  }
+
+  const cached = conn.nameCache.get(raw.senderGuidLow);
+  if (cached !== undefined) {
+    deliverMessage(conn, raw, cached);
+    return;
+  }
+
+  const pending = conn.pendingMessages.get(raw.senderGuidLow);
+  if (pending) {
+    pending.push(raw);
+  } else {
+    conn.pendingMessages.set(raw.senderGuidLow, [raw]);
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_NAME_QUERY,
+      buildNameQuery(raw.senderGuidLow, raw.senderGuidHigh),
+    );
+  }
+}
+
+function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
+  const result = parseNameQueryResponse(r);
+  if (!result.found || !result.name) return;
+
+  const name = result.name;
+
+  for (const [guidLow, messages] of conn.pendingMessages) {
+    const cached = conn.nameCache.get(guidLow);
+    if (cached !== undefined) continue;
+
+    conn.nameCache.set(guidLow, name);
+    for (const raw of messages) deliverMessage(conn, raw, name);
+    conn.pendingMessages.delete(guidLow);
+    break;
+  }
+}
+
+function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
+  const name = r.cString();
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message: `No player named "${name}" is currently playing.`,
+  });
+}
+
 async function authenticateWorld(
   conn: WorldConn,
   config: ClientConfig,
@@ -264,6 +365,8 @@ export function worldSession(
       dispatch: new OpcodeDispatch(),
       buf: new AccumulatorBuffer(),
       startTime: Date.now(),
+      nameCache: new Map(),
+      pendingMessages: new Map(),
     };
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -274,6 +377,18 @@ export function worldSession(
 
     conn.dispatch.on(GameOpcode.SMSG_TIME_SYNC_REQ, (r) =>
       handleTimeSync(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_MESSAGE_CHAT, (r) =>
+      handleChatMessage(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GM_MESSAGECHAT, (r) =>
+      handleChatMessage(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_NAME_QUERY_RESPONSE, (r) =>
+      handleNameQueryResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
+      handlePlayerNotFound(conn, r),
     );
 
     async function login() {
@@ -286,6 +401,63 @@ export function worldSession(
         close() {
           clearInterval(pingInterval);
           conn.socket.end();
+        },
+        onMessage(cb) {
+          conn.onMessage = cb;
+        },
+        sendWhisper(target, message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.WHISPER, message, target),
+          );
+        },
+        sendSay(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.SAY, message),
+          );
+        },
+        sendYell(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.YELL, message),
+          );
+        },
+        sendGuild(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.GUILD, message),
+          );
+        },
+        sendParty(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.PARTY, message),
+          );
+        },
+        sendRaid(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.RAID, message),
+          );
+        },
+        sendChannel(channel, message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.CHANNEL, message, channel),
+          );
+        },
+        async who(opts = {}) {
+          sendPacket(conn, GameOpcode.CMSG_WHO, buildWhoRequest(opts));
+          const r = await conn.dispatch.expect(GameOpcode.SMSG_WHO);
+          return parseWhoResponse(r);
         },
       });
     }
