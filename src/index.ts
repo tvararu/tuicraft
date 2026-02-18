@@ -1,44 +1,114 @@
-import { parseArgs } from "node:util";
-import { authHandshake, worldSession } from "client";
-import { startTui } from "tui";
+import { parseArgs, sendToSocket, ensureDaemon } from "cli";
 
-const { values } = parseArgs({
-  args: Bun.argv.slice(2),
-  options: {
-    host: { type: "string", default: "t1" },
-    port: { type: "string", default: "3724" },
-    account: { type: "string" },
-    password: { type: "string" },
-    character: { type: "string" },
-    language: { type: "string", default: "1" },
-  },
-});
-
-if (!values.account || !values.password || !values.character) {
-  console.error(
-    "Usage: bun src/index.ts --account <account> --password <password> --character <name> [--host <host>] [--port <port>]",
-  );
-  process.exit(1);
-}
-
-const config = {
-  host: values.host!,
-  port: parseInt(values.port!, 10),
-  account: values.account.toUpperCase(),
-  password: values.password.toUpperCase(),
-  character: values.character,
-  language: parseInt(values.language!, 10),
-};
+const action = parseArgs(Bun.argv.slice(2), process.stdin.isTTY ?? false);
 
 async function main() {
-  console.log(
-    `Connecting to ${config.host}:${config.port} as ${config.account}...`,
-  );
-  const auth = await authHandshake(config);
-  console.log(`Authenticated. Realm: ${auth.realmHost}:${auth.realmPort}`);
-  const handle = await worldSession(config, auth);
-  console.log(`Logged in as ${config.character}.`);
-  await startTui(handle, process.stdin.isTTY ?? false);
+  switch (action.mode) {
+    case "interactive": {
+      const { authHandshake, worldSession } = await import("client");
+      const { readConfig } = await import("config");
+      const cfg = await readConfig();
+      const auth = await authHandshake({
+        host: cfg.host,
+        port: cfg.port,
+        account: cfg.account.toUpperCase(),
+        password: cfg.password.toUpperCase(),
+        character: cfg.character,
+        language: cfg.language,
+      });
+      const handle = await worldSession(
+        {
+          host: cfg.host,
+          port: cfg.port,
+          account: cfg.account.toUpperCase(),
+          password: cfg.password.toUpperCase(),
+          character: cfg.character,
+          language: cfg.language,
+        },
+        auth,
+      );
+      const { startTui } = await import("tui");
+      await startTui(handle, process.stdin.isTTY ?? false);
+      break;
+    }
+    case "daemon": {
+      const { startDaemon } = await import("daemon");
+      await startDaemon();
+      break;
+    }
+    case "setup": {
+      const { runSetup } = await import("setup");
+      await runSetup(action.args);
+      break;
+    }
+    case "help": {
+      const { helpText } = await import("help");
+      console.log(helpText());
+      break;
+    }
+    case "say":
+    case "yell":
+    case "guild":
+    case "party": {
+      await ensureDaemon();
+      const cmd = `${action.mode.toUpperCase()} ${action.message}`;
+      const lines = await sendToSocket(cmd);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "whisper": {
+      await ensureDaemon();
+      const lines = await sendToSocket(
+        `WHISPER ${action.target} ${action.message}`,
+      );
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "read": {
+      await ensureDaemon();
+      const cmd =
+        action.wait != null ? `READ_WAIT ${action.wait * 1000}` : "READ";
+      const lines = await sendToSocket(cmd);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "tail": {
+      await ensureDaemon();
+      while (true) {
+        const lines = await sendToSocket("READ_WAIT 1000");
+        for (const line of lines) console.log(line);
+      }
+      break;
+    }
+    case "status": {
+      await ensureDaemon();
+      const lines = await sendToSocket("STATUS");
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "stop": {
+      const lines = await sendToSocket("STOP");
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "who": {
+      await ensureDaemon();
+      const cmd = action.filter ? `WHO ${action.filter}` : "WHO";
+      const lines = await sendToSocket(cmd);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "logs": {
+      const { logPath } = await import("paths");
+      const file = Bun.file(logPath());
+      if (await file.exists()) {
+        console.log(await file.text());
+      } else {
+        console.log("No session log found.");
+      }
+      break;
+    }
+  }
 }
 
 main().catch((err) => {
