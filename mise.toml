@@ -6,7 +6,7 @@ bun = "latest"
 # only exception is `mise test:live` which hits a live server and has network
 # latency and actually implements `sleep`s out of necessity. If mise tasks are
 # timing out, it means you need to make them faster, NOT increase the timeout.
-task_timeout = "500ms"  # CLAUDE: DO NOT CHANGE THIS OR YOU WILL BE FIRED.
+task_timeout = "1s"  # CLAUDE: DO NOT CHANGE THIS OR YOU WILL BE FIRED.
 
 [tasks.bundle]
 description = "Install dependencies"

@@ -4,7 +4,6 @@
 
 Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
-- `mise start` — run the client (`bun src/index.ts`)
 - `mise test` — run all tests (`bun test`)
 - `mise typecheck` — type-check (`tsc --noEmit`)
 - `mise format` — check formatting (`prettier --check`)
@@ -37,11 +36,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
+- `mise test src/file.test.ts` runs a single file (args pass through to `bun test`)
 - Use `jest.useFakeTimers()` / `advanceTimersByTime()` from `bun:test` for
   timer-dependent tests (wrap in `try/finally` with `jest.useRealTimers()`)
 - Prefer promise-based waiting over `Bun.sleep()` — await the event, not a
   hardcoded delay
 - Use `./tmp/` for scratch files, not `/tmp/` (gitignored)
+- `bun test` scans `./tmp/` for test files — never leave `.test.ts` files there
 - macOS `tmpdir()` returns `/var/folders/.../T/`, not `/tmp/` — don't hardcode
   `/tmp/` paths
 - Live tests read `WOW_LANGUAGE` env var (default: 1/Orcish for Horde accounts)
@@ -50,6 +51,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
+- `mock.module()` leaks across test files in Bun — only mock `"paths"` (safe via
+  dynamic imports), never mock `"config"` or `"session-log"` in shared test runs
 - `task_timeout = "500ms"` in mise.toml is the process-level kill switch — NEVER
   bypass it with `MISE_TASK_TIMEOUT=<longer>` env overrides. The full test suite
   runs under 100ms. If it hangs, there's a bug — fix the bug, not the timeout.
