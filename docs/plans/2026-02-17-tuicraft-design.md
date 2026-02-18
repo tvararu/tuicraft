@@ -62,20 +62,20 @@ This works on any AzerothCore 3.3.5a server running mod-playerbots. No fork patc
 
 **TUI Layer** — Human/LLM interface. Interactive readline mode or non-interactive pipe mode. Just one consumer of the session layer.
 
-## v1 Scope: Authenticate and Stay Connected
+## 0.1 Scope: Authenticate and Stay Connected
 
-v1 proves the protocol works end-to-end. No chat, no TUI — just authenticate, enter the world, and stay alive.
+0.1 proves the protocol works end-to-end. No chat, no TUI — just authenticate, enter the world, and stay alive.
 
-### v1 Design Decisions
+### 0.1 Design Decisions
 
 - **Opcode dispatch**: `Map<number, handler>` for persistent handlers + `expect(opcode): Promise<PacketReader>` for request-response. No EventEmitter.
 - **Packet buffer**: Thin `PacketReader` / `PacketWriter` wrappers over `DataView` on `Uint8Array`. Cursor-based read/write. Writer grows dynamically.
 - **Crypto**: Bun's `node:crypto` compat (`createHash`, `createHmac`, `createCipheriv`). Same API as the wow-chat-client reference.
 - **TCP**: `Bun.connect` native TCP API. Data arrives as `Uint8Array`.
 - **Testing**: Unit tests with known vectors for all modules. Integration test against live server. Tests colocated with implementation.
-- **No session/TUI layer in v1**. `index.ts` drives the flow directly.
+- **No session/TUI layer in 0.1**. `index.ts` drives the flow directly.
 
-### v1 Project Structure
+### 0.1 Project Structure
 
 ```
 src/
@@ -95,7 +95,7 @@ src/
 │   └── arc4.test.ts        — Encrypt/decrypt against known ciphertext
 ```
 
-### v1 Connection Flow
+### 0.1 Connection Flow
 
 1. Parse CLI args: `--host`, `--port`, `--account`, `--password`, `--character`
 2. Connect TCP to authserver (`host:3724`) via `Bun.connect`
@@ -112,19 +112,19 @@ src/
 13. Respond to `SMSG_TIME_SYNC_REQ` with `CMSG_TIME_SYNC_RESP`
 14. Send `CMSG_PING` periodically, expect `SMSG_PONG`
 
-### v1 Opcodes
+### 0.1 Opcodes
 
-| Direction | Opcode | Purpose |
-|---|---|---|
-| → | `CMSG_AUTH_PROOF` | World auth session |
-| ← | `SMSG_AUTH_CHALLENGE` | World auth challenge |
-| ← | `SMSG_AUTH_RESPONSE` | World auth result |
-| → | `CMSG_CHAR_ENUM` | Request character list |
-| ← | `SMSG_CHAR_ENUM` | Character list response |
-| → | `CMSG_PLAYER_LOGIN` | Enter world |
-| ← | `SMSG_LOGIN_VERIFY_WORLD` | World entry confirmed |
-| ↔ | `SMSG_TIME_SYNC_REQ` / `CMSG_TIME_SYNC_RESP` | Keepalive |
-| ↔ | `CMSG_PING` / `SMSG_PONG` | Keepalive |
+| Direction | Opcode                                       | Purpose                 |
+| --------- | -------------------------------------------- | ----------------------- |
+| →         | `CMSG_AUTH_PROOF`                            | World auth session      |
+| ←         | `SMSG_AUTH_CHALLENGE`                        | World auth challenge    |
+| ←         | `SMSG_AUTH_RESPONSE`                         | World auth result       |
+| →         | `CMSG_CHAR_ENUM`                             | Request character list  |
+| ←         | `SMSG_CHAR_ENUM`                             | Character list response |
+| →         | `CMSG_PLAYER_LOGIN`                          | Enter world             |
+| ←         | `SMSG_LOGIN_VERIFY_WORLD`                    | World entry confirmed   |
+| ↔         | `SMSG_TIME_SYNC_REQ` / `CMSG_TIME_SYNC_RESP` | Keepalive               |
+| ↔         | `CMSG_PING` / `SMSG_PONG`                    | Keepalive               |
 
 ### Key Implementation Details
 
@@ -156,6 +156,7 @@ src/
 ### SRP-6 Implementation
 
 BigInt-based. Key steps:
+
 - Identity hash: `SHA1(account + ":" + password)`
 - Private value `x` from `SHA1(salt || identity_hash)` (little-endian)
 - Client public value `A = g^a mod N`
@@ -172,7 +173,7 @@ BigInt-based. Key steps:
 - Drop first 1024 bytes of keystream (Arc4-drop1024)
 - Only encrypts/decrypts packet headers, not body
 
-## TUI Interface (post-v1)
+## TUI Interface (post-0.1)
 
 ### Interactive mode
 
@@ -206,16 +207,16 @@ $ tuicraft --host t1 --account XI --character Xi --pipe
 
 No prompt, no formatting. Raw lines in (commands) and out (events). For LLM/script consumption.
 
-### Commands (post-v1)
+### Commands (post-0.1)
 
-| Command | What it does |
-|---|---|
-| `/w <name> <msg>` | Whisper |
-| `/s <msg>` | Say |
-| `/g <msg>` | Guild chat |
-| `/who <query>` | /who query |
-| `/help` | List commands |
-| `/quit` | Disconnect and exit |
+| Command           | What it does        |
+| ----------------- | ------------------- |
+| `/w <name> <msg>` | Whisper             |
+| `/s <msg>`        | Say                 |
+| `/g <msg>`        | Guild chat          |
+| `/who <query>`    | /who query          |
+| `/help`           | List commands       |
+| `/quit`           | Disconnect and exit |
 
 ## Prior Art
 
@@ -223,17 +224,17 @@ No prompt, no formatting. Raw lines in (commands) and out (events). For LLM/scri
 - **mod-ollama-bot-buddy** — AzerothCore module that shows what game state can be extracted server-side.
 - **namigator** / **AmeisenNavigation** — Client-side pathfinding libraries for WoW. Relevant for future movement support.
 
-## Future Extensions (not v1)
+## Future Extensions (not 0.1)
 
-**v2 — Chat:** Send/receive whispers, say, guild chat. TUI layer with interactive and pipe modes. Session layer with `TuicraftClient` API.
+**0.2 — Chat:** Send/receive whispers, say, guild chat. TUI layer with interactive and pipe modes. Session layer with `TuicraftClient` API.
 
-**v3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby entities. Status bar, numbered target list.
+**0.3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby entities. Status bar, numbered target list.
 
-**v4 — Movement:** Send `CMSG_MOVE_*` opcodes. Raw coordinate movement, then pathfinding via mmaps.
+**0.4 — Movement:** Send `CMSG_MOVE_*` opcodes. Raw coordinate movement, then pathfinding via mmaps.
 
-**v5 — Automation:** Scriptable command sequences, event subscriptions, client-side strategy behaviors.
+**0.5 — Automation:** Scriptable command sequences, event subscriptions, client-side strategy behaviors.
 
-**v6 — Multi-bot:** Multiple characters per tuicraft instance or coordinated instances.
+**0.6 — Multi-bot:** Multiple characters per tuicraft instance or coordinated instances.
 
 The three-layer architecture (protocol / session / TUI) accommodates all extensions without restructuring.
 
