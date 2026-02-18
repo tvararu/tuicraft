@@ -132,6 +132,39 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("INVITE", () => {
+    expect(parseIpcCommand("INVITE Voidtrix")).toEqual({
+      type: "invite",
+      target: "Voidtrix",
+    });
+  });
+
+  test("KICK", () => {
+    expect(parseIpcCommand("KICK Voidtrix")).toEqual({
+      type: "kick",
+      target: "Voidtrix",
+    });
+  });
+
+  test("LEAVE", () => {
+    expect(parseIpcCommand("LEAVE")).toEqual({ type: "leave" });
+  });
+
+  test("LEADER", () => {
+    expect(parseIpcCommand("LEADER Voidtrix")).toEqual({
+      type: "leader",
+      target: "Voidtrix",
+    });
+  });
+
+  test("ACCEPT", () => {
+    expect(parseIpcCommand("ACCEPT")).toEqual({ type: "accept" });
+  });
+
+  test("DECLINE", () => {
+    expect(parseIpcCommand("DECLINE")).toEqual({ type: "decline" });
+  });
+
   test("unrecognized verb becomes chat", () => {
     expect(parseIpcCommand("DANCE")).toEqual({
       type: "chat",
@@ -451,6 +484,24 @@ describe("dispatchCommand", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test("invite calls handle.invite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "invite", target: "Voidtrix" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.invite).toHaveBeenCalledWith("Voidtrix");
+    expect(socket.written()).toBe("OK\n\n");
   });
 
   test("who_json returns JSON formatted results", async () => {

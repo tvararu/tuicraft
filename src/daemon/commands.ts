@@ -4,9 +4,10 @@ import {
   formatMessageObj,
   formatWhoResults,
   formatWhoResultsJson,
+  formatGroupEvent,
 } from "ui/tui";
 import { SessionLog } from "lib/session-log";
-import type { WorldHandle, ChatMessage } from "wow/client";
+import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 
 export type EventEntry = { text: string; json: string };
 
@@ -29,7 +30,13 @@ export type IpcCommand =
   | { type: "stop" }
   | { type: "status" }
   | { type: "who"; filter?: string }
-  | { type: "who_json"; filter?: string };
+  | { type: "who_json"; filter?: string }
+  | { type: "invite"; target: string }
+  | { type: "kick"; target: string }
+  | { type: "leave" }
+  | { type: "leader"; target: string }
+  | { type: "accept" }
+  | { type: "decline" };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
   const spaceIdx = line.indexOf(" ");
@@ -77,6 +84,18 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return rest ? { type: "who", filter: rest } : { type: "who" };
     case "WHO_JSON":
       return rest ? { type: "who_json", filter: rest } : { type: "who_json" };
+    case "INVITE":
+      return { type: "invite", target: rest };
+    case "KICK":
+      return { type: "kick", target: rest };
+    case "LEAVE":
+      return { type: "leave" };
+    case "LEADER":
+      return { type: "leader", target: rest };
+    case "ACCEPT":
+      return { type: "accept" };
+    case "DECLINE":
+      return { type: "decline" };
     default:
       return line ? { type: "chat", message: line } : undefined;
   }
@@ -174,7 +193,82 @@ export async function dispatchCommand(
       writeLines(socket, [formatWhoResultsJson(results)]);
       return false;
     }
+    case "invite":
+      handle.invite(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "kick":
+      handle.uninvite(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "leave":
+      handle.leaveGroup();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "leader":
+      handle.setLeader(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "accept":
+      handle.acceptInvite();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "decline":
+      handle.declineInvite();
+      writeLines(socket, ["OK"]);
+      return false;
   }
+}
+
+function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "invite_received":
+      return { type: "GROUP_INVITE", from: event.from };
+    case "invite_result":
+      return {
+        type: "GROUP_INVITE_RESULT",
+        target: event.target,
+        result: event.result,
+      };
+    case "leader_changed":
+      return { type: "GROUP_LEADER_CHANGED", name: event.name };
+    case "group_destroyed":
+      return { type: "GROUP_DESTROYED" };
+    case "kicked":
+      return { type: "GROUP_KICKED" };
+    case "invite_declined":
+      return { type: "GROUP_INVITE_DECLINED", name: event.name };
+    case "group_list":
+      return {
+        type: "GROUP_LIST",
+        members: event.members.map((m) => ({
+          name: m.name,
+          online: m.online,
+        })),
+        leader: event.leader,
+      };
+    case "member_stats":
+      return {
+        type: "PARTY_MEMBER_STATS",
+        guidLow: event.guidLow,
+        online: event.online,
+        hp: event.hp,
+        maxHp: event.maxHp,
+        level: event.level,
+      };
+  }
+}
+
+export function onGroupEvent(
+  event: GroupEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatGroupEvent(event);
+  if (!text) return;
+  const json = JSON.stringify(formatGroupEventObj(event));
+  events.push({ text, json });
+  log.append(formatGroupEventObj(event)).catch(() => {});
 }
 
 export function onChatMessage(
