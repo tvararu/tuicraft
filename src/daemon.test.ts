@@ -135,6 +135,36 @@ describe("parseIpcCommand", () => {
   test("unknown command returns undefined", () => {
     expect(parseIpcCommand("DANCE")).toBeUndefined();
   });
+
+  test("READ_WAIT with empty argument returns undefined", () => {
+    expect(parseIpcCommand("READ_WAIT")).toBeUndefined();
+  });
+
+  test("READ_WAIT with non-numeric argument returns undefined", () => {
+    expect(parseIpcCommand("READ_WAIT abc")).toBeUndefined();
+  });
+
+  test("READ_WAIT with negative value returns undefined", () => {
+    expect(parseIpcCommand("READ_WAIT -100")).toBeUndefined();
+  });
+
+  test("READ_WAIT clamps to 60000ms", () => {
+    expect(parseIpcCommand("READ_WAIT 120000")).toEqual({
+      type: "read_wait",
+      ms: 60_000,
+    });
+  });
+
+  test("READ_WAIT_JSON with empty argument returns undefined", () => {
+    expect(parseIpcCommand("READ_WAIT_JSON")).toBeUndefined();
+  });
+
+  test("READ_WAIT_JSON clamps to 60000ms", () => {
+    expect(parseIpcCommand("READ_WAIT_JSON 999999")).toEqual({
+      type: "read_wait_json",
+      ms: 60_000,
+    });
+  });
 });
 
 describe("dispatchCommand", () => {
@@ -602,7 +632,7 @@ describe("IPC round-trip", () => {
     startTestServer();
     const lines = await sendToSocket("STOP", sockPath);
     expect(lines).toEqual(["OK"]);
-    await Bun.sleep(50);
+    await Bun.sleep(0);
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 

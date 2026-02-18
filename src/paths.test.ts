@@ -6,6 +6,7 @@ import {
   socketPath,
   pidPath,
   configPath,
+  logPath,
 } from "paths";
 
 describe("paths", () => {
@@ -36,5 +37,9 @@ describe("paths", () => {
 
   test("configPath returns configDir/config.toml", () => {
     expect(configPath()).toBe(`${configDir()}/config.toml`);
+  });
+
+  test("logPath returns stateDir/session.log", () => {
+    expect(logPath()).toBe(`${stateDir()}/session.log`);
   });
 });

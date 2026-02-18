@@ -211,7 +211,7 @@ describe("auth error paths", () => {
           const opcode = new Uint8Array(data)[0];
           if (opcode === AuthOpcode.LOGON_CHALLENGE) {
             socket.write(challengeData.slice(0, splitAt));
-            setTimeout(() => socket.write(challengeData.slice(splitAt)), 10);
+            setTimeout(() => socket.write(challengeData.slice(splitAt)), 0);
           } else if (opcode === AuthOpcode.LOGON_PROOF) {
             socket.write(buildSuccessProofResponse());
           } else if (opcode === AuthOpcode.REALM_LIST) {
@@ -339,7 +339,7 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 1 },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(5);
+      await Bun.sleep(1);
       handle.close();
       await handle.closed;
     } finally {
