@@ -33,6 +33,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Prefer promise-based waiting over `Bun.sleep()` — await the event, not a
   hardcoded delay
 - Use `./tmp/` for scratch files, not `/tmp/` (gitignored)
+- Live tests read `WOW_LANGUAGE` env var (default: 1/Orcish for Horde accounts)
 
 ## Commits
 
@@ -60,7 +61,9 @@ PRs:
   when decoding
 - `drainWorldPackets` must catch handler errors — one bad packet breaks all
   subsequent processing
-- Always test protocol parsers against the live server (`mise test:live`), not
-  just hand-built fixtures
+- Always run `mise test:live` after protocol changes — never claim something
+  works without verifying against the real server
 - Live-first testing: validate behavior against the real server, then encode it
   in mock integration tests as a living spec
+- Chat messages must use a valid racial language (LANG_ORCISH=1 for Horde,
+  LANG_COMMON=7 for Alliance) — server rejects LANG_UNIVERSAL (0) silently
