@@ -549,7 +549,7 @@ describe("IPC round-trip", () => {
     exitSpy = jest
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
-    result = startDaemonServer(handle, sockPath, log, opts);
+    result = startDaemonServer({ handle, sock: sockPath, log, ...opts });
   }
 
   afterEach(async () => {
@@ -658,11 +658,11 @@ describe("IPC round-trip", () => {
     try {
       const handle = createMockHandle();
       const log = new SessionLog(`./tmp/test-daemon-split-${Date.now()}.jsonl`);
-      const { cleanup } = startDaemonServer(
+      const { cleanup } = startDaemonServer({
         handle,
-        `./tmp/test-daemon-split-${Date.now()}.sock`,
+        sock: `./tmp/test-daemon-split-${Date.now()}.sock`,
         log,
-      );
+      });
       const socket = createMockSocket();
 
       capturedData!(socket, Buffer.from("STA"));
@@ -700,11 +700,11 @@ describe("IPC round-trip", () => {
     try {
       const handle = createMockHandle();
       const log = new SessionLog(`./tmp/test-daemon-multi-${Date.now()}.jsonl`);
-      const { cleanup } = startDaemonServer(
+      const { cleanup } = startDaemonServer({
         handle,
-        `./tmp/test-daemon-multi-${Date.now()}.sock`,
+        sock: `./tmp/test-daemon-multi-${Date.now()}.sock`,
         log,
-      );
+      });
       const socket = createMockSocket();
 
       capturedData!(socket, Buffer.from("STATUS\nSTATUS\n"));

@@ -133,7 +133,7 @@ describe("daemon IPC", () => {
     const sockPath = join("./tmp", `test-daemon-${Date.now()}.sock`);
     const logFile = join("./tmp", `test-session-${Date.now()}.log`);
     const log = new SessionLog(logFile);
-    const { server } = startDaemonServer(handle, sockPath, log);
+    const { server } = startDaemonServer({ handle, sock: sockPath, log });
 
     try {
       await Bun.sleep(1000);
