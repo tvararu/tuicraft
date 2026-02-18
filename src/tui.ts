@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline";
 import { ChatType } from "protocol/opcodes";
-import type { WorldHandle, ChatMessage } from "client";
+import type { WorldHandle, ChatMessage, WhoResult } from "client";
 
 export type Command =
   | { type: "say"; message: string }
@@ -105,6 +105,93 @@ export function formatMessage(msg: ChatMessage, interactive: boolean): string {
   return `[${label}] ${msg.sender}: ${msg.message}`;
 }
 
+export function formatError(message: string, interactive: boolean): string {
+  return interactive ? `[system] ${message}` : `SYSTEM\t\t${message}`;
+}
+
+export function formatWhoResults(
+  results: WhoResult[],
+  interactive: boolean,
+): string {
+  if (interactive) {
+    const names =
+      results.map((r) => `${r.name} (${r.level})`).join(", ") || "none";
+    return `[who] ${results.length} results: ${names}`;
+  }
+  return (
+    results.map((r) => `WHO\t${r.name}\t${r.level}\t${r.guild}`).join("\n") ||
+    "WHO\t\t0\t"
+  );
+}
+
+export type TuiState = {
+  handle: WorldHandle;
+  interactive: boolean;
+  write: (s: string) => void;
+  lastWhisperFrom: string | undefined;
+};
+
+export async function executeCommand(
+  state: TuiState,
+  cmd: Command,
+): Promise<boolean> {
+  switch (cmd.type) {
+    case "say":
+      state.handle.sendSay(cmd.message);
+      break;
+    case "yell":
+      state.handle.sendYell(cmd.message);
+      break;
+    case "guild":
+      state.handle.sendGuild(cmd.message);
+      break;
+    case "party":
+      state.handle.sendParty(cmd.message);
+      break;
+    case "raid":
+      state.handle.sendRaid(cmd.message);
+      break;
+    case "whisper":
+      state.handle.sendWhisper(cmd.target, cmd.message);
+      state.lastWhisperFrom = cmd.target;
+      break;
+    case "reply":
+      if (!state.lastWhisperFrom) {
+        state.write(
+          formatError("No one has whispered you yet.", state.interactive) +
+            "\n",
+        );
+      } else {
+        state.handle.sendWhisper(state.lastWhisperFrom, cmd.message);
+      }
+      break;
+    case "channel": {
+      const channel = /^\d+$/.test(cmd.target)
+        ? state.handle.getChannel(parseInt(cmd.target, 10))
+        : cmd.target;
+      if (!channel) {
+        state.write(
+          formatError(`Not in channel ${cmd.target}.`, state.interactive) +
+            "\n",
+        );
+      } else {
+        state.handle.sendChannel(channel, cmd.message);
+      }
+      break;
+    }
+    case "who": {
+      const results = await state.handle.who(
+        cmd.target ? { name: cmd.target } : {},
+      );
+      state.write(formatWhoResults(results, state.interactive) + "\n");
+      break;
+    }
+    case "quit":
+      return true;
+  }
+  return false;
+}
+
 export type TuiOptions = {
   input?: NodeJS.ReadableStream;
   write?: (s: string) => void;
@@ -116,22 +203,19 @@ export function startTui(
   opts: TuiOptions = {},
 ): Promise<void> {
   const write = opts.write ?? ((s: string) => void process.stdout.write(s));
+  const state: TuiState = {
+    handle,
+    interactive,
+    write,
+    lastWhisperFrom: undefined,
+  };
+
   return new Promise<void>((resolve) => {
-    let lastWhisperFrom: string | undefined;
-
     handle.onMessage((msg) => {
-      if (msg.type === ChatType.WHISPER) {
-        lastWhisperFrom = msg.sender;
-      }
-
+      if (msg.type === ChatType.WHISPER) state.lastWhisperFrom = msg.sender;
       const line = formatMessage(msg, interactive);
-
-      if (interactive) {
-        write(`\r\x1b[K${line}\n`);
-        rl.prompt(true);
-      } else {
-        write(line + "\n");
-      }
+      write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
+      if (interactive) rl.prompt(true);
     });
 
     const rl = createInterface({
@@ -144,80 +228,16 @@ export function startTui(
     if (interactive) rl.prompt();
 
     rl.on("line", async (input) => {
-      const cmd = parseCommand(input.trim());
-
-      switch (cmd.type) {
-        case "say":
-          handle.sendSay(cmd.message);
-          break;
-        case "yell":
-          handle.sendYell(cmd.message);
-          break;
-        case "guild":
-          handle.sendGuild(cmd.message);
-          break;
-        case "party":
-          handle.sendParty(cmd.message);
-          break;
-        case "raid":
-          handle.sendRaid(cmd.message);
-          break;
-        case "whisper":
-          handle.sendWhisper(cmd.target, cmd.message);
-          lastWhisperFrom = cmd.target;
-          break;
-        case "reply":
-          if (!lastWhisperFrom) {
-            const errLine = interactive
-              ? "[system] No one has whispered you yet."
-              : "SYSTEM\t\tNo one has whispered you yet.";
-            write(errLine + "\n");
-          } else {
-            handle.sendWhisper(lastWhisperFrom, cmd.message);
-          }
-          break;
-        case "channel": {
-          const channel = /^\d+$/.test(cmd.target)
-            ? handle.getChannel(parseInt(cmd.target, 10))
-            : cmd.target;
-          if (!channel) {
-            const errLine = interactive
-              ? `[system] Not in channel ${cmd.target}.`
-              : `SYSTEM\t\tNot in channel ${cmd.target}.`;
-            write(errLine + "\n");
-          } else {
-            handle.sendChannel(channel, cmd.message);
-          }
-          break;
-        }
-        case "who": {
-          const results = await handle.who(
-            cmd.target ? { name: cmd.target } : {},
-          );
-          const line = interactive
-            ? `[who] ${results.length} results: ${results.map((r) => `${r.name} (${r.level})`).join(", ") || "none"}`
-            : results
-                .map((r) => `WHO\t${r.name}\t${r.level}\t${r.guild}`)
-                .join("\n") || "WHO\t\t0\t";
-          write(line + "\n");
-          break;
-        }
-        case "quit":
-          handle.close();
-          rl.close();
-          resolve();
-          return;
+      if (await executeCommand(state, parseCommand(input.trim()))) {
+        handle.close();
+        rl.close();
+        resolve();
+        return;
       }
-
       if (interactive) rl.prompt();
     });
 
-    rl.on("close", () => {
-      resolve();
-    });
-
-    handle.closed.then(() => {
-      rl.close();
-    });
+    rl.on("close", () => resolve());
+    handle.closed.then(() => rl.close());
   });
 }
