@@ -11,12 +11,16 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format:fix` — fix formatting (`prettier --write`)
 - `mise bundle` — install dependencies (`bun install`)
 - `mise ci` — run typecheck, test, and format in parallel
+- `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 
 ## Code Style
 
-- Strict TypeScript — `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, all strict flags on (see tsconfig.json)
+- Follow `/typescript-style` skill for structure and taste decisions
+- Strict TypeScript — `noUncheckedIndexedAccess`, `noUnusedLocals`,
+  `noUnusedParameters`, all strict flags on (see tsconfig.json)
 - Never write comments
-- Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket` built-in, etc.)
+- Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket`
+  built-in, etc.)
 - Bun automatically loads `.env`, so don't use dotenv
 
 ## Testing
@@ -39,3 +43,19 @@ PRs:
 
 - Write a short essay (1-2 paragraphs) describing why the changes are needed
 - NEVER add a Claude Code attribution footer
+
+## Reference Codebases
+
+- `../wow-chat-client` — Node.js WoW chat client, primary protocol reference
+- `../azerothcore-wotlk-playerbots` — AzerothCore server source (C++)
+
+## Protocol Gotchas
+
+- Server sends message lengths including the null terminator — strip trailing \0
+  when decoding
+- `drainWorldPackets` must catch handler errors — one bad packet breaks all
+  subsequent processing
+- Always test protocol parsers against the live server (`mise test:live`), not
+  just hand-built fixtures
+- Live-first testing: validate behavior against the real server, then encode it
+  in mock integration tests as a living spec
