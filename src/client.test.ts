@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll } from "bun:test";
+import { test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
 import { authHandshake, worldSession, type ChatMessage } from "client";
 import type { AuthResult } from "client";
 import { startMockAuthServer } from "test/mock-auth-server";
@@ -271,7 +271,6 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(50);
       handle.close();
       await handle.closed;
     } finally {
@@ -313,16 +312,18 @@ describe("world error paths", () => {
   });
 
   test("ping interval fires and server handles CMSG_PING", async () => {
+    jest.useFakeTimers();
     const ws = await startMockWorldServer();
     try {
       const handle = await worldSession(
         { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 50 },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(120);
+      jest.advanceTimersByTime(100);
       handle.close();
       await handle.closed;
     } finally {
+      jest.useRealTimers();
       ws.stop();
     }
   });
@@ -335,13 +336,14 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
 
-      const received: ChatMessage[] = [];
-      handle.onMessage((msg) => received.push(msg));
+      const messageReceived = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
 
       handle.sendWhisper("Someone", "test whisper");
-      await Bun.sleep(500);
+      const msg = await messageReceived;
 
-      expect(received.length).toBeGreaterThan(0);
+      expect(msg.message).toBe("test whisper");
 
       handle.close();
       await handle.closed;

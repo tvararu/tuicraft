@@ -28,6 +28,11 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
+- Use `jest.useFakeTimers()` / `advanceTimersByTime()` from `bun:test` for
+  timer-dependent tests (wrap in `try/finally` with `jest.useRealTimers()`)
+- Prefer promise-based waiting over `Bun.sleep()` — await the event, not a
+  hardcoded delay
+- Use `./tmp/` for scratch files, not `/tmp/` (gitignored)
 
 ## Commits
 
