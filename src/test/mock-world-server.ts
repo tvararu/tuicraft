@@ -1,7 +1,7 @@
 import type { Socket, TCPSocketListener } from "bun";
 import { createHmac, createCipheriv, createDecipheriv } from "node:crypto";
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { GameOpcode } from "protocol/opcodes";
+import { GameOpcode, ChatType } from "protocol/opcodes";
 import { sessionKey, serverSeed, FIXTURE_CHARACTER } from "test/fixtures";
 
 const ENCRYPT_KEY = "C2B3723CC6AED9B5343C53EE2F4367CE";
@@ -154,7 +154,7 @@ function handleMessageChat(socket: Socket<ConnState>, body: Uint8Array): void {
   const chatType = r.uint32LE();
   r.uint32LE();
   let target = "";
-  if (chatType === 0x07 || chatType === 0x11) {
+  if (chatType === ChatType.WHISPER || chatType === ChatType.CHANNEL) {
     target = r.cString();
   }
   const message = r.cString();
@@ -165,14 +165,14 @@ function handleMessageChat(socket: Socket<ConnState>, body: Uint8Array): void {
   w.uint32LE(0x42);
   w.uint32LE(0x00);
   w.uint32LE(0);
-  if (chatType === 0x11) w.cString(target);
+  if (chatType === ChatType.CHANNEL) w.cString(target);
   w.uint32LE(0x42);
   w.uint32LE(0x00);
   const msgBytes = new TextEncoder().encode(message);
   w.uint32LE(msgBytes.byteLength);
   w.rawBytes(msgBytes);
   w.uint8(0);
-  send(socket, 0x0096, w.finish());
+  send(socket, GameOpcode.SMSG_MESSAGE_CHAT, w.finish());
 }
 
 function handleNameQuery(socket: Socket<ConnState>): void {
@@ -185,7 +185,7 @@ function handleNameQuery(socket: Socket<ConnState>): void {
   w.uint32LE(1);
   w.uint32LE(0);
   w.uint32LE(1);
-  send(socket, 0x0051, w.finish());
+  send(socket, GameOpcode.SMSG_NAME_QUERY_RESPONSE, w.finish());
 }
 
 function handleWho(socket: Socket<ConnState>): void {
@@ -199,7 +199,7 @@ function handleWho(socket: Socket<ConnState>): void {
   w.uint32LE(1);
   w.uint8(0);
   w.uint32LE(1);
-  send(socket, 0x0063, w.finish());
+  send(socket, GameOpcode.SMSG_WHO, w.finish());
 }
 
 function handlePacket(
@@ -215,9 +215,10 @@ function handlePacket(
   else if (opcode === GameOpcode.CMSG_PLAYER_LOGIN)
     handlePlayerLogin(socket, sendTimeSync);
   else if (opcode === GameOpcode.CMSG_PING) handlePing(socket, body);
-  else if (opcode === 0x0095) handleMessageChat(socket, body);
-  else if (opcode === 0x0050) handleNameQuery(socket);
-  else if (opcode === 0x0062) handleWho(socket);
+  else if (opcode === GameOpcode.CMSG_MESSAGE_CHAT)
+    handleMessageChat(socket, body);
+  else if (opcode === GameOpcode.CMSG_NAME_QUERY) handleNameQuery(socket);
+  else if (opcode === GameOpcode.CMSG_WHO) handleWho(socket);
 }
 
 function drainPackets(

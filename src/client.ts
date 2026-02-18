@@ -276,6 +276,11 @@ function handleChatMessage(conn: WorldConn, r: PacketReader): void {
   }
 }
 
+function handleGmChatMessage(conn: WorldConn, r: PacketReader): void {
+  const raw = parseChatMessage(r, true);
+  deliverMessage(conn, raw, raw.senderName ?? "");
+}
+
 function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseNameQueryResponse(r);
   if (!result.found || !result.name) return;
@@ -386,7 +391,7 @@ export function worldSession(
       handleChatMessage(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_GM_MESSAGECHAT, (r) =>
-      handleChatMessage(conn, r),
+      handleGmChatMessage(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_NAME_QUERY_RESPONSE, (r) =>
       handleNameQueryResponse(conn, r),

@@ -8,6 +8,7 @@ export type ChatMessage = {
   senderGuidHigh: number;
   message: string;
   channel?: string;
+  senderName?: string;
 };
 
 export type NameQueryResult = {
@@ -26,12 +27,18 @@ export type WhoResult = {
   zone: number;
 };
 
-export function parseChatMessage(r: PacketReader): ChatMessage {
+export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
   const type = r.uint8();
   const language = r.uint32LE();
   const senderGuidLow = r.uint32LE();
   const senderGuidHigh = r.uint32LE();
   r.uint32LE();
+
+  let senderName: string | undefined;
+  if (isGm) {
+    const nameLen = r.uint32LE();
+    senderName = new TextDecoder().decode(r.bytes(nameLen));
+  }
 
   let channel: string | undefined;
   if (type === ChatType.CHANNEL) {
@@ -49,7 +56,15 @@ export function parseChatMessage(r: PacketReader): ChatMessage {
   const message = new TextDecoder().decode(messageBytes.subarray(0, end));
   if (r.remaining > 0) r.uint8();
 
-  return { type, language, senderGuidLow, senderGuidHigh, message, channel };
+  return {
+    type,
+    language,
+    senderGuidLow,
+    senderGuidHigh,
+    message,
+    channel,
+    senderName,
+  };
 }
 
 export function buildChatMessage(
