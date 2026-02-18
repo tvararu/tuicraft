@@ -60,6 +60,15 @@ export type ChatMessage = {
 
 export type { WhoResult };
 
+export type ChatMode =
+  | { type: "say" }
+  | { type: "yell" }
+  | { type: "guild" }
+  | { type: "party" }
+  | { type: "raid" }
+  | { type: "whisper"; target: string }
+  | { type: "channel"; channel: string };
+
 export type WorldHandle = {
   closed: Promise<void>;
   close(): void;
@@ -77,6 +86,9 @@ export type WorldHandle = {
     minLevel?: number;
     maxLevel?: number;
   }): Promise<WhoResult[]>;
+  getLastChatMode(): ChatMode;
+  setLastChatMode(mode: ChatMode): void;
+  sendInCurrentMode(message: string): void;
 };
 
 type WorldConn = {
@@ -89,6 +101,7 @@ type WorldConn = {
   nameCache: Map<number, string>;
   pendingMessages: Map<number, RawChatMessage[]>;
   channels: string[];
+  lastChatMode: ChatMode;
   onMessage?: (msg: ChatMessage) => void;
 };
 
@@ -390,6 +403,7 @@ export function worldSession(
       nameCache: new Map(),
       pendingMessages: new Map(),
       channels: [],
+      lastChatMode: { type: "say" },
     };
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -423,7 +437,7 @@ export function worldSession(
       pingInterval = startPingLoop(conn, config.pingIntervalMs ?? 30_000);
       const lang = config.language ?? Language.COMMON;
       done = true;
-      resolve({
+      const handle: WorldHandle = {
         closed,
         close() {
           clearInterval(pingInterval);
@@ -433,6 +447,7 @@ export function worldSession(
           conn.onMessage = cb;
         },
         sendWhisper(target, message) {
+          conn.lastChatMode = { type: "whisper", target };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -440,6 +455,7 @@ export function worldSession(
           );
         },
         sendSay(message) {
+          conn.lastChatMode = { type: "say" };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -447,6 +463,7 @@ export function worldSession(
           );
         },
         sendYell(message) {
+          conn.lastChatMode = { type: "yell" };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -454,6 +471,7 @@ export function worldSession(
           );
         },
         sendGuild(message) {
+          conn.lastChatMode = { type: "guild" };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -461,6 +479,7 @@ export function worldSession(
           );
         },
         sendParty(message) {
+          conn.lastChatMode = { type: "party" };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -468,6 +487,7 @@ export function worldSession(
           );
         },
         sendRaid(message) {
+          conn.lastChatMode = { type: "raid" };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -475,6 +495,7 @@ export function worldSession(
           );
         },
         sendChannel(channel, message) {
+          conn.lastChatMode = { type: "channel", channel };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
@@ -489,7 +510,40 @@ export function worldSession(
           const r = await conn.dispatch.expect(GameOpcode.SMSG_WHO);
           return parseWhoResponse(r);
         },
-      });
+        getLastChatMode() {
+          return conn.lastChatMode;
+        },
+        setLastChatMode(mode) {
+          conn.lastChatMode = mode;
+        },
+        sendInCurrentMode(message) {
+          const mode = conn.lastChatMode;
+          switch (mode.type) {
+            case "say":
+              handle.sendSay(message);
+              break;
+            case "yell":
+              handle.sendYell(message);
+              break;
+            case "guild":
+              handle.sendGuild(message);
+              break;
+            case "party":
+              handle.sendParty(message);
+              break;
+            case "raid":
+              handle.sendRaid(message);
+              break;
+            case "whisper":
+              handle.sendWhisper(mode.target, message);
+              break;
+            case "channel":
+              handle.sendChannel(mode.channel, message);
+              break;
+          }
+        },
+      };
+      resolve(handle);
     }
 
     login().catch((err) => {

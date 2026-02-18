@@ -1,5 +1,5 @@
 import { jest } from "bun:test";
-import type { WorldHandle, ChatMessage } from "wow/client";
+import type { WorldHandle, ChatMessage, ChatMode } from "wow/client";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
@@ -10,6 +10,7 @@ export function createMockHandle(): WorldHandle & {
   const closed = new Promise<void>((r) => {
     closeResolve = r;
   });
+  let lastChatMode: ChatMode = { type: "say" };
 
   return {
     closed,
@@ -26,6 +27,11 @@ export function createMockHandle(): WorldHandle & {
     sendChannel: jest.fn(),
     getChannel: jest.fn(),
     who: jest.fn(async () => []),
+    getLastChatMode: jest.fn(() => lastChatMode),
+    setLastChatMode: jest.fn((mode: ChatMode) => {
+      lastChatMode = mode;
+    }),
+    sendInCurrentMode: jest.fn(),
     triggerMessage(msg) {
       messageCb?.(msg);
     },
