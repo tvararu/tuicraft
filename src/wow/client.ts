@@ -31,6 +31,20 @@ import {
   buildOutgoingPacket,
   decryptIncomingHeader,
 } from "wow/protocol/world";
+import {
+  buildGroupInvite,
+  buildGroupAccept,
+  buildGroupDecline,
+  buildGroupUninvite,
+  buildGroupDisband,
+  buildGroupSetLeader,
+  parsePartyCommandResult,
+  parseGroupInvite,
+  parseGroupSetLeader,
+  parseGroupDecline,
+  parseGroupList,
+  parsePartyMemberStats,
+} from "wow/protocol/group";
 
 export type ClientConfig = {
   host: string;
@@ -57,6 +71,32 @@ export type ChatMessage = {
   message: string;
   channel?: string;
 };
+
+export type GroupEvent =
+  | { type: "invite_received"; from: string }
+  | { type: "invite_result"; target: string; result: number }
+  | { type: "leader_changed"; name: string }
+  | {
+      type: "group_list";
+      members: Array<{
+        name: string;
+        guidLow: number;
+        guidHigh: number;
+        online: boolean;
+      }>;
+      leader: string;
+    }
+  | { type: "group_destroyed" }
+  | { type: "kicked" }
+  | { type: "invite_declined"; name: string }
+  | {
+      type: "member_stats";
+      guidLow: number;
+      online?: boolean;
+      hp?: number;
+      maxHp?: number;
+      level?: number;
+    };
 
 export type { WhoResult };
 
@@ -89,6 +129,13 @@ export type WorldHandle = {
   getLastChatMode(): ChatMode;
   setLastChatMode(mode: ChatMode): void;
   sendInCurrentMode(message: string): void;
+  invite(name: string): void;
+  uninvite(name: string): void;
+  leaveGroup(): void;
+  setLeader(name: string): void;
+  acceptInvite(): void;
+  declineInvite(): void;
+  onGroupEvent(cb: (event: GroupEvent) => void): void;
 };
 
 type WorldConn = {
@@ -103,6 +150,8 @@ type WorldConn = {
   channels: string[];
   lastChatMode: ChatMode;
   onMessage?: (msg: ChatMessage) => void;
+  partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
+  onGroupEvent?: (event: GroupEvent) => void;
 };
 
 function handleChallenge(
@@ -328,6 +377,79 @@ function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
   });
 }
 
+function handlePartyCommandResult(conn: WorldConn, r: PacketReader): void {
+  const result = parsePartyCommandResult(r);
+  conn.onGroupEvent?.({
+    type: "invite_result",
+    target: result.member,
+    result: result.result,
+  });
+}
+
+function handleGroupInviteReceived(conn: WorldConn, r: PacketReader): void {
+  const invite = parseGroupInvite(r);
+  conn.onGroupEvent?.({ type: "invite_received", from: invite.name });
+}
+
+function handleGroupSetLeaderMsg(conn: WorldConn, r: PacketReader): void {
+  const { name } = parseGroupSetLeader(r);
+  conn.onGroupEvent?.({ type: "leader_changed", name });
+}
+
+function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
+  const list = parseGroupList(r);
+  conn.partyMembers.clear();
+  let leaderName = "";
+  for (const m of list.members) {
+    conn.partyMembers.set(m.name, {
+      guidLow: m.guidLow,
+      guidHigh: m.guidHigh,
+    });
+    if (
+      m.guidLow === list.leaderGuidLow &&
+      m.guidHigh === list.leaderGuidHigh
+    ) {
+      leaderName = m.name;
+    }
+  }
+  conn.onGroupEvent?.({
+    type: "group_list",
+    members: list.members,
+    leader: leaderName,
+  });
+}
+
+function handleGroupDestroyed(conn: WorldConn): void {
+  conn.partyMembers.clear();
+  conn.onGroupEvent?.({ type: "group_destroyed" });
+}
+
+function handleGroupUninvite(conn: WorldConn): void {
+  conn.partyMembers.clear();
+  conn.onGroupEvent?.({ type: "kicked" });
+}
+
+function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
+  const { name } = parseGroupDecline(r);
+  conn.onGroupEvent?.({ type: "invite_declined", name });
+}
+
+function handlePartyMemberStatsMsg(
+  conn: WorldConn,
+  r: PacketReader,
+  isFull = false,
+): void {
+  const stats = parsePartyMemberStats(r, isFull);
+  conn.onGroupEvent?.({
+    type: "member_stats",
+    guidLow: stats.guidLow,
+    online: stats.online,
+    hp: stats.hp,
+    maxHp: stats.maxHp,
+    level: stats.level,
+  });
+}
+
 async function authenticateWorld(
   conn: WorldConn,
   config: ClientConfig,
@@ -404,6 +526,7 @@ export function worldSession(
       pendingMessages: new Map(),
       channels: [],
       lastChatMode: { type: "say" },
+      partyMembers: new Map(),
     };
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -429,6 +552,33 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
       handleChannelNotify(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
+      handlePartyCommandResult(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_INVITE, (r) =>
+      handleGroupInviteReceived(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_SET_LEADER, (r) =>
+      handleGroupSetLeaderMsg(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_LIST, (r) =>
+      handleGroupListMsg(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_DESTROYED, () =>
+      handleGroupDestroyed(conn),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_UNINVITE, () =>
+      handleGroupUninvite(conn),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GROUP_DECLINE, (r) =>
+      handleGroupDeclineMsg(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS, (r) =>
+      handlePartyMemberStatsMsg(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, (r) =>
+      handlePartyMemberStatsMsg(conn, r, true),
     );
 
     async function login() {
@@ -541,6 +691,48 @@ export function worldSession(
               handle.sendChannel(mode.channel, message);
               break;
           }
+        },
+        invite(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GROUP_INVITE,
+            buildGroupInvite(name),
+          );
+        },
+        uninvite(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GROUP_UNINVITE,
+            buildGroupUninvite(name),
+          );
+        },
+        leaveGroup() {
+          sendPacket(conn, GameOpcode.CMSG_GROUP_DISBAND, buildGroupDisband());
+        },
+        setLeader(name) {
+          const member = conn.partyMembers.get(name);
+          if (!member) {
+            conn.onMessage?.({
+              type: ChatType.SYSTEM,
+              sender: "",
+              message: `"${name}" is not in your party.`,
+            });
+            return;
+          }
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GROUP_SET_LEADER,
+            buildGroupSetLeader(member.guidLow, member.guidHigh),
+          );
+        },
+        acceptInvite() {
+          sendPacket(conn, GameOpcode.CMSG_GROUP_ACCEPT, buildGroupAccept());
+        },
+        declineInvite() {
+          sendPacket(conn, GameOpcode.CMSG_GROUP_DECLINE, buildGroupDecline());
+        },
+        onGroupEvent(cb) {
+          conn.onGroupEvent = cb;
         },
       };
       resolve(handle);
