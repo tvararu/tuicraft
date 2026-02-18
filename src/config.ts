@@ -31,6 +31,11 @@ export function parseConfig(text: string): Config {
       result[key] = Number.isNaN(n) ? raw : n;
     }
   }
+  for (const field of ["account", "password", "character"] as const) {
+    if (typeof result[field] !== "string") {
+      throw new Error(`Missing required config field: ${field}`);
+    }
+  }
   return result as unknown as Config;
 }
 

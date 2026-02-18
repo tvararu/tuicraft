@@ -3,7 +3,7 @@ import { parseConfig, serializeConfig, type Config } from "config";
 
 describe("parseConfig", () => {
   test("parses string and number values", () => {
-    const input = `account = "x"\npassword = "xwow2026"\nport = 3724`;
+    const input = `account = "x"\npassword = "xwow2026"\ncharacter = "Z"\nport = 3724`;
     const cfg = parseConfig(input);
     expect(cfg.account).toBe("x");
     expect(cfg.password).toBe("xwow2026");
@@ -11,7 +11,7 @@ describe("parseConfig", () => {
   });
 
   test("ignores blank lines and comments", () => {
-    const input = `# comment\naccount = "x"\n\ncharacter = "Xia"`;
+    const input = `# comment\naccount = "x"\npassword = "y"\n\ncharacter = "Xia"`;
     const cfg = parseConfig(input);
     expect(cfg.account).toBe("x");
     expect(cfg.character).toBe("Xia");
@@ -23,6 +23,24 @@ describe("parseConfig", () => {
     expect(cfg.port).toBe(3724);
     expect(cfg.language).toBe(1);
     expect(cfg.timeout_minutes).toBe(30);
+  });
+
+  test("throws on missing account", () => {
+    expect(() => parseConfig(`password = "y"\ncharacter = "Z"`)).toThrow(
+      "Missing required config field: account",
+    );
+  });
+
+  test("throws on missing password", () => {
+    expect(() => parseConfig(`account = "x"\ncharacter = "Z"`)).toThrow(
+      "Missing required config field: password",
+    );
+  });
+
+  test("throws on missing character", () => {
+    expect(() => parseConfig(`account = "x"\npassword = "y"`)).toThrow(
+      "Missing required config field: character",
+    );
   });
 });
 

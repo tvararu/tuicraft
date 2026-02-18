@@ -12,12 +12,16 @@ export function parseSetupFlags(args: string[]): Config {
   if (!account || !password || !character) {
     throw new Error("Required: --account, --password, --character");
   }
+  const portStr = get("port");
+  if (portStr !== undefined && Number.isNaN(parseInt(portStr, 10))) {
+    throw new Error(`Invalid --port value: ${portStr}`);
+  }
   return {
     account,
     password,
     character,
     host: get("host") ?? "t1",
-    port: parseInt(get("port") ?? "3724", 10),
+    port: parseInt(portStr ?? "3724", 10),
     language: parseInt(get("language") ?? "1", 10),
     timeout_minutes: parseInt(get("timeout_minutes") ?? "30", 10),
   };

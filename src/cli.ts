@@ -37,6 +37,9 @@ function flagValue(args: string[], flag: string): string | undefined {
 function parseRead(args: string[]): CliAction {
   const rest = args.slice(1);
   const wait = flagValue(rest, "--wait");
+  if (wait !== undefined && Number.isNaN(parseInt(wait, 10))) {
+    throw new Error(`Invalid --wait value: ${wait}`);
+  }
   return {
     mode: "read",
     wait: wait !== undefined ? parseInt(wait, 10) : undefined,
@@ -64,43 +67,51 @@ function parseSubcommand(args: string[]): CliAction | undefined {
   }
 }
 
+function filterFlags(args: string[]): string[] {
+  return args.filter((a) => a !== "--json");
+}
+
 function parseFlagCommands(args: string[]): CliAction | undefined {
   if (hasFlag(args, "--help")) return { mode: "help" };
   if (hasFlag(args, "--daemon")) return { mode: "daemon" };
 
   if (hasFlag(args, "-w")) {
-    const idx = args.indexOf("-w");
+    const filtered = filterFlags(args);
+    const idx = filtered.indexOf("-w");
     return {
       mode: "whisper",
-      target: args[idx + 1] ?? "",
-      message: args.slice(idx + 2).join(" "),
+      target: filtered[idx + 1] ?? "",
+      message: filtered.slice(idx + 2).join(" "),
       json: hasFlag(args, "--json"),
     };
   }
 
   if (hasFlag(args, "-y")) {
-    const idx = args.indexOf("-y");
+    const filtered = filterFlags(args);
+    const idx = filtered.indexOf("-y");
     return {
       mode: "yell",
-      message: args.slice(idx + 1).join(" "),
+      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
     };
   }
 
   if (hasFlag(args, "-g")) {
-    const idx = args.indexOf("-g");
+    const filtered = filterFlags(args);
+    const idx = filtered.indexOf("-g");
     return {
       mode: "guild",
-      message: args.slice(idx + 1).join(" "),
+      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
     };
   }
 
   if (hasFlag(args, "-p")) {
-    const idx = args.indexOf("-p");
+    const filtered = filterFlags(args);
+    const idx = filtered.indexOf("-p");
     return {
       mode: "party",
-      message: args.slice(idx + 1).join(" "),
+      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
     };
   }
@@ -118,7 +129,7 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
   return undefined;
 }
 
-export function parseArgs(args: string[], _isTTY: boolean): CliAction {
+export function parseArgs(args: string[]): CliAction {
   if (args.length === 0) return { mode: "interactive" };
 
   const sub = parseSubcommand(args);
@@ -174,7 +185,15 @@ async function socketExists(path: string): Promise<boolean> {
 export async function ensureDaemon(): Promise<void> {
   const { socketPath } = await import("paths");
   const path = socketPath();
-  if (await socketExists(path)) return;
+  if (await socketExists(path)) {
+    try {
+      await sendToSocket("STATUS", path);
+      return;
+    } catch {
+      const { unlink } = await import("node:fs/promises");
+      await unlink(path).catch(() => {});
+    }
+  }
 
   const isSource = Bun.main.endsWith(".ts");
   const args = isSource

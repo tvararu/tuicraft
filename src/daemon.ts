@@ -2,10 +2,17 @@ import { readConfig } from "config";
 import { authHandshake, worldSession } from "client";
 import type { WorldHandle, ChatMessage } from "client";
 import { RingBuffer } from "ring-buffer";
-import { formatMessage, formatMessageJson, formatWhoResults } from "tui";
+import {
+  formatMessage,
+  formatMessageJson,
+  formatWhoResults,
+  formatWhoResultsJson,
+} from "tui";
 import { socketPath, pidPath, runtimeDir, logPath } from "paths";
 import { SessionLog } from "session-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
+
+export type EventEntry = { text: string; json: string };
 
 export type IpcCommand =
   | { type: "say"; message: string }
@@ -14,10 +21,13 @@ export type IpcCommand =
   | { type: "party"; message: string }
   | { type: "whisper"; target: string; message: string }
   | { type: "read" }
+  | { type: "read_json" }
   | { type: "read_wait"; ms: number }
+  | { type: "read_wait_json"; ms: number }
   | { type: "stop" }
   | { type: "status" }
-  | { type: "who"; filter?: string };
+  | { type: "who"; filter?: string }
+  | { type: "who_json"; filter?: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
   const spaceIdx = line.indexOf(" ");
@@ -45,14 +55,20 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     }
     case "READ":
       return { type: "read" };
+    case "READ_JSON":
+      return { type: "read_json" };
     case "READ_WAIT":
       return { type: "read_wait", ms: parseInt(rest, 10) };
+    case "READ_WAIT_JSON":
+      return { type: "read_wait_json", ms: parseInt(rest, 10) };
     case "STOP":
       return { type: "stop" };
     case "STATUS":
       return { type: "status" };
     case "WHO":
       return rest ? { type: "who", filter: rest } : { type: "who" };
+    case "WHO_JSON":
+      return rest ? { type: "who_json", filter: rest } : { type: "who_json" };
     default:
       return undefined;
   }
@@ -66,10 +82,18 @@ export function writeLines(
   socket.write("\n");
 }
 
+function drainText(events: RingBuffer<EventEntry>): string[] {
+  return events.drain().map((e) => e.text);
+}
+
+function drainJson(events: RingBuffer<EventEntry>): string[] {
+  return events.drain().map((e) => e.json);
+}
+
 export async function dispatchCommand(
   cmd: IpcCommand,
   handle: WorldHandle,
-  events: RingBuffer<string>,
+  events: RingBuffer<EventEntry>,
   socket: { write(data: string | Uint8Array): number; end(): void },
   cleanup: () => void,
 ): Promise<boolean> {
@@ -95,12 +119,23 @@ export async function dispatchCommand(
       writeLines(socket, ["OK"]);
       return false;
     case "read":
-      writeLines(socket, events.drain());
+      writeLines(socket, drainText(events));
+      return false;
+    case "read_json":
+      writeLines(socket, drainJson(events));
       return false;
     case "read_wait":
       await new Promise<void>((resolve) => {
         setTimeout(() => {
-          writeLines(socket, events.drain());
+          writeLines(socket, drainText(events));
+          resolve();
+        }, cmd.ms);
+      });
+      return false;
+    case "read_wait_json":
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          writeLines(socket, drainJson(events));
           resolve();
         }, cmd.ms);
       });
@@ -117,17 +152,22 @@ export async function dispatchCommand(
       writeLines(socket, formatWhoResults(results).split("\n"));
       return false;
     }
+    case "who_json": {
+      const results = await handle.who(cmd.filter ? { name: cmd.filter } : {});
+      writeLines(socket, [formatWhoResultsJson(results)]);
+      return false;
+    }
   }
 }
 
 export function onChatMessage(
   msg: ChatMessage,
-  events: RingBuffer<string>,
+  events: RingBuffer<EventEntry>,
   log: SessionLog,
 ): void {
-  events.push(formatMessage(msg));
-  const json = JSON.parse(formatMessageJson(msg));
-  log.append(json);
+  const jsonStr = formatMessageJson(msg);
+  events.push({ text: formatMessage(msg), json: jsonStr });
+  log.append(JSON.parse(jsonStr)).catch(() => {});
 }
 
 export function startDaemonServer(
@@ -137,13 +177,16 @@ export function startDaemonServer(
   opts?: { onActivity?: () => void },
 ): {
   server: ReturnType<typeof Bun.listen>;
-  events: RingBuffer<string>;
+  events: RingBuffer<EventEntry>;
   cleanup: () => void;
 } {
-  const events = new RingBuffer<string>(1000);
+  const events = new RingBuffer<EventEntry>(1000);
   handle.onMessage((msg) => onChatMessage(msg, events, log));
 
+  let cleaned = false;
   function cleanup(): void {
+    if (cleaned) return;
+    cleaned = true;
     handle.close();
     server.stop();
     unlink(sock).catch(() => {});
@@ -209,7 +252,10 @@ export async function startDaemon(): Promise<void> {
     },
   });
 
+  let cleaned = false;
   function cleanup(): void {
+    if (cleaned) return;
+    cleaned = true;
     baseCleanup();
     unlink(pid).catch(() => {});
   }

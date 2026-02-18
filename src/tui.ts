@@ -136,6 +136,22 @@ export function formatWhoResults(results: WhoResult[]): string {
   return `[who] ${results.length} results: ${names}`;
 }
 
+export function formatWhoResultsJson(results: WhoResult[]): string {
+  return JSON.stringify({
+    type: "WHO",
+    count: results.length,
+    results: results.map((r) => ({
+      name: r.name,
+      guild: r.guild,
+      level: r.level,
+      classId: r.classId,
+      race: r.race,
+      gender: r.gender,
+      zone: r.zone,
+    })),
+  });
+}
+
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;
