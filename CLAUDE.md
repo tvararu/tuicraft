@@ -69,13 +69,24 @@ PRs:
 ## Reference Codebases
 
 - `../wow-chat-client` — Node.js WoW chat client, primary protocol reference
-- `../azerothcore-wotlk-playerbots` — AzerothCore server source (C++)
+- `../azerothcore-wotlk-playerbots` — AzerothCore server source (C++). Key files:
+  `src/server/game/Entities/Object/Updates/UpdateFields.h` (complete field index
+  for 3.3.5a build 12340), `src/server/game/Handlers/SpellHandler.cpp`
+  (CMSG_CAST_SPELL handling), `src/server/game/Handlers/GroupHandler.cpp`
+  (SMSG_PARTY_MEMBER_STATS construction)
 - `../wowser` — browser-based WoW 3.3.5a client (ES2015/React/WebGL). Useful for
   cross-referencing opcodes, auth error codes, and realm parsing. Key files:
   `src/lib/auth/` (challenge opcodes, reconnect), `src/lib/game/opcode.js` (40+
   world opcodes), `src/lib/realms/handler.js` (realm list parsing),
   `src/lib/crypto/srp.js` (SRP-6 reference — uses insecure Math.random, ours is
   better)
+- `../wow_messages` — auto-generated WoW protocol definitions in `.wowm` format
+  (Rust crate source). Machine-readable spec for every opcode across Vanilla/TBC/
+  WotLK. Key path: `wow_message_parser/wowm/world/` for world packet definitions
+- `../namigator` — C++ pathfinding + line-of-sight library for WoW (Alpha through
+  WotLK). Reads MPQ files, generates navmesh via Recast/Detour. For v4+ movement
+- `../namigator-rs` — Rust bindings for namigator. Clean API reference for the FFI
+  wrapper we'll build: `find_path`, `line_of_sight`, `find_height`, `load_adt`
 
 ## Protocol Gotchas
 
