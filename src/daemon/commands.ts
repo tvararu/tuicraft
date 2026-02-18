@@ -6,7 +6,7 @@ import {
   formatWhoResultsJson,
   formatGroupEvent,
 } from "ui/tui";
-import { SessionLog } from "lib/session-log";
+import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 
 export type EventEntry = { text: string; json: string };
@@ -266,9 +266,9 @@ export function onGroupEvent(
 ): void {
   const text = formatGroupEvent(event);
   if (!text) return;
-  const json = JSON.stringify(formatGroupEventObj(event));
-  events.push({ text, json });
-  log.append(formatGroupEventObj(event)).catch(() => {});
+  const obj = formatGroupEventObj(event);
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
 }
 
 export function onChatMessage(
