@@ -28,6 +28,16 @@ run = "bun test ./src/test/live.ts"
 description = "Run tests with coverage report"
 run = "bun test --coverage"
 
+[tasks."test:slowest"]
+description = "Show 10 slowest tests"
+run = '''
+bun test --reporter=junit \
+  --reporter-outfile=tmp/junit.xml && \
+sed -n 's/.*<testcase name="\([^"]*\)".* time="\([^"]*\)".*/\2\t\1/p' \
+  tmp/junit.xml | sort -rn | head -10 \
+  | awk -F'	' '{printf "%7.1fms  %s\n",$1*1000,$2}'
+'''
+
 [tasks.ci]
 description = "Run all CI checks in parallel"
 run = "mise typecheck ::: test ::: format"
