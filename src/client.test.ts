@@ -276,7 +276,9 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(50);
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("probe");
+      await received;
       handle.close();
       await handle.closed;
     } finally {
@@ -321,10 +323,10 @@ describe("world error paths", () => {
     const ws = await startMockWorldServer();
     try {
       const handle = await worldSession(
-        { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 10 },
+        { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 1 },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(50);
+      await Bun.sleep(5);
       handle.close();
       await handle.closed;
     } finally {
@@ -364,7 +366,9 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
 
-      await Bun.sleep(50);
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("probe");
+      await received;
 
       expect(handle.getChannel(1)).toBe("General");
       expect(handle.getChannel(2)).toBe("Trade");
@@ -674,7 +678,9 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
 
-      await Bun.sleep(50);
+      let received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("probe");
+      await received;
       expect(handle.getChannel(1)).toBe("General");
 
       const w = new PacketWriter();
@@ -684,7 +690,9 @@ describe("world error paths", () => {
       w.uint8(0);
       ws.inject(GameOpcode.SMSG_CHANNEL_NOTIFY, w.finish());
 
-      await Bun.sleep(50);
+      received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("probe");
+      await received;
       expect(handle.getChannel(1)).toBe("Trade");
 
       handle.close();
@@ -706,7 +714,9 @@ describe("world error paths", () => {
       );
 
       ws.inject(GameOpcode.SMSG_TIME_SYNC_REQ, new Uint8Array(0));
-      await Bun.sleep(50);
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("probe");
+      await received;
 
       expect(stderrSpy).toHaveBeenCalled();
       const output = String(stderrSpy.mock.calls[0]![0]);
