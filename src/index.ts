@@ -10,6 +10,7 @@ const { values } = parseArgs({
     account: { type: "string" },
     password: { type: "string" },
     character: { type: "string" },
+    language: { type: "string", default: "1" },
   },
 });
 
@@ -26,6 +27,7 @@ const config = {
   account: values.account.toUpperCase(),
   password: values.password.toUpperCase(),
   character: values.character,
+  language: parseInt(values.language!, 10),
 };
 
 async function main() {

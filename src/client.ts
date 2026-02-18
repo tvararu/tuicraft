@@ -8,6 +8,7 @@ import {
   buildChatMessage,
   buildNameQuery,
   parseNameQueryResponse,
+  parseChannelNotify,
   buildWhoRequest,
   parseWhoResponse,
   type ChatMessage as RawChatMessage,
@@ -70,6 +71,7 @@ export type WorldHandle = {
   sendParty(message: string): void;
   sendRaid(message: string): void;
   sendChannel(channel: string, message: string): void;
+  getChannel(index: number): string | undefined;
   who(opts?: {
     name?: string;
     minLevel?: number;
@@ -86,6 +88,7 @@ type WorldConn = {
   pendingHeader?: { size: number; opcode: number };
   nameCache: Map<number, string>;
   pendingMessages: Map<number, RawChatMessage[]>;
+  channels: string[];
   onMessage?: (msg: ChatMessage) => void;
 };
 
@@ -283,13 +286,23 @@ function handleGmChatMessage(conn: WorldConn, r: PacketReader): void {
 
 function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseNameQueryResponse(r);
-  if (!result.found || !result.name) return;
-
-  conn.nameCache.set(result.guidLow, result.name);
   const pending = conn.pendingMessages.get(result.guidLow);
-  if (pending) {
-    for (const raw of pending) deliverMessage(conn, raw, result.name);
-    conn.pendingMessages.delete(result.guidLow);
+  if (!pending) return;
+
+  const name = result.found && result.name ? result.name : "";
+  if (result.found && result.name)
+    conn.nameCache.set(result.guidLow, result.name);
+  for (const raw of pending) deliverMessage(conn, raw, name);
+  conn.pendingMessages.delete(result.guidLow);
+}
+
+function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
+  const event = parseChannelNotify(r);
+  if (event.type === "joined") {
+    conn.channels.push(event.channel);
+  } else if (event.type === "left") {
+    const idx = conn.channels.indexOf(event.channel);
+    if (idx !== -1) conn.channels.splice(idx, 1);
   }
 }
 
@@ -376,6 +389,7 @@ export function worldSession(
       startTime: Date.now(),
       nameCache: new Map(),
       pendingMessages: new Map(),
+      channels: [],
     };
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -398,6 +412,9 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
       handlePlayerNotFound(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
+      handleChannelNotify(conn, r),
     );
 
     async function login() {
@@ -463,6 +480,9 @@ export function worldSession(
             GameOpcode.CMSG_MESSAGE_CHAT,
             buildChatMessage(ChatType.CHANNEL, lang, message, channel),
           );
+        },
+        getChannel(index) {
+          return conn.channels[index - 1];
         },
         async who(opts = {}) {
           sendPacket(conn, GameOpcode.CMSG_WHO, buildWhoRequest(opts));

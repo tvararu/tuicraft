@@ -169,9 +169,20 @@ export function startTui(
             handle.sendWhisper(lastWhisperFrom, cmd.message);
           }
           break;
-        case "channel":
-          handle.sendChannel(cmd.target, cmd.message);
+        case "channel": {
+          const channel = /^\d+$/.test(cmd.target)
+            ? handle.getChannel(parseInt(cmd.target, 10))
+            : cmd.target;
+          if (!channel) {
+            const errLine = interactive
+              ? `[system] Not in channel ${cmd.target}.`
+              : `SYSTEM\t\tNot in channel ${cmd.target}.`;
+            process.stdout.write(errLine + "\n");
+          } else {
+            handle.sendChannel(channel, cmd.message);
+          }
           break;
+        }
         case "who": {
           const results = await handle.who(
             cmd.target ? { name: cmd.target } : {},

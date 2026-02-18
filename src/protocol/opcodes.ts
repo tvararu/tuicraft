@@ -23,6 +23,7 @@ export const GameOpcode = {
   SMSG_WHO: 0x0063,
   CMSG_MESSAGE_CHAT: 0x0095,
   SMSG_MESSAGE_CHAT: 0x0096,
+  SMSG_CHANNEL_NOTIFY: 0x0099,
   SMSG_LOGIN_VERIFY_WORLD: 0x0236,
   CMSG_PING: 0x01dc,
   SMSG_PONG: 0x01dd,
@@ -39,6 +40,11 @@ export const Language = {
   UNIVERSAL: 0x00,
   ORCISH: 0x01,
   COMMON: 0x07,
+} as const;
+
+export const ChannelNotify = {
+  YOU_JOINED: 0x02,
+  YOU_LEFT: 0x03,
 } as const;
 
 export const ChatType = {

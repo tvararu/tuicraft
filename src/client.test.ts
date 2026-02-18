@@ -352,6 +352,27 @@ describe("world error paths", () => {
     }
   });
 
+  test("channel tracking populates from SMSG_CHANNEL_NOTIFY", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      await Bun.sleep(50);
+
+      expect(handle.getChannel(1)).toBe("General");
+      expect(handle.getChannel(2)).toBe("Trade");
+      expect(handle.getChannel(3)).toBeUndefined();
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("who returns results from mock server", async () => {
     const ws = await startMockWorldServer();
     try {
