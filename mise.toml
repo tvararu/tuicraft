@@ -53,3 +53,27 @@ run = "bunx prettier --check src/"
 [tasks."format:fix"]
 description = "Fix formatting"
 run = "bunx prettier --write src/"
+
+[tasks.worktree]
+description = "Create a worktree for feature work"
+usage = 'arg "<branch>"'
+run = '''
+set -e
+ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+DIR="$ROOT/.worktrees/$usage_branch"
+[ -d "$DIR" ] && echo "Already exists: $DIR" >&2 && exit 1
+git worktree add "$DIR" -b "$usage_branch" main
+cd "$DIR"
+mise trust
+mise bundle
+echo ""
+echo "Worktree ready: $DIR"
+''''
+
+[tasks."worktree:clean"]
+description = "Remove a worktree"
+usage = 'arg "<branch>"'
+run = """
+git worktree remove --force .worktrees/$usage_branch
+git branch -D $usage_branch
+"""
