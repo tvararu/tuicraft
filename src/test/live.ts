@@ -4,12 +4,15 @@ import { authHandshake, worldSession, type ChatMessage } from "client";
 const host = process.env["WOW_HOST"] ?? "t1";
 const port = parseInt(process.env["WOW_PORT"] ?? "3724", 10);
 
+const language = parseInt(process.env["WOW_LANGUAGE"] ?? "1", 10);
+
 const config1 = {
   host,
   port,
   account: process.env["WOW_ACCOUNT_1"] ?? "",
   password: process.env["WOW_PASSWORD_1"] ?? "",
   character: process.env["WOW_CHARACTER_1"] ?? "",
+  language,
 };
 
 const config2 = {
@@ -18,6 +21,7 @@ const config2 = {
   account: process.env["WOW_ACCOUNT_2"] ?? "",
   password: process.env["WOW_PASSWORD_2"] ?? "",
   character: process.env["WOW_CHARACTER_2"] ?? "",
+  language,
 };
 
 test("full login flow against live server", async () => {
