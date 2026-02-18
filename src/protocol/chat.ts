@@ -11,6 +11,7 @@ export type ChatMessage = {
 };
 
 export type NameQueryResult = {
+  guidLow: number;
   found: boolean;
   name?: string;
 };
@@ -41,8 +42,12 @@ export function parseChatMessage(r: PacketReader): ChatMessage {
   r.uint32LE();
   const messageLength = r.uint32LE();
   const messageBytes = r.bytes(messageLength);
-  const message = new TextDecoder().decode(messageBytes);
-  r.uint8();
+  const end =
+    messageLength > 0 && messageBytes[messageLength - 1] === 0
+      ? messageLength - 1
+      : messageLength;
+  const message = new TextDecoder().decode(messageBytes.subarray(0, end));
+  if (r.remaining > 0) r.uint8();
 
   return { type, language, senderGuidLow, senderGuidHigh, message, channel };
 }
@@ -70,11 +75,11 @@ export function buildNameQuery(guidLow: number, guidHigh: number): Uint8Array {
 }
 
 export function parseNameQueryResponse(r: PacketReader): NameQueryResult {
-  r.packedGuid();
+  const { low: guidLow } = r.packedGuid();
   const notFound = r.uint8();
-  if (notFound) return { found: false };
+  if (notFound) return { guidLow, found: false };
   const name = r.cString();
-  return { found: true, name };
+  return { guidLow, found: true, name };
 }
 
 export function buildWhoRequest(opts: {

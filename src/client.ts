@@ -214,7 +214,9 @@ function drainWorldPackets(conn: WorldConn): void {
 
     const { opcode } = conn.pendingHeader;
     conn.pendingHeader = undefined;
-    conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
+    try {
+      conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
+    } catch {}
   }
 }
 
@@ -271,16 +273,11 @@ function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseNameQueryResponse(r);
   if (!result.found || !result.name) return;
 
-  const name = result.name;
-
-  for (const [guidLow, messages] of conn.pendingMessages) {
-    const cached = conn.nameCache.get(guidLow);
-    if (cached !== undefined) continue;
-
-    conn.nameCache.set(guidLow, name);
-    for (const raw of messages) deliverMessage(conn, raw, name);
-    conn.pendingMessages.delete(guidLow);
-    break;
+  conn.nameCache.set(result.guidLow, result.name);
+  const pending = conn.pendingMessages.get(result.guidLow);
+  if (pending) {
+    for (const raw of pending) deliverMessage(conn, raw, result.name);
+    conn.pendingMessages.delete(result.guidLow);
   }
 }
 

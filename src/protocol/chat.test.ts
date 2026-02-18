@@ -144,6 +144,7 @@ describe("buildNameQuery / parseNameQueryResponse", () => {
     w.uint32LE(5);
 
     const result = parseNameQueryResponse(new PacketReader(w.finish()));
+    expect(result.guidLow).toBe(0x42);
     expect(result.found).toBe(true);
     expect(result.name).toBe("Xiara");
   });
@@ -155,6 +156,7 @@ describe("buildNameQuery / parseNameQueryResponse", () => {
     w.uint8(1);
 
     const result = parseNameQueryResponse(new PacketReader(w.finish()));
+    expect(result.guidLow).toBe(0x42);
     expect(result.found).toBe(false);
   });
 });
