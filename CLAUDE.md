@@ -129,3 +129,10 @@ PRs:
   in mock integration tests as a living spec
 - Chat messages must use a valid racial language (LANG_ORCISH=1 for Horde,
   LANG_COMMON=7 for Alliance) — server rejects LANG_UNIVERSAL (0) silently
+
+## WorldHandle
+
+- Two mocks exist: `src/test/mock-handle.ts` (shared) and an inline mock in
+  `src/daemon/start.test.ts` — update both when adding WorldHandle methods
+- `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
+  events need `as LogEntry` cast
