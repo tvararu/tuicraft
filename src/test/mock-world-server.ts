@@ -1,7 +1,7 @@
 import type { Socket, TCPSocketListener } from "bun";
 import { createHmac, createCipheriv, createDecipheriv } from "node:crypto";
-import { PacketReader, PacketWriter } from "protocol/packet";
-import { GameOpcode, ChatType, ChannelNotify } from "protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { GameOpcode, ChatType, ChannelNotify } from "wow/protocol/opcodes";
 import { sessionKey, serverSeed, FIXTURE_CHARACTER } from "test/fixtures";
 
 const ENCRYPT_KEY = "C2B3723CC6AED9B5343C53EE2F4367CE";

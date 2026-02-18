@@ -1,8 +1,8 @@
 import { test, expect, describe } from "bun:test";
-import { authHandshake, worldSession, type ChatMessage } from "client";
-import { sendToSocket } from "cli";
-import { startDaemonServer } from "daemon";
-import { SessionLog } from "session-log";
+import { authHandshake, worldSession, type ChatMessage } from "wow/client";
+import { sendToSocket } from "cli/ipc";
+import { startDaemonServer } from "daemon/server";
+import { SessionLog } from "lib/session-log";
 import { join } from "node:path";
 import { unlink } from "node:fs/promises";
 

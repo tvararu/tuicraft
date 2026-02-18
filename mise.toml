@@ -14,7 +14,7 @@ run = "bun install"
 
 [tasks.build]
 description = "Compile single binary"
-run = "bun build --compile src/index.ts --outfile dist/tuicraft"
+run = "bun build --compile src/main.ts --outfile dist/tuicraft"
 
 [tasks.test]
 description = "Run all tests"
