@@ -1,10 +1,11 @@
 import { createInterface } from "node:readline";
 import { ChatType } from "wow/protocol/opcodes";
-import type { WorldHandle, ChatMessage, WhoResult } from "wow/client";
+import type { WorldHandle, ChatMessage, ChatMode, WhoResult } from "wow/client";
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
 
 export type Command =
+  | { type: "chat"; message: string }
   | { type: "say"; message: string }
   | { type: "yell"; message: string }
   | { type: "guild"; message: string }
@@ -17,7 +18,7 @@ export type Command =
   | { type: "quit" };
 
 export function parseCommand(input: string): Command {
-  if (!input.startsWith("/")) return { type: "say", message: input };
+  if (!input.startsWith("/")) return { type: "chat", message: input };
 
   const spaceIdx = input.indexOf(" ");
   const cmd = spaceIdx === -1 ? input : input.slice(0, spaceIdx);
@@ -159,6 +160,17 @@ export function formatWhoResultsJson(results: WhoResult[]): string {
   });
 }
 
+export function formatPrompt(mode: ChatMode): string {
+  switch (mode.type) {
+    case "whisper":
+      return `[whisper: ${mode.target}] > `;
+    case "channel":
+      return `[${mode.channel}] > `;
+    default:
+      return `[${mode.type}] > `;
+  }
+}
+
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;
@@ -170,6 +182,9 @@ export async function executeCommand(
   cmd: Command,
 ): Promise<boolean> {
   switch (cmd.type) {
+    case "chat":
+      state.handle.sendInCurrentMode(cmd.message);
+      break;
     case "say":
       state.handle.sendSay(cmd.message);
       break;
@@ -248,7 +263,7 @@ export function startTui(
     const rl = createInterface({
       input: opts.input ?? process.stdin,
       output: interactive ? process.stdout : undefined,
-      prompt: interactive ? "> " : "",
+      prompt: interactive ? formatPrompt(handle.getLastChatMode()) : "",
       terminal: interactive,
     });
 
@@ -266,7 +281,10 @@ export function startTui(
         const msg = err instanceof Error ? err.message : String(err);
         write(formatError(msg) + "\n");
       }
-      if (interactive) rl.prompt();
+      if (interactive) {
+        rl.setPrompt(formatPrompt(handle.getLastChatMode()));
+        rl.prompt();
+      }
     });
 
     rl.on("SIGINT", () => {

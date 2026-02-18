@@ -4,6 +4,7 @@ import {
   parseCommand,
   formatMessage,
   formatMessageJson,
+  formatPrompt,
   startTui,
 } from "ui/tui";
 import { ChatType } from "wow/protocol/opcodes";
@@ -20,8 +21,8 @@ const flush = async (turns = 1): Promise<void> => {
 };
 
 describe("parseCommand", () => {
-  test("bare text becomes say", () => {
-    expect(parseCommand("hello")).toEqual({ type: "say", message: "hello" });
+  test("bare text becomes chat", () => {
+    expect(parseCommand("hello")).toEqual({ type: "chat", message: "hello" });
   });
 
   test("/s sends say", () => {
@@ -128,8 +129,8 @@ describe("parseCommand", () => {
     expect(parseCommand("/quit")).toEqual({ type: "quit" });
   });
 
-  test("empty string becomes say with empty message", () => {
-    expect(parseCommand("")).toEqual({ type: "say", message: "" });
+  test("empty string becomes chat with empty message", () => {
+    expect(parseCommand("")).toEqual({ type: "chat", message: "" });
   });
 
   test("unknown slash command becomes say with full input", () => {
@@ -257,19 +258,30 @@ describe("formatMessageJson", () => {
 });
 
 describe("startTui", () => {
-  test("dispatches say command", async () => {
+  test("bare text sends via sticky mode", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
-    const output: string[] = [];
 
-    const done = startTui(handle, false, {
-      input,
-      write: (s) => void output.push(s),
-    });
+    const done = startTui(handle, false, { input, write: () => {} });
     writeLine(input, "hello");
     await flush();
 
+    expect(handle.sendInCurrentMode).toHaveBeenCalledWith("hello");
+
+    input.end();
+    await done;
+  });
+
+  test("/say explicitly sends say and not sendInCurrentMode", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/say hello");
+    await flush();
+
     expect(handle.sendSay).toHaveBeenCalledWith("hello");
+    expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
 
     input.end();
     await done;
@@ -572,5 +584,27 @@ describe("startTui", () => {
 
     input.end();
     await done;
+  });
+});
+
+describe("formatPrompt", () => {
+  test("say mode", () => {
+    expect(formatPrompt({ type: "say" })).toBe("[say] > ");
+  });
+
+  test("party mode", () => {
+    expect(formatPrompt({ type: "party" })).toBe("[party] > ");
+  });
+
+  test("whisper mode includes target", () => {
+    expect(formatPrompt({ type: "whisper", target: "Xiara" })).toBe(
+      "[whisper: Xiara] > ",
+    );
+  });
+
+  test("channel mode includes channel name", () => {
+    expect(formatPrompt({ type: "channel", channel: "General" })).toBe(
+      "[General] > ",
+    );
   });
 });
