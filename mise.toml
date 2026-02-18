@@ -7,7 +7,14 @@ run = "bun install"
 
 [tasks.start]
 description = "Run the client"
-run = "bun run start"
+run = """
+bun src/index.ts \
+  --account "${WOW_ACCOUNT_1}" \
+  --password "${WOW_PASSWORD_1}" \
+  --character "${WOW_CHARACTER_1}" \
+  --host "${WOW_HOST:-t1}" \
+  --port "${WOW_PORT:-3724}"
+"""
 
 [tasks.test]
 description = "Run all tests"
