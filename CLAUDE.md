@@ -30,6 +30,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Testing
 
+- **Always run `mise test:live` yourself after protocol or daemon changes.** The
+  live server is always available. Do not ask the user to run it — run it. If it
+  fails for infrastructure reasons (server down, env vars missing), then defer to
+  the user.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
