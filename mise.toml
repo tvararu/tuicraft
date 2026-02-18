@@ -1,6 +1,13 @@
 [tools]
 bun = "latest"
 
+[settings]
+# We use a very short timeout to enforce a fast test suite and fast build. The
+# only exception is `mise test:live` which hits a live server and has network
+# latency and actually implements `sleep`s out of necessity. If mise tasks are
+# timing out, it means you need to make them faster, NOT increase the timeout.
+task_timeout = "500ms"  # CLAUDE: DO NOT CHANGE THIS OR YOU WILL BE FIRED.
+
 [tasks.bundle]
 description = "Install dependencies"
 run = "bun install"
@@ -8,17 +15,6 @@ run = "bun install"
 [tasks.build]
 description = "Compile single binary"
 run = "bun build --compile src/index.ts --outfile dist/tuicraft"
-
-[tasks.start]
-description = "Run the client"
-run = """
-bun src/index.ts \
-  --account "${WOW_ACCOUNT_1}" \
-  --password "${WOW_PASSWORD_1}" \
-  --character "${WOW_CHARACTER_1}" \
-  --host "${WOW_HOST:-t1}" \
-  --port "${WOW_PORT:-3724}"
-"""
 
 [tasks.test]
 description = "Run all tests"

@@ -11,7 +11,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format:fix` — fix formatting (`prettier --write`)
 - `mise bundle` — install dependencies (`bun install`)
 - `mise ci` — run typecheck, test, and format in parallel
-- `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
+- `MISE_TASK_TIMEOUT=60s mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 - `mise build` — compile single binary (`bun build --compile`)
 
 ## Code Style
@@ -30,10 +30,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Testing
 
-- **Always run `mise test:live` yourself after protocol or daemon changes.** The
-  live server is always available. Do not ask the user to run it — run it. If it
-  fails for infrastructure reasons (server down, env vars missing), then defer to
-  the user.
+- **Always run `MISE_TASK_TIMEOUT=60s mise test:live` yourself after protocol or
+  daemon changes.** The live server is always available. Do not ask the user to
+  run it — run it. If it fails for infrastructure reasons (server down, env vars
+  missing), then defer to the user.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
@@ -50,6 +50,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
+- `task_timeout = "500ms"` in mise.toml is the process-level kill switch — NEVER
+  bypass it with `MISE_TASK_TIMEOUT=<longer>` env overrides. The full test suite
+  runs under 100ms. If it hangs, there's a bug — fix the bug, not the timeout.
 
 ## Commits
 
@@ -87,6 +90,8 @@ PRs:
   WotLK). Reads MPQ files, generates navmesh via Recast/Detour. For v4+ movement
 - `../namigator-rs` — Rust bindings for namigator. Clean API reference for the FFI
   wrapper we'll build: `find_path`, `line_of_sight`, `find_height`, `load_adt`
+- wowdev.wiki is unnecessary — it 403s automated access and has no offline dump.
+  wow_messages and AzerothCore source cover everything needed for protocol work
 
 ## Protocol Gotchas
 
@@ -94,8 +99,8 @@ PRs:
   when decoding
 - `drainWorldPackets` must catch handler errors — one bad packet breaks all
   subsequent processing
-- Always run `mise test:live` after protocol changes — never claim something
-  works without verifying against the real server
+- Always run `MISE_TASK_TIMEOUT=60s mise test:live` after protocol changes —
+  never claim something works without verifying against the real server
 - Live-first testing: validate behavior against the real server, then encode it
   in mock integration tests as a living spec
 - Chat messages must use a valid racial language (LANG_ORCISH=1 for Horde,
