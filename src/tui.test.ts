@@ -1,6 +1,6 @@
 import { test, expect, describe, jest } from "bun:test";
 import { PassThrough } from "node:stream";
-import { parseCommand, formatMessage, startTui } from "tui";
+import { parseCommand, formatMessage, formatMessageJson, startTui } from "tui";
 import { ChatType } from "protocol/opcodes";
 import type { WorldHandle, ChatMessage } from "client";
 
@@ -170,58 +170,109 @@ describe("parseCommand", () => {
 });
 
 describe("formatMessage", () => {
-  test("non-interactive say", () => {
-    const msg = { type: ChatType.SAY, sender: "Alice", message: "hi" };
-    expect(formatMessage(msg, false)).toBe("SAY\tAlice\thi");
-  });
-
-  test("non-interactive unknown type uses TYPE_N", () => {
-    const msg = { type: 99, sender: "Bob", message: "wat" };
-    expect(formatMessage(msg, false)).toBe("TYPE_99\tBob\twat");
-  });
-
-  test("non-interactive whisper from", () => {
+  test("whisper from", () => {
     const msg = { type: ChatType.WHISPER, sender: "Eve", message: "psst" };
-    expect(formatMessage(msg, false)).toBe("WHISPER_FROM\tEve\tpsst");
+    expect(formatMessage(msg)).toBe("[whisper from Eve] psst");
   });
 
-  test("interactive whisper from", () => {
-    const msg = { type: ChatType.WHISPER, sender: "Eve", message: "psst" };
-    expect(formatMessage(msg, true)).toBe("[whisper from Eve] psst");
-  });
-
-  test("interactive whisper to", () => {
+  test("whisper to", () => {
     const msg = {
       type: ChatType.WHISPER_INFORM,
       sender: "Eve",
       message: "hey",
     };
-    expect(formatMessage(msg, true)).toBe("[whisper to Eve] hey");
+    expect(formatMessage(msg)).toBe("[whisper to Eve] hey");
   });
 
-  test("interactive system message", () => {
+  test("system message", () => {
     const msg = { type: ChatType.SYSTEM, sender: "", message: "Welcome" };
-    expect(formatMessage(msg, true)).toBe("[system] Welcome");
+    expect(formatMessage(msg)).toBe("[system] Welcome");
   });
 
-  test("interactive channel message", () => {
+  test("channel message", () => {
     const msg = {
       type: ChatType.CHANNEL,
       sender: "Al",
       message: "hey",
       channel: "General",
     };
-    expect(formatMessage(msg, true)).toBe("[General] Al: hey");
+    expect(formatMessage(msg)).toBe("[General] Al: hey");
   });
 
-  test("interactive generic say", () => {
+  test("generic say", () => {
     const msg = { type: ChatType.SAY, sender: "Alice", message: "hi" };
-    expect(formatMessage(msg, true)).toBe("[say] Alice: hi");
+    expect(formatMessage(msg)).toBe("[say] Alice: hi");
   });
 
-  test("interactive unknown type", () => {
+  test("unknown type", () => {
     const msg = { type: 99, sender: "Bob", message: "wat" };
-    expect(formatMessage(msg, true)).toBe("[type 99] Bob: wat");
+    expect(formatMessage(msg)).toBe("[type 99] Bob: wat");
+  });
+});
+
+describe("formatMessageJson", () => {
+  test("json say", () => {
+    const msg = { type: ChatType.SAY, sender: "Alice", message: "hi" };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "SAY",
+      sender: "Alice",
+      message: "hi",
+    });
+  });
+
+  test("json whisper from", () => {
+    const msg = { type: ChatType.WHISPER, sender: "Eve", message: "psst" };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "WHISPER_FROM",
+      sender: "Eve",
+      message: "psst",
+    });
+  });
+
+  test("json whisper to", () => {
+    const msg = {
+      type: ChatType.WHISPER_INFORM,
+      sender: "Eve",
+      message: "hey",
+    };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "WHISPER_TO",
+      sender: "Eve",
+      message: "hey",
+    });
+  });
+
+  test("json channel includes channel field", () => {
+    const msg = {
+      type: ChatType.CHANNEL,
+      sender: "Al",
+      message: "hey",
+      channel: "General",
+    };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "CHANNEL",
+      sender: "Al",
+      message: "hey",
+      channel: "General",
+    });
+  });
+
+  test("json system message", () => {
+    const msg = { type: ChatType.SYSTEM, sender: "", message: "Welcome" };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "SYSTEM",
+      sender: "",
+      message: "Welcome",
+    });
+  });
+
+  test("json unknown type uses TYPE_N", () => {
+    const msg = { type: 99, sender: "Bob", message: "wat" };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "TYPE_99",
+      sender: "Bob",
+      message: "wat",
+    });
   });
 });
 
@@ -334,7 +385,7 @@ describe("startTui", () => {
     writeLine(input, "/who");
     await flush(2);
 
-    expect(output.join("")).toContain("WHO\tTest\t80\tG");
+    expect(output.join("")).toContain("[who] 1 results: Test (80)");
 
     input.end();
     await done;
@@ -405,7 +456,7 @@ describe("startTui", () => {
       message: "hi",
     });
 
-    expect(output.join("")).toContain("SAY\tAlice\thi");
+    expect(output.join("")).toContain("[say] Alice: hi");
 
     input.end();
     await done;

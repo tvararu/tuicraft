@@ -80,14 +80,7 @@ const CHAT_TYPE_LABELS: Record<number, string> = {
   [ChatType.PARTY_LEADER]: "party leader",
 };
 
-export function formatMessage(msg: ChatMessage, interactive: boolean): string {
-  if (!interactive) {
-    const label =
-      CHAT_TYPE_LABELS[msg.type]?.toUpperCase().replace(/ /g, "_") ??
-      `TYPE_${msg.type}`;
-    return `${label}\t${msg.sender}\t${msg.message}`;
-  }
-
+export function formatMessage(msg: ChatMessage): string {
   const label = CHAT_TYPE_LABELS[msg.type] ?? `type ${msg.type}`;
 
   if (msg.type === ChatType.WHISPER) {
@@ -105,28 +98,46 @@ export function formatMessage(msg: ChatMessage, interactive: boolean): string {
   return `[${label}] ${msg.sender}: ${msg.message}`;
 }
 
-export function formatError(message: string, interactive: boolean): string {
-  return interactive ? `[system] ${message}` : `SYSTEM\t\t${message}`;
+const JSON_TYPE_LABELS: Record<number, string> = {
+  [ChatType.SYSTEM]: "SYSTEM",
+  [ChatType.SAY]: "SAY",
+  [ChatType.PARTY]: "PARTY",
+  [ChatType.RAID]: "RAID",
+  [ChatType.GUILD]: "GUILD",
+  [ChatType.OFFICER]: "OFFICER",
+  [ChatType.YELL]: "YELL",
+  [ChatType.WHISPER]: "WHISPER_FROM",
+  [ChatType.WHISPER_INFORM]: "WHISPER_TO",
+  [ChatType.EMOTE]: "EMOTE",
+  [ChatType.CHANNEL]: "CHANNEL",
+  [ChatType.RAID_LEADER]: "RAID_LEADER",
+  [ChatType.RAID_WARNING]: "RAID_WARNING",
+  [ChatType.PARTY_LEADER]: "PARTY_LEADER",
+};
+
+export function formatMessageJson(msg: ChatMessage): string {
+  const type = JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
+  const obj: Record<string, string> = {
+    type,
+    sender: msg.sender,
+    message: msg.message,
+  };
+  if (msg.channel) obj["channel"] = msg.channel;
+  return JSON.stringify(obj);
 }
 
-export function formatWhoResults(
-  results: WhoResult[],
-  interactive: boolean,
-): string {
-  if (interactive) {
-    const names =
-      results.map((r) => `${r.name} (${r.level})`).join(", ") || "none";
-    return `[who] ${results.length} results: ${names}`;
-  }
-  return (
-    results.map((r) => `WHO\t${r.name}\t${r.level}\t${r.guild}`).join("\n") ||
-    "WHO\t\t0\t"
-  );
+export function formatError(message: string): string {
+  return `[system] ${message}`;
+}
+
+export function formatWhoResults(results: WhoResult[]): string {
+  const names =
+    results.map((r) => `${r.name} (${r.level})`).join(", ") || "none";
+  return `[who] ${results.length} results: ${names}`;
 }
 
 export type TuiState = {
   handle: WorldHandle;
-  interactive: boolean;
   write: (s: string) => void;
   lastWhisperFrom: string | undefined;
 };
@@ -157,10 +168,7 @@ export async function executeCommand(
       break;
     case "reply":
       if (!state.lastWhisperFrom) {
-        state.write(
-          formatError("No one has whispered you yet.", state.interactive) +
-            "\n",
-        );
+        state.write(formatError("No one has whispered you yet.") + "\n");
       } else {
         state.handle.sendWhisper(state.lastWhisperFrom, cmd.message);
       }
@@ -170,10 +178,7 @@ export async function executeCommand(
         ? state.handle.getChannel(parseInt(cmd.target, 10))
         : cmd.target;
       if (!channel) {
-        state.write(
-          formatError(`Not in channel ${cmd.target}.`, state.interactive) +
-            "\n",
-        );
+        state.write(formatError(`Not in channel ${cmd.target}.`) + "\n");
       } else {
         state.handle.sendChannel(channel, cmd.message);
       }
@@ -183,7 +188,7 @@ export async function executeCommand(
       const results = await state.handle.who(
         cmd.target ? { name: cmd.target } : {},
       );
-      state.write(formatWhoResults(results, state.interactive) + "\n");
+      state.write(formatWhoResults(results) + "\n");
       break;
     }
     case "quit":
@@ -205,7 +210,6 @@ export function startTui(
   const write = opts.write ?? ((s: string) => void process.stdout.write(s));
   const state: TuiState = {
     handle,
-    interactive,
     write,
     lastWhisperFrom: undefined,
   };
@@ -213,7 +217,7 @@ export function startTui(
   return new Promise<void>((resolve) => {
     handle.onMessage((msg) => {
       if (msg.type === ChatType.WHISPER) state.lastWhisperFrom = msg.sender;
-      const line = formatMessage(msg, interactive);
+      const line = formatMessage(msg);
       write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
       if (interactive) rl.prompt(true);
     });
@@ -237,7 +241,7 @@ export function startTui(
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        write(formatError(msg, interactive) + "\n");
+        write(formatError(msg) + "\n");
       }
       if (interactive) rl.prompt();
     });
