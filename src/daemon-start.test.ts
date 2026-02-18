@@ -222,4 +222,24 @@ describe("startDaemon", () => {
     await promise;
     expect(client.mockHandleClose).toHaveBeenCalledTimes(1);
   });
+
+  test("STOP cleans up pid file before exit", async () => {
+    await writeTestConfig();
+    const client = makeMockClient();
+    const promise = startDaemon(client);
+    await waitForSetup();
+
+    const lines = await sendToSocket("STOP", `${rtDir}/sock`);
+    expect(lines).toEqual(["OK"]);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    for (let i = 0; i < 50; i++) {
+      if (!(await Bun.file(`${rtDir}/pid`).exists())) break;
+      await Bun.sleep(5);
+    }
+    expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
+
+    closedResolve();
+    await promise;
+  });
 });

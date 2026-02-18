@@ -214,12 +214,24 @@ export async function ensureDaemon(): Promise<void> {
     stdio: ["ignore", "ignore", "pipe"],
   });
   proc.unref();
+  const stderrChunks: string[] = [];
+  const stderrReader = proc.stderr.getReader();
+  const stderrDone = (async () => {
+    try {
+      while (true) {
+        const { value, done } = await stderrReader.read();
+        if (done) return;
+        stderrChunks.push(Buffer.from(value).toString());
+      }
+    } catch {}
+  })();
+  void stderrDone;
 
   for (let i = 0; i < 300; i++) {
     await Bun.sleep(100);
     if (await socketExists(path)) return;
   }
-  const stderr = (await new Response(proc.stderr).text()).trim();
+  const stderr = stderrChunks.join("").trim();
   const message = stderr
     ? `Daemon failed to start within 30 seconds:\n${stderr}`
     : "Daemon failed to start within 30 seconds";
