@@ -47,7 +47,7 @@ Single binary distribution/packaging via `bun build --compile` is possible, TBD.
 
 - [x] 🔐 **0.1 — Auth & Connect:** SRP-6 auth, Arc4-encrypted world session,
       character select, keepalive
-- [ ] 💬 **0.2 — Chat:** Send/receive whispers, say, guild chat. TUI with
+- [x] 💬 **0.2 — Chat:** Send/receive whispers, say, guild chat. TUI with
       interactive and pipe modes
 - [ ] 🌍 **0.3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
