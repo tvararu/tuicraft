@@ -1,11 +1,18 @@
 import { jest } from "bun:test";
-import type { WorldHandle, ChatMessage, ChatMode } from "wow/client";
+import type {
+  WorldHandle,
+  ChatMessage,
+  ChatMode,
+  GroupEvent,
+} from "wow/client";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
+  triggerGroupEvent(event: GroupEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
+  let groupEventCb: ((event: GroupEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -32,8 +39,20 @@ export function createMockHandle(): WorldHandle & {
       lastChatMode = mode;
     }),
     sendInCurrentMode: jest.fn(),
+    invite: jest.fn(),
+    uninvite: jest.fn(),
+    leaveGroup: jest.fn(),
+    setLeader: jest.fn(),
+    acceptInvite: jest.fn(),
+    declineInvite: jest.fn(),
+    onGroupEvent(cb) {
+      groupEventCb = cb;
+    },
     triggerMessage(msg) {
       messageCb?.(msg);
+    },
+    triggerGroupEvent(event) {
+      groupEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();
