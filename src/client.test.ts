@@ -4,7 +4,12 @@ import type { AuthResult } from "client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter } from "protocol/packet";
-import { AuthOpcode } from "protocol/opcodes";
+import {
+  AuthOpcode,
+  GameOpcode,
+  ChatType,
+  ChannelNotify,
+} from "protocol/opcodes";
 import { bigIntToLeBytes } from "crypto/srp";
 import {
   FIXTURE_ACCOUNT,
@@ -271,6 +276,7 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await Bun.sleep(50);
       handle.close();
       await handle.closed;
     } finally {
@@ -312,18 +318,16 @@ describe("world error paths", () => {
   });
 
   test("ping interval fires and server handles CMSG_PING", async () => {
-    jest.useFakeTimers();
     const ws = await startMockWorldServer();
     try {
       const handle = await worldSession(
-        { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 50 },
+        { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 10 },
         fakeAuth(ws.port),
       );
-      jest.advanceTimersByTime(100);
+      await Bun.sleep(50);
       handle.close();
       await handle.closed;
     } finally {
-      jest.useRealTimers();
       ws.stop();
     }
   });
@@ -388,6 +392,330 @@ describe("world error paths", () => {
       handle.close();
       await handle.closed;
     } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendSay sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("test say");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SAY);
+      expect(msg.message).toBe("test say");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendYell sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendYell("test yell");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.YELL);
+      expect(msg.message).toBe("test yell");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendGuild sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendGuild("test guild");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.GUILD);
+      expect(msg.message).toBe("test guild");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendParty sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendParty("test party");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.PARTY);
+      expect(msg.message).toBe("test party");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendRaid sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendRaid("test raid");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.RAID);
+      expect(msg.message).toBe("test raid");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendChannel sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendChannel("General", "test channel");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.CHANNEL);
+      expect(msg.message).toBe("test channel");
+      expect(msg.channel).toBe("General");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("cached sender name skips name query on second message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const first = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("first");
+      await first;
+
+      const second = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendSay("second");
+      const msg = await second;
+      expect(msg.sender).toBe(FIXTURE_CHARACTER);
+      expect(msg.message).toBe("second");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("multiple pending messages for same guid", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const messages: ChatMessage[] = [];
+      const gotTwo = new Promise<void>((resolve) => {
+        handle.onMessage((msg) => {
+          messages.push(msg);
+          if (messages.length === 2) resolve();
+        });
+      });
+
+      handle.sendSay("msg1");
+      handle.sendSay("msg2");
+      await gotTwo;
+
+      expect(messages[0]!.message).toBe("msg1");
+      expect(messages[1]!.message).toBe("msg2");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("zero-guid system message delivers with empty sender", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint8(ChatType.SYSTEM);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      const msgBytes = new TextEncoder().encode("Server shutting down");
+      w.uint32LE(msgBytes.byteLength);
+      w.rawBytes(msgBytes);
+      w.uint8(0);
+      ws.inject(GameOpcode.SMSG_MESSAGE_CHAT, w.finish());
+
+      const msg = await received;
+      expect(msg.sender).toBe("");
+      expect(msg.message).toBe("Server shutting down");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("GM chat message delivers with sender name from packet", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint8(ChatType.SAY);
+      w.uint32LE(0);
+      w.uint32LE(0x42);
+      w.uint32LE(0x00);
+      w.uint32LE(0);
+      const nameBytes = new TextEncoder().encode("GameMaster");
+      w.uint32LE(nameBytes.byteLength);
+      w.rawBytes(nameBytes);
+      w.uint32LE(0x42);
+      w.uint32LE(0x00);
+      const msgBytes = new TextEncoder().encode("hello from gm");
+      w.uint32LE(msgBytes.byteLength);
+      w.rawBytes(msgBytes);
+      w.uint8(0);
+      ws.inject(GameOpcode.SMSG_GM_MESSAGECHAT, w.finish());
+
+      const msg = await received;
+      expect(msg.sender).toBe("GameMaster");
+      expect(msg.message).toBe("hello from gm");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("player not found delivers system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.cString("Ghostplayer");
+      ws.inject(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.message).toBe(
+        'No player named "Ghostplayer" is currently playing.',
+      );
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("channel left removes from channel list", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      await Bun.sleep(50);
+      expect(handle.getChannel(1)).toBe("General");
+
+      const w = new PacketWriter();
+      w.uint8(ChannelNotify.YOU_LEFT);
+      w.cString("General");
+      w.uint32LE(0);
+      w.uint8(0);
+      ws.inject(GameOpcode.SMSG_CHANNEL_NOTIFY, w.finish());
+
+      await Bun.sleep(50);
+      expect(handle.getChannel(1)).toBe("Trade");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("handler error in drainWorldPackets logs to stderr", async () => {
+    const ws = await startMockWorldServer();
+    const stderrSpy = jest
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      ws.inject(GameOpcode.SMSG_TIME_SYNC_REQ, new Uint8Array(0));
+      await Bun.sleep(50);
+
+      expect(stderrSpy).toHaveBeenCalled();
+      const output = String(stderrSpy.mock.calls[0]![0]);
+      expect(output).toContain("0x390");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      stderrSpy.mockRestore();
       ws.stop();
     }
   });

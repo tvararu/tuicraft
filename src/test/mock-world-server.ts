@@ -293,9 +293,11 @@ export function startMockWorldServer(opts?: {
 }): Promise<{
   port: number;
   stop(): void;
+  inject(opcode: number, body: Uint8Array): void;
 }> {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
+  let activeSocket: Socket<ConnState> | undefined;
 
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
@@ -304,13 +306,16 @@ export function startMockWorldServer(opts?: {
       data: { buf: new Uint8Array(0) },
       socket: {
         open(socket) {
+          activeSocket = socket;
           sendAuthChallenge(socket);
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
           drainPackets(socket, authStatus, sendTimeSync);
         },
-        close() {},
+        close() {
+          activeSocket = undefined;
+        },
       },
     });
 
@@ -318,6 +323,12 @@ export function startMockWorldServer(opts?: {
       port: listener.port,
       stop() {
         listener.stop(true);
+      },
+      inject(opcode: number, body: Uint8Array) {
+        if (!activeSocket) throw new Error("No active connection");
+        activeSocket.write(
+          buildServerPacket(opcode, body, activeSocket.data.arc4),
+        );
       },
     });
   });
