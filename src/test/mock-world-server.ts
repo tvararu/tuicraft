@@ -149,6 +149,59 @@ function handlePing(socket: Socket<ConnState>, body: Uint8Array): void {
   send(socket, GameOpcode.SMSG_PONG, w.finish());
 }
 
+function handleMessageChat(socket: Socket<ConnState>, body: Uint8Array): void {
+  const r = new PacketReader(body);
+  const chatType = r.uint32LE();
+  r.uint32LE();
+  let target = "";
+  if (chatType === 0x07 || chatType === 0x11) {
+    target = r.cString();
+  }
+  const message = r.cString();
+
+  const w = new PacketWriter();
+  w.uint8(chatType);
+  w.uint32LE(0);
+  w.uint32LE(0x42);
+  w.uint32LE(0x00);
+  w.uint32LE(0);
+  if (chatType === 0x11) w.cString(target);
+  w.uint32LE(0x42);
+  w.uint32LE(0x00);
+  const msgBytes = new TextEncoder().encode(message);
+  w.uint32LE(msgBytes.byteLength);
+  w.rawBytes(msgBytes);
+  w.uint8(0);
+  send(socket, 0x0096, w.finish());
+}
+
+function handleNameQuery(socket: Socket<ConnState>): void {
+  const w = new PacketWriter();
+  w.uint8(0x01);
+  w.uint8(0x42);
+  w.uint8(0);
+  w.cString(FIXTURE_CHARACTER);
+  w.cString("");
+  w.uint32LE(1);
+  w.uint32LE(0);
+  w.uint32LE(1);
+  send(socket, 0x0051, w.finish());
+}
+
+function handleWho(socket: Socket<ConnState>): void {
+  const w = new PacketWriter();
+  w.uint32LE(1);
+  w.uint32LE(1);
+  w.cString(FIXTURE_CHARACTER);
+  w.cString("");
+  w.uint32LE(10);
+  w.uint32LE(1);
+  w.uint32LE(1);
+  w.uint8(0);
+  w.uint32LE(1);
+  send(socket, 0x0063, w.finish());
+}
+
 function handlePacket(
   socket: Socket<ConnState>,
   opcode: number,
@@ -162,6 +215,9 @@ function handlePacket(
   else if (opcode === GameOpcode.CMSG_PLAYER_LOGIN)
     handlePlayerLogin(socket, sendTimeSync);
   else if (opcode === GameOpcode.CMSG_PING) handlePing(socket, body);
+  else if (opcode === 0x0095) handleMessageChat(socket, body);
+  else if (opcode === 0x0050) handleNameQuery(socket);
+  else if (opcode === 0x0062) handleWho(socket);
 }
 
 function drainPackets(
