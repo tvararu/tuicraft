@@ -347,6 +347,22 @@ describe("world error paths", () => {
     }
   });
 
+  test("sendWhisper with empty target does not poison sticky mode", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.sendWhisper("", "");
+      expect(handle.getLastChatMode()).toEqual({ type: "say" });
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("sendWhisper sends message and receives echo", async () => {
     const ws = await startMockWorldServer();
     try {

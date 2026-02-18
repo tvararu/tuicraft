@@ -447,7 +447,7 @@ export function worldSession(
           conn.onMessage = cb;
         },
         sendWhisper(target, message) {
-          conn.lastChatMode = { type: "whisper", target };
+          if (target) conn.lastChatMode = { type: "whisper", target };
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
