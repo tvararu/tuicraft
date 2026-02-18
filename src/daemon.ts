@@ -174,7 +174,7 @@ export function startDaemonServer(
   handle: WorldHandle,
   sock: string,
   log: SessionLog,
-  opts?: { onActivity?: () => void },
+  opts?: { onActivity?: () => void; onStop?: () => void },
 ): {
   server: ReturnType<typeof Bun.listen>;
   events: RingBuffer<EventEntry>;
@@ -192,26 +192,72 @@ export function startDaemonServer(
     unlink(sock).catch(() => {});
   }
 
+  type SocketState = { buffer: string; processing: boolean; ended: boolean };
+  const states = new WeakMap<
+    { write(data: string | Uint8Array): number; end(): void },
+    SocketState
+  >();
+
+  function getState(socket: {
+    write(data: string | Uint8Array): number;
+    end(): void;
+  }): SocketState {
+    const existing = states.get(socket);
+    if (existing) return existing;
+    const state: SocketState = { buffer: "", processing: false, ended: false };
+    states.set(socket, state);
+    return state;
+  }
+
+  function processLine(
+    socket: { write(data: string | Uint8Array): number; end(): void },
+    state: SocketState,
+    line: string,
+  ): void {
+    if (state.processing || state.ended) return;
+    state.processing = true;
+    opts?.onActivity?.();
+    const cmd = parseIpcCommand(line);
+    if (!cmd) {
+      writeLines(socket, ["ERR unknown command"]);
+      state.ended = true;
+      state.processing = false;
+      socket.end();
+      return;
+    }
+    dispatchCommand(cmd, handle, events, socket, cleanup)
+      .then((shouldExit) => {
+        if (shouldExit) (opts?.onStop ?? (() => process.exit(0)))();
+      })
+      .catch(() => {
+        writeLines(socket, ["ERR internal"]);
+      })
+      .finally(() => {
+        state.processing = false;
+        if (state.ended) return;
+        const nextBreak = state.buffer.indexOf("\n");
+        if (nextBreak !== -1) {
+          const next = state.buffer.slice(0, nextBreak).trim();
+          state.buffer = state.buffer.slice(nextBreak + 1);
+          processLine(socket, state, next);
+          return;
+        }
+        state.ended = true;
+        socket.end();
+      });
+  }
+
   const server = Bun.listen({
     unix: sock,
     socket: {
       data(socket, data) {
-        opts?.onActivity?.();
-        const line = Buffer.from(data).toString().trim();
-        const cmd = parseIpcCommand(line);
-        if (!cmd) {
-          writeLines(socket, ["ERR unknown command"]);
-          socket.end();
-          return;
-        }
-        dispatchCommand(cmd, handle, events, socket, cleanup)
-          .then((shouldExit) => {
-            if (shouldExit) process.exit(0);
-          })
-          .catch(() => {
-            writeLines(socket, ["ERR internal"]);
-          })
-          .finally(() => socket.end());
+        const state = getState(socket);
+        state.buffer += Buffer.from(data).toString();
+        const breakIdx = state.buffer.indexOf("\n");
+        if (breakIdx === -1) return;
+        const line = state.buffer.slice(0, breakIdx).trim();
+        state.buffer = state.buffer.slice(breakIdx + 1);
+        processLine(socket, state, line);
       },
     },
   });
@@ -249,19 +295,23 @@ export async function startDaemon(client?: {
   const timeoutMs = cfg.timeout_minutes * 60 * 1000;
 
   const log = new SessionLog(logPath());
-  const { cleanup: baseCleanup } = startDaemonServer(handle, sock, log, {
-    onActivity: () => {
-      lastActivity = Date.now();
-    },
-  });
-
+  let baseCleanup: (() => void) | undefined;
   let cleaned = false;
   function cleanup(): void {
     if (cleaned) return;
     cleaned = true;
-    baseCleanup();
+    if (baseCleanup) baseCleanup();
     unlink(pid).catch(() => {});
   }
+  ({ cleanup: baseCleanup } = startDaemonServer(handle, sock, log, {
+    onActivity: () => {
+      lastActivity = Date.now();
+    },
+    onStop: () => {
+      cleanup();
+      process.exit(0);
+    },
+  }));
 
   const idleCheck = setInterval(() => {
     if (Date.now() - lastActivity > timeoutMs) {

@@ -606,6 +606,89 @@ describe("IPC round-trip", () => {
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
+  test("buffers split command chunks before parsing", async () => {
+    const origListen = Bun.listen;
+    let capturedData:
+      | ((
+          socket: {
+            write(data: string | Uint8Array): number;
+            end(): void;
+          },
+          data: ArrayBuffer | ArrayBufferView,
+        ) => void | Promise<void>)
+      | undefined;
+    let stopFn: ReturnType<typeof jest.fn> | undefined;
+
+    Bun.listen = jest.fn((opts: { socket: { data: typeof capturedData } }) => {
+      capturedData = opts.socket.data;
+      stopFn = jest.fn();
+      return { stop: stopFn } as unknown as ReturnType<typeof Bun.listen>;
+    }) as unknown as typeof Bun.listen;
+
+    try {
+      const handle = createMockHandle();
+      const log = new SessionLog(`./tmp/test-daemon-split-${Date.now()}.jsonl`);
+      const { cleanup } = startDaemonServer(
+        handle,
+        `./tmp/test-daemon-split-${Date.now()}.sock`,
+        log,
+      );
+      const socket = createMockSocket();
+
+      capturedData!(socket, Buffer.from("STA"));
+      capturedData!(socket, Buffer.from("TUS\n"));
+      await Promise.resolve();
+
+      expect(socket.written()).toBe("CONNECTED\n\n");
+
+      cleanup();
+      expect(stopFn).toHaveBeenCalled();
+    } finally {
+      Bun.listen = origListen;
+    }
+  });
+
+  test("processes multiple commands from a single chunk", async () => {
+    const origListen = Bun.listen;
+    let capturedData:
+      | ((
+          socket: {
+            write(data: string | Uint8Array): number;
+            end(): void;
+          },
+          data: ArrayBuffer | ArrayBufferView,
+        ) => void | Promise<void>)
+      | undefined;
+    let stopFn: ReturnType<typeof jest.fn> | undefined;
+
+    Bun.listen = jest.fn((opts: { socket: { data: typeof capturedData } }) => {
+      capturedData = opts.socket.data;
+      stopFn = jest.fn();
+      return { stop: stopFn } as unknown as ReturnType<typeof Bun.listen>;
+    }) as unknown as typeof Bun.listen;
+
+    try {
+      const handle = createMockHandle();
+      const log = new SessionLog(`./tmp/test-daemon-multi-${Date.now()}.jsonl`);
+      const { cleanup } = startDaemonServer(
+        handle,
+        `./tmp/test-daemon-multi-${Date.now()}.sock`,
+        log,
+      );
+      const socket = createMockSocket();
+
+      capturedData!(socket, Buffer.from("STATUS\nSTATUS\n"));
+      await Bun.sleep(0);
+
+      expect(socket.written()).toBe("CONNECTED\n\nCONNECTED\n\n");
+
+      cleanup();
+      expect(stopFn).toHaveBeenCalled();
+    } finally {
+      Bun.listen = origListen;
+    }
+  });
+
   test("onMessage wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerMessage({

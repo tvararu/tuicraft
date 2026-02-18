@@ -39,6 +39,28 @@ function fakeProc(stderrText = ""): FakeProc {
   };
 }
 
+function fakeProcWithOpenStderr(): FakeProc {
+  return {
+    unref() {},
+    stderr: new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("bind EADDRINUSE"));
+      },
+    }),
+  };
+}
+
+function fakeProcWithErroredStderr(): FakeProc {
+  return {
+    unref() {},
+    stderr: new ReadableStream({
+      start(c) {
+        c.error(new Error("stderr read failed"));
+      },
+    }),
+  };
+}
+
 function listenStatus(path: string): ReturnType<typeof Bun.listen> {
   const server = Bun.listen({
     unix: path,
@@ -120,6 +142,28 @@ describe("ensureDaemon", () => {
 
     await expect(ensureDaemon()).rejects.toThrow(
       "Daemon failed to start within 30 seconds:\nbind EADDRINUSE",
+    );
+  });
+
+  test("times out even when stderr stream stays open", async () => {
+    Bun.spawn = jest.fn(() =>
+      fakeProcWithOpenStderr(),
+    ) as unknown as typeof Bun.spawn;
+    Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
+
+    await expect(ensureDaemon()).rejects.toThrow(
+      "Daemon failed to start within 30 seconds:\nbind EADDRINUSE",
+    );
+  });
+
+  test("times out when stderr stream errors", async () => {
+    Bun.spawn = jest.fn(() =>
+      fakeProcWithErroredStderr(),
+    ) as unknown as typeof Bun.spawn;
+    Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
+
+    await expect(ensureDaemon()).rejects.toThrow(
+      "Daemon failed to start within 30 seconds",
     );
   });
 });
