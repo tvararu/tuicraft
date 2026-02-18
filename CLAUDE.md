@@ -12,6 +12,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise bundle` — install dependencies (`bun install`)
 - `mise ci` — run typecheck, test, and format in parallel
 - `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
+- `mise build` — compile single binary (`bun build --compile`)
 
 ## Code Style
 
@@ -21,6 +22,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Never write comments
 - Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket`
   built-in, etc.)
+- `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
+  Bun equivalents exist
 - Bun automatically loads `.env`, so don't use dotenv
 
 ## Testing
@@ -33,6 +36,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Prefer promise-based waiting over `Bun.sleep()` — await the event, not a
   hardcoded delay
 - Use `./tmp/` for scratch files, not `/tmp/` (gitignored)
+- macOS `tmpdir()` returns `/var/folders/.../T/`, not `/tmp/` — don't hardcode
+  `/tmp/` paths
 - Live tests read `WOW_LANGUAGE` env var (default: 1/Orcish for Horde accounts)
 
 ## Commits

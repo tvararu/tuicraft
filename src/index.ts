@@ -8,25 +8,16 @@ async function main() {
       const { authHandshake, worldSession } = await import("client");
       const { readConfig } = await import("config");
       const cfg = await readConfig();
-      const auth = await authHandshake({
+      const clientCfg = {
         host: cfg.host,
         port: cfg.port,
         account: cfg.account.toUpperCase(),
         password: cfg.password.toUpperCase(),
         character: cfg.character,
         language: cfg.language,
-      });
-      const handle = await worldSession(
-        {
-          host: cfg.host,
-          port: cfg.port,
-          account: cfg.account.toUpperCase(),
-          password: cfg.password.toUpperCase(),
-          character: cfg.character,
-          language: cfg.language,
-        },
-        auth,
-      );
+      };
+      const auth = await authHandshake(clientCfg);
+      const handle = await worldSession(clientCfg, auth);
       const { startTui } = await import("tui");
       await startTui(handle, process.stdin.isTTY ?? false);
       break;

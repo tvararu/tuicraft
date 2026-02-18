@@ -2,8 +2,9 @@ import { readConfig } from "config";
 import { authHandshake, worldSession } from "client";
 import type { WorldHandle, ChatMessage } from "client";
 import { RingBuffer } from "ring-buffer";
-import { formatMessage, formatWhoResults } from "tui";
-import { socketPath, pidPath, runtimeDir } from "paths";
+import { formatMessage, formatMessageJson, formatWhoResults } from "tui";
+import { socketPath, pidPath, runtimeDir, logPath } from "paths";
+import { SessionLog } from "session-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 
 export type IpcCommand =
@@ -120,8 +121,14 @@ async function dispatchCommand(
   }
 }
 
-function onChatMessage(msg: ChatMessage, events: RingBuffer<string>): void {
+function onChatMessage(
+  msg: ChatMessage,
+  events: RingBuffer<string>,
+  log: SessionLog,
+): void {
   events.push(formatMessage(msg));
+  const json = JSON.parse(formatMessageJson(msg));
+  log.append(json);
 }
 
 export async function startDaemon(): Promise<void> {
@@ -148,7 +155,8 @@ export async function startDaemon(): Promise<void> {
   const handle = await worldSession(clientCfg, auth);
 
   const events = new RingBuffer<string>(1000);
-  handle.onMessage((msg) => onChatMessage(msg, events));
+  const log = new SessionLog(logPath());
+  handle.onMessage((msg) => onChatMessage(msg, events, log));
 
   function cleanup(): void {
     handle.close();
