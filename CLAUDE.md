@@ -41,6 +41,11 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - macOS `tmpdir()` returns `/var/folders/.../T/`, not `/tmp/` — don't hardcode
   `/tmp/` paths
 - Live tests read `WOW_LANGUAGE` env var (default: 1/Orcish for Horde accounts)
+- `Bun.connect()` returns a promise — connection errors escape `new Promise`
+  constructors. Chain `.catch(reject)` on the returned promise, not try/catch
+- `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
+  `close` — detect the protocol terminator in `data` handler instead
+- Use unique socket paths per test (counter + timestamp) to avoid cleanup races
 
 ## Commits
 
@@ -61,6 +66,12 @@ PRs:
 
 - `../wow-chat-client` — Node.js WoW chat client, primary protocol reference
 - `../azerothcore-wotlk-playerbots` — AzerothCore server source (C++)
+- `../wowser` — browser-based WoW 3.3.5a client (ES2015/React/WebGL). Useful for
+  cross-referencing opcodes, auth error codes, and realm parsing. Key files:
+  `src/lib/auth/` (challenge opcodes, reconnect), `src/lib/game/opcode.js` (40+
+  world opcodes), `src/lib/realms/handler.js` (realm list parsing),
+  `src/lib/crypto/srp.js` (SRP-6 reference — uses insecure Math.random, ours is
+  better)
 
 ## Protocol Gotchas
 
