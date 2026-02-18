@@ -12,6 +12,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise ci` — run typecheck, test, and format in parallel
 - `MISE_TASK_TIMEOUT=60s mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 - `mise build` — compile single binary (`bun build --compile`)
+- `mise test:slowest` — show 10 slowest tests via junit XML
 
 ## Code Style
 
@@ -23,6 +24,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   built-in, etc.)
 - `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
   Bun equivalents exist
+- `Bun.write` has no permission mode option — use `writeFile` from
+  `node:fs/promises` with `{ mode: 0o600 }` when writing files containing
+  secrets
 - `Bun.file().exists()` only works on regular files — use `fs.access()` for
   unix sockets and other special files
 - Bun automatically loads `.env`, so don't use dotenv
@@ -56,6 +60,16 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `task_timeout = "500ms"` in mise.toml is the process-level kill switch — NEVER
   bypass it with `MISE_TASK_TIMEOUT=<longer>` env overrides. The full test suite
   runs under 100ms. If it hangs, there's a bug — fix the bug, not the timeout.
+- `Bun.sleep(0)` yields one microtask tick (enough for `.then()` chains);
+  `Bun.sleep(1)` yields one full event loop turn (needed for filesystem I/O like
+  `unlink` to complete) — prefer the minimum needed in tests
+- `bun test` suppresses per-test lines when piped — use `mise test:slowest` or
+  `--reporter=junit --reporter-outfile=<file>` for timing data
+
+## Mise Task Authoring
+
+- Use `'''` (TOML literal strings) for tasks with regex/backslashes — `"""`
+  processes escapes and breaks sed/awk patterns
 
 ## Commits
 
