@@ -9,6 +9,7 @@ import {
   parseIpcCommand,
   dispatchCommand,
   onChatMessage,
+  onGroupEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
@@ -103,6 +104,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   const { handle, sock, log, onActivity, onStop } = args;
   const events = new RingBuffer<EventEntry>(1000);
   handle.onMessage((msg) => onChatMessage(msg, events, log));
+  handle.onGroupEvent((event) => onGroupEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
