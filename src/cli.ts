@@ -161,19 +161,30 @@ export async function sendToSocket(command: string): Promise<string[]> {
   });
 }
 
+async function socketExists(path: string): Promise<boolean> {
+  const { access } = await import("node:fs/promises");
+  return access(path)
+    .then(() => true)
+    .catch(() => false);
+}
+
 export async function ensureDaemon(): Promise<void> {
   const { socketPath } = await import("paths");
   const path = socketPath();
-  if (await Bun.file(path).exists()) return;
+  if (await socketExists(path)) return;
 
-  const proc = Bun.spawn([process.execPath, "--daemon"], {
+  const isSource = Bun.main.endsWith(".ts");
+  const args = isSource
+    ? [process.execPath, Bun.main, "--daemon"]
+    : [process.execPath, "--daemon"];
+  const proc = Bun.spawn(args, {
     stdio: ["ignore", "ignore", "ignore"],
   });
   proc.unref();
 
   for (let i = 0; i < 300; i++) {
     await Bun.sleep(100);
-    if (await Bun.file(path).exists()) return;
+    if (await socketExists(path)) return;
   }
   throw new Error("Daemon failed to start within 30 seconds");
 }
