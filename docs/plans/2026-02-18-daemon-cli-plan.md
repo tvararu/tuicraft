@@ -30,24 +30,20 @@ Add to `mise.toml`:
 ```toml
 [tasks.build]
 description = "Compile single binary"
-run = "bun build --compile src/index.ts --outfile tuicraft"
+run = "bun build --compile src/index.ts --outfile dist/tuicraft"
 ```
 
-**Step 2: Add `tuicraft` to .gitignore**
-
-Append `tuicraft` (the compiled binary) to `.gitignore`.
-
-**Step 3: Run the build**
+**Step 2: Run the build**
 
 Run: `mise build`
-Expected: Produces `./tuicraft` binary, no errors.
+Expected: Produces `./dist/tuicraft` binary, no errors.
 
-**Step 4: Verify binary runs**
+**Step 3: Verify binary runs**
 
-Run: `./tuicraft --help` (will error since no --help yet, but should show the existing "Usage:" error from `src/index.ts`)
+Run: `./dist/tuicraft --help` (will error since no --help yet, but should show the existing "Usage:" error from `src/index.ts`)
 Expected: Prints usage message and exits, proving the binary works.
 
-**Step 5: Commit**
+**Step 4: Commit**
 
 ```
 Add mise build task for single binary
@@ -1079,41 +1075,41 @@ Wire everything together and validate against the real server.
 **Step 1: Build the binary**
 
 Run: `mise build`
-Expected: Produces `./tuicraft` binary.
+Expected: Produces `./dist/tuicraft` binary.
 
 **Step 2: Test setup command**
 
-Run: `./tuicraft setup --account x --password xwow2026 --character Xia --host t1`
+Run: `./dist/tuicraft setup --account x --password xwow2026 --character Xia --host t1`
 Expected: `Config saved to ~/.config/tuicraft/config.toml`
 
 **Step 3: Test one-shot say**
 
-Run: `./tuicraft "hello from binary"`
+Run: `./dist/tuicraft "hello from binary"`
 Expected: Daemon boots (may take a few seconds for auth), sends message, exits.
 
 **Step 4: Test read**
 
-Run: `./tuicraft read`
+Run: `./dist/tuicraft read`
 Expected: Prints any buffered events (system messages from login).
 
 **Step 5: Test read --wait**
 
-Run: `./tuicraft read --wait 5 --json`
+Run: `./dist/tuicraft read --wait 5 --json`
 Expected: Waits 5 seconds, prints any events as JSONL, exits.
 
 **Step 6: Test status**
 
-Run: `./tuicraft status`
+Run: `./dist/tuicraft status`
 Expected: Shows daemon is running, connected.
 
 **Step 7: Test stop**
 
-Run: `./tuicraft stop`
+Run: `./dist/tuicraft stop`
 Expected: Daemon shuts down cleanly.
 
 **Step 8: Test interactive reattach**
 
-Run: `./tuicraft "hello"` (boots daemon), then `./tuicraft` (should reattach).
+Run: `./dist/tuicraft "hello"` (boots daemon), then `./dist/tuicraft` (should reattach).
 Expected: Interactive readline prompt, can send commands, see events.
 
 **Step 9: Commit**

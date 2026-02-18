@@ -41,7 +41,7 @@ The client connects to the authserver, authenticates, picks the first realm,
 logs in as the named character, and enters a keepalive loop responding to time
 sync requests and sending pings.
 
-Single binary distribution/packaging via `bun build --compile` is possible, TBD.
+`mise build` compiles a standalone binary to `dist/tuicraft` via `bun build --compile`.
 
 ## Roadmap
 

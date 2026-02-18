@@ -206,7 +206,7 @@ fast drain via `read`; the log file is for history.
 
 ## Single Binary
 
-`bun build --compile src/index.ts --outfile tuicraft` produces a self-contained
+`bun build --compile src/index.ts --outfile dist/tuicraft` produces a self-contained
 executable. No Bun runtime, no node_modules, no mise needed on the target
 machine. The mise tasks remain for development (`mise test`, `mise ci`).
 
