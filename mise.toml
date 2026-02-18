@@ -68,7 +68,7 @@ mise trust
 mise bundle
 echo ""
 echo "Worktree ready: $DIR"
-''''
+'''
 
 [tasks."worktree:clean"]
 description = "Remove a worktree"
