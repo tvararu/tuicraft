@@ -339,7 +339,7 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 1 },
         fakeAuth(ws.port),
       );
-      await Bun.sleep(1);
+      await Bun.sleep(2);
       handle.close();
       await handle.closed;
     } finally {
