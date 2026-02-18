@@ -16,6 +16,7 @@ export type IpcSocket = {
 };
 
 export type IpcCommand =
+  | { type: "chat"; message: string }
   | { type: "say"; message: string }
   | { type: "yell"; message: string }
   | { type: "guild"; message: string }
@@ -77,7 +78,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "WHO_JSON":
       return rest ? { type: "who_json", filter: rest } : { type: "who_json" };
     default:
-      return undefined;
+      return line ? { type: "chat", message: line } : undefined;
   }
 }
 
@@ -102,6 +103,18 @@ export async function dispatchCommand(
   cleanup: () => void,
 ): Promise<boolean> {
   switch (cmd.type) {
+    case "chat": {
+      handle.sendInCurrentMode(cmd.message);
+      const mode = handle.getLastChatMode();
+      const label =
+        mode.type === "whisper"
+          ? `WHISPER ${mode.target}`
+          : mode.type === "channel"
+            ? `CHANNEL ${mode.channel}`
+            : mode.type.toUpperCase();
+      writeLines(socket, [`OK ${label}`]);
+      return false;
+    }
     case "say":
       handle.sendSay(cmd.message);
       writeLines(socket, ["OK"]);
