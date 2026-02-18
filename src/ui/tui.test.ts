@@ -173,6 +173,27 @@ describe("parseCommand", () => {
   test("/decline", () => {
     expect(parseCommand("/decline")).toEqual({ type: "decline" });
   });
+
+  test("/invite with no target falls back to say", () => {
+    expect(parseCommand("/invite")).toEqual({
+      type: "say",
+      message: "/invite",
+    });
+  });
+
+  test("/kick with no target falls back to say", () => {
+    expect(parseCommand("/kick")).toEqual({
+      type: "say",
+      message: "/kick",
+    });
+  });
+
+  test("/leader with no target falls back to say", () => {
+    expect(parseCommand("/leader")).toEqual({
+      type: "say",
+      message: "/leader",
+    });
+  });
 });
 
 describe("formatMessage", () => {

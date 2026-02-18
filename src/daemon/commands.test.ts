@@ -166,6 +166,18 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("DECLINE")).toEqual({ type: "decline" });
   });
 
+  test("INVITE with no target returns undefined", () => {
+    expect(parseIpcCommand("INVITE")).toBeUndefined();
+  });
+
+  test("KICK with no target returns undefined", () => {
+    expect(parseIpcCommand("KICK")).toBeUndefined();
+  });
+
+  test("LEADER with no target returns undefined", () => {
+    expect(parseIpcCommand("LEADER")).toBeUndefined();
+  });
+
   test("unrecognized verb becomes chat", () => {
     expect(parseIpcCommand("DANCE")).toEqual({
       type: "chat",
@@ -502,6 +514,78 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.invite).toHaveBeenCalledWith("Voidtrix");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("kick calls handle.uninvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "kick", target: "Voidtrix" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.uninvite).toHaveBeenCalledWith("Voidtrix");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("leave calls handle.leaveGroup and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "leave" }, handle, events, socket, cleanup);
+
+    expect(handle.leaveGroup).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("leader calls handle.setLeader and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "leader", target: "Voidtrix" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.setLeader).toHaveBeenCalledWith("Voidtrix");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("accept calls handle.acceptInvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "accept" }, handle, events, socket, cleanup);
+
+    expect(handle.acceptInvite).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("decline calls handle.declineInvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "decline" }, handle, events, socket, cleanup);
+
+    expect(handle.declineInvite).toHaveBeenCalled();
     expect(socket.written()).toBe("OK\n\n");
   });
 
