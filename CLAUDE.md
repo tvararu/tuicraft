@@ -2,12 +2,15 @@
 
 ## Commands
 
-Use `mise` to run tasks (not `bun` directly):
+Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - `mise start` — run the client (`bun src/index.ts`)
 - `mise test` — run all tests (`bun test`)
 - `mise typecheck` — type-check (`tsc --noEmit`)
+- `mise format` — check formatting (`prettier --check`)
+- `mise format:fix` — fix formatting (`prettier --write`)
 - `mise bundle` — install dependencies (`bun install`)
+- `mise ci` — run typecheck, test, and format in parallel
 
 ## Code Style
 

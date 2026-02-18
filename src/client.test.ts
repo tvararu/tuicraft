@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
-import { authHandshake, worldSession } from "client";
+import { authHandshake, worldSession, type ChatMessage } from "client";
 import type { AuthResult } from "client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
@@ -320,6 +320,48 @@ describe("world error paths", () => {
         fakeAuth(ws.port),
       );
       await Bun.sleep(120);
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendWhisper sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received: ChatMessage[] = [];
+      handle.onMessage((msg) => received.push(msg));
+
+      handle.sendWhisper("Someone", "test whisper");
+      await Bun.sleep(500);
+
+      expect(received.length).toBeGreaterThan(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("who returns results from mock server", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const results = await handle.who({});
+      expect(results.length).toBe(1);
+      expect(results[0]!.name).toBe(FIXTURE_CHARACTER);
+
       handle.close();
       await handle.closed;
     } finally {

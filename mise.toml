@@ -21,6 +21,10 @@ run = "bun test ./src/test/live.ts"
 description = "Run tests with coverage report"
 run = "bun test --coverage"
 
+[tasks.ci]
+description = "Run all CI checks in parallel"
+run = "mise typecheck ::: test ::: format"
+
 [tasks.typecheck]
 description = "Type-check with tsc"
 run = "bun run typecheck"
