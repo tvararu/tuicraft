@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { ChatType, Language } from "protocol/opcodes";
+import { ChatType, ChannelNotify, Language } from "protocol/opcodes";
 import {
   parseChatMessage,
   buildChatMessage,
@@ -8,6 +8,7 @@ import {
   parseNameQueryResponse,
   buildWhoRequest,
   parseWhoResponse,
+  parseChannelNotify,
 } from "protocol/chat";
 
 describe("parseChatMessage", () => {
@@ -241,5 +242,45 @@ describe("buildWhoRequest / parseWhoResponse", () => {
 
     const results = parseWhoResponse(new PacketReader(w.finish()));
     expect(results).toHaveLength(0);
+  });
+});
+
+describe("parseChannelNotify", () => {
+  test("parses YOU_JOINED", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.YOU_JOINED);
+    w.cString("General - Elwynn Forest");
+    w.uint8(0x10);
+    w.uint32LE(1);
+    w.uint32LE(0);
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "joined",
+      channel: "General - Elwynn Forest",
+    });
+  });
+
+  test("parses YOU_LEFT", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.YOU_LEFT);
+    w.cString("General - Elwynn Forest");
+    w.uint32LE(1);
+    w.uint8(1);
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "left",
+      channel: "General - Elwynn Forest",
+    });
+  });
+
+  test("returns other for unknown type", () => {
+    const w = new PacketWriter();
+    w.uint8(0x00);
+    w.cString("General");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({ type: "other" });
   });
 });

@@ -1,7 +1,7 @@
 import type { Socket, TCPSocketListener } from "bun";
 import { createHmac, createCipheriv, createDecipheriv } from "node:crypto";
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { GameOpcode, ChatType } from "protocol/opcodes";
+import { GameOpcode, ChatType, ChannelNotify } from "protocol/opcodes";
 import { sessionKey, serverSeed, FIXTURE_CHARACTER } from "test/fixtures";
 
 const ENCRYPT_KEY = "C2B3723CC6AED9B5343C53EE2F4367CE";
@@ -123,6 +123,16 @@ function handleCharEnum(socket: Socket<ConnState>): void {
   send(socket, GameOpcode.SMSG_CHAR_ENUM, buildCharEnumBody());
 }
 
+function buildChannelNotifyJoined(channel: string): Uint8Array {
+  const w = new PacketWriter();
+  w.uint8(ChannelNotify.YOU_JOINED);
+  w.cString(channel);
+  w.uint8(0);
+  w.uint32LE(0);
+  w.uint32LE(0);
+  return w.finish();
+}
+
 function handlePlayerLogin(
   socket: Socket<ConnState>,
   sendTimeSync: boolean,
@@ -134,6 +144,17 @@ function handlePlayerLogin(
   w.floatLE(0);
   w.floatLE(0);
   send(socket, GameOpcode.SMSG_LOGIN_VERIFY_WORLD, w.finish());
+
+  send(
+    socket,
+    GameOpcode.SMSG_CHANNEL_NOTIFY,
+    buildChannelNotifyJoined("General"),
+  );
+  send(
+    socket,
+    GameOpcode.SMSG_CHANNEL_NOTIFY,
+    buildChannelNotifyJoined("Trade"),
+  );
 
   if (sendTimeSync) {
     const syncW = new PacketWriter();

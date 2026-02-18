@@ -1,5 +1,5 @@
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { ChatType } from "protocol/opcodes";
+import { ChatType, ChannelNotify } from "protocol/opcodes";
 
 export type ChatMessage = {
   type: number;
@@ -113,6 +113,31 @@ export function buildWhoRequest(opts: {
   w.uint32LE(0);
   w.uint32LE(0);
   return w.finish();
+}
+
+export type ChannelNotifyEvent =
+  | { type: "joined"; channel: string }
+  | { type: "left"; channel: string }
+  | { type: "other" };
+
+export function parseChannelNotify(r: PacketReader): ChannelNotifyEvent {
+  const notifyType = r.uint8();
+  const channel = r.cString();
+
+  if (notifyType === ChannelNotify.YOU_JOINED) {
+    r.uint8();
+    r.uint32LE();
+    r.uint32LE();
+    return { type: "joined", channel };
+  }
+
+  if (notifyType === ChannelNotify.YOU_LEFT) {
+    r.uint32LE();
+    r.uint8();
+    return { type: "left", channel };
+  }
+
+  return { type: "other" };
 }
 
 export function parseWhoResponse(r: PacketReader): WhoResult[] {
