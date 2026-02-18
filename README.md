@@ -14,6 +14,7 @@ Requires [Bun](https://bun.sh) and [mise](https://mise.jdx.dev).
 ```
 mise trust -y
 mise bundle
+mise build
 ```
 
 ## Testing
@@ -31,17 +32,18 @@ cp mise.local.toml.example mise.local.toml
 mise test:live
 ```
 
-## Usage (WIP)
+## Usage
 
 ```
-mise start --account nesingwary --password hunter2 --character Hemet [--host t1] [--port 3724]
+./dist/tuicraft setup
+./dist/tuicraft                     # interactive TUI
+./dist/tuicraft "Hello world"       # send a say message (auto-starts daemon)
+./dist/tuicraft -w Hemet "Hey"      # whisper
+./dist/tuicraft read --wait 5       # read events, wait up to 5s
+./dist/tuicraft tail                # continuous event stream
+./dist/tuicraft status              # daemon status
+./dist/tuicraft stop                # stop daemon
 ```
-
-The client connects to the authserver, authenticates, picks the first realm,
-logs in as the named character, and enters a keepalive loop responding to time
-sync requests and sending pings.
-
-`mise build` compiles a standalone binary to `dist/tuicraft` via `bun build --compile`.
 
 ## Roadmap
 
