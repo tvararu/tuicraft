@@ -139,6 +139,39 @@ describe("parseCommand", () => {
       message: "/emote hello",
     });
   });
+
+  test("/invite", () => {
+    expect(parseCommand("/invite Voidtrix")).toEqual({
+      type: "invite",
+      target: "Voidtrix",
+    });
+  });
+
+  test("/kick", () => {
+    expect(parseCommand("/kick Voidtrix")).toEqual({
+      type: "kick",
+      target: "Voidtrix",
+    });
+  });
+
+  test("/leave", () => {
+    expect(parseCommand("/leave")).toEqual({ type: "leave" });
+  });
+
+  test("/leader", () => {
+    expect(parseCommand("/leader Voidtrix")).toEqual({
+      type: "leader",
+      target: "Voidtrix",
+    });
+  });
+
+  test("/accept", () => {
+    expect(parseCommand("/accept")).toEqual({ type: "accept" });
+  });
+
+  test("/decline", () => {
+    expect(parseCommand("/decline")).toEqual({ type: "decline" });
+  });
 });
 
 describe("formatMessage", () => {
@@ -595,6 +628,48 @@ describe("startTui", () => {
     await flush(2);
 
     expect(output.join("")).toContain("Timed out waiting for opcode 0x63");
+
+    input.end();
+    await done;
+  });
+
+  test("/invite calls handle.invite", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/invite Voidtrix");
+    await flush();
+
+    expect(handle.invite).toHaveBeenCalledWith("Voidtrix");
+
+    input.end();
+    await done;
+  });
+
+  test("/kick calls handle.uninvite", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/kick Voidtrix");
+    await flush();
+
+    expect(handle.uninvite).toHaveBeenCalledWith("Voidtrix");
+
+    input.end();
+    await done;
+  });
+
+  test("/leave calls handle.leaveGroup", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/leave");
+    await flush();
+
+    expect(handle.leaveGroup).toHaveBeenCalled();
 
     input.end();
     await done;

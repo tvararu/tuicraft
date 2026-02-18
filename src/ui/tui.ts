@@ -1,6 +1,12 @@
 import { createInterface } from "node:readline";
-import { ChatType } from "wow/protocol/opcodes";
-import type { WorldHandle, ChatMessage, ChatMode, WhoResult } from "wow/client";
+import { ChatType, PartyResult } from "wow/protocol/opcodes";
+import type {
+  WorldHandle,
+  ChatMessage,
+  ChatMode,
+  WhoResult,
+  GroupEvent,
+} from "wow/client";
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
 
@@ -15,6 +21,12 @@ export type Command =
   | { type: "reply"; message: string }
   | { type: "channel"; target: string; message: string }
   | { type: "who"; target?: string }
+  | { type: "invite"; target: string }
+  | { type: "kick"; target: string }
+  | { type: "leave" }
+  | { type: "leader"; target: string }
+  | { type: "accept" }
+  | { type: "decline" }
   | { type: "quit" };
 
 export function parseCommand(input: string): Command {
@@ -54,6 +66,18 @@ export function parseCommand(input: string): Command {
       return { type: "reply", message: rest };
     case "/who":
       return rest ? { type: "who", target: rest } : { type: "who" };
+    case "/invite":
+      return { type: "invite", target: rest };
+    case "/kick":
+      return { type: "kick", target: rest };
+    case "/leave":
+      return { type: "leave" };
+    case "/leader":
+      return { type: "leader", target: rest };
+    case "/accept":
+      return { type: "accept" };
+    case "/decline":
+      return { type: "decline" };
     case "/quit":
       return { type: "quit" };
     default: {
@@ -171,6 +195,50 @@ export function formatPrompt(mode: ChatMode): string {
   }
 }
 
+function partyResultLabel(result: number): string {
+  switch (result) {
+    case PartyResult.BAD_PLAYER_NAME:
+      return "player not found";
+    case PartyResult.GROUP_FULL:
+      return "group is full";
+    case PartyResult.ALREADY_IN_GROUP:
+      return "already in a group";
+    case PartyResult.NOT_LEADER:
+      return "you are not the leader";
+    case PartyResult.PLAYER_WRONG_FACTION:
+      return "wrong faction";
+    case PartyResult.IGNORING_YOU:
+      return "player is ignoring you";
+    default:
+      return `error ${result}`;
+  }
+}
+
+export function formatGroupEvent(event: GroupEvent): string | undefined {
+  switch (event.type) {
+    case "invite_received":
+      return `[group] ${event.from} invites you to a group`;
+    case "invite_result": {
+      const label =
+        event.result === PartyResult.SUCCESS
+          ? `Invited ${event.target}`
+          : `Cannot invite ${event.target}: ${partyResultLabel(event.result)}`;
+      return `[group] ${label}`;
+    }
+    case "leader_changed":
+      return `[group] ${event.name} is now the group leader`;
+    case "group_destroyed":
+      return "[group] Group has been disbanded";
+    case "kicked":
+      return "[group] You have been removed from the group";
+    case "invite_declined":
+      return `[group] ${event.name} has declined your invitation`;
+    case "group_list":
+    case "member_stats":
+      return undefined;
+  }
+}
+
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;
@@ -229,6 +297,24 @@ export async function executeCommand(
       state.write(formatWhoResults(results) + "\n");
       break;
     }
+    case "invite":
+      state.handle.invite(cmd.target);
+      break;
+    case "kick":
+      state.handle.uninvite(cmd.target);
+      break;
+    case "leave":
+      state.handle.leaveGroup();
+      break;
+    case "leader":
+      state.handle.setLeader(cmd.target);
+      break;
+    case "accept":
+      state.handle.acceptInvite();
+      break;
+    case "decline":
+      state.handle.declineInvite();
+      break;
     case "quit":
       return true;
   }
@@ -256,6 +342,13 @@ export function startTui(
     handle.onMessage((msg) => {
       if (msg.type === ChatType.WHISPER) state.lastWhisperFrom = msg.sender;
       const line = formatMessage(msg);
+      write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
+      if (interactive) rl.prompt(true);
+    });
+
+    handle.onGroupEvent((event) => {
+      const line = formatGroupEvent(event);
+      if (!line) return;
       write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
       if (interactive) rl.prompt(true);
     });
