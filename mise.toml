@@ -64,6 +64,7 @@ DIR="$ROOT/.worktrees/$usage_branch"
 [ -d "$DIR" ] && echo "Already exists: $DIR" >&2 && exit 1
 git worktree add "$DIR" -b "$usage_branch" main
 cd "$DIR"
+[ -f "$ROOT/.claude/settings.local.json" ] && cp "$ROOT/.claude/settings.local.json" "$DIR/.claude/"
 mise trust
 mise bundle
 echo ""
