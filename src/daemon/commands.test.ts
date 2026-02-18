@@ -4,6 +4,7 @@ import {
   parseIpcCommand,
   dispatchCommand,
   onChatMessage,
+  onGroupEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -668,6 +669,58 @@ describe("onChatMessage", () => {
     await Promise.resolve();
 
     expect(append).toHaveBeenCalled();
+  });
+});
+
+describe("onGroupEvent", () => {
+  test("pushes group_list with undefined text to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log: SessionLog = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+
+    onGroupEvent(
+      {
+        type: "group_list",
+        members: [{ name: "Alice", guidLow: 1, guidHigh: 0, online: true }],
+        leader: "Alice",
+      },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toBeUndefined();
+    expect(JSON.parse(drained[0]!.json)).toMatchObject({ type: "GROUP_LIST" });
+  });
+
+  test("pushes member_stats to session log", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.resolve());
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onGroupEvent(
+      { type: "member_stats", guidLow: 42, hp: 100, maxHp: 200 },
+      events,
+      log,
+    );
+
+    expect(append).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "PARTY_MEMBER_STATS", guidLow: 42 }),
+    );
+  });
+
+  test("pushes displayable events with text", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log: SessionLog = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+
+    onGroupEvent({ type: "invite_received", from: "Bob" }, events, log);
+
+    const drained = events.drain();
+    expect(drained[0]!.text).toBe("[group] Bob invites you to a group");
   });
 });
 

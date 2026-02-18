@@ -9,7 +9,7 @@ import {
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 
-export type EventEntry = { text: string; json: string };
+export type EventEntry = { text: string | undefined; json: string };
 
 export type IpcSocket = {
   write(data: string | Uint8Array): number;
@@ -107,7 +107,7 @@ export function writeLines(socket: IpcSocket, lines: string[]): void {
 }
 
 function drainText(events: RingBuffer<EventEntry>): string[] {
-  return events.drain().map((e) => e.text);
+  return events.drain().flatMap((e) => (e.text !== undefined ? [e.text] : []));
 }
 
 function drainJson(events: RingBuffer<EventEntry>): string[] {
@@ -224,9 +224,10 @@ function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
   switch (event.type) {
     case "invite_received":
       return { type: "GROUP_INVITE", from: event.from };
-    case "invite_result":
+    case "command_result":
       return {
-        type: "GROUP_INVITE_RESULT",
+        type: "GROUP_COMMAND_RESULT",
+        operation: event.operation,
         target: event.target,
         result: event.result,
       };
@@ -265,7 +266,6 @@ export function onGroupEvent(
   log: SessionLog,
 ): void {
   const text = formatGroupEvent(event);
-  if (!text) return;
   const obj = formatGroupEventObj(event);
   events.push({ text, json: JSON.stringify(obj) });
   log.append(obj as LogEntry).catch(() => {});
