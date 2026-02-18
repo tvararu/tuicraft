@@ -67,13 +67,19 @@ export function parseCommand(input: string): Command {
     case "/who":
       return rest ? { type: "who", target: rest } : { type: "who" };
     case "/invite":
-      return { type: "invite", target: rest };
+      return rest
+        ? { type: "invite", target: rest }
+        : { type: "say", message: input };
     case "/kick":
-      return { type: "kick", target: rest };
+      return rest
+        ? { type: "kick", target: rest }
+        : { type: "say", message: input };
     case "/leave":
       return { type: "leave" };
     case "/leader":
-      return { type: "leader", target: rest };
+      return rest
+        ? { type: "leader", target: rest }
+        : { type: "say", message: input };
     case "/accept":
       return { type: "accept" };
     case "/decline":

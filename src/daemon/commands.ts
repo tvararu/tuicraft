@@ -85,13 +85,13 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "WHO_JSON":
       return rest ? { type: "who_json", filter: rest } : { type: "who_json" };
     case "INVITE":
-      return { type: "invite", target: rest };
+      return rest ? { type: "invite", target: rest } : undefined;
     case "KICK":
-      return { type: "kick", target: rest };
+      return rest ? { type: "kick", target: rest } : undefined;
     case "LEAVE":
       return { type: "leave" };
     case "LEADER":
-      return { type: "leader", target: rest };
+      return rest ? { type: "leader", target: rest } : undefined;
     case "ACCEPT":
       return { type: "accept" };
     case "DECLINE":
