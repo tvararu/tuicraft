@@ -130,6 +130,52 @@ export function onChatMessage(
   log.append(json);
 }
 
+export function startDaemonServer(
+  handle: WorldHandle,
+  sock: string,
+  log: SessionLog,
+  opts?: { onActivity?: () => void },
+): {
+  server: ReturnType<typeof Bun.listen>;
+  events: RingBuffer<string>;
+  cleanup: () => void;
+} {
+  const events = new RingBuffer<string>(1000);
+  handle.onMessage((msg) => onChatMessage(msg, events, log));
+
+  function cleanup(): void {
+    handle.close();
+    server.stop();
+    unlink(sock).catch(() => {});
+  }
+
+  const server = Bun.listen({
+    unix: sock,
+    socket: {
+      data(socket, data) {
+        opts?.onActivity?.();
+        const line = Buffer.from(data).toString().trim();
+        const cmd = parseIpcCommand(line);
+        if (!cmd) {
+          writeLines(socket, ["ERR unknown command"]);
+          socket.end();
+          return;
+        }
+        dispatchCommand(cmd, handle, events, socket, cleanup)
+          .then((shouldExit) => {
+            if (shouldExit) process.exit(0);
+          })
+          .catch(() => {
+            writeLines(socket, ["ERR internal"]);
+          })
+          .finally(() => socket.end());
+      },
+    },
+  });
+
+  return { server, events, cleanup };
+}
+
 export async function startDaemon(): Promise<void> {
   const cfg = await readConfig();
   const sock = socketPath();
@@ -153,49 +199,27 @@ export async function startDaemon(): Promise<void> {
   const auth = await authHandshake(clientCfg);
   const handle = await worldSession(clientCfg, auth);
 
-  const events = new RingBuffer<string>(1000);
+  let lastActivity = Date.now();
+  const timeoutMs = cfg.timeout_minutes * 60 * 1000;
+
   const log = new SessionLog(logPath());
-  handle.onMessage((msg) => onChatMessage(msg, events, log));
+  const { cleanup: baseCleanup } = startDaemonServer(handle, sock, log, {
+    onActivity: () => {
+      lastActivity = Date.now();
+    },
+  });
 
   function cleanup(): void {
-    handle.close();
-    server.stop();
-    unlink(sock).catch(() => {});
+    baseCleanup();
     unlink(pid).catch(() => {});
   }
 
-  let lastActivity = Date.now();
-  const timeoutMs = cfg.timeout_minutes * 60 * 1000;
   const idleCheck = setInterval(() => {
     if (Date.now() - lastActivity > timeoutMs) {
       cleanup();
       process.exit(0);
     }
   }, 60_000);
-
-  const server = Bun.listen({
-    unix: sock,
-    socket: {
-      data(socket, data) {
-        lastActivity = Date.now();
-        const line = Buffer.from(data).toString().trim();
-        const cmd = parseIpcCommand(line);
-        if (!cmd) {
-          writeLines(socket, ["ERR unknown command"]);
-          socket.end();
-          return;
-        }
-        dispatchCommand(cmd, handle, events, socket, cleanup)
-          .then((shouldExit) => {
-            if (shouldExit) process.exit(0);
-          })
-          .catch(() => {
-            writeLines(socket, ["ERR internal"]);
-          })
-          .finally(() => socket.end());
-      },
-    },
-  });
 
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);

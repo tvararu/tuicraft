@@ -1,6 +1,10 @@
 import { test, expect, describe } from "bun:test";
 import { authHandshake, worldSession, type ChatMessage } from "client";
-import { ensureDaemon, sendToSocket } from "cli";
+import { sendToSocket } from "cli";
+import { startDaemonServer } from "daemon";
+import { SessionLog } from "session-log";
+import { join } from "node:path";
+import { unlink } from "node:fs/promises";
 
 const host = process.env["WOW_HOST"] ?? "t1";
 const port = parseInt(process.env["WOW_PORT"] ?? "3724", 10);
@@ -122,21 +126,34 @@ describe("two-client chat", () => {
 });
 
 describe("daemon IPC", () => {
-  test("STATUS, SAY, READ_WAIT, STOP via daemon socket", async () => {
-    await ensureDaemon();
+  test("STATUS, SAY, READ_WAIT via inline daemon server", async () => {
+    const auth = await authHandshake(config1);
+    const handle = await worldSession(config1, auth);
 
-    const status = await sendToSocket("STATUS");
-    expect(status).toEqual(["CONNECTED"]);
+    const sockPath = join("./tmp", `test-daemon-${Date.now()}.sock`);
+    const logFile = join("./tmp", `test-session-${Date.now()}.log`);
+    const log = new SessionLog(logFile);
+    const { server } = startDaemonServer(handle, sockPath, log);
 
-    const say = await sendToSocket("SAY hello from ipc test");
-    expect(say).toEqual(["OK"]);
+    try {
+      await Bun.sleep(1000);
 
-    await Bun.sleep(1000);
+      const status = await sendToSocket("STATUS", sockPath);
+      expect(status).toEqual(["CONNECTED"]);
 
-    const read = await sendToSocket("READ_WAIT 2000");
-    expect(read.length).toBeGreaterThanOrEqual(0);
+      const say = await sendToSocket("SAY hello from ipc test", sockPath);
+      expect(say).toEqual(["OK"]);
 
-    const stop = await sendToSocket("STOP");
-    expect(stop).toEqual(["OK"]);
+      await Bun.sleep(1000);
+
+      const read = await sendToSocket("READ_WAIT 2000", sockPath);
+      expect(read.length).toBeGreaterThanOrEqual(0);
+    } finally {
+      server.stop(true);
+      handle.close();
+      await handle.closed;
+      await unlink(sockPath).catch(() => {});
+      await unlink(logFile).catch(() => {});
+    }
   }, 60_000);
 });
