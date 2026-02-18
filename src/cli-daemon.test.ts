@@ -1,5 +1,5 @@
 import { mock, jest, test, expect, describe, afterEach } from "bun:test";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, rm, unlink, writeFile } from "node:fs/promises";
 
 const tmpDir = `./tmp/cli-daemon-${Date.now()}`;
 const uid = process.getuid?.() ?? 0;
@@ -58,7 +58,7 @@ afterEach(async () => {
   Bun.sleep = origSleep;
   for (const s of servers) s.stop(true);
   servers = [];
-  await unlink(sockPath).catch(() => {});
+  await rm(sockPath, { recursive: true, force: true });
 });
 
 describe("ensureDaemon", () => {
@@ -77,6 +77,24 @@ describe("ensureDaemon", () => {
       sleepCount++;
       if (sleepCount === 3) {
         await unlink(sockPath).catch(() => {});
+        listenStatus(sockPath);
+      }
+    }) as unknown as typeof Bun.sleep;
+
+    await ensureDaemon();
+    expect(Bun.spawn).toHaveBeenCalled();
+  });
+
+  test("continues startup when stale path cannot be unlinked", async () => {
+    await mkdir(sockPath, { recursive: true });
+
+    Bun.spawn = jest.fn(() => fakeProc()) as unknown as typeof Bun.spawn;
+
+    let sleepCount = 0;
+    Bun.sleep = jest.fn(async () => {
+      sleepCount++;
+      if (sleepCount === 2) {
+        await rm(sockPath, { recursive: true, force: true });
         listenStatus(sockPath);
       }
     }) as unknown as typeof Bun.sleep;

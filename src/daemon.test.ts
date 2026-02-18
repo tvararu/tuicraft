@@ -1,4 +1,5 @@
 import { test, expect, describe, jest, afterEach } from "bun:test";
+import { unlink } from "node:fs/promises";
 import {
   parseIpcCommand,
   dispatchCommand,
@@ -68,6 +69,14 @@ describe("parseIpcCommand", () => {
       type: "whisper",
       target: "Xiara",
       message: "follow me",
+    });
+  });
+
+  test("WHISPER without message", () => {
+    expect(parseIpcCommand("WHISPER Xiara")).toEqual({
+      type: "whisper",
+      target: "Xiara",
+      message: "",
     });
   });
 
@@ -479,6 +488,21 @@ describe("onChatMessage", () => {
       message: "psst",
     });
   });
+
+  test("swallows session log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onChatMessage(
+      { type: ChatType.WHISPER, sender: "Eve", message: "psst" },
+      events,
+      log,
+    );
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
 });
 
 describe("IPC round-trip", () => {
@@ -562,6 +586,14 @@ describe("IPC round-trip", () => {
   test("cleanup is idempotent", async () => {
     startTestServer();
     result.cleanup();
+    result.cleanup();
+    expect(handle.close).toHaveBeenCalledTimes(1);
+  });
+
+  test("cleanup ignores missing socket file", async () => {
+    startTestServer();
+    await sendToSocket("STATUS", sockPath);
+    await unlink(sockPath);
     result.cleanup();
     expect(handle.close).toHaveBeenCalledTimes(1);
   });

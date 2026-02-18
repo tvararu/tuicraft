@@ -1,7 +1,8 @@
 import { mock, jest, test, expect, describe, afterEach } from "bun:test";
-import { access, rm, mkdir } from "node:fs/promises";
+import { access, rm, mkdir, unlink } from "node:fs/promises";
 import { serializeConfig } from "config";
 import type { AuthResult, WorldHandle } from "client";
+import { sendToSocket } from "cli";
 
 const tmpDir = `./tmp/daemon-start-${Date.now()}`;
 const cfgDir = `${tmpDir}/config/tuicraft`;
@@ -195,5 +196,30 @@ describe("startDaemon", () => {
 
     closedResolve();
     await promise;
+  });
+
+  test("updates activity timestamp from IPC activity", async () => {
+    await writeTestConfig();
+    const client = makeMockClient();
+    const promise = startDaemon(client);
+    await waitForSetup();
+
+    const lines = await sendToSocket("STATUS", `${rtDir}/sock`);
+    expect(lines).toEqual(["CONNECTED"]);
+
+    closedResolve();
+    await promise;
+  });
+
+  test("cleanup tolerates missing pid file", async () => {
+    await writeTestConfig();
+    const client = makeMockClient();
+    const promise = startDaemon(client);
+    await waitForSetup();
+
+    await unlink(`${rtDir}/pid`);
+    closedResolve();
+    await promise;
+    expect(client.mockHandleClose).toHaveBeenCalledTimes(1);
   });
 });

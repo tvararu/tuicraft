@@ -1,4 +1,4 @@
-import { test, expect, describe } from "bun:test";
+import { test, expect, describe, jest } from "bun:test";
 import { writeFile, unlink } from "node:fs/promises";
 import { parseArgs, sendToSocket } from "cli";
 
@@ -218,6 +218,41 @@ describe("sendToSocket", () => {
     } finally {
       server.stop(true);
       await unlink(path).catch(() => {});
+    }
+  });
+
+  test("resolves buffered lines on socket close without terminator", async () => {
+    const path = `./tmp/test-close-${Date.now()}.sock`;
+    const server = Bun.listen({
+      unix: path,
+      socket: {
+        data(socket) {
+          socket.write("OK\n");
+          socket.end();
+        },
+      },
+    });
+    try {
+      const lines = await sendToSocket("STATUS", path);
+      expect(lines).toEqual(["OK"]);
+    } finally {
+      server.stop(true);
+      await unlink(path).catch(() => {});
+    }
+  });
+
+  test("rejects when socket error callback fires", async () => {
+    const originalConnect = Bun.connect;
+    Bun.connect = jest.fn(async (options: any) => {
+      options.socket.error({}, new Error("connect boom"));
+      return {} as any;
+    }) as unknown as typeof Bun.connect;
+    try {
+      await expect(
+        sendToSocket("STATUS", "./tmp/missing.sock"),
+      ).rejects.toThrow("connect boom");
+    } finally {
+      Bun.connect = originalConnect;
     }
   });
 });
