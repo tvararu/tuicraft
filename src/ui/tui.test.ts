@@ -4,10 +4,11 @@ import {
   parseCommand,
   formatMessage,
   formatMessageJson,
+  formatGroupEvent,
   formatPrompt,
   startTui,
 } from "ui/tui";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { createMockHandle } from "test/mock-handle";
 
 function writeLine(stream: PassThrough, line: string): void {
@@ -695,5 +696,61 @@ describe("formatPrompt", () => {
     expect(formatPrompt({ type: "channel", channel: "General" })).toBe(
       "[General] > ",
     );
+  });
+});
+
+describe("formatGroupEvent", () => {
+  test("invite success", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.SUCCESS,
+      }),
+    ).toBe("[group] Invited Voidtrix");
+  });
+
+  test("invite failure", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.BAD_PLAYER_NAME,
+      }),
+    ).toBe("[group] Cannot invite Voidtrix: player not found");
+  });
+
+  test("uninvite success", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.UNINVITE,
+        target: "Voidtrix",
+        result: PartyResult.SUCCESS,
+      }),
+    ).toBe("[group] Removed Voidtrix from group");
+  });
+
+  test("uninvite failure", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.UNINVITE,
+        target: "Voidtrix",
+        result: PartyResult.NOT_LEADER,
+      }),
+    ).toBe("[group] Cannot kick Voidtrix: you are not the leader");
+  });
+
+  test("group_list returns undefined", () => {
+    expect(
+      formatGroupEvent({
+        type: "group_list",
+        members: [],
+        leader: "",
+      }),
+    ).toBeUndefined();
   });
 });

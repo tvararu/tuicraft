@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import { ChatType, PartyResult } from "wow/protocol/opcodes";
+import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import type {
   WorldHandle,
   ChatMessage,
@@ -218,11 +218,15 @@ export function formatGroupEvent(event: GroupEvent): string | undefined {
   switch (event.type) {
     case "invite_received":
       return `[group] ${event.from} invites you to a group`;
-    case "invite_result": {
+    case "command_result": {
+      const verb =
+        event.operation === PartyOperation.UNINVITE ? "kick" : "invite";
       const label =
         event.result === PartyResult.SUCCESS
-          ? `Invited ${event.target}`
-          : `Cannot invite ${event.target}: ${partyResultLabel(event.result)}`;
+          ? verb === "kick"
+            ? `Removed ${event.target} from group`
+            : `Invited ${event.target}`
+          : `Cannot ${verb} ${event.target}: ${partyResultLabel(event.result)}`;
       return `[group] ${label}`;
     }
     case "leader_changed":

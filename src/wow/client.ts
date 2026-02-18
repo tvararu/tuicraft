@@ -74,7 +74,12 @@ export type ChatMessage = {
 
 export type GroupEvent =
   | { type: "invite_received"; from: string }
-  | { type: "invite_result"; target: string; result: number }
+  | {
+      type: "command_result";
+      operation: number;
+      target: string;
+      result: number;
+    }
   | { type: "leader_changed"; name: string }
   | {
       type: "group_list";
@@ -380,7 +385,8 @@ function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
 function handlePartyCommandResult(conn: WorldConn, r: PacketReader): void {
   const result = parsePartyCommandResult(r);
   conn.onGroupEvent?.({
-    type: "invite_result",
+    type: "command_result",
+    operation: result.operation,
     target: result.member,
     result: result.result,
   });
