@@ -1,6 +1,11 @@
 [env]
-WOW_ACCOUNT = "myaccount"
-WOW_PASSWORD = "mypassword"
-WOW_CHARACTER = "Charname"
-# WOW_HOST = "t1"
-# WOW_PORT = "3724"
+WOW_HOST = "t1"
+WOW_PORT = "3724"
+
+WOW_ACCOUNT_1 = "myaccount"
+WOW_PASSWORD_1 = "mypassword"
+WOW_CHARACTER_1 = "Charname"
+
+WOW_ACCOUNT_2 = "myaccount2"
+WOW_PASSWORD_2 = "mypassword2"
+WOW_CHARACTER_2 = "Charname2"
