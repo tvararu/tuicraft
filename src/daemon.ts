@@ -58,7 +58,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
   }
 }
 
-function writeLines(
+export function writeLines(
   socket: { write(data: string | Uint8Array): number },
   lines: string[],
 ): void {
@@ -66,37 +66,37 @@ function writeLines(
   socket.write("\n");
 }
 
-async function dispatchCommand(
+export async function dispatchCommand(
   cmd: IpcCommand,
   handle: WorldHandle,
   events: RingBuffer<string>,
   socket: { write(data: string | Uint8Array): number; end(): void },
   cleanup: () => void,
-): Promise<void> {
+): Promise<boolean> {
   switch (cmd.type) {
     case "say":
       handle.sendSay(cmd.message);
       writeLines(socket, ["OK"]);
-      break;
+      return false;
     case "yell":
       handle.sendYell(cmd.message);
       writeLines(socket, ["OK"]);
-      break;
+      return false;
     case "guild":
       handle.sendGuild(cmd.message);
       writeLines(socket, ["OK"]);
-      break;
+      return false;
     case "party":
       handle.sendParty(cmd.message);
       writeLines(socket, ["OK"]);
-      break;
+      return false;
     case "whisper":
       handle.sendWhisper(cmd.target, cmd.message);
       writeLines(socket, ["OK"]);
-      break;
+      return false;
     case "read":
       writeLines(socket, events.drain());
-      break;
+      return false;
     case "read_wait":
       await new Promise<void>((resolve) => {
         setTimeout(() => {
@@ -104,24 +104,23 @@ async function dispatchCommand(
           resolve();
         }, cmd.ms);
       });
-      break;
+      return false;
     case "stop":
       writeLines(socket, ["OK"]);
       cleanup();
-      process.exit(0);
-      break;
+      return true;
     case "status":
       writeLines(socket, ["CONNECTED"]);
-      break;
+      return false;
     case "who": {
       const results = await handle.who(cmd.filter ? { name: cmd.filter } : {});
       writeLines(socket, formatWhoResults(results).split("\n"));
-      break;
+      return false;
     }
   }
 }
 
-function onChatMessage(
+export function onChatMessage(
   msg: ChatMessage,
   events: RingBuffer<string>,
   log: SessionLog,
@@ -187,6 +186,9 @@ export async function startDaemon(): Promise<void> {
           return;
         }
         dispatchCommand(cmd, handle, events, socket, cleanup)
+          .then((shouldExit) => {
+            if (shouldExit) process.exit(0);
+          })
           .catch(() => {
             writeLines(socket, ["ERR internal"]);
           })

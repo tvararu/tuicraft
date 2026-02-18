@@ -130,12 +130,15 @@ export function parseArgs(args: string[], _isTTY: boolean): CliAction {
   return { mode: "say", message: args.join(" "), json: false };
 }
 
-export async function sendToSocket(command: string): Promise<string[]> {
-  const { socketPath } = await import("paths");
-  return new Promise((resolve, reject) => {
-    let buffer = "";
+export async function sendToSocket(
+  command: string,
+  path?: string,
+): Promise<string[]> {
+  const sock = path ?? (await import("paths")).socketPath();
+  let buffer = "";
+  return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
-      unix: socketPath(),
+      unix: sock,
       socket: {
         open(socket) {
           socket.write(command + "\n");
@@ -157,7 +160,7 @@ export async function sendToSocket(command: string): Promise<string[]> {
           reject(err);
         },
       },
-    });
+    }).catch(reject);
   });
 }
 

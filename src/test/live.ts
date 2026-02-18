@@ -1,5 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { authHandshake, worldSession, type ChatMessage } from "client";
+import { ensureDaemon, sendToSocket } from "cli";
 
 const host = process.env["WOW_HOST"] ?? "t1";
 const port = parseInt(process.env["WOW_PORT"] ?? "3724", 10);
@@ -118,4 +119,24 @@ describe("two-client chat", () => {
     const sayMsg = received.find((m) => m.message === "hello from say test");
     expect(sayMsg).toBeDefined();
   }, 30_000);
+});
+
+describe("daemon IPC", () => {
+  test("STATUS, SAY, READ_WAIT, STOP via daemon socket", async () => {
+    await ensureDaemon();
+
+    const status = await sendToSocket("STATUS");
+    expect(status).toEqual(["CONNECTED"]);
+
+    const say = await sendToSocket("SAY hello from ipc test");
+    expect(say).toEqual(["OK"]);
+
+    await Bun.sleep(1000);
+
+    const read = await sendToSocket("READ_WAIT 2000");
+    expect(read.length).toBeGreaterThanOrEqual(0);
+
+    const stop = await sendToSocket("STOP");
+    expect(stop).toEqual(["OK"]);
+  }, 60_000);
 });
