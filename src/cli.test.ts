@@ -77,6 +77,22 @@ describe("parseArgs", () => {
     });
   });
 
+  test("bare say with --json", () => {
+    expect(parseArgs(["--json", "hello"])).toEqual({
+      mode: "say",
+      message: "hello",
+      json: true,
+    });
+  });
+
+  test("bare say with --json in middle", () => {
+    expect(parseArgs(["hello", "--json", "world"])).toEqual({
+      mode: "say",
+      message: "hello world",
+      json: true,
+    });
+  });
+
   test("-w flag = whisper", () => {
     expect(parseArgs(["-w", "Xiara", "follow me"])).toEqual({
       mode: "whisper",
@@ -181,6 +197,26 @@ describe("sendToSocket", () => {
     try {
       await expect(sendToSocket("STATUS", path)).rejects.toThrow();
     } finally {
+      await unlink(path).catch(() => {});
+    }
+  });
+
+  test("resolves on terminator without waiting for close", async () => {
+    const path = `./tmp/test-terminator-${Date.now()}.sock`;
+    const server = Bun.listen({
+      unix: path,
+      socket: {
+        data(socket) {
+          socket.write("OK\n\n");
+          socket.flush();
+        },
+      },
+    });
+    try {
+      const lines = await sendToSocket("SAY hi", path);
+      expect(lines).toEqual(["OK"]);
+    } finally {
+      server.stop(true);
       await unlink(path).catch(() => {});
     }
   });
