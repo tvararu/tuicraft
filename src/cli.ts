@@ -220,9 +220,8 @@ export async function ensureDaemon(): Promise<void> {
     if (await socketExists(path)) return;
   }
   const stderr = (await new Response(proc.stderr).text()).trim();
-  throw new Error(
-    stderr
-      ? `Daemon failed to start within 30 seconds:\n${stderr}`
-      : "Daemon failed to start within 30 seconds",
-  );
+  const message = stderr
+    ? `Daemon failed to start within 30 seconds:\n${stderr}`
+    : "Daemon failed to start within 30 seconds";
+  throw new Error(message);
 }
