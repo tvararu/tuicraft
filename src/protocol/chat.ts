@@ -54,12 +54,13 @@ export function parseChatMessage(r: PacketReader): ChatMessage {
 
 export function buildChatMessage(
   type: number,
+  language: number,
   message: string,
   target?: string,
 ): Uint8Array {
   const w = new PacketWriter();
   w.uint32LE(type);
-  w.uint32LE(0);
+  w.uint32LE(language);
   if (type === ChatType.WHISPER || type === ChatType.CHANNEL) {
     w.cString(target ?? "");
   }

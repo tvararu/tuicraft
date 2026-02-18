@@ -35,6 +35,12 @@ export const GameOpcode = {
   SMSG_GM_MESSAGECHAT: 0x03b3,
 } as const;
 
+export const Language = {
+  UNIVERSAL: 0x00,
+  ORCISH: 0x01,
+  COMMON: 0x07,
+} as const;
+
 export const ChatType = {
   SYSTEM: 0x00,
   SAY: 0x01,

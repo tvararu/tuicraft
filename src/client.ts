@@ -2,7 +2,7 @@ import type { Socket } from "bun";
 import { PacketReader, PacketWriter } from "protocol/packet";
 import { SRP, type SRPResult } from "crypto/srp";
 import { Arc4 } from "crypto/arc4";
-import { GameOpcode, ChatType } from "protocol/opcodes";
+import { GameOpcode, ChatType, Language } from "protocol/opcodes";
 import {
   parseChatMessage,
   buildChatMessage,
@@ -40,6 +40,7 @@ export type ClientConfig = {
   srpPrivateKey?: bigint;
   clientSeed?: Uint8Array;
   pingIntervalMs?: number;
+  language?: number;
 };
 
 export type AuthResult = {
@@ -216,7 +217,13 @@ function drainWorldPackets(conn: WorldConn): void {
     conn.pendingHeader = undefined;
     try {
       conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
-    } catch {}
+    } catch (err) {
+      if (err instanceof Error) {
+        process.stderr.write(
+          `opcode 0x${opcode.toString(16)} size=${bodySize}: ${err.message}\n`,
+        );
+      }
+    }
   }
 }
 
@@ -392,6 +399,7 @@ export function worldSession(
       await authenticateWorld(conn, config, auth);
       await selectCharacter(conn, config);
       pingInterval = startPingLoop(conn, config.pingIntervalMs ?? 30_000);
+      const lang = config.language ?? Language.COMMON;
       done = true;
       resolve({
         closed,
@@ -406,49 +414,49 @@ export function worldSession(
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.WHISPER, message, target),
+            buildChatMessage(ChatType.WHISPER, lang, message, target),
           );
         },
         sendSay(message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.SAY, message),
+            buildChatMessage(ChatType.SAY, lang, message),
           );
         },
         sendYell(message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.YELL, message),
+            buildChatMessage(ChatType.YELL, lang, message),
           );
         },
         sendGuild(message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.GUILD, message),
+            buildChatMessage(ChatType.GUILD, lang, message),
           );
         },
         sendParty(message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.PARTY, message),
+            buildChatMessage(ChatType.PARTY, lang, message),
           );
         },
         sendRaid(message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.RAID, message),
+            buildChatMessage(ChatType.RAID, lang, message),
           );
         },
         sendChannel(channel, message) {
           sendPacket(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.CHANNEL, message, channel),
+            buildChatMessage(ChatType.CHANNEL, lang, message, channel),
           );
         },
         async who(opts = {}) {

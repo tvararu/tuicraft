@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { PacketReader, PacketWriter } from "protocol/packet";
-import { ChatType } from "protocol/opcodes";
+import { ChatType, Language } from "protocol/opcodes";
 import {
   parseChatMessage,
   buildChatMessage,
@@ -90,36 +90,50 @@ describe("parseChatMessage", () => {
 
 describe("buildChatMessage", () => {
   test("builds a SAY message", () => {
-    const body = buildChatMessage(ChatType.SAY, "hello");
+    const body = buildChatMessage(ChatType.SAY, Language.COMMON, "hello");
     const r = new PacketReader(body);
     expect(r.uint32LE()).toBe(ChatType.SAY);
-    expect(r.uint32LE()).toBe(0);
+    expect(r.uint32LE()).toBe(Language.COMMON);
     expect(r.cString()).toBe("hello");
   });
 
   test("builds a WHISPER message with target name", () => {
-    const body = buildChatMessage(ChatType.WHISPER, "hey", "Xiara");
+    const body = buildChatMessage(
+      ChatType.WHISPER,
+      Language.ORCISH,
+      "hey",
+      "Xiara",
+    );
     const r = new PacketReader(body);
     expect(r.uint32LE()).toBe(ChatType.WHISPER);
-    expect(r.uint32LE()).toBe(0);
+    expect(r.uint32LE()).toBe(Language.ORCISH);
     expect(r.cString()).toBe("Xiara");
     expect(r.cString()).toBe("hey");
   });
 
   test("builds a CHANNEL message with channel name", () => {
-    const body = buildChatMessage(ChatType.CHANNEL, "hi", "General");
+    const body = buildChatMessage(
+      ChatType.CHANNEL,
+      Language.COMMON,
+      "hi",
+      "General",
+    );
     const r = new PacketReader(body);
     expect(r.uint32LE()).toBe(ChatType.CHANNEL);
-    expect(r.uint32LE()).toBe(0);
+    expect(r.uint32LE()).toBe(Language.COMMON);
     expect(r.cString()).toBe("General");
     expect(r.cString()).toBe("hi");
   });
 
   test("builds a GUILD message (no target)", () => {
-    const body = buildChatMessage(ChatType.GUILD, "hello guild");
+    const body = buildChatMessage(
+      ChatType.GUILD,
+      Language.COMMON,
+      "hello guild",
+    );
     const r = new PacketReader(body);
     expect(r.uint32LE()).toBe(ChatType.GUILD);
-    expect(r.uint32LE()).toBe(0);
+    expect(r.uint32LE()).toBe(Language.COMMON);
     expect(r.cString()).toBe("hello guild");
   });
 });
