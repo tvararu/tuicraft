@@ -1,6 +1,7 @@
 # Chat UX Fixes Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** First, create a worktree: `mise worktree chat-ux`, then `cd` into it.
+> Then use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add sticky chat mode (TUI + daemon) and strip WoW color codes from messages.
 
