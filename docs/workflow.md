@@ -48,6 +48,7 @@ My process currently is running down this checklist:
 - [ ] `claude` and prompt it to `/review`
 - [ ] `codex` and prompt it to `/review`
 - [ ] `sentry-bot` on GitHub also leaves comments independently
+- [ ] `mise test:coverage` to check if coverage is adequate
 - [ ] `claude` with findings from above automated investigations
 - [ ] Human manual end to end testing, trying the TUI myself
 - [ ] Human review on GitHub, reading the full output after all LLM reviews
