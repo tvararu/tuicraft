@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 import { authHandshake, worldSession } from "client";
+import { startTui } from "tui";
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -34,8 +35,8 @@ async function main() {
   const auth = await authHandshake(config);
   console.log(`Authenticated. Realm: ${auth.realmHost}:${auth.realmPort}`);
   const handle = await worldSession(config, auth);
-  console.log("Logged in.");
-  await handle.closed;
+  console.log(`Logged in as ${config.character}.`);
+  await startTui(handle, process.stdin.isTTY ?? false);
 }
 
 main().catch((err) => {
