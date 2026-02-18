@@ -1,6 +1,6 @@
 import { test, expect, describe, afterEach, mock } from "bun:test";
 import { parseConfig, serializeConfig, type Config } from "config";
-import { rm } from "node:fs/promises";
+import { rm, stat } from "node:fs/promises";
 
 const tmpBase = `./tmp/config-test-${Date.now()}`;
 const cfgDir = `${tmpBase}/config/tuicraft`;
@@ -58,6 +58,35 @@ describe("parseConfig", () => {
       "Missing required config field: character",
     );
   });
+
+  test("unescapes backslash and quote in quoted values", () => {
+    const input = `account = "te\\"st"\npassword = "p\\\\w"\ncharacter = "Z"`;
+    const cfg = parseConfig(input);
+    expect(cfg.account).toBe('te"st');
+    expect(cfg.password).toBe("p\\w");
+  });
+
+  test("rejects non-positive port", () => {
+    expect(() =>
+      parseConfig(`account = "x"\npassword = "y"\ncharacter = "Z"\nport = -1`),
+    ).toThrow("Invalid port");
+  });
+
+  test("rejects NaN language", () => {
+    expect(() =>
+      parseConfig(
+        `account = "x"\npassword = "y"\ncharacter = "Z"\nlanguage = abc`,
+      ),
+    ).toThrow("Invalid language");
+  });
+
+  test("rejects Infinity timeout_minutes", () => {
+    expect(() =>
+      parseConfig(
+        `account = "x"\npassword = "y"\ncharacter = "Z"\ntimeout_minutes = Infinity`,
+      ),
+    ).toThrow("Invalid timeout_minutes");
+  });
 });
 
 describe("serializeConfig", () => {
@@ -72,6 +101,23 @@ describe("serializeConfig", () => {
       timeout_minutes: 30,
     };
     const text = serializeConfig(cfg);
+    const parsed = parseConfig(text);
+    expect(parsed).toEqual(cfg);
+  });
+
+  test("escapes backslash and double-quote in values", () => {
+    const cfg: Config = {
+      account: 'te"st',
+      password: "p\\w",
+      character: "Z",
+      host: "t1",
+      port: 3724,
+      language: 1,
+      timeout_minutes: 30,
+    };
+    const text = serializeConfig(cfg);
+    expect(text).toContain('account = "te\\"st"');
+    expect(text).toContain('password = "p\\\\w"');
     const parsed = parseConfig(text);
     expect(parsed).toEqual(cfg);
   });
@@ -126,5 +172,12 @@ describe("writeConfig", () => {
     await writeConfig(sampleConfig);
     const cfg = await readConfig();
     expect(cfg).toEqual(sampleConfig);
+  });
+
+  test("creates file with mode 0600", async () => {
+    const { writeConfig } = await import("config");
+    await writeConfig(sampleConfig);
+    const st = await stat(cfgPath);
+    expect(st.mode & 0o777).toBe(0o600);
   });
 });

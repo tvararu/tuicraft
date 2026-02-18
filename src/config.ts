@@ -25,7 +25,10 @@ export function parseConfig(text: string): Config {
     const key = trimmed.slice(0, eq).trim();
     const raw = trimmed.slice(eq + 1).trim();
     if (raw.startsWith('"') && raw.endsWith('"')) {
-      result[key] = raw.slice(1, -1);
+      result[key] = raw
+        .slice(1, -1)
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, "\\");
     } else {
       const n = Number(raw);
       result[key] = Number.isNaN(n) ? raw : n;
@@ -36,12 +39,22 @@ export function parseConfig(text: string): Config {
       throw new Error(`Missing required config field: ${field}`);
     }
   }
+  for (const field of ["port", "language", "timeout_minutes"] as const) {
+    const v = result[field];
+    if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+      throw new Error(`Invalid ${field}: must be a finite positive number`);
+    }
+  }
   return result as unknown as Config;
 }
 
 export function serializeConfig(cfg: Config): string {
   return Object.entries(cfg)
-    .map(([k, v]) => (typeof v === "string" ? `${k} = "${v}"` : `${k} = ${v}`))
+    .map(([k, v]) =>
+      typeof v === "string"
+        ? `${k} = "${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
+        : `${k} = ${v}`,
+    )
     .join("\n");
 }
 
@@ -58,7 +71,7 @@ export async function readConfig(): Promise<Config> {
 
 export async function writeConfig(cfg: Config): Promise<void> {
   const { configPath, configDir } = await import("paths");
-  const { mkdir } = await import("node:fs/promises");
+  const { mkdir, writeFile } = await import("node:fs/promises");
   await mkdir(configDir(), { recursive: true });
-  await Bun.write(configPath(), serializeConfig(cfg) + "\n");
+  await writeFile(configPath(), serializeConfig(cfg) + "\n", { mode: 0o600 });
 }

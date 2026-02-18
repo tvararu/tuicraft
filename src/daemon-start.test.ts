@@ -100,7 +100,7 @@ async function waitForSetup(): Promise<void> {
       await access(`${rtDir}/sock`);
       return;
     } catch {
-      await Bun.sleep(5);
+      await Bun.sleep(1);
     }
   }
   throw new Error("setup never completed");
@@ -128,7 +128,7 @@ describe("startDaemon", () => {
     closedResolve();
     await promise;
 
-    await Bun.sleep(50);
+    await Bun.sleep(1);
     expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
   });
 
@@ -235,7 +235,7 @@ describe("startDaemon", () => {
 
     for (let i = 0; i < 50; i++) {
       if (!(await Bun.file(`${rtDir}/pid`).exists())) break;
-      await Bun.sleep(5);
+      await Bun.sleep(1);
     }
     expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
 

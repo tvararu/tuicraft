@@ -57,10 +57,16 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "read" };
     case "READ_JSON":
       return { type: "read_json" };
-    case "READ_WAIT":
-      return { type: "read_wait", ms: parseInt(rest, 10) };
-    case "READ_WAIT_JSON":
-      return { type: "read_wait_json", ms: parseInt(rest, 10) };
+    case "READ_WAIT": {
+      const ms = parseInt(rest, 10);
+      if (!Number.isFinite(ms) || ms < 0) return undefined;
+      return { type: "read_wait", ms: Math.min(ms, 60_000) };
+    }
+    case "READ_WAIT_JSON": {
+      const ms = parseInt(rest, 10);
+      if (!Number.isFinite(ms) || ms < 0) return undefined;
+      return { type: "read_wait_json", ms: Math.min(ms, 60_000) };
+    }
     case "STOP":
       return { type: "stop" };
     case "STATUS":
