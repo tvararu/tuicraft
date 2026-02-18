@@ -3,10 +3,18 @@ import { parseConfig, serializeConfig, type Config } from "config";
 import { rm } from "node:fs/promises";
 
 const tmpBase = `./tmp/config-test-${Date.now()}`;
+const cfgDir = `${tmpBase}/config/tuicraft`;
+const cfgPath = `${cfgDir}/config.toml`;
+const uid = process.getuid?.() ?? 0;
 
 mock.module("paths", () => ({
-  configPath: () => `${tmpBase}/config.toml`,
-  configDir: () => tmpBase,
+  configDir: () => cfgDir,
+  runtimeDir: () => `${tmpBase}/tuicraft-${uid}`,
+  stateDir: () => `${tmpBase}/state/tuicraft`,
+  socketPath: () => `${tmpBase}/tuicraft-${uid}/sock`,
+  pidPath: () => `${tmpBase}/tuicraft-${uid}/pid`,
+  configPath: () => cfgPath,
+  logPath: () => `${tmpBase}/state/tuicraft/session.log`,
 }));
 
 describe("parseConfig", () => {
@@ -92,11 +100,8 @@ describe("readConfig", () => {
   test("parses an existing config file", async () => {
     const { readConfig } = await import("config");
     const { mkdir } = await import("node:fs/promises");
-    await mkdir(tmpBase, { recursive: true });
-    await Bun.write(
-      `${tmpBase}/config.toml`,
-      serializeConfig(sampleConfig) + "\n",
-    );
+    await mkdir(cfgDir, { recursive: true });
+    await Bun.write(cfgPath, serializeConfig(sampleConfig) + "\n");
     const cfg = await readConfig();
     expect(cfg).toEqual(sampleConfig);
   });
@@ -110,7 +115,7 @@ describe("writeConfig", () => {
   test("creates directory and writes config", async () => {
     const { writeConfig } = await import("config");
     await writeConfig(sampleConfig);
-    const content = await Bun.file(`${tmpBase}/config.toml`).text();
+    const content = await Bun.file(cfgPath).text();
     expect(content).toContain('account = "testuser"');
     expect(content).toContain('password = "testpass"');
     expect(content).toContain("port = 3724");
