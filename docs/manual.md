@@ -76,7 +76,7 @@ idles out after 30 minutes of inactivity.
 
 `--json`
 : Output events as JSONL instead of human-readable format. Works with `read`,
-`tail`, and chat commands.
+`tail`, `--who`, and chat commands.
 
 `--wait` _N_
 : Wait _N_ seconds for events before returning. For use with `read`.
