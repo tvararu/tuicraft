@@ -18,7 +18,7 @@ USAGE
   tuicraft help               Show this help
 
 FLAGS
-  --json          Output events as JSONL (for read, tail, chat)
+  --json          Output events as JSONL (for read, tail, chat, who)
   --wait N        Wait N seconds for events (for read)
   --daemon        Start as background daemon (internal)
 
@@ -28,6 +28,8 @@ SETUP FLAGS
   --character NAME Character name (required)
   --host HOST     Auth server hostname (default: t1)
   --port PORT     Auth server port (default: 3724)
+  --language ID   Chat language code (default: 1/Orcish)
+  --timeout_minutes N  Daemon idle timeout (default: 30)
 
 DAEMON
   The daemon starts automatically when needed and stays running
