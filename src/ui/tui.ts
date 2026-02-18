@@ -2,6 +2,7 @@ import { createInterface } from "node:readline";
 import { ChatType } from "wow/protocol/opcodes";
 import type { WorldHandle, ChatMessage, WhoResult } from "wow/client";
 import type { LogEntry } from "lib/session-log";
+import { stripColorCodes } from "lib/strip-colors";
 
 export type Command =
   | { type: "say"; message: string }
@@ -82,21 +83,22 @@ const CHAT_TYPE_LABELS: Record<number, string> = {
 };
 
 export function formatMessage(msg: ChatMessage): string {
+  const message = stripColorCodes(msg.message);
   const label = CHAT_TYPE_LABELS[msg.type] ?? `type ${msg.type}`;
 
   if (msg.type === ChatType.WHISPER) {
-    return `[whisper from ${msg.sender}] ${msg.message}`;
+    return `[whisper from ${msg.sender}] ${message}`;
   }
   if (msg.type === ChatType.WHISPER_INFORM) {
-    return `[whisper to ${msg.sender}] ${msg.message}`;
+    return `[whisper to ${msg.sender}] ${message}`;
   }
   if (msg.type === ChatType.SYSTEM) {
-    return `[system] ${msg.message}`;
+    return `[system] ${message}`;
   }
   if (msg.type === ChatType.CHANNEL && msg.channel) {
-    return `[${msg.channel}] ${msg.sender}: ${msg.message}`;
+    return `[${msg.channel}] ${msg.sender}: ${message}`;
   }
-  return `[${label}] ${msg.sender}: ${msg.message}`;
+  return `[${label}] ${msg.sender}: ${message}`;
 }
 
 const JSON_TYPE_LABELS: Record<number, string> = {
@@ -118,7 +120,11 @@ const JSON_TYPE_LABELS: Record<number, string> = {
 
 export function formatMessageObj(msg: ChatMessage): LogEntry {
   const type = JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
-  const obj: LogEntry = { type, sender: msg.sender, message: msg.message };
+  const obj: LogEntry = {
+    type,
+    sender: msg.sender,
+    message: stripColorCodes(msg.message),
+  };
   if (msg.channel) obj.channel = msg.channel;
   return obj;
 }

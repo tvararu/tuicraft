@@ -179,6 +179,15 @@ describe("formatMessage", () => {
     const msg = { type: 99, sender: "Bob", message: "wat" };
     expect(formatMessage(msg)).toBe("[type 99] Bob: wat");
   });
+
+  test("strips color codes from message", () => {
+    const msg = {
+      type: ChatType.SAY,
+      sender: "Alice",
+      message: "|cff1eff00|Hitem:1234|h[Cool Sword]|h|r equipped",
+    };
+    expect(formatMessage(msg)).toBe("[say] Alice: [Cool Sword] equipped");
+  });
 });
 
 describe("formatMessageJson", () => {
