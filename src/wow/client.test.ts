@@ -709,6 +709,179 @@ describe("world error paths", () => {
     }
   });
 
+  test("getLastChatMode defaults to say", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      expect(handle.getLastChatMode()).toEqual({ type: "say" });
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("setLastChatMode updates mode", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "guild" });
+      expect(handle.getLastChatMode()).toEqual({ type: "guild" });
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches based on last mode", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("hello via say");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SAY);
+      expect(msg.message).toBe("hello via say");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches whisper after mode change", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "whisper", target: "Someone" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("whisper test");
+      const msg = await received;
+      expect(msg.message).toBe("whisper test");
+      expect(handle.getLastChatMode()).toEqual({
+        type: "whisper",
+        target: "Someone",
+      });
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches yell", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "yell" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("yell test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.YELL);
+      expect(msg.message).toBe("yell test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches guild", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "guild" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("guild test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.GUILD);
+      expect(msg.message).toBe("guild test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches party", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "party" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("party test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.PARTY);
+      expect(msg.message).toBe("party test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches raid", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "raid" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("raid test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.RAID);
+      expect(msg.message).toBe("raid test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches channel", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "channel", channel: "General" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("channel test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.CHANNEL);
+      expect(msg.message).toBe("channel test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("handler error in drainWorldPackets logs to stderr", async () => {
     const ws = await startMockWorldServer();
     const stderrSpy = jest

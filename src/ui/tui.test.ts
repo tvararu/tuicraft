@@ -474,6 +474,20 @@ describe("startTui", () => {
     await done;
   });
 
+  test("SIGINT closes handle and resolves", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, true, {
+      input,
+      write: () => {},
+    });
+    input.write("\x03");
+    await done;
+
+    expect(handle.close).toHaveBeenCalled();
+  });
+
   test("stream close resolves promise", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
