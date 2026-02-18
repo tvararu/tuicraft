@@ -1,16 +1,16 @@
 import { test, expect, describe, jest, afterEach } from "bun:test";
-import { unlink } from "node:fs/promises";
 import {
   parseIpcCommand,
   dispatchCommand,
   onChatMessage,
   writeLines,
+  startDaemonServer,
   type EventEntry,
 } from "daemon";
 import { sendToSocket } from "cli";
 import { RingBuffer } from "ring-buffer";
 import { ChatType } from "protocol/opcodes";
-import type { SessionLog } from "session-log";
+import { SessionLog } from "session-log";
 import { createMockHandle } from "test/mock-handle";
 
 function createMockSocket(): {
@@ -484,104 +484,56 @@ describe("onChatMessage", () => {
 describe("IPC round-trip", () => {
   let sockCounter = 0;
   let sockPath: string;
-  let server: ReturnType<typeof Bun.listen>;
   let handle: ReturnType<typeof createMockHandle>;
-  let events: RingBuffer<EventEntry>;
+  let result: ReturnType<typeof startDaemonServer>;
+  let exitSpy: ReturnType<typeof jest.fn>;
 
-  function startTestServer() {
+  function startTestServer(opts?: { onActivity?: () => void }) {
     sockPath = `./tmp/test-daemon-${++sockCounter}-${Date.now()}.sock`;
     handle = createMockHandle();
-    events = new RingBuffer<EventEntry>(100);
-    const cleanup = jest.fn();
-
-    server = Bun.listen({
-      unix: sockPath,
-      socket: {
-        data(socket, data) {
-          const line = Buffer.from(data).toString().trim();
-          const cmd = parseIpcCommand(line);
-          if (!cmd) {
-            writeLines(socket, ["ERR unknown command"]);
-            socket.end();
-            return;
-          }
-          dispatchCommand(cmd, handle, events, socket, cleanup)
-            .catch(() => writeLines(socket, ["ERR internal"]))
-            .finally(() => {
-              socket.flush();
-              socket.end();
-            });
-        },
-      },
-    });
+    const log = new SessionLog(`./tmp/test-daemon-${sockCounter}.jsonl`);
+    exitSpy = jest
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    result = startDaemonServer(handle, sockPath, log, opts);
   }
 
   afterEach(async () => {
-    server?.stop(true);
-    await unlink(sockPath).catch(() => {});
+    exitSpy?.mockRestore();
+    result?.cleanup();
   });
-
-  function sendCommand(command: string): Promise<string[]> {
-    return new Promise((resolve, reject) => {
-      let buf = "";
-      Bun.connect({
-        unix: sockPath,
-        socket: {
-          open(s) {
-            s.write(command + "\n");
-            s.flush();
-          },
-          data(s, data) {
-            buf += Buffer.from(data).toString();
-            if (buf.endsWith("\n\n") || buf === "\n") {
-              const result: string[] = [];
-              for (const l of buf.split("\n")) {
-                if (l === "") break;
-                result.push(l);
-              }
-              s.end();
-              resolve(result);
-            }
-          },
-          error(_s, err) {
-            reject(err);
-          },
-        },
-      });
-    });
-  }
 
   test("STATUS returns CONNECTED", async () => {
     startTestServer();
-    const lines = await sendCommand("STATUS");
+    const lines = await sendToSocket("STATUS", sockPath);
     expect(lines).toEqual(["CONNECTED"]);
   });
 
   test("SAY returns OK and calls handle", async () => {
     startTestServer();
-    const lines = await sendCommand("SAY hello world");
+    const lines = await sendToSocket("SAY hello world", sockPath);
     expect(lines).toEqual(["OK"]);
     expect(handle.sendSay).toHaveBeenCalledWith("hello world");
   });
 
   test("WHISPER returns OK", async () => {
     startTestServer();
-    const lines = await sendCommand("WHISPER Xiara hey");
+    const lines = await sendToSocket("WHISPER Xiara hey", sockPath);
     expect(lines).toEqual(["OK"]);
     expect(handle.sendWhisper).toHaveBeenCalledWith("Xiara", "hey");
   });
 
   test("READ returns buffered events", async () => {
     startTestServer();
-    events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
-    events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
-    const lines = await sendCommand("READ");
+    result.events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
+    result.events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
+    const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
   });
 
   test("unknown command returns ERR", async () => {
     startTestServer();
-    const lines = await sendCommand("DANCE");
+    const lines = await sendToSocket("DANCE", sockPath);
     expect(lines).toEqual(["ERR unknown command"]);
   });
 
@@ -589,5 +541,47 @@ describe("IPC round-trip", () => {
     await expect(
       sendToSocket("STATUS", "./tmp/nonexistent.sock"),
     ).rejects.toThrow();
+  });
+
+  test("onActivity fires on each IPC command", async () => {
+    const activity = jest.fn();
+    startTestServer({ onActivity: activity });
+    await sendToSocket("STATUS", sockPath);
+    await sendToSocket("STATUS", sockPath);
+    expect(activity).toHaveBeenCalledTimes(2);
+  });
+
+  test("cleanup closes handle and stops server", async () => {
+    startTestServer();
+    await sendToSocket("STATUS", sockPath);
+    result.cleanup();
+    expect(handle.close).toHaveBeenCalled();
+    await expect(sendToSocket("STATUS", sockPath)).rejects.toThrow();
+  });
+
+  test("cleanup is idempotent", async () => {
+    startTestServer();
+    result.cleanup();
+    result.cleanup();
+    expect(handle.close).toHaveBeenCalledTimes(1);
+  });
+
+  test("STOP triggers process.exit", async () => {
+    startTestServer();
+    const lines = await sendToSocket("STOP", sockPath);
+    expect(lines).toEqual(["OK"]);
+    await Bun.sleep(50);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  test("onMessage wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerMessage({
+      type: ChatType.SAY,
+      sender: "Alice",
+      message: "hi",
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines).toEqual(["[say] Alice: hi"]);
   });
 });
