@@ -263,7 +263,16 @@ export function startTui(
       if (interactive) rl.prompt();
     });
 
-    rl.on("close", () => resolve());
+    rl.on("SIGINT", () => {
+      handle.close();
+      rl.close();
+    });
+
+    rl.on("close", () => {
+      handle.close();
+      resolve();
+    });
+
     handle.closed.then(() => rl.close());
   });
 }
