@@ -1,6 +1,6 @@
 import { parseArgs, sendToSocket, ensureDaemon } from "cli";
 
-const action = parseArgs(Bun.argv.slice(2), process.stdin.isTTY ?? false);
+const action = parseArgs(Bun.argv.slice(2));
 
 async function main() {
   switch (action.mode) {
@@ -44,7 +44,11 @@ async function main() {
       await ensureDaemon();
       const cmd = `${action.mode.toUpperCase()} ${action.message}`;
       const lines = await sendToSocket(cmd);
-      for (const line of lines) console.log(line);
+      if (action.json) {
+        console.log(JSON.stringify({ status: "ok" }));
+      } else {
+        for (const line of lines) console.log(line);
+      }
       break;
     }
     case "whisper": {
@@ -52,21 +56,29 @@ async function main() {
       const lines = await sendToSocket(
         `WHISPER ${action.target} ${action.message}`,
       );
-      for (const line of lines) console.log(line);
+      if (action.json) {
+        console.log(JSON.stringify({ status: "ok" }));
+      } else {
+        for (const line of lines) console.log(line);
+      }
       break;
     }
     case "read": {
       await ensureDaemon();
+      const base = action.json ? "READ_JSON" : "READ";
       const cmd =
-        action.wait != null ? `READ_WAIT ${action.wait * 1000}` : "READ";
+        action.wait != null
+          ? `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`
+          : base;
       const lines = await sendToSocket(cmd);
       for (const line of lines) console.log(line);
       break;
     }
     case "tail": {
       await ensureDaemon();
+      const verb = action.json ? "READ_WAIT_JSON" : "READ_WAIT";
       while (true) {
-        const lines = await sendToSocket("READ_WAIT 1000");
+        const lines = await sendToSocket(`${verb} 1000`);
         for (const line of lines) console.log(line);
       }
       break;
@@ -78,13 +90,18 @@ async function main() {
       break;
     }
     case "stop": {
-      const lines = await sendToSocket("STOP");
-      for (const line of lines) console.log(line);
+      try {
+        const lines = await sendToSocket("STOP");
+        for (const line of lines) console.log(line);
+      } catch {
+        console.log("Daemon is not running.");
+      }
       break;
     }
     case "who": {
       await ensureDaemon();
-      const cmd = action.filter ? `WHO ${action.filter}` : "WHO";
+      const verb = action.json ? "WHO_JSON" : "WHO";
+      const cmd = action.filter ? `${verb} ${action.filter}` : verb;
       const lines = await sendToSocket(cmd);
       for (const line of lines) console.log(line);
       break;

@@ -1,32 +1,33 @@
 import { test, expect, describe } from "bun:test";
-import { parseArgs } from "cli";
+import { writeFile, unlink } from "node:fs/promises";
+import { parseArgs, sendToSocket } from "cli";
 
 describe("parseArgs", () => {
   test("no args with tty = interactive", () => {
-    expect(parseArgs([], true)).toEqual({ mode: "interactive" });
+    expect(parseArgs([])).toEqual({ mode: "interactive" });
   });
 
   test("no args without tty = interactive", () => {
-    expect(parseArgs([], false)).toEqual({ mode: "interactive" });
+    expect(parseArgs([])).toEqual({ mode: "interactive" });
   });
 
   test("setup subcommand", () => {
-    expect(parseArgs(["setup", "--account", "x"], false)).toEqual({
+    expect(parseArgs(["setup", "--account", "x"])).toEqual({
       mode: "setup",
       args: ["--account", "x"],
     });
   });
 
   test("stop subcommand", () => {
-    expect(parseArgs(["stop"], false)).toEqual({ mode: "stop" });
+    expect(parseArgs(["stop"])).toEqual({ mode: "stop" });
   });
 
   test("status subcommand", () => {
-    expect(parseArgs(["status"], false)).toEqual({ mode: "status" });
+    expect(parseArgs(["status"])).toEqual({ mode: "status" });
   });
 
   test("read subcommand", () => {
-    expect(parseArgs(["read"], false)).toEqual({
+    expect(parseArgs(["read"])).toEqual({
       mode: "read",
       wait: undefined,
       json: false,
@@ -34,7 +35,7 @@ describe("parseArgs", () => {
   });
 
   test("read with --wait", () => {
-    expect(parseArgs(["read", "--wait", "5"], false)).toEqual({
+    expect(parseArgs(["read", "--wait", "5"])).toEqual({
       mode: "read",
       wait: 5,
       json: false,
@@ -42,7 +43,7 @@ describe("parseArgs", () => {
   });
 
   test("read with --json", () => {
-    expect(parseArgs(["read", "--json"], false)).toEqual({
+    expect(parseArgs(["read", "--json"])).toEqual({
       mode: "read",
       wait: undefined,
       json: true,
@@ -50,26 +51,26 @@ describe("parseArgs", () => {
   });
 
   test("tail subcommand", () => {
-    expect(parseArgs(["tail"], false)).toEqual({
+    expect(parseArgs(["tail"])).toEqual({
       mode: "tail",
       json: false,
     });
   });
 
   test("logs subcommand", () => {
-    expect(parseArgs(["logs"], false)).toEqual({ mode: "logs" });
+    expect(parseArgs(["logs"])).toEqual({ mode: "logs" });
   });
 
   test("help subcommand", () => {
-    expect(parseArgs(["help"], false)).toEqual({ mode: "help" });
+    expect(parseArgs(["help"])).toEqual({ mode: "help" });
   });
 
   test("--help flag", () => {
-    expect(parseArgs(["--help"], false)).toEqual({ mode: "help" });
+    expect(parseArgs(["--help"])).toEqual({ mode: "help" });
   });
 
   test("bare string = say", () => {
-    expect(parseArgs(["hello world"], false)).toEqual({
+    expect(parseArgs(["hello world"])).toEqual({
       mode: "say",
       message: "hello world",
       json: false,
@@ -77,7 +78,7 @@ describe("parseArgs", () => {
   });
 
   test("-w flag = whisper", () => {
-    expect(parseArgs(["-w", "Xiara", "follow me"], false)).toEqual({
+    expect(parseArgs(["-w", "Xiara", "follow me"])).toEqual({
       mode: "whisper",
       target: "Xiara",
       message: "follow me",
@@ -86,7 +87,7 @@ describe("parseArgs", () => {
   });
 
   test("-y flag = yell", () => {
-    expect(parseArgs(["-y", "HELLO"], false)).toEqual({
+    expect(parseArgs(["-y", "HELLO"])).toEqual({
       mode: "yell",
       message: "HELLO",
       json: false,
@@ -94,7 +95,7 @@ describe("parseArgs", () => {
   });
 
   test("-g flag = guild", () => {
-    expect(parseArgs(["-g", "guild msg"], false)).toEqual({
+    expect(parseArgs(["-g", "guild msg"])).toEqual({
       mode: "guild",
       message: "guild msg",
       json: false,
@@ -102,7 +103,7 @@ describe("parseArgs", () => {
   });
 
   test("-p flag = party", () => {
-    expect(parseArgs(["-p", "party msg"], false)).toEqual({
+    expect(parseArgs(["-p", "party msg"])).toEqual({
       mode: "party",
       message: "party msg",
       json: false,
@@ -110,7 +111,7 @@ describe("parseArgs", () => {
   });
 
   test("--who flag", () => {
-    expect(parseArgs(["--who"], false)).toEqual({
+    expect(parseArgs(["--who"])).toEqual({
       mode: "who",
       filter: undefined,
       json: false,
@@ -118,7 +119,7 @@ describe("parseArgs", () => {
   });
 
   test("--who with filter", () => {
-    expect(parseArgs(["--who", "mage"], false)).toEqual({
+    expect(parseArgs(["--who", "mage"])).toEqual({
       mode: "who",
       filter: "mage",
       json: false,
@@ -126,6 +127,61 @@ describe("parseArgs", () => {
   });
 
   test("--daemon flag", () => {
-    expect(parseArgs(["--daemon"], false)).toEqual({ mode: "daemon" });
+    expect(parseArgs(["--daemon"])).toEqual({ mode: "daemon" });
+  });
+
+  test("--wait with invalid value throws", () => {
+    expect(() => parseArgs(["read", "--wait", "abc"])).toThrow(
+      "Invalid --wait value: abc",
+    );
+  });
+
+  test("--json does not leak into yell message", () => {
+    const result = parseArgs(["-y", "--json", "hello"]);
+    expect(result).toEqual({
+      mode: "yell",
+      message: "hello",
+      json: true,
+    });
+  });
+
+  test("--json does not leak into guild message", () => {
+    const result = parseArgs(["-g", "--json", "inv pls"]);
+    expect(result).toEqual({
+      mode: "guild",
+      message: "inv pls",
+      json: true,
+    });
+  });
+
+  test("--json does not leak into party message", () => {
+    const result = parseArgs(["-p", "--json", "pull now"]);
+    expect(result).toEqual({
+      mode: "party",
+      message: "pull now",
+      json: true,
+    });
+  });
+
+  test("--json does not leak into whisper message", () => {
+    const result = parseArgs(["-w", "Xiara", "--json", "hey"]);
+    expect(result).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "hey",
+      json: true,
+    });
+  });
+});
+
+describe("sendToSocket", () => {
+  test("rejects on stale socket file", async () => {
+    const path = `./tmp/stale-sock-${Date.now()}.sock`;
+    await writeFile(path, "");
+    try {
+      await expect(sendToSocket("STATUS", path)).rejects.toThrow();
+    } finally {
+      await unlink(path).catch(() => {});
+    }
   });
 });

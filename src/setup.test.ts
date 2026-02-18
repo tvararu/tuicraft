@@ -35,4 +35,19 @@ describe("parseSetupFlags", () => {
   test("throws if required flags missing", () => {
     expect(() => parseSetupFlags(["--account", "x"])).toThrow();
   });
+
+  test("throws on invalid --port value", () => {
+    expect(() =>
+      parseSetupFlags([
+        "--account",
+        "x",
+        "--password",
+        "y",
+        "--character",
+        "Z",
+        "--port",
+        "abc",
+      ]),
+    ).toThrow("Invalid --port value: abc");
+  });
 });

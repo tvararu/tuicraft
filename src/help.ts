@@ -36,7 +36,7 @@ DAEMON
 
 FILES
   ~/.config/tuicraft/config.toml  Account config
-  /tmp/tuicraft-<uid>/sock        Daemon socket
-  /tmp/tuicraft-<uid>/pid         Daemon pidfile
+  $TMPDIR/tuicraft-<uid>/sock     Daemon socket
+  $TMPDIR/tuicraft-<uid>/pid     Daemon pidfile
   ~/.local/state/tuicraft/session.log  Session log`;
 }

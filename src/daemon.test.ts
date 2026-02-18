@@ -5,6 +5,7 @@ import {
   dispatchCommand,
   onChatMessage,
   writeLines,
+  type EventEntry,
 } from "daemon";
 import { sendToSocket } from "cli";
 import { RingBuffer } from "ring-buffer";
@@ -100,6 +101,28 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("READ_JSON", () => {
+    expect(parseIpcCommand("READ_JSON")).toEqual({ type: "read_json" });
+  });
+
+  test("READ_WAIT_JSON", () => {
+    expect(parseIpcCommand("READ_WAIT_JSON 2000")).toEqual({
+      type: "read_wait_json",
+      ms: 2000,
+    });
+  });
+
+  test("WHO_JSON without filter", () => {
+    expect(parseIpcCommand("WHO_JSON")).toEqual({ type: "who_json" });
+  });
+
+  test("WHO_JSON with filter", () => {
+    expect(parseIpcCommand("WHO_JSON mage")).toEqual({
+      type: "who_json",
+      filter: "mage",
+    });
+  });
+
   test("unknown command returns undefined", () => {
     expect(parseIpcCommand("DANCE")).toBeUndefined();
   });
@@ -108,7 +131,7 @@ describe("parseIpcCommand", () => {
 describe("dispatchCommand", () => {
   test("say calls sendSay and writes OK", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -127,7 +150,7 @@ describe("dispatchCommand", () => {
 
   test("yell calls sendYell and writes OK", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -145,7 +168,7 @@ describe("dispatchCommand", () => {
 
   test("guild calls sendGuild and writes OK", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -163,7 +186,7 @@ describe("dispatchCommand", () => {
 
   test("party calls sendParty and writes OK", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -181,7 +204,7 @@ describe("dispatchCommand", () => {
 
   test("whisper calls sendWhisper and writes OK", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -197,11 +220,11 @@ describe("dispatchCommand", () => {
     expect(socket.written()).toBe("OK\n\n");
   });
 
-  test("read drains ring buffer", async () => {
+  test("read drains ring buffer text", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
-    events.push("[say] Alice: hi");
-    events.push("[say] Bob: hey");
+    const events = new RingBuffer<EventEntry>(10);
+    events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
+    events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -212,7 +235,7 @@ describe("dispatchCommand", () => {
 
   test("read on empty buffer writes just terminator", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -225,8 +248,8 @@ describe("dispatchCommand", () => {
     jest.useFakeTimers();
     try {
       const handle = createMockHandle();
-      const events = new RingBuffer<string>(10);
-      events.push("[say] Alice: hi");
+      const events = new RingBuffer<EventEntry>(10);
+      events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
       const socket = createMockSocket();
       const cleanup = jest.fn();
 
@@ -249,7 +272,7 @@ describe("dispatchCommand", () => {
 
   test("status writes CONNECTED", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -260,7 +283,7 @@ describe("dispatchCommand", () => {
 
   test("stop calls cleanup and returns true", async () => {
     const handle = createMockHandle();
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -290,7 +313,7 @@ describe("dispatchCommand", () => {
         zone: 1,
       },
     ]);
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -309,13 +332,97 @@ describe("dispatchCommand", () => {
   test("who without filter passes empty object", async () => {
     const handle = createMockHandle();
     (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([]);
-    const events = new RingBuffer<string>(10);
+    const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
     await dispatchCommand({ type: "who" }, handle, events, socket, cleanup);
 
     expect(handle.who).toHaveBeenCalledWith({});
+  });
+
+  test("read_json drains ring buffer json", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    events.push({
+      text: "[say] Alice: hi",
+      json: '{"type":"SAY","sender":"Alice","message":"hi"}',
+    });
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "read_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe(
+      '{"type":"SAY","sender":"Alice","message":"hi"}\n\n',
+    );
+  });
+
+  test("read_wait_json delays then drains json", async () => {
+    jest.useFakeTimers();
+    try {
+      const handle = createMockHandle();
+      const events = new RingBuffer<EventEntry>(10);
+      events.push({
+        text: "[say] Alice: hi",
+        json: '{"type":"SAY"}',
+      });
+      const socket = createMockSocket();
+      const cleanup = jest.fn();
+
+      const promise = dispatchCommand(
+        { type: "read_wait_json", ms: 500 },
+        handle,
+        events,
+        socket,
+        cleanup,
+      );
+
+      expect(socket.written()).toBe("");
+      jest.advanceTimersByTime(500);
+      await promise;
+      expect(socket.written()).toBe('{"type":"SAY"}\n\n');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("who_json returns JSON formatted results", async () => {
+    const handle = createMockHandle();
+    (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([
+      {
+        name: "Test",
+        guild: "G",
+        level: 80,
+        classId: 1,
+        race: 1,
+        gender: 0,
+        zone: 1,
+      },
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "who_json", filter: "mage" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.who).toHaveBeenCalledWith({ name: "mage" });
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("WHO");
+    expect(parsed.count).toBe(1);
+    expect(parsed.results[0].name).toBe("Test");
   });
 });
 
@@ -335,8 +442,10 @@ describe("writeLines", () => {
 
 describe("onChatMessage", () => {
   test("pushes formatted message to ring buffer", () => {
-    const events = new RingBuffer<string>(10);
-    const log: SessionLog = { append: jest.fn() } as unknown as SessionLog;
+    const events = new RingBuffer<EventEntry>(10);
+    const log: SessionLog = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
 
     onChatMessage(
       { type: ChatType.SAY, sender: "Alice", message: "hi" },
@@ -345,12 +454,17 @@ describe("onChatMessage", () => {
     );
 
     const drained = events.drain();
-    expect(drained).toEqual(["[say] Alice: hi"]);
+    expect(drained[0]!.text).toBe("[say] Alice: hi");
+    expect(JSON.parse(drained[0]!.json)).toEqual({
+      type: "SAY",
+      sender: "Alice",
+      message: "hi",
+    });
   });
 
   test("appends JSON to session log", () => {
-    const events = new RingBuffer<string>(10);
-    const append = jest.fn();
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.resolve());
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onChatMessage(
@@ -372,12 +486,12 @@ describe("IPC round-trip", () => {
   let sockPath: string;
   let server: ReturnType<typeof Bun.listen>;
   let handle: ReturnType<typeof createMockHandle>;
-  let events: RingBuffer<string>;
+  let events: RingBuffer<EventEntry>;
 
   function startTestServer() {
     sockPath = `./tmp/test-daemon-${++sockCounter}-${Date.now()}.sock`;
     handle = createMockHandle();
-    events = new RingBuffer<string>(100);
+    events = new RingBuffer<EventEntry>(100);
     const cleanup = jest.fn();
 
     server = Bun.listen({
@@ -459,8 +573,8 @@ describe("IPC round-trip", () => {
 
   test("READ returns buffered events", async () => {
     startTestServer();
-    events.push("[say] Alice: hi");
-    events.push("[say] Bob: hey");
+    events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
+    events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
     const lines = await sendCommand("READ");
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
   });
