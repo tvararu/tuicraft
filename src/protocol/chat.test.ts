@@ -86,6 +86,28 @@ describe("parseChatMessage", () => {
     expect(msg.type).toBe(ChatType.SYSTEM);
     expect(msg.message).toBe("Welcome");
   });
+
+  test("parses a GM message with embedded sender name", () => {
+    const w = new PacketWriter();
+    w.uint8(ChatType.SAY);
+    w.uint32LE(0);
+    w.uint32LE(0x42);
+    w.uint32LE(0x00);
+    w.uint32LE(0);
+    const nameBytes = new TextEncoder().encode("GameMaster");
+    w.uint32LE(nameBytes.byteLength);
+    w.rawBytes(nameBytes);
+    w.uint32LE(0x42);
+    w.uint32LE(0x00);
+    w.uint32LE(5);
+    w.rawBytes(new TextEncoder().encode("hello"));
+    w.uint8(0);
+
+    const msg = parseChatMessage(new PacketReader(w.finish()), true);
+    expect(msg.type).toBe(ChatType.SAY);
+    expect(msg.senderName).toBe("GameMaster");
+    expect(msg.message).toBe("hello");
+  });
 });
 
 describe("buildChatMessage", () => {
