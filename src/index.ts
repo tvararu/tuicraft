@@ -84,9 +84,12 @@ async function main() {
       break;
     }
     case "status": {
-      await ensureDaemon();
-      const lines = await sendToSocket("STATUS");
-      for (const line of lines) console.log(line);
+      try {
+        const lines = await sendToSocket("STATUS");
+        for (const line of lines) console.log(line);
+      } catch {
+        console.log("Daemon is not running.");
+      }
       break;
     }
     case "stop": {

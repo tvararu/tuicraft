@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { ChatType } from "protocol/opcodes";
 import type { WorldHandle, ChatMessage, WhoResult } from "client";
+import type { LogEntry } from "session-log";
 
 export type Command =
   | { type: "say"; message: string }
@@ -115,15 +116,15 @@ const JSON_TYPE_LABELS: Record<number, string> = {
   [ChatType.PARTY_LEADER]: "PARTY_LEADER",
 };
 
-export function formatMessageJson(msg: ChatMessage): string {
+export function formatMessageObj(msg: ChatMessage): LogEntry {
   const type = JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
-  const obj: Record<string, string> = {
-    type,
-    sender: msg.sender,
-    message: msg.message,
-  };
-  if (msg.channel) obj["channel"] = msg.channel;
-  return JSON.stringify(obj);
+  const obj: LogEntry = { type, sender: msg.sender, message: msg.message };
+  if (msg.channel) obj.channel = msg.channel;
+  return obj;
+}
+
+export function formatMessageJson(msg: ChatMessage): string {
+  return JSON.stringify(formatMessageObj(msg));
 }
 
 export function formatError(message: string): string {

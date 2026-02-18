@@ -4,7 +4,7 @@ import type { WorldHandle, ChatMessage } from "client";
 import { RingBuffer } from "ring-buffer";
 import {
   formatMessage,
-  formatMessageJson,
+  formatMessageObj,
   formatWhoResults,
   formatWhoResultsJson,
 } from "tui";
@@ -165,9 +165,9 @@ export function onChatMessage(
   events: RingBuffer<EventEntry>,
   log: SessionLog,
 ): void {
-  const jsonStr = formatMessageJson(msg);
-  events.push({ text: formatMessage(msg), json: jsonStr });
-  log.append(JSON.parse(jsonStr)).catch(() => {});
+  const obj = formatMessageObj(msg);
+  events.push({ text: formatMessage(msg), json: JSON.stringify(obj) });
+  log.append(obj).catch(() => {});
 }
 
 export function startDaemonServer(

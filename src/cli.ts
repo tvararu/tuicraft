@@ -138,7 +138,20 @@ export function parseArgs(args: string[]): CliAction {
   const flag = parseFlagCommands(args);
   if (flag) return flag;
 
-  return { mode: "say", message: args.join(" "), json: false };
+  return {
+    mode: "say",
+    message: filterFlags(args).join(" "),
+    json: hasFlag(args, "--json"),
+  };
+}
+
+function parseResponseLines(buffer: string): string[] {
+  const result: string[] = [];
+  for (const line of buffer.split("\n")) {
+    if (line === "") break;
+    result.push(line);
+  }
+  return result;
 }
 
 export async function sendToSocket(
@@ -155,17 +168,15 @@ export async function sendToSocket(
           socket.write(command + "\n");
           socket.flush();
         },
-        data(_socket, data) {
+        data(socket, data) {
           buffer += Buffer.from(data).toString();
+          if (buffer.endsWith("\n\n") || buffer === "\n") {
+            socket.end();
+            resolve(parseResponseLines(buffer));
+          }
         },
         close() {
-          const lines = buffer.split("\n");
-          const result: string[] = [];
-          for (const line of lines) {
-            if (line === "") break;
-            result.push(line);
-          }
-          resolve(result);
+          resolve(parseResponseLines(buffer));
         },
         error(_socket, err) {
           reject(err);
@@ -200,7 +211,7 @@ export async function ensureDaemon(): Promise<void> {
     ? [process.execPath, Bun.main, "--daemon"]
     : [process.execPath, "--daemon"];
   const proc = Bun.spawn(args, {
-    stdio: ["ignore", "ignore", "ignore"],
+    stdio: ["ignore", "ignore", "pipe"],
   });
   proc.unref();
 
@@ -208,5 +219,10 @@ export async function ensureDaemon(): Promise<void> {
     await Bun.sleep(100);
     if (await socketExists(path)) return;
   }
-  throw new Error("Daemon failed to start within 30 seconds");
+  const stderr = (await new Response(proc.stderr).text()).trim();
+  throw new Error(
+    stderr
+      ? `Daemon failed to start within 30 seconds:\n${stderr}`
+      : "Daemon failed to start within 30 seconds",
+  );
 }
