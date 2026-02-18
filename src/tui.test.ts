@@ -42,6 +42,8 @@ function writeLine(stream: PassThrough, line: string): void {
   stream.write(line + "\n");
 }
 
+const flush = () => Bun.sleep(0);
+
 describe("parseCommand", () => {
   test("bare text becomes say", () => {
     expect(parseCommand("hello")).toEqual({ type: "say", message: "hello" });
@@ -230,7 +232,7 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "hello");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.sendSay).toHaveBeenCalledWith("hello");
 
@@ -247,7 +249,7 @@ describe("startTui", () => {
     writeLine(input, "/g guild msg");
     writeLine(input, "/p party msg");
     writeLine(input, "/raid pull now");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.sendYell).toHaveBeenCalledWith("LOUD");
     expect(handle.sendGuild).toHaveBeenCalledWith("guild msg");
@@ -264,7 +266,7 @@ describe("startTui", () => {
 
     const done = startTui(handle, false, { input, write: () => {} });
     writeLine(input, "/w Alice hey there");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.sendWhisper).toHaveBeenCalledWith("Alice", "hey there");
 
@@ -282,7 +284,7 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/r hello");
-    await Bun.sleep(10);
+    await flush();
 
     expect(output.join("")).toContain("No one has whispered you yet");
 
@@ -297,7 +299,7 @@ describe("startTui", () => {
     const done = startTui(handle, false, { input, write: () => {} });
     writeLine(input, "/w Bob initial");
     writeLine(input, "/r followup");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.sendWhisper).toHaveBeenCalledWith("Bob", "followup");
 
@@ -326,7 +328,8 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/who");
-    await Bun.sleep(10);
+    await flush();
+    await flush();
 
     expect(output.join("")).toContain("WHO\tTest\t80\tG");
 
@@ -343,7 +346,7 @@ describe("startTui", () => {
 
     const done = startTui(handle, false, { input, write: () => {} });
     writeLine(input, "/1 hello general");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.getChannel).toHaveBeenCalledWith(1);
     expect(handle.sendChannel).toHaveBeenCalledWith("General", "hello general");
@@ -365,7 +368,7 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/3 hello");
-    await Bun.sleep(10);
+    await flush();
 
     expect(output.join("")).toContain("Not in channel 3");
 
@@ -398,7 +401,6 @@ describe("startTui", () => {
       sender: "Alice",
       message: "hi",
     });
-    await Bun.sleep(10);
 
     expect(output.join("")).toContain("SAY\tAlice\thi");
 
@@ -416,10 +418,9 @@ describe("startTui", () => {
       sender: "Eve",
       message: "psst",
     });
-    await Bun.sleep(10);
 
     writeLine(input, "/r got it");
-    await Bun.sleep(10);
+    await flush();
 
     expect(handle.sendWhisper).toHaveBeenCalledWith("Eve", "got it");
 
@@ -459,7 +460,6 @@ describe("startTui", () => {
         sender: "Al",
         message: "hi",
       });
-      await Bun.sleep(10);
 
       expect(spy).toHaveBeenCalled();
       input.end();
@@ -490,7 +490,8 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     writeLine(input, "/who");
-    await Bun.sleep(10);
+    await flush();
+    await flush();
 
     expect(output.join("")).toContain("[who] 1 results: Test (80)");
 
@@ -512,7 +513,6 @@ describe("startTui", () => {
       sender: "Alice",
       message: "hi",
     });
-    await Bun.sleep(10);
 
     expect(output.join("")).toContain("\r\x1b[K[say] Alice: hi\n");
 
