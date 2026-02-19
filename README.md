@@ -8,7 +8,7 @@ tuicraft targets AzerothCore private servers and is designed to be both human
 and LLM friendly.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+curl -fsSL tuicraft.vararu.org | sh
 ```
 
 ## Features
@@ -37,13 +37,13 @@ mode, JSONL output for scripting
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+curl -fsSL tuicraft.vararu.org | sh
 ```
 
 Override the install directory (default: `/usr/local/bin`):
 
 ```sh
-TUICRAFT_INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+TUICRAFT_INSTALL_DIR=~/.local/bin curl -fsSL tuicraft.vararu.org | sh
 ```
 
 Pre-built binaries are available on the [releases
