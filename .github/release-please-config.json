@@ -8,13 +8,13 @@
     { "type": "fix", "section": "Bug Fixes" },
     { "type": "perf", "section": "Performance" },
     { "type": "deps", "section": "Dependencies" },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "chore", "section": "Miscellaneous", "hidden": true },
-    { "type": "style", "section": "Miscellaneous", "hidden": true },
-    { "type": "refactor", "section": "Miscellaneous", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "build", "section": "Build", "hidden": true },
-    { "type": "ci", "section": "CI", "hidden": true }
+    { "type": "docs", "section": "Documentation" },
+    { "type": "chore", "section": "Maintenance" },
+    { "type": "style", "section": "Maintenance" },
+    { "type": "refactor", "section": "Maintenance" },
+    { "type": "test", "section": "Maintenance" },
+    { "type": "build", "section": "Maintenance" },
+    { "type": "ci", "section": "Maintenance" }
   ],
   "packages": {
     ".": {}
