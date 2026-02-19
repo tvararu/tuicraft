@@ -376,6 +376,19 @@ function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
   }
 }
 
+function handleMotd(conn: WorldConn, r: PacketReader): void {
+  const lineCount = r.uint32LE();
+  const lines: string[] = [];
+  for (let i = 0; i < lineCount; i++) {
+    lines.push(r.cString());
+  }
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message: lines.join("\n"),
+  });
+}
+
 function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
   const name = r.cString();
   conn.onMessage?.({
@@ -575,6 +588,7 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_NAME_QUERY_RESPONSE, (r) =>
       handleNameQueryResponse(conn, r),
     );
+    conn.dispatch.on(GameOpcode.SMSG_MOTD, (r) => handleMotd(conn, r));
     conn.dispatch.on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
       handlePlayerNotFound(conn, r),
     );

@@ -1,16 +1,9 @@
 # Known Bugs
 
-- [ ] No SMSG_MOTD handler — message-of-the-day silently dropped
 - [ ] No reconnect challenge/proof handling — quick reconnects fail
 - [ ] No SMSG_CONTACT_LIST handler — friend list unavailable
 
 ---
-
-## No SMSG_MOTD handler — message-of-the-day silently dropped
-
-The server sends SMSG_MOTD (0x033D) during login. Format: uint32 line count,
-then N null-terminated strings. Should push into the ring buffer as a system
-event. Currently silently dropped by `drainWorldPackets`.
 
 ## No reconnect challenge/proof handling — quick reconnects fail
 

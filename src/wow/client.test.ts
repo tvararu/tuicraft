@@ -742,6 +742,33 @@ describe("world error paths", () => {
     }
   });
 
+  test("SMSG_MOTD delivers each line as a system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint32LE(2);
+      w.cString("Welcome to the server!");
+      w.cString("Enjoy your stay.");
+      ws.inject(GameOpcode.SMSG_MOTD, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.message).toBe("Welcome to the server!\nEnjoy your stay.");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("channel left removes from channel list", async () => {
     const ws = await startMockWorldServer();
     try {
