@@ -121,6 +121,12 @@ When running in TUI mode, the following slash commands are available:
 | `/1` _msg_        | Channel 1 (usually General) |
 | `/2` _msg_        | Channel 2 (usually Trade)   |
 | `/who` _query_    | Who search                  |
+| `/invite` _name_  | Invite player to group      |
+| `/kick` _name_    | Remove player from group    |
+| `/leave`          | Leave the current group     |
+| `/leader` _name_  | Transfer group leadership   |
+| `/accept`         | Accept a group invitation   |
+| `/decline`        | Decline a group invitation  |
 | `/quit`           | Disconnect and exit         |
 
 ## Output Format
@@ -132,6 +138,8 @@ Human-readable (default):
 [whisper from Xiara] Following Deity
 [guild] Xiara: heading out
 [who] 3 results: Xiara (80), Hemet (74), Sanu (14)
+[group] Voidtrix invites you to a group
+[group] Xia is now the group leader
 ```
 
 JSONL (`--json`):

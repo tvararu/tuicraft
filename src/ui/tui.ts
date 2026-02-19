@@ -232,7 +232,7 @@ export function formatGroupEvent(event: GroupEvent): string | undefined {
           ? verb === "kick"
             ? `Removed ${event.target} from group`
             : `Invited ${event.target}`
-          : `Cannot ${verb} ${event.target}: ${partyResultLabel(event.result)}`;
+          : `Cannot ${verb}${event.target ? ` ${event.target}` : ""}: ${partyResultLabel(event.result)}`;
       return `[group] ${label}`;
     }
     case "leader_changed":

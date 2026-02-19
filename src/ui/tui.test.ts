@@ -871,6 +871,17 @@ describe("formatGroupEvent", () => {
     ).toBe("[group] Cannot kick Voidtrix: you are not the leader");
   });
 
+  test("command_result with empty target omits extra space", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.UNINVITE,
+        target: "",
+        result: PartyResult.NOT_LEADER,
+      }),
+    ).toBe("[group] Cannot kick: you are not the leader");
+  });
+
   test("invite failure with group full label", () => {
     expect(
       formatGroupEvent({

@@ -18,6 +18,18 @@ test("help text includes all global flags", () => {
     expect(text).toContain(flag);
 });
 
+test("help text includes interactive group commands", () => {
+  for (const cmd of [
+    "/invite",
+    "/kick",
+    "/leave",
+    "/leader",
+    "/accept",
+    "/decline",
+  ])
+    expect(text).toContain(cmd);
+});
+
 test("help text includes all setup flags", () => {
   for (const flag of [
     "--account",
