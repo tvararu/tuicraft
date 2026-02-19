@@ -1,6 +1,7 @@
 export type CliAction =
   | { mode: "interactive" }
   | { mode: "daemon" }
+  | { mode: "version" }
   | { mode: "setup"; args: string[] }
   | { mode: "help" }
   | { mode: "stop" }
@@ -29,6 +30,7 @@ const SUBCOMMANDS = new Set([
   "tail",
   "logs",
   "help",
+  "version",
   "send",
   "who",
 ]);
@@ -156,7 +158,9 @@ function filterFlags(args: string[]): string[] {
 }
 
 function parseFlagCommands(args: string[]): CliAction | undefined {
-  if (hasFlag(args, "--help")) return { mode: "help" };
+  if (hasFlag(args, "--help") || hasFlag(args, "-h")) return { mode: "help" };
+  if (hasFlag(args, "--version") || hasFlag(args, "-v"))
+    return { mode: "version" };
   if (hasFlag(args, "--daemon")) return { mode: "daemon" };
 
   if (hasFlag(args, "-w")) {
