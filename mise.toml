@@ -14,6 +14,9 @@ run = "bun install"
 
 [tasks.build]
 description = "Compile single binary"
+depends = ["bundle"]
+sources = ["src/**/*.ts"]
+outputs = ["dist/tuicraft"]
 run = "bun build --compile src/main.ts --outfile dist/tuicraft"
 
 [tasks."build:all"]
@@ -90,6 +93,11 @@ run = """
 git worktree remove --force .worktrees/$usage_branch
 git branch -D $usage_branch
 """
+
+[tasks.deploy]
+description = "Build and symlink to /usr/local/bin"
+depends = ["build"]
+run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 
 [tasks.main]
 description = "Switch to main, pull, and clean up merged branches"
