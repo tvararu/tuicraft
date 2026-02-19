@@ -4,7 +4,7 @@
 - [ ] `/invite` treated as a say message instead of a command
 - [ ] Playerbot commands from non-party GM only partially work
 - [ ] Chat mode not sticky like in-game client
-- [ ] SPECIFY_BUILD flag skips wrong byte count in realm parsing
+- [x] SPECIFY_BUILD flag skips wrong byte count in realm parsing
 - [ ] Auth error codes are incomplete (6 of 19)
 - [ ] World auth failure codes are unnamed
 - [ ] No SMSG_MOTD handler — message-of-the-day silently dropped

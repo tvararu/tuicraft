@@ -134,7 +134,7 @@ export function parseRealmList(r: PacketReader): Realm[] {
 
     if (flags & 0x04) {
       r.skip(3);
-      r.skip(1);
+      r.skip(2);
     }
 
     realms.push({

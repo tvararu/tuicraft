@@ -203,7 +203,7 @@ test("parseRealmList skips version info when flags & 0x04", () => {
 
   const bodyWriter = new PacketWriter();
   bodyWriter.uint32LE(0);
-  bodyWriter.uint16LE(1);
+  bodyWriter.uint16LE(2);
 
   bodyWriter.uint8(0);
   bodyWriter.uint8(0);
@@ -217,7 +217,17 @@ test("parseRealmList skips version info when flags & 0x04", () => {
   bodyWriter.uint8(3);
   bodyWriter.uint8(3);
   bodyWriter.uint8(5);
+  bodyWriter.uint16LE(12340);
+
   bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(0);
+  bodyWriter.cString("Normal");
+  bodyWriter.cString("10.0.0.2:8086");
+  bodyWriter.uint32LE(0);
+  bodyWriter.uint8(0);
+  bodyWriter.uint8(1);
+  bodyWriter.uint8(42);
 
   const body = bodyWriter.finish();
   w.uint16LE(body.length);
@@ -226,9 +236,13 @@ test("parseRealmList skips version info when flags & 0x04", () => {
   const r = new PacketReader(w.finish());
   const realms = parseRealmList(r);
 
-  expect(realms).toHaveLength(1);
+  expect(realms).toHaveLength(2);
   expect(realms[0]!.name).toBe("PTR");
   expect(realms[0]!.host).toBe("10.0.0.1");
   expect(realms[0]!.port).toBe(8085);
   expect(realms[0]!.id).toBe(7);
+  expect(realms[1]!.name).toBe("Normal");
+  expect(realms[1]!.host).toBe("10.0.0.2");
+  expect(realms[1]!.port).toBe(8086);
+  expect(realms[1]!.id).toBe(42);
 });
