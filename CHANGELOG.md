@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.3.5](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.4...tuicraft-v0.3.5) (2026-02-19)
+
+
+### Features
+
+* Add --version/-v/version and -h flag shortcuts ([745a1ab](https://github.com/tvararu/tuicraft/commit/745a1ab9878e4871d0d512d8c678273bb8e6527e))
+* Add authWithRetry with exponential backoff for reconnect ([3df0a26](https://github.com/tvararu/tuicraft/commit/3df0a26a588f04ac9474baf0b4aa8fa8f39b1fc8))
+* Add buildReconnectProof with MD5 proof computation ([036aa4b](https://github.com/tvararu/tuicraft/commit/036aa4b8e6d06b98f69afa7e61e1136da6840a4a))
+* Add parseReconnectChallengeResponse ([774c8ef](https://github.com/tvararu/tuicraft/commit/774c8efa18e644dec8a5dd81c8a9586ca2b31d21))
+* Add reconnect mode to mock auth server ([e1d7344](https://github.com/tvararu/tuicraft/commit/e1d7344c1978407ab9b3c4e79aef06e3d355b532))
+* Add RECONNECT_CHALLENGE and RECONNECT_PROOF auth opcodes ([d4d8e34](https://github.com/tvararu/tuicraft/commit/d4d8e3475e8600c080dc4276a49894d5a1b87bd4))
+* Handle RECONNECT_CHALLENGE in auth state machine ([9583b48](https://github.com/tvararu/tuicraft/commit/9583b4889b12f5ab3590ab9209e43a309eb569c5))
+* Wire callers to use authWithRetry for reconnect resilience ([f87c7c2](https://github.com/tvararu/tuicraft/commit/f87c7c2e91b2bc82b868ff7666efe3d0a7172c26))
+
+
+### Bug Fixes
+
+* **ci:** Add issues:write permission for coverage comment updates ([570bf99](https://github.com/tvararu/tuicraft/commit/570bf9981bdc458bd92c281a8c58f70254ebde56))
+* **ci:** Replace REST issues API with GraphQL for coverage comments ([8da9a20](https://github.com/tvararu/tuicraft/commit/8da9a20f645a6723b576ab104cf61261f976ca74))
+* Consume full 16-byte checksum salt in reconnect challenge parser ([79288a9](https://github.com/tvararu/tuicraft/commit/79288a9a0c1f25548b1d0024cc21dd2e80429240))
+* Point install command at /install.sh path ([ec9f63c](https://github.com/tvararu/tuicraft/commit/ec9f63ced8236214ce18f8807ab2dd15c53a99dc))
+* Replace implicit say fallback with send subcommand ([c3fbcf0](https://github.com/tvararu/tuicraft/commit/c3fbcf02c0611b4d4b9e31b2f93157088b20b042))
+* Use SHA1 instead of MD5 for reconnect proof hash ([f75f178](https://github.com/tvararu/tuicraft/commit/f75f178fdefe5f1388e54e05c7cbc5bca5f3a369))
+
+
+### Documentation
+
+* Mark reconnect challenge/proof bug as resolved ([0494e55](https://github.com/tvararu/tuicraft/commit/0494e552af5b117d8b32b33aff3ee3450044adab))
+* Remove resolved reconnect bug from bugs.md ([54c1556](https://github.com/tvararu/tuicraft/commit/54c15569c8e670587c83a895a96819b25803763d))
+* Update README usage examples for send subcommand ([b4c76a7](https://github.com/tvararu/tuicraft/commit/b4c76a776faa29804b0ca96ec1a14cfb207c8a4c))
+
+
+### Maintenance
+
+* Cover reconnect challenge and proof failure branches ([7bfa7df](https://github.com/tvararu/tuicraft/commit/7bfa7df90ca4551800af9a15a94c683b17a8b548))
+* Extract auth state machine from authHandshake ([74ac385](https://github.com/tvararu/tuicraft/commit/74ac38569165b18616be381a20baa01588e66a9e))
+* Fix trailing newline in auth test file ([7095173](https://github.com/tvararu/tuicraft/commit/709517354d959860fa96c8d217c91253284ee116))
+* Move --who flag to who subcommand ([e83470b](https://github.com/tvararu/tuicraft/commit/e83470b689c10a8ddb64bd742ddb1cbae5bd2bc8))
+
 ## [0.3.4](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.3...tuicraft-v0.3.4) (2026-02-19)
 
 
