@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { AuthOpcode } from "wow/protocol/opcodes";
 import {
@@ -96,6 +97,30 @@ export function parseReconnectChallengeResponse(
   const challengeData = r.bytes(16);
   r.skip(6);
   return { status, challengeData };
+}
+
+export function buildReconnectProof(
+  account: string,
+  challengeData: Uint8Array,
+  sessionKey: Uint8Array,
+  clientData?: Uint8Array,
+): Uint8Array {
+  const cd = clientData ?? new Uint8Array(randomBytes(16));
+  const proof = createHash("md5")
+    .update(new TextEncoder().encode(account.toUpperCase()))
+    .update(challengeData)
+    .update(cd)
+    .update(sessionKey)
+    .digest();
+
+  const w = new PacketWriter();
+  w.uint8(AuthOpcode.RECONNECT_PROOF);
+  w.rawBytes(cd);
+  w.rawBytes(new Uint8Array(proof));
+  w.rawBytes(new Uint8Array(4));
+  w.rawBytes(new Uint8Array(20));
+  w.uint8(0x00);
+  return w.finish();
 }
 
 export function buildLogonProof(srpResult: SRPResult): Uint8Array {

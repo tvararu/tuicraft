@@ -1,4 +1,5 @@
 import { test, expect } from "bun:test";
+import { createHash } from "node:crypto";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { leBytesToBigInt } from "wow/crypto/srp";
 import { ChallengeResult } from "wow/protocol/opcodes";
@@ -6,6 +7,7 @@ import {
   buildLogonChallenge,
   buildLogonProof,
   buildRealmListRequest,
+  buildReconnectProof,
   parseLogonChallengeResponse,
   parseLogonProofResponse,
   parseRealmList,
@@ -298,5 +300,35 @@ test("parseReconnectChallengeResponse returns error status", () => {
 
   expect(result.status).toBe(0x05);
   expect(result.challengeData).toBeUndefined();
+});
+
+test("buildReconnectProof produces correct packet with MD5 proof", () => {
+  const account = "TEST";
+  const challengeData = new Uint8Array(16).fill(0xaa);
+  const testSessionKey = new Uint8Array(40).fill(0xbb);
+  const clientData = new Uint8Array(16).fill(0xcc);
+
+  const expectedProof = createHash("md5")
+    .update(new TextEncoder().encode(account))
+    .update(challengeData)
+    .update(clientData)
+    .update(testSessionKey)
+    .digest();
+
+  const pkt = buildReconnectProof(
+    account,
+    challengeData,
+    testSessionKey,
+    clientData,
+  );
+
+  expect(pkt[0]).toBe(0x03);
+  expect(pkt.slice(1, 17)).toEqual(clientData);
+  expect(pkt.slice(17, 37)).toEqual(
+    new Uint8Array([...expectedProof, 0, 0, 0, 0]),
+  );
+  expect(pkt.slice(37, 57)).toEqual(new Uint8Array(20));
+  expect(pkt[57]).toBe(0x00);
+  expect(pkt.byteLength).toBe(58);
 });
 
