@@ -80,6 +80,24 @@ export function parseLogonChallengeResponse(
   return { status, B, g, N, salt };
 }
 
+export interface ReconnectChallengeResult {
+  status: number;
+  challengeData?: Uint8Array;
+}
+
+export function parseReconnectChallengeResponse(
+  r: PacketReader,
+): ReconnectChallengeResult {
+  r.skip(1);
+  const status = r.uint8();
+  if (status !== 0x00) {
+    return { status };
+  }
+  const challengeData = r.bytes(16);
+  r.skip(6);
+  return { status, challengeData };
+}
+
 export function buildLogonProof(srpResult: SRPResult): Uint8Array {
   const w = new PacketWriter();
   w.uint8(AuthOpcode.LOGON_PROOF);
