@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.3](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.2...tuicraft-v0.3.3) (2026-02-19)
+
+
+### Documentation
+
+* Add commit prefix guidance to CLAUDE.md ([b947f62](https://github.com/tvararu/tuicraft/commit/b947f627087e5aa9b0008add447b8be5567f2440))
+* Add install and compatibility sections ([50298f9](https://github.com/tvararu/tuicraft/commit/50298f913841fa38280f0e7a0d78c53788992553))
+* Add no-hard-wrap rule for PR bodies ([86a4a80](https://github.com/tvararu/tuicraft/commit/86a4a80d8de5f5eea7ddff1de9090468c4a486de))
+* Rewrite tagline and feature copy for clarity ([bb989cf](https://github.com/tvararu/tuicraft/commit/bb989cfc303772a6560b1bac31e177f30186b753))
+* Update usage examples to show installed binary ([ebec193](https://github.com/tvararu/tuicraft/commit/ebec19391595c534243dcc0f7c47a3504eeb97ab))
+* Use tuicraft.vararu.org install URL ([d7b8663](https://github.com/tvararu/tuicraft/commit/d7b866336d80424c1516d3dcf6d1840830ccc7a2))
+
+
+### Maintenance
+
+* Add GitHub Pages site ([e60e35b](https://github.com/tvararu/tuicraft/commit/e60e35b513c6e0be7716cf5b79cea5a4f351b2ff))
+* Add install script ([9ff4d23](https://github.com/tvararu/tuicraft/commit/9ff4d234471b4008d5161ef3aca45b96a71b655e))
+* Add mise deploy task and skip-if-fresh build ([98d6fe5](https://github.com/tvararu/tuicraft/commit/98d6fe5d29583a5da3b2766d5468be073ddc0379))
+* Add mise main task ([99cc25f](https://github.com/tvararu/tuicraft/commit/99cc25f0d6242576a665e6fb74c73abb5758d8ba))
+
 ## [0.3.2](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.1...tuicraft-v0.3.2) (2026-02-19)
 
 
