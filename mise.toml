@@ -16,6 +16,18 @@ run = "bun install"
 description = "Compile single binary"
 run = "bun build --compile src/main.ts --outfile dist/tuicraft"
 
+[tasks."build:all"]
+description = "Cross-compile binaries for all platforms"
+run = '''
+set -e
+for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
+  suffix="${target#bun-}"
+  echo "Building ${suffix}..."
+  bun build --compile --target="${target}" src/main.ts --outfile "dist/tuicraft-${suffix}"
+done
+echo "Done. Binaries in dist/"
+'''
+
 [tasks.test]
 description = "Run all tests"
 run = "bun test"
