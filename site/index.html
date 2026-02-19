@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tuicraft</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #05080a;
+        --surface: #0c1116;
+        --border: #1a2332;
+        --text: #d4c5a0;
+        --muted: #6b6046;
+        --amber: #e8a828;
+        --gold: #f0c040;
+        --dim: #2a2418;
+        --mono:
+          "Menlo", "Cascadia Mono", "Consolas", "Liberation Mono", monospace;
+      }
+      html {
+        font-family: var(--mono);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        font-size: 16px;
+      }
+      body {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 4rem 1.5rem 3rem;
+        position: relative;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.08) 2px,
+          rgba(0, 0, 0, 0.08) 4px
+        );
+        pointer-events: none;
+        z-index: 10;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 50% 0%,
+          rgba(232, 168, 40, 0.04),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .reveal {
+        opacity: 0;
+        animation: fade-up 0.5s ease forwards;
+      }
+
+      h1 {
+        font-size: 3rem;
+        letter-spacing: -0.04em;
+        color: var(--amber);
+        text-shadow: 0 0 30px rgba(232, 168, 40, 0.25);
+        margin-bottom: 0.125rem;
+        animation-delay: 0s;
+      }
+      .tagline {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 3rem;
+        animation-delay: 0.08s;
+      }
+
+      .install {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 0.875rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow-x: auto;
+        animation-delay: 0.16s;
+      }
+      .install::before {
+        content: "$";
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .install code {
+        flex: 1;
+        white-space: nowrap;
+        color: var(--gold);
+        font-size: 0.85rem;
+      }
+      .install button {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 0.2rem 0.5rem;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        flex-shrink: 0;
+        transition: all 0.15s;
+      }
+      .install button:hover {
+        color: var(--amber);
+        border-color: var(--amber);
+      }
+
+      .features {
+        list-style: none;
+        margin-bottom: 3rem;
+        animation-delay: 0.24s;
+      }
+      .features li {
+        padding: 0.4rem 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .features li::before {
+        content: ">";
+        color: var(--amber);
+      }
+      .features strong {
+        color: var(--text);
+        font-weight: normal;
+      }
+
+      .links {
+        display: flex;
+        gap: 2rem;
+        animation-delay: 0.32s;
+      }
+      .links a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.8rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        border-bottom: 1px solid transparent;
+        padding-bottom: 2px;
+        transition: all 0.15s;
+      }
+      .links a:hover {
+        color: var(--amber);
+        border-bottom-color: var(--amber);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="reveal">tuicraft</h1>
+    <p class="tagline reveal">
+      A headless WoW 3.3.5a client that speaks the binary protocol from a
+      terminal.
+    </p>
+
+    <div class="install reveal">
+      <code>curl -fsSL tuicraft.vararu.org | sh</code>
+      <button
+        onclick="
+          navigator.clipboard
+            .writeText('curl -fsSL tuicraft.vararu.org | sh')
+            .then(() => {
+              this.textContent = 'copied!';
+              setTimeout(() => (this.textContent = 'copy'), 2000);
+            })
+        "
+      >
+        copy
+      </button>
+    </div>
+
+    <ul class="features reveal">
+      <li>
+        <strong>🔐 Auth</strong> &mdash; SRP-6 login, Arc4-encrypted world
+        session, realm and character select
+      </li>
+      <li>
+        <strong>💬 Chat</strong> &mdash; Say, yell, whisper, guild, party, raid,
+        and channel messages
+      </li>
+      <li>
+        <strong>👥 Party</strong> &mdash; Invite, kick, leave, leader transfer,
+        live group roster
+      </li>
+      <li>
+        <strong>🖥️ TUI</strong> &mdash; Interactive terminal UI with slash
+        commands and channel switching
+      </li>
+      <li>
+        <strong>🤖 Daemon</strong> &mdash; Background daemon with Unix socket
+        IPC and JSONL output
+      </li>
+      <li>
+        <strong>⚡ Zero deps</strong> &mdash; Pure TypeScript on Bun, compiles
+        to a single binary
+      </li>
+    </ul>
+
+    <nav class="links reveal">
+      <a href="https://github.com/tvararu/tuicraft">GitHub</a>
+      <a href="https://github.com/tvararu/tuicraft/releases">Releases</a>
+    </nav>
+  </body>
+</html>
