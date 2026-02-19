@@ -9,18 +9,19 @@ import {
 } from "bun:test";
 import { parseConfig } from "lib/config";
 import { rm } from "node:fs/promises";
+import type { Interface as ReadlineInterface } from "node:readline";
 
 let answers: string[] = [];
 const mockClose = mock(() => {});
 
-mock.module("node:readline", () => ({
-  createInterface: () => ({
+function fakeCreateInterface(): ReadlineInterface {
+  return {
     question: (_prompt: string, cb: (answer: string) => void) => {
       cb(answers.shift() ?? "");
     },
     close: mockClose,
-  }),
-}));
+  } as unknown as ReadlineInterface;
+}
 
 const tmpBase = `./tmp/setup-wizard-test-${Date.now()}`;
 const cfgDir = `${tmpBase}/config/tuicraft`;
@@ -51,7 +52,7 @@ afterEach(async () => {
 describe("runSetupWizard", () => {
   test("collects all fields and returns config", async () => {
     answers = ["testaccount", "testpass", "Testchar", "myhost", "1234", "7"];
-    const cfg = await runSetupWizard();
+    const cfg = await runSetupWizard(fakeCreateInterface as never);
     expect(cfg).toEqual({
       account: "testaccount",
       password: "testpass",
@@ -66,7 +67,7 @@ describe("runSetupWizard", () => {
 
   test("uses fallback values when answers are empty", async () => {
     answers = ["acc", "pass", "Char", "", "", ""];
-    const cfg = await runSetupWizard();
+    const cfg = await runSetupWizard(fakeCreateInterface as never);
     expect(cfg.host).toBe("t1");
     expect(cfg.port).toBe(3724);
     expect(cfg.language).toBe(1);
@@ -92,7 +93,7 @@ describe("runSetup", () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     try {
       answers = ["wizacc", "wizpass", "WizChar", "wizhost", "9999", "7"];
-      await runSetup([]);
+      await runSetup([], fakeCreateInterface as never);
       const content = await Bun.file(cfgPath).text();
       const cfg = parseConfig(content);
       expect(cfg.account).toBe("wizacc");
@@ -107,7 +108,7 @@ describe("runSetup", () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     try {
       answers = ["a", "b", "C", "", "", ""];
-      await runSetup([]);
+      await runSetup([], fakeCreateInterface as never);
       expect(logSpy).toHaveBeenCalledTimes(1);
       expect(logSpy.mock.calls[0]![0]).toContain("config.toml");
     } finally {
