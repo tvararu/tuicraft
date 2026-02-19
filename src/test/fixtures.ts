@@ -47,5 +47,9 @@ export const sessionKey = fromHex(
   "85e4351ee5ae16d2e3c783b49c7a49124e85067b85d5dbb7c9ec645986cb7f6c471b5acabe51e0aa",
 );
 
+export const reconnectChallengeData = fromHex(
+  "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+);
+
 export const serverSeed = fromHex("deadbeef");
 export const clientSeed = fromHex("cafebabe");
