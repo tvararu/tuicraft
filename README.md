@@ -83,8 +83,10 @@ mise test:live
 tuicraft help              # show help
 tuicraft setup
 tuicraft                   # interactive TUI
-tuicraft "Hello world"     # send a say message (auto-starts daemon)
-tuicraft -w Hemet "Hey"    # whisper
+tuicraft send "Hello"      # send a say message (auto-starts daemon)
+tuicraft send -w Hemet "x" # whisper
+tuicraft send -g "lfm"     # guild chat
+tuicraft who               # who query
 tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
 tuicraft status            # daemon status
