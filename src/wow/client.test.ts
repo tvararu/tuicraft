@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
 import {
   authHandshake,
+  authWithRetry,
   worldSession,
   ReconnectRequiredError,
   type ChatMessage,
@@ -332,6 +333,79 @@ describe("auth error paths", () => {
       ).rejects.toThrow(ReconnectRequiredError);
     } finally {
       authServer.stop();
+    }
+  });
+
+  test("authWithRetry succeeds on first attempt with cached key", async () => {
+    const authServer = await startMockAuthServer({
+      realmAddress: "127.0.0.1:1234",
+      reconnect: {
+        challengeData: reconnectChallengeData,
+        sessionKey,
+      },
+    });
+
+    try {
+      const auth = await authWithRetry(
+        {
+          ...base,
+          host: "127.0.0.1",
+          port: authServer.port,
+          cachedSessionKey: sessionKey,
+        },
+        { maxAttempts: 3, baseDelayMs: 1 },
+      );
+
+      expect(auth.sessionKey).toEqual(sessionKey);
+    } finally {
+      authServer.stop();
+    }
+  });
+
+  test("authWithRetry gives up after maxAttempts", async () => {
+    const authServer = await startMockAuthServer({
+      realmAddress: "127.0.0.1:1234",
+      reconnect: {
+        challengeData: reconnectChallengeData,
+        sessionKey,
+      },
+    });
+
+    try {
+      await expect(
+        authWithRetry(
+          { ...base, host: "127.0.0.1", port: authServer.port },
+          { maxAttempts: 2, baseDelayMs: 1 },
+        ),
+      ).rejects.toThrow(ReconnectRequiredError);
+    } finally {
+      authServer.stop();
+    }
+  });
+
+  test("authWithRetry propagates non-reconnect errors immediately", async () => {
+    const server = Bun.listen({
+      hostname: "127.0.0.1",
+      port: 0,
+      socket: {
+        data(socket) {
+          socket.write(new Uint8Array([0x00, 0x00, 0x05]));
+        },
+        open() {},
+        close() {},
+        error() {},
+      },
+    });
+
+    try {
+      await expect(
+        authWithRetry(
+          { ...base, host: "127.0.0.1", port: server.port },
+          { maxAttempts: 3, baseDelayMs: 1 },
+        ),
+      ).rejects.toThrow("Auth challenge failed: status 0x5");
+    } finally {
+      server.stop(true);
     }
   });
 });
