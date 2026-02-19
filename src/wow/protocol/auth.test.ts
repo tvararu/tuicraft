@@ -331,4 +331,3 @@ test("buildReconnectProof produces correct packet with MD5 proof", () => {
   expect(pkt[57]).toBe(0x00);
   expect(pkt.byteLength).toBe(58);
 });
-
