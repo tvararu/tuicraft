@@ -871,6 +871,28 @@ describe("formatGroupEvent", () => {
     ).toBe("[group] Cannot kick Voidtrix: you are not the leader");
   });
 
+  test("leave success", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.LEAVE,
+        target: "",
+        result: PartyResult.SUCCESS,
+      }),
+    ).toBe("[group] Left the group");
+  });
+
+  test("leave failure", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.LEAVE,
+        target: "",
+        result: PartyResult.NOT_LEADER,
+      }),
+    ).toBe("[group] Cannot leave: you are not the leader");
+  });
+
   test("command_result with empty target omits extra space", () => {
     expect(
       formatGroupEvent({
