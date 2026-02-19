@@ -2,12 +2,12 @@
 set -eu
 
 REPO="tvararu/tuicraft"
-INSTALL_DIR="${TUICRAFT_INSTALL_DIR:-/usr/local/bin}"
 
 main() {
     platform="$(detect_platform)"
     arch="$(detect_arch)"
     fetch_cmd="$(detect_fetch)"
+    install_dir="$(resolve_install_dir)"
 
     printf "Detected: %s-%s\n" "$platform" "$arch" >&2
 
@@ -29,29 +29,42 @@ main() {
     printf "Downloading %s\n" "$url" >&2
     $fetch_cmd "$url" > "$tmpfile"
     chmod +x "$tmpfile"
-
-    if [ -w "$INSTALL_DIR" ]; then
-        mv "$tmpfile" "${INSTALL_DIR}/tuicraft"
-    elif command -v sudo >/dev/null 2>&1; then
-        sudo mv "$tmpfile" "${INSTALL_DIR}/tuicraft"
-    else
-        printf "Error: %s is not writable" "$INSTALL_DIR" >&2
-        printf " and sudo is not available\n" >&2
-        printf "Set TUICRAFT_INSTALL_DIR to a " >&2
-        printf "writable directory\n" >&2
-        exit 1
-    fi
+    mv "$tmpfile" "${install_dir}/tuicraft"
 
     printf "Installed tuicraft (%s) to %s\n" \
-        "$tag" "${INSTALL_DIR}/tuicraft" >&2
+        "$tag" "${install_dir}/tuicraft" >&2
 
     case ":${PATH}:" in
-        *":${INSTALL_DIR}:"*) ;;
+        *":${install_dir}:"*) ;;
         *)
             printf "Warning: %s is not in PATH\n" \
-                "$INSTALL_DIR" >&2
+                "$install_dir" >&2
             ;;
     esac
+}
+
+resolve_install_dir() {
+    if [ -n "${TUICRAFT_INSTALL_DIR:-}" ]; then
+        printf "%s" "$TUICRAFT_INSTALL_DIR"
+        return
+    fi
+
+    if [ -w "/usr/local/bin" ]; then
+        printf "/usr/local/bin"
+        return
+    fi
+
+    local_bin="${HOME}/.local/bin"
+    if [ -d "$local_bin" ] || mkdir -p "$local_bin" 2>/dev/null; then
+        printf "%s" "$local_bin"
+        return
+    fi
+
+    printf "Error: /usr/local/bin is not writable" >&2
+    printf " and ~/.local/bin could not be created\n" >&2
+    printf "Set TUICRAFT_INSTALL_DIR to a " >&2
+    printf "writable directory\n" >&2
+    exit 1
 }
 
 detect_platform() {
