@@ -15,9 +15,12 @@ USAGE
   tuicraft status             Show daemon status
   tuicraft stop               Stop the daemon
   tuicraft logs               Print session log
+  tuicraft version            Print version and exit
   tuicraft help               Show this help
 
 FLAGS
+  -v, --version   Print version and exit
+  -h, --help      Show this help
   --json          Output events as JSONL (for read, tail, chat, who)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)

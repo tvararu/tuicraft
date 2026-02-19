@@ -23,7 +23,7 @@ test("help text includes all chat flags", () => {
 });
 
 test("help text includes all global flags", () => {
-  for (const flag of ["--json", "--wait", "--daemon"])
+  for (const flag of ["--version", "--json", "--wait", "--daemon"])
     expect(text).toContain(flag);
 });
 

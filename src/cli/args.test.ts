@@ -68,6 +68,22 @@ describe("parseArgs", () => {
     expect(parseArgs(["--help"])).toEqual({ mode: "help" });
   });
 
+  test("-h flag", () => {
+    expect(parseArgs(["-h"])).toEqual({ mode: "help" });
+  });
+
+  test("--version flag", () => {
+    expect(parseArgs(["--version"])).toEqual({ mode: "version" });
+  });
+
+  test("version subcommand", () => {
+    expect(parseArgs(["version"])).toEqual({ mode: "version" });
+  });
+
+  test("-v flag", () => {
+    expect(parseArgs(["-v"])).toEqual({ mode: "version" });
+  });
+
   test("send = say", () => {
     expect(parseArgs(["send", "hello world"])).toEqual({
       mode: "say",

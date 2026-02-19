@@ -48,6 +48,11 @@ async function main() {
       console.log(helpText());
       break;
     }
+    case "version": {
+      const pkg: { version: string } = await import("../package.json");
+      console.log(pkg.version);
+      break;
+    }
     case "say":
     case "yell":
     case "guild":
