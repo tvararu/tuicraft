@@ -180,11 +180,11 @@
     </p>
 
     <div class="install reveal">
-      <code>curl -fsSL tuicraft.vararu.org | sh</code>
+      <code>curl -fsSL tuicraft.vararu.org/install.sh | sh</code>
       <button
         onclick="
           navigator.clipboard
-            .writeText('curl -fsSL tuicraft.vararu.org | sh')
+            .writeText('curl -fsSL tuicraft.vararu.org/install.sh | sh')
             .then(() => {
               this.textContent = 'copied!';
               setTimeout(() => (this.textContent = 'copy'), 2000);
