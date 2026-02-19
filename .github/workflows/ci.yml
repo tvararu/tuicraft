@@ -1,12 +1,16 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
   MISE_TASK_TIMEOUT: 10s
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   format:
@@ -30,11 +34,16 @@ jobs:
       - run: mise typecheck
 
   test:
-    name: test / bun test
+    name: test / bun test --coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
         with: { cache: true, install: true }
       - run: mise bundle
-      - run: mise test
+      - run: mise test:coverage
+      - uses: zgosalvez/github-actions-report-lcov@v7
+        if: github.event_name == 'pull_request'
+        with:
+          coverage-files: coverage/lcov.info
+          update-comment: true
