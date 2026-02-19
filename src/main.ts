@@ -16,7 +16,7 @@ async function waitForEvents(
 async function main() {
   switch (action.mode) {
     case "interactive": {
-      const { authHandshake, worldSession } = await import("wow/client");
+      const { authWithRetry, worldSession } = await import("wow/client");
       const { readConfig } = await import("lib/config");
       const cfg = await readConfig();
       const clientCfg = {
@@ -27,7 +27,7 @@ async function main() {
         character: cfg.character,
         language: cfg.language,
       };
-      const auth = await authHandshake(clientCfg);
+      const auth = await authWithRetry(clientCfg);
       const handle = await worldSession(clientCfg, auth);
       const { startTui } = await import("ui/tui");
       await startTui(handle, process.stdin.isTTY ?? false);

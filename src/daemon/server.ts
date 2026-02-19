@@ -1,5 +1,5 @@
 import { readConfig } from "lib/config";
-import { authHandshake, worldSession } from "wow/client";
+import { authHandshake, authWithRetry, worldSession } from "wow/client";
 import type { WorldHandle } from "wow/client";
 import { RingBuffer } from "lib/ring-buffer";
 import { socketPath, pidPath, runtimeDir, logPath } from "lib/paths";
@@ -149,7 +149,7 @@ export async function startDaemon(client?: DaemonClient): Promise<void> {
   const { sock, pid } = await prepareDaemonPaths();
 
   const clientCfg = buildClientConfig(cfg);
-  const auth = await (client?.authHandshake ?? authHandshake)(clientCfg);
+  const auth = await (client ? client.authHandshake(clientCfg) : authWithRetry(clientCfg));
   const handle = await (client?.worldSession ?? worldSession)(clientCfg, auth);
   const log = new SessionLog(logPath());
 
