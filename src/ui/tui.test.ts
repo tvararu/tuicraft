@@ -532,15 +532,22 @@ describe("startTui", () => {
   test("SIGINT closes handle and resolves", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
+    const spy = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
 
-    const done = startTui(handle, true, {
-      input,
-      write: () => {},
-    });
-    input.write("\x03");
-    await done;
+    try {
+      const done = startTui(handle, true, {
+        input,
+        write: () => {},
+      });
+      input.write("\x03");
+      await done;
 
-    expect(handle.close).toHaveBeenCalled();
+      expect(handle.close).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("stream close resolves promise", async () => {
@@ -599,39 +606,53 @@ describe("startTui", () => {
     ]);
     const input = new PassThrough();
     const output: string[] = [];
+    const spy = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
 
-    const done = startTui(handle, true, {
-      input,
-      write: (s) => void output.push(s),
-    });
-    writeLine(input, "/who");
-    await flush(2);
+    try {
+      const done = startTui(handle, true, {
+        input,
+        write: (s) => void output.push(s),
+      });
+      writeLine(input, "/who");
+      await flush(2);
 
-    expect(output.join("")).toContain("[who] 1 results: Test (80)");
+      expect(output.join("")).toContain("[who] 1 results: Test (80)");
 
-    input.end();
-    await done;
+      input.end();
+      await done;
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("interactive mode uses ANSI formatting", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
     const output: string[] = [];
+    const spy = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
 
-    const done = startTui(handle, true, {
-      input,
-      write: (s) => void output.push(s),
-    });
-    handle.triggerMessage({
-      type: ChatType.SAY,
-      sender: "Alice",
-      message: "hi",
-    });
+    try {
+      const done = startTui(handle, true, {
+        input,
+        write: (s) => void output.push(s),
+      });
+      handle.triggerMessage({
+        type: ChatType.SAY,
+        sender: "Alice",
+        message: "hi",
+      });
 
-    expect(output.join("")).toContain("\r\x1b[K[say] Alice: hi\n");
+      expect(output.join("")).toContain("\r\x1b[K[say] Alice: hi\n");
 
-    input.end();
-    await done;
+      input.end();
+      await done;
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("command error is caught and displayed", async () => {
