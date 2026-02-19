@@ -1,5 +1,10 @@
 import { test, expect, describe } from "bun:test";
-import { authHandshake, worldSession, type ChatMessage } from "wow/client";
+import {
+  authHandshake,
+  worldSession,
+  type ChatMessage,
+  type GroupEvent,
+} from "wow/client";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
@@ -122,6 +127,82 @@ describe("two-client chat", () => {
 
     const sayMsg = received.find((m) => m.message === "hello from say test");
     expect(sayMsg).toBeDefined();
+  }, 30_000);
+});
+
+function waitForGroupEvent<T extends GroupEvent["type"]>(
+  events: GroupEvent[],
+  type: T,
+  filter?: (e: Extract<GroupEvent, { type: T }>) => boolean,
+  timeoutMs = 5000,
+): Promise<Extract<GroupEvent, { type: T }>> {
+  const startIdx = events.length;
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      clearInterval(poll);
+      reject(new Error(`timeout waiting for ${type}`));
+    }, timeoutMs);
+    const poll = setInterval(() => {
+      for (let i = startIdx; i < events.length; i++) {
+        const e = events[i]!;
+        if (
+          e.type === type &&
+          (!filter || filter(e as Extract<GroupEvent, { type: T }>))
+        ) {
+          clearInterval(poll);
+          clearTimeout(deadline);
+          resolve(e as Extract<GroupEvent, { type: T }>);
+          return;
+        }
+      }
+    }, 50);
+  });
+}
+
+describe("party management", () => {
+  test("invite, accept, leader transfer, leave", async () => {
+    const auth1 = await authHandshake(config1);
+    const auth2 = await authHandshake(config2);
+
+    const handle1 = await worldSession(config1, auth1);
+    const handle2 = await worldSession(config2, auth2);
+
+    try {
+      await Bun.sleep(1000);
+
+      handle1.leaveGroup();
+      handle2.leaveGroup();
+      await Bun.sleep(2000);
+
+      const events1: GroupEvent[] = [];
+      const events2: GroupEvent[] = [];
+      handle1.onGroupEvent((e) => events1.push(e));
+      handle2.onGroupEvent((e) => events2.push(e));
+
+      handle1.invite(config2.character);
+      await waitForGroupEvent(events2, "invite_received");
+
+      handle2.acceptInvite();
+      const hasMembers = (e: { members: unknown[] }) => e.members.length >= 1;
+      const [list1, list2] = await Promise.all([
+        waitForGroupEvent(events1, "group_list", hasMembers),
+        waitForGroupEvent(events2, "group_list", hasMembers),
+      ]);
+
+      expect(list1.leader).toBe(config1.character);
+      expect(list2.leader).toBe(config1.character);
+
+      handle1.setLeader(config2.character);
+      const leaderChanged = await waitForGroupEvent(events1, "leader_changed");
+      expect(leaderChanged.name).toBe(config2.character);
+
+      handle2.leaveGroup();
+      await waitForGroupEvent(events1, "group_destroyed");
+    } finally {
+      handle1.close();
+      handle2.close();
+      await Promise.all([handle1.closed, handle2.closed]);
+    }
   }, 30_000);
 });
 
