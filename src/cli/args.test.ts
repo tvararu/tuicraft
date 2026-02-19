@@ -199,16 +199,16 @@ describe("parseArgs", () => {
     });
   });
 
-  test("--who flag", () => {
-    expect(parseArgs(["--who"])).toEqual({
+  test("who subcommand", () => {
+    expect(parseArgs(["who"])).toEqual({
       mode: "who",
       filter: undefined,
       json: false,
     });
   });
 
-  test("--who with filter", () => {
-    expect(parseArgs(["--who", "mage"])).toEqual({
+  test("who with filter", () => {
+    expect(parseArgs(["who", "mage"])).toEqual({
       mode: "who",
       filter: "mage",
       json: false,

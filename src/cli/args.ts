@@ -30,6 +30,7 @@ const SUBCOMMANDS = new Set([
   "logs",
   "help",
   "send",
+  "who",
 ]);
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -61,6 +62,16 @@ function parseRead(args: string[]): CliAction {
 
 function parseTail(args: string[]): CliAction {
   return { mode: "tail", json: hasFlag(args.slice(1), "--json") };
+}
+
+function parseWho(args: string[]): CliAction {
+  const rest = args.slice(1);
+  const next = rest[0];
+  return {
+    mode: "who",
+    filter: next && !next.startsWith("-") ? next : undefined,
+    json: hasFlag(rest, "--json"),
+  };
 }
 
 function parseSend(args: string[]): CliAction {
@@ -124,6 +135,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseTail(args);
     case "send":
       return parseSend(args);
+    case "who":
+      return parseWho(args);
     default:
       return { mode: cmd } as CliAction;
   }
@@ -188,16 +201,6 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
       message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
       wait: parseWaitFlag(args),
-    };
-  }
-
-  if (hasFlag(args, "--who")) {
-    const idx = args.indexOf("--who");
-    const next = args[idx + 1];
-    return {
-      mode: "who",
-      filter: next && !next.startsWith("-") ? next : undefined,
-      json: hasFlag(args, "--json"),
     };
   }
 
