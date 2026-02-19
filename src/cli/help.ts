@@ -19,7 +19,7 @@ USAGE
 
 FLAGS
   --json          Output events as JSONL (for read, tail, chat, who)
-  --wait N        Wait N seconds for events (for read)
+  --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
 
 SETUP FLAGS
