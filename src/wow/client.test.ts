@@ -330,6 +330,34 @@ describe("world error paths", () => {
     }
   });
 
+  test("rejects with named message for system error (0x0d)", async () => {
+    const ws = await startMockWorldServer({ authStatus: 0x0d });
+    try {
+      await expect(
+        worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        ),
+      ).rejects.toThrow("World auth failed: system error");
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("rejects with named message for account in use (0x15)", async () => {
+    const ws = await startMockWorldServer({ authStatus: 0x15 });
+    try {
+      await expect(
+        worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        ),
+      ).rejects.toThrow("World auth failed: account in use");
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("rejects when character is not found", async () => {
     const ws = await startMockWorldServer();
     try {
