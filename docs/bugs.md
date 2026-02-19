@@ -1,21 +1,11 @@
 # Known Bugs
 
-- [ ] Auth error codes are incomplete (6 of 19)
 - [ ] World auth failure codes are unnamed
 - [ ] No SMSG_MOTD handler — message-of-the-day silently dropped
 - [ ] No reconnect challenge/proof handling — quick reconnects fail
 - [ ] No SMSG_CONTACT_LIST handler — friend list unavailable
 
 ---
-
-## Auth error codes are incomplete (6 of 19)
-
-`src/protocol/opcodes.ts` `ChallengeResult` has 6 entries. The server can return
-at least 19 different status codes including ACCOUNT_BANNED, ALREADY_ONLINE,
-ACCOUNT_SUSPENDED, TRIAL_EXPIRED, and PARENTAL_CONTROL. Unknown codes surface as
-a raw hex number instead of a human-readable reason.
-
-Reference: `../wowser/src/lib/auth/challenge-opcode.js`.
 
 ## World auth failure codes are unnamed
 

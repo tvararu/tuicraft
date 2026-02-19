@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { leBytesToBigInt } from "wow/crypto/srp";
+import { ChallengeResult } from "wow/protocol/opcodes";
 import {
   buildLogonChallenge,
   buildLogonProof,
@@ -174,6 +175,28 @@ test("parseRealmList throws on address without port", () => {
   expect(() => parseRealmList(new PacketReader(w.finish()))).toThrow(
     "Invalid realm address",
   );
+});
+
+test("ChallengeResult has all 19 WoW 3.3.5a auth result codes", () => {
+  expect(ChallengeResult.SUCCESS).toBe(0x00);
+  expect(ChallengeResult.FAIL_UNKNOWN0).toBe(0x01);
+  expect(ChallengeResult.FAIL_UNKNOWN1).toBe(0x02);
+  expect(ChallengeResult.ACCOUNT_BANNED).toBe(0x03);
+  expect(ChallengeResult.ACCOUNT_INVALID).toBe(0x04);
+  expect(ChallengeResult.PASSWORD_INVALID).toBe(0x05);
+  expect(ChallengeResult.ALREADY_ONLINE).toBe(0x06);
+  expect(ChallengeResult.NO_TIME).toBe(0x07);
+  expect(ChallengeResult.DB_BUSY).toBe(0x08);
+  expect(ChallengeResult.BUILD_INVALID).toBe(0x09);
+  expect(ChallengeResult.BUILD_UPDATE).toBe(0x0a);
+  expect(ChallengeResult.INVALID_SERVER).toBe(0x0b);
+  expect(ChallengeResult.ACCOUNT_SUSPENDED).toBe(0x0c);
+  expect(ChallengeResult.NO_ACCESS).toBe(0x0d);
+  expect(ChallengeResult.SUCCESS_SURVEY).toBe(0x0e);
+  expect(ChallengeResult.PARENTAL_CONTROL).toBe(0x0f);
+  expect(ChallengeResult.LOCKED_ENFORCED).toBe(0x10);
+  expect(ChallengeResult.TRIAL_EXPIRED).toBe(0x11);
+  expect(ChallengeResult.USE_BATTLENET).toBe(0x12);
 });
 
 test("parseRealmList throws on non-numeric port", () => {

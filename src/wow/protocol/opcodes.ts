@@ -6,11 +6,24 @@ export const AuthOpcode = {
 
 export const ChallengeResult = {
   SUCCESS: 0x00,
+  FAIL_UNKNOWN0: 0x01,
+  FAIL_UNKNOWN1: 0x02,
   ACCOUNT_BANNED: 0x03,
   ACCOUNT_INVALID: 0x04,
   PASSWORD_INVALID: 0x05,
   ALREADY_ONLINE: 0x06,
+  NO_TIME: 0x07,
+  DB_BUSY: 0x08,
   BUILD_INVALID: 0x09,
+  BUILD_UPDATE: 0x0a,
+  INVALID_SERVER: 0x0b,
+  ACCOUNT_SUSPENDED: 0x0c,
+  NO_ACCESS: 0x0d,
+  SUCCESS_SURVEY: 0x0e,
+  PARENTAL_CONTROL: 0x0f,
+  LOCKED_ENFORCED: 0x10,
+  TRIAL_EXPIRED: 0x11,
+  USE_BATTLENET: 0x12,
 } as const;
 
 export const GameOpcode = {
