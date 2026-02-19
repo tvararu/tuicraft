@@ -18,6 +18,18 @@ async function main() {
     case "interactive": {
       const { authWithRetry, worldSession } = await import("wow/client");
       const { readConfig } = await import("lib/config");
+      const { configPath } = await import("lib/paths");
+
+      if (!(await Bun.file(configPath()).exists())) {
+        if (!process.stdin.isTTY) {
+          throw new Error(
+            "No config found. Run 'tuicraft setup' to create one.",
+          );
+        }
+        const { runSetup } = await import("cli/setup");
+        await runSetup([]);
+      }
+
       const cfg = await readConfig();
       const clientCfg = {
         host: cfg.host,
