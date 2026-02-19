@@ -126,6 +126,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
+- Capitalize the subject after the prefix: `feat: Add thing` not `feat: add thing`
 - Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
 - No bullet points, NEVER add "Co-Authored-By" or other footers
 - Check `git log -n 5` first to match existing style
