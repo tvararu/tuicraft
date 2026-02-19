@@ -83,11 +83,27 @@ mise test:live
 - [ ] 🤖 **0.6 — Automation:** Scriptable command sequences and event
       subscriptions
 
-## Prior Art
+## Prior art
 
-[wow-chat-client](https://github.com/swiftmatt/wow-chat-client): TypeScript WoW
-3.3.5a protocol implementation, used as reference for packet formats and SRP-6
-flow
+- [swiftmatt/wow-chat-client](https://github.com/swiftmatt/wow-chat-client) —
+  Node.js WoW 3.3.5a chat client, primary reference for packet formats and
+  SRP-6 auth flow
+- [azerothcore/azerothcore-wotlk](https://github.com/azerothcore/azerothcore-wotlk) —
+  open-source WoW 3.3.5a server emulator, used as the canonical reference for
+  handler implementations and update field definitions
+- [mod-playerbots/mod-playerbots](https://github.com/mod-playerbots/mod-playerbots) —
+  AzerothCore playerbot module, the target server environment for tuicraft
+- [wowserhq/wowser](https://github.com/wowserhq/wowser) — browser-based WoW
+  3.3.5a client in JS/React/WebGL, useful for cross-referencing opcodes, auth
+  error codes, and realm parsing
+- [gtker/wow_messages](https://github.com/gtker/wow_messages) — auto-generated
+  WoW protocol definitions in `.wowm` format, machine-readable spec for every
+  opcode across Vanilla/TBC/WotLK
+- [namreeb/namigator](https://github.com/namreeb/namigator) — C++ pathfinding
+  and line-of-sight library for WoW, reads MPQ files and generates navmesh via
+  Recast/Detour
+- [gtker/namigator-rs](https://github.com/gtker/namigator-rs) — Rust FFI
+  bindings for namigator, API reference for the pathfinding integration
 
 ## License
 
