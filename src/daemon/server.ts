@@ -149,7 +149,9 @@ export async function startDaemon(client?: DaemonClient): Promise<void> {
   const { sock, pid } = await prepareDaemonPaths();
 
   const clientCfg = buildClientConfig(cfg);
-  const auth = await (client ? client.authHandshake(clientCfg) : authWithRetry(clientCfg));
+  const auth = await (client
+    ? client.authHandshake(clientCfg)
+    : authWithRetry(clientCfg));
   const handle = await (client?.worldSession ?? worldSession)(clientCfg, auth);
   const log = new SessionLog(logPath());
 

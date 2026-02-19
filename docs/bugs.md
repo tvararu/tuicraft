@@ -1,6 +1,6 @@
 # Known Bugs
 
-- [ ] No reconnect challenge/proof handling — quick reconnects fail
+- [x] No reconnect challenge/proof handling — quick reconnects fail
 - [ ] No SMSG_CONTACT_LIST handler — friend list unavailable
 
 ---
