@@ -2,6 +2,7 @@ import { test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
 import {
   authHandshake,
   worldSession,
+  ReconnectRequiredError,
   type ChatMessage,
   type GroupEvent,
   type WorldHandle,
@@ -32,6 +33,7 @@ import {
   N,
   B_LE,
   M2_bytes,
+  reconnectChallengeData,
 } from "test/fixtures";
 
 const base = {
@@ -287,6 +289,49 @@ describe("auth error paths", () => {
       ).rejects.toThrow("No realms available");
     } finally {
       server.stop(true);
+    }
+  });
+
+  test("reconnect challenge succeeds with cached session key", async () => {
+    const authServer = await startMockAuthServer({
+      realmAddress: "127.0.0.1:1234",
+      reconnect: {
+        challengeData: reconnectChallengeData,
+        sessionKey,
+      },
+    });
+
+    try {
+      const auth = await authHandshake({
+        ...base,
+        host: "127.0.0.1",
+        port: authServer.port,
+        cachedSessionKey: sessionKey,
+      });
+
+      expect(auth.sessionKey).toEqual(sessionKey);
+      expect(auth.realmHost).toBe("127.0.0.1");
+      expect(auth.realmPort).toBe(1234);
+    } finally {
+      authServer.stop();
+    }
+  });
+
+  test("reconnect challenge without cached key throws ReconnectRequiredError", async () => {
+    const authServer = await startMockAuthServer({
+      realmAddress: "127.0.0.1:1234",
+      reconnect: {
+        challengeData: reconnectChallengeData,
+        sessionKey,
+      },
+    });
+
+    try {
+      await expect(
+        authHandshake({ ...base, host: "127.0.0.1", port: authServer.port }),
+      ).rejects.toThrow(ReconnectRequiredError);
+    } finally {
+      authServer.stop();
     }
   });
 });
