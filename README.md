@@ -80,15 +80,15 @@ mise test:live
 ## Usage
 
 ```
-./dist/tuicraft help                # show help
-./dist/tuicraft setup
-./dist/tuicraft                     # interactive TUI
-./dist/tuicraft "Hello world"       # send a say message (auto-starts daemon)
-./dist/tuicraft -w Hemet "Hey"      # whisper
-./dist/tuicraft read --wait 5       # read events, wait up to 5s
-./dist/tuicraft tail                # continuous event stream
-./dist/tuicraft status              # daemon status
-./dist/tuicraft stop                # stop daemon
+tuicraft help              # show help
+tuicraft setup
+tuicraft                   # interactive TUI
+tuicraft "Hello world"     # send a say message (auto-starts daemon)
+tuicraft -w Hemet "Hey"    # whisper
+tuicraft read --wait 5     # read events, wait up to 5s
+tuicraft tail              # continuous event stream
+tuicraft status            # daemon status
+tuicraft stop              # stop daemon
 ```
 
 ## Roadmap
