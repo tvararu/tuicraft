@@ -226,12 +226,18 @@ export function formatGroupEvent(event: GroupEvent): string | undefined {
       return `[group] ${event.from} invites you to a group`;
     case "command_result": {
       const verb =
-        event.operation === PartyOperation.UNINVITE ? "kick" : "invite";
+        event.operation === PartyOperation.UNINVITE
+          ? "kick"
+          : event.operation === PartyOperation.LEAVE
+            ? "leave"
+            : "invite";
       const label =
         event.result === PartyResult.SUCCESS
           ? verb === "kick"
             ? `Removed ${event.target} from group`
-            : `Invited ${event.target}`
+            : verb === "leave"
+              ? "Left the group"
+              : `Invited ${event.target}`
           : `Cannot ${verb}${event.target ? ` ${event.target}` : ""}: ${partyResultLabel(event.result)}`;
       return `[group] ${label}`;
     }
