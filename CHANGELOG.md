@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.4](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.3...tuicraft-v0.3.4) (2026-02-19)
+
+
+### Bug Fixes
+
+* Add all 19 WoW 3.3.5a ChallengeResult auth codes ([24370e7](https://github.com/tvararu/tuicraft/commit/24370e77d54946ec8e8844a07018b031a0fefee0))
+* Handle SMSG_MOTD and deliver lines as system messages ([39e8f84](https://github.com/tvararu/tuicraft/commit/39e8f84f4507db57d80bdf791bdd3f05b7803d0d))
+* Inject readline factory to prevent mock leak across test files ([ab9cdc5](https://github.com/tvararu/tuicraft/commit/ab9cdc56b2391fb45f87d892dc9cec0b0173559c))
+* Name 0x0D and 0x15 SMSG_AUTH_RESPONSE failure codes ([4a9fc7e](https://github.com/tvararu/tuicraft/commit/4a9fc7e7f2192aec5485d2381235cb3f254858e5))
+* Skip 5 bytes for SPECIFY_BUILD version info in realm parsing ([ae2bda8](https://github.com/tvararu/tuicraft/commit/ae2bda88ab766b58087d024fe07cb0428491eb1d))
+
+
+### Documentation
+
+* Add design doc for SPECIFY_BUILD byte skip fix ([3193630](https://github.com/tvararu/tuicraft/commit/31936302508b9078f14f26cc1a66ba89fc2673a3))
+* Add implementation plan for SPECIFY_BUILD byte skip fix ([8f2ae02](https://github.com/tvararu/tuicraft/commit/8f2ae020501569723cbdc3a059bbaf282bc433bf))
+* Add stdlib mock leak guidance to CLAUDE.md ([5fc7a5a](https://github.com/tvararu/tuicraft/commit/5fc7a5a74e8b9bbfdf2f3256fb2c54672b90c82a))
+* Remove resolved bugs from bugs.md ([9b08920](https://github.com/tvararu/tuicraft/commit/9b0892057b9d1ca3fd8964204c417243328fbfcb))
+
+
+### Maintenance
+
+* Add PR coverage reporting via lcov ([cc4d4da](https://github.com/tvararu/tuicraft/commit/cc4d4da99f2b5f38acce4a9b00f4c5c0dcf40519))
+* Fix setup-lcov version tag to v1 ([b410eaf](https://github.com/tvararu/tuicraft/commit/b410eaf44d41d1d0d941f34dd0d5473bdcb7c91e))
+* Install lcov for genhtml dependency ([9b82ecc](https://github.com/tvararu/tuicraft/commit/9b82ecca26b8567cb43f9c0d433aad919a5486a4))
+* Pass GITHUB_TOKEN to coverage action ([c579092](https://github.com/tvararu/tuicraft/commit/c579092524e3c68ba1b7da33dd5af7d6316598cb))
+* Replace lcov coverage with bun's text output ([7d8a2ca](https://github.com/tvararu/tuicraft/commit/7d8a2ca7f95577854c18547bc4caa9767a0555f3))
+* Strip leading * and + before awk in tasks.main branch cleanup ([82c21ba](https://github.com/tvararu/tuicraft/commit/82c21ba3e8130a8ee88c7af781307cf6c89857d5))
+* Use setup-lcov action instead of apt-get ([4bc0dca](https://github.com/tvararu/tuicraft/commit/4bc0dca6df7ae5abf4e5afc0258d63291787dbb8))
+
 ## [0.3.3](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.2...tuicraft-v0.3.3) (2026-02-19)
 
 
