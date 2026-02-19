@@ -1,4 +1,5 @@
 import type { Socket, TCPSocketListener } from "bun";
+import { createHash } from "node:crypto";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { AuthOpcode } from "wow/protocol/opcodes";
 import { bigIntToLeBytes } from "wow/crypto/srp";
@@ -85,8 +86,47 @@ function handleRealmList(socket: Socket, realmAddress: string) {
   socket.write(w.finish());
 }
 
+function handleReconnectChallenge(
+  socket: Socket,
+  challengeData: Uint8Array,
+) {
+  const w = new PacketWriter();
+  w.uint8(AuthOpcode.RECONNECT_CHALLENGE);
+  w.uint8(0x00);
+  w.rawBytes(challengeData);
+  w.uint16LE(0);
+  w.uint32LE(0);
+  socket.write(w.finish());
+}
+
+function handleReconnectProof(
+  socket: Socket,
+  data: Uint8Array,
+  challengeData: Uint8Array,
+  expectedSessionKey: Uint8Array,
+  account: string,
+) {
+  const clientData = data.slice(1, 17);
+  const receivedProof = data.slice(17, 33);
+
+  const expectedProof = createHash("md5")
+    .update(new TextEncoder().encode(account))
+    .update(challengeData)
+    .update(clientData)
+    .update(expectedSessionKey)
+    .digest();
+
+  const w = new PacketWriter();
+  w.uint8(AuthOpcode.RECONNECT_PROOF);
+  const match =
+    Buffer.compare(Buffer.from(receivedProof), expectedProof) === 0;
+  w.uint8(match ? 0x00 : 0x0b);
+  socket.write(w.finish());
+}
+
 export function startMockAuthServer(opts: {
   realmAddress: string;
+  reconnect?: { challengeData: Uint8Array; sessionKey: Uint8Array };
 }): Promise<{ port: number; stop(): void }> {
   return new Promise((resolve) => {
     let listener: TCPSocketListener<undefined>;
@@ -98,9 +138,21 @@ export function startMockAuthServer(opts: {
         data(socket: Socket, data: Uint8Array) {
           const opcode = data[0];
           if (opcode === AuthOpcode.LOGON_CHALLENGE) {
-            handleChallenge(socket);
+            if (opts.reconnect) {
+              handleReconnectChallenge(socket, opts.reconnect.challengeData);
+            } else {
+              handleChallenge(socket);
+            }
           } else if (opcode === AuthOpcode.LOGON_PROOF) {
             handleProof(socket, data);
+          } else if (opcode === AuthOpcode.RECONNECT_PROOF) {
+            handleReconnectProof(
+              socket,
+              data,
+              opts.reconnect!.challengeData,
+              opts.reconnect!.sessionKey,
+              "TEST",
+            );
           } else if (opcode === AuthOpcode.REALM_LIST) {
             handleRealmList(socket, opts.realmAddress);
           }
