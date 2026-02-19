@@ -1,5 +1,10 @@
-import { createInterface } from "node:readline";
+import {
+  createInterface,
+  type Interface as ReadlineInterface,
+} from "node:readline";
 import { type Config, writeConfig } from "lib/config";
+
+type CreateInterfaceFn = typeof createInterface;
 
 export function parseSetupFlags(args: string[]): Config {
   const get = (name: string): string | undefined => {
@@ -28,7 +33,7 @@ export function parseSetupFlags(args: string[]): Config {
 }
 
 function ask(
-  rl: ReturnType<typeof createInterface>,
+  rl: ReadlineInterface,
   prompt: string,
   fallback?: string,
 ): Promise<string> {
@@ -38,8 +43,10 @@ function ask(
   );
 }
 
-export async function runSetupWizard(): Promise<Config> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+export async function runSetupWizard(
+  factory: CreateInterfaceFn = createInterface,
+): Promise<Config> {
+  const rl = factory({ input: process.stdin, output: process.stdout });
   try {
     const account = await ask(rl, "Account");
     const password = await ask(rl, "Password");
@@ -61,9 +68,12 @@ export async function runSetupWizard(): Promise<Config> {
   }
 }
 
-export async function runSetup(args: string[]): Promise<void> {
+export async function runSetup(
+  args: string[],
+  factory?: CreateInterfaceFn,
+): Promise<void> {
   const hasFlags = args.some((a) => a.startsWith("--"));
-  const cfg = hasFlags ? parseSetupFlags(args) : await runSetupWizard();
+  const cfg = hasFlags ? parseSetupFlags(args) : await runSetupWizard(factory);
   await writeConfig(cfg);
   const { configPath } = await import("lib/paths");
   console.log(`Config saved to ${configPath()}`);
