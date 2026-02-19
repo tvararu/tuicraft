@@ -91,8 +91,7 @@ function handleReconnectChallenge(socket: Socket, challengeData: Uint8Array) {
   w.uint8(AuthOpcode.RECONNECT_CHALLENGE);
   w.uint8(0x00);
   w.rawBytes(challengeData);
-  w.uint16LE(0);
-  w.uint32LE(0);
+  w.rawBytes(new Uint8Array(16));
   socket.write(w.finish());
 }
 

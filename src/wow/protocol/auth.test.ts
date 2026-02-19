@@ -280,8 +280,7 @@ test("parseReconnectChallengeResponse extracts challenge data on success", () =>
   const challengeData = new Uint8Array(16);
   for (let i = 0; i < 16; i++) challengeData[i] = i + 0xa0;
   w.rawBytes(challengeData);
-  w.uint16LE(0);
-  w.uint32LE(0);
+  w.rawBytes(new Uint8Array(16));
 
   const r = new PacketReader(w.finish());
   const result = parseReconnectChallengeResponse(r);
