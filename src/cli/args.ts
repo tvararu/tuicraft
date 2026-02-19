@@ -8,11 +8,17 @@ export type CliAction =
   | { mode: "logs" }
   | { mode: "read"; wait: number | undefined; json: boolean }
   | { mode: "tail"; json: boolean }
-  | { mode: "say"; message: string; json: boolean }
-  | { mode: "yell"; message: string; json: boolean }
-  | { mode: "guild"; message: string; json: boolean }
-  | { mode: "party"; message: string; json: boolean }
-  | { mode: "whisper"; target: string; message: string; json: boolean }
+  | { mode: "say"; message: string; json: boolean; wait: number | undefined }
+  | { mode: "yell"; message: string; json: boolean; wait: number | undefined }
+  | { mode: "guild"; message: string; json: boolean; wait: number | undefined }
+  | { mode: "party"; message: string; json: boolean; wait: number | undefined }
+  | {
+      mode: "whisper";
+      target: string;
+      message: string;
+      json: boolean;
+      wait: number | undefined;
+    }
   | { mode: "who"; filter: string | undefined; json: boolean };
 
 const SUBCOMMANDS = new Set([
@@ -34,15 +40,20 @@ function flagValue(args: string[], flag: string): string | undefined {
   return idx !== -1 ? args[idx + 1] : undefined;
 }
 
+function parseWaitFlag(args: string[]): number | undefined {
+  const raw = flagValue(args, "--wait");
+  if (raw === undefined) return undefined;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n) || n < 0)
+    throw new Error(`Invalid --wait value: ${raw}`);
+  return n;
+}
+
 function parseRead(args: string[]): CliAction {
   const rest = args.slice(1);
-  const wait = flagValue(rest, "--wait");
-  if (wait !== undefined && Number.isNaN(parseInt(wait, 10))) {
-    throw new Error(`Invalid --wait value: ${wait}`);
-  }
   return {
     mode: "read",
-    wait: wait !== undefined ? parseInt(wait, 10) : undefined,
+    wait: parseWaitFlag(rest),
     json: hasFlag(rest, "--json"),
   };
 }
@@ -68,7 +79,16 @@ function parseSubcommand(args: string[]): CliAction | undefined {
 }
 
 function filterFlags(args: string[]): string[] {
-  return args.filter((a) => a !== "--json");
+  const result: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--json") continue;
+    if (args[i] === "--wait") {
+      i++;
+      continue;
+    }
+    result.push(args[i]!);
+  }
+  return result;
 }
 
 function parseFlagCommands(args: string[]): CliAction | undefined {
@@ -83,6 +103,7 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
       target: filtered[idx + 1] ?? "",
       message: filtered.slice(idx + 2).join(" "),
       json: hasFlag(args, "--json"),
+      wait: parseWaitFlag(args),
     };
   }
 
@@ -93,6 +114,7 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
       mode: "yell",
       message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      wait: parseWaitFlag(args),
     };
   }
 
@@ -103,6 +125,7 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
       mode: "guild",
       message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      wait: parseWaitFlag(args),
     };
   }
 
@@ -113,6 +136,7 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
       mode: "party",
       message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      wait: parseWaitFlag(args),
     };
   }
 
@@ -142,5 +166,6 @@ export function parseArgs(args: string[]): CliAction {
     mode: "say",
     message: filterFlags(args).join(" "),
     json: hasFlag(args, "--json"),
+    wait: parseWaitFlag(args),
   };
 }

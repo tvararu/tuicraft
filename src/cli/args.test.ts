@@ -73,6 +73,7 @@ describe("parseArgs", () => {
       mode: "say",
       message: "hello world",
       json: false,
+      wait: undefined,
     });
   });
 
@@ -81,6 +82,7 @@ describe("parseArgs", () => {
       mode: "say",
       message: "hello",
       json: true,
+      wait: undefined,
     });
   });
 
@@ -89,6 +91,7 @@ describe("parseArgs", () => {
       mode: "say",
       message: "hello world",
       json: true,
+      wait: undefined,
     });
   });
 
@@ -98,6 +101,7 @@ describe("parseArgs", () => {
       target: "Xiara",
       message: "follow me",
       json: false,
+      wait: undefined,
     });
   });
 
@@ -106,6 +110,7 @@ describe("parseArgs", () => {
       mode: "yell",
       message: "HELLO",
       json: false,
+      wait: undefined,
     });
   });
 
@@ -114,6 +119,7 @@ describe("parseArgs", () => {
       mode: "guild",
       message: "guild msg",
       json: false,
+      wait: undefined,
     });
   });
 
@@ -122,6 +128,7 @@ describe("parseArgs", () => {
       mode: "party",
       message: "party msg",
       json: false,
+      wait: undefined,
     });
   });
 
@@ -157,6 +164,7 @@ describe("parseArgs", () => {
       mode: "yell",
       message: "hello",
       json: true,
+      wait: undefined,
     });
   });
 
@@ -166,6 +174,7 @@ describe("parseArgs", () => {
       mode: "guild",
       message: "inv pls",
       json: true,
+      wait: undefined,
     });
   });
 
@@ -175,6 +184,7 @@ describe("parseArgs", () => {
       mode: "party",
       message: "pull now",
       json: true,
+      wait: undefined,
     });
   });
 
@@ -185,6 +195,71 @@ describe("parseArgs", () => {
       target: "Xiara",
       message: "hey",
       json: true,
+      wait: undefined,
+    });
+  });
+
+  test("whisper with --wait", () => {
+    expect(parseArgs(["-w", "Xiara", "los", "--wait", "3"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "los",
+      json: false,
+      wait: 3,
+    });
+  });
+
+  test("say with --wait", () => {
+    expect(parseArgs(["hello", "--wait", "5"])).toEqual({
+      mode: "say",
+      message: "hello",
+      json: false,
+      wait: 5,
+    });
+  });
+
+  test("yell with --wait", () => {
+    expect(parseArgs(["-y", "hey", "--wait", "2"])).toEqual({
+      mode: "yell",
+      message: "hey",
+      json: false,
+      wait: 2,
+    });
+  });
+
+  test("--wait does not leak into whisper message", () => {
+    expect(parseArgs(["-w", "Xiara", "--wait", "3", "follow me"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "follow me",
+      json: false,
+      wait: 3,
+    });
+  });
+
+  test("--wait with invalid value throws on send commands", () => {
+    expect(() => parseArgs(["-w", "Xiara", "hi", "--wait", "abc"])).toThrow(
+      "Invalid --wait value: abc",
+    );
+  });
+
+  test("fractional --wait", () => {
+    expect(parseArgs(["-w", "Xiara", "los", "--wait", "0.1"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "los",
+      json: false,
+      wait: 0.1,
+    });
+  });
+
+  test("whisper with --wait and --json", () => {
+    expect(parseArgs(["-w", "Xiara", "los", "--wait", "3", "--json"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "los",
+      json: true,
+      wait: 3,
     });
   });
 });

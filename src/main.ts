@@ -3,6 +3,16 @@ import { sendToSocket, ensureDaemon } from "cli/ipc";
 
 const action = parseArgs(Bun.argv.slice(2));
 
+async function waitForEvents(
+  wait: number | undefined,
+  json: boolean,
+): Promise<void> {
+  if (wait == null) return;
+  const cmd = json ? "READ_WAIT_JSON" : "READ_WAIT";
+  const lines = await sendToSocket(`${cmd} ${wait * 1000}`);
+  for (const line of lines) console.log(line);
+}
+
 async function main() {
   switch (action.mode) {
     case "interactive": {
@@ -50,6 +60,7 @@ async function main() {
       } else {
         for (const line of lines) console.log(line);
       }
+      await waitForEvents(action.wait, action.json);
       break;
     }
     case "whisper": {
@@ -62,6 +73,7 @@ async function main() {
       } else {
         for (const line of lines) console.log(line);
       }
+      await waitForEvents(action.wait, action.json);
       break;
     }
     case "read": {
