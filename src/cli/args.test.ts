@@ -68,8 +68,8 @@ describe("parseArgs", () => {
     expect(parseArgs(["--help"])).toEqual({ mode: "help" });
   });
 
-  test("bare string = say", () => {
-    expect(parseArgs(["hello world"])).toEqual({
+  test("send = say", () => {
+    expect(parseArgs(["send", "hello world"])).toEqual({
       mode: "say",
       message: "hello world",
       json: false,
@@ -77,8 +77,17 @@ describe("parseArgs", () => {
     });
   });
 
-  test("bare say with --json", () => {
-    expect(parseArgs(["--json", "hello"])).toEqual({
+  test("send -s = explicit say", () => {
+    expect(parseArgs(["send", "-s", "hello"])).toEqual({
+      mode: "say",
+      message: "hello",
+      json: false,
+      wait: undefined,
+    });
+  });
+
+  test("send with --json", () => {
+    expect(parseArgs(["send", "--json", "hello"])).toEqual({
       mode: "say",
       message: "hello",
       json: true,
@@ -86,12 +95,70 @@ describe("parseArgs", () => {
     });
   });
 
-  test("bare say with --json in middle", () => {
-    expect(parseArgs(["hello", "--json", "world"])).toEqual({
+  test("send -w = whisper", () => {
+    expect(parseArgs(["send", "-w", "Xiara", "follow me"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "follow me",
+      json: false,
+      wait: undefined,
+    });
+  });
+
+  test("send -y = yell", () => {
+    expect(parseArgs(["send", "-y", "HELLO"])).toEqual({
+      mode: "yell",
+      message: "HELLO",
+      json: false,
+      wait: undefined,
+    });
+  });
+
+  test("send -g = guild", () => {
+    expect(parseArgs(["send", "-g", "guild msg"])).toEqual({
+      mode: "guild",
+      message: "guild msg",
+      json: false,
+      wait: undefined,
+    });
+  });
+
+  test("send -p = party", () => {
+    expect(parseArgs(["send", "-p", "party msg"])).toEqual({
+      mode: "party",
+      message: "party msg",
+      json: false,
+      wait: undefined,
+    });
+  });
+
+  test("send with --wait", () => {
+    expect(parseArgs(["send", "hello", "--wait", "5"])).toEqual({
       mode: "say",
-      message: "hello world",
+      message: "hello",
+      json: false,
+      wait: 5,
+    });
+  });
+
+  test("send -y with --json", () => {
+    expect(parseArgs(["send", "-y", "--json", "hello"])).toEqual({
+      mode: "yell",
+      message: "hello",
       json: true,
       wait: undefined,
+    });
+  });
+
+  test("send -w with --wait and --json", () => {
+    expect(
+      parseArgs(["send", "-w", "Xiara", "los", "--wait", "3", "--json"]),
+    ).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "los",
+      json: true,
+      wait: 3,
     });
   });
 
@@ -159,8 +226,7 @@ describe("parseArgs", () => {
   });
 
   test("--json does not leak into yell message", () => {
-    const result = parseArgs(["-y", "--json", "hello"]);
-    expect(result).toEqual({
+    expect(parseArgs(["-y", "--json", "hello"])).toEqual({
       mode: "yell",
       message: "hello",
       json: true,
@@ -169,8 +235,7 @@ describe("parseArgs", () => {
   });
 
   test("--json does not leak into guild message", () => {
-    const result = parseArgs(["-g", "--json", "inv pls"]);
-    expect(result).toEqual({
+    expect(parseArgs(["-g", "--json", "inv pls"])).toEqual({
       mode: "guild",
       message: "inv pls",
       json: true,
@@ -179,8 +244,7 @@ describe("parseArgs", () => {
   });
 
   test("--json does not leak into party message", () => {
-    const result = parseArgs(["-p", "--json", "pull now"]);
-    expect(result).toEqual({
+    expect(parseArgs(["-p", "--json", "pull now"])).toEqual({
       mode: "party",
       message: "pull now",
       json: true,
@@ -189,8 +253,7 @@ describe("parseArgs", () => {
   });
 
   test("--json does not leak into whisper message", () => {
-    const result = parseArgs(["-w", "Xiara", "--json", "hey"]);
-    expect(result).toEqual({
+    expect(parseArgs(["-w", "Xiara", "--json", "hey"])).toEqual({
       mode: "whisper",
       target: "Xiara",
       message: "hey",
@@ -206,15 +269,6 @@ describe("parseArgs", () => {
       message: "los",
       json: false,
       wait: 3,
-    });
-  });
-
-  test("say with --wait", () => {
-    expect(parseArgs(["hello", "--wait", "5"])).toEqual({
-      mode: "say",
-      message: "hello",
-      json: false,
-      wait: 5,
     });
   });
 
@@ -261,5 +315,17 @@ describe("parseArgs", () => {
       json: true,
       wait: 3,
     });
+  });
+
+  test("unknown positional arg throws", () => {
+    expect(() => parseArgs(["foo"])).toThrow("Unknown command");
+  });
+
+  test("unknown flag throws", () => {
+    expect(() => parseArgs(["--foo"])).toThrow("Unknown command");
+  });
+
+  test("bare message without send throws", () => {
+    expect(() => parseArgs(["hello world"])).toThrow("Unknown command");
   });
 });

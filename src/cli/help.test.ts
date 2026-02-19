@@ -4,7 +4,16 @@ import { helpText } from "cli/help";
 const text = helpText();
 
 test("help text includes all subcommands", () => {
-  for (const cmd of ["setup", "read", "tail", "logs", "stop", "status", "help"])
+  for (const cmd of [
+    "setup",
+    "send",
+    "read",
+    "tail",
+    "logs",
+    "stop",
+    "status",
+    "help",
+  ])
     expect(text).toContain(cmd);
 });
 

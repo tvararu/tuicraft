@@ -29,6 +29,7 @@ const SUBCOMMANDS = new Set([
   "tail",
   "logs",
   "help",
+  "send",
 ]);
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -62,6 +63,54 @@ function parseTail(args: string[]): CliAction {
   return { mode: "tail", json: hasFlag(args.slice(1), "--json") };
 }
 
+function parseSend(args: string[]): CliAction {
+  const rest = args.slice(1);
+  const json = hasFlag(rest, "--json");
+  const wait = parseWaitFlag(rest);
+  const filtered = filterFlags(rest);
+
+  if (hasFlag(filtered, "-w")) {
+    const idx = filtered.indexOf("-w");
+    return {
+      mode: "whisper",
+      target: filtered[idx + 1] ?? "",
+      message: filtered.slice(idx + 2).join(" "),
+      json,
+      wait,
+    };
+  }
+  if (hasFlag(filtered, "-y")) {
+    const idx = filtered.indexOf("-y");
+    return {
+      mode: "yell",
+      message: filtered.slice(idx + 1).join(" "),
+      json,
+      wait,
+    };
+  }
+  if (hasFlag(filtered, "-g")) {
+    const idx = filtered.indexOf("-g");
+    return {
+      mode: "guild",
+      message: filtered.slice(idx + 1).join(" "),
+      json,
+      wait,
+    };
+  }
+  if (hasFlag(filtered, "-p")) {
+    const idx = filtered.indexOf("-p");
+    return {
+      mode: "party",
+      message: filtered.slice(idx + 1).join(" "),
+      json,
+      wait,
+    };
+  }
+
+  const message = filtered.filter((a) => a !== "-s").join(" ");
+  return { mode: "say", message, json, wait };
+}
+
 function parseSubcommand(args: string[]): CliAction | undefined {
   const cmd = args[0];
   if (!cmd || !SUBCOMMANDS.has(cmd)) return undefined;
@@ -73,6 +122,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseRead(args);
     case "tail":
       return parseTail(args);
+    case "send":
+      return parseSend(args);
     default:
       return { mode: cmd } as CliAction;
   }
@@ -162,10 +213,7 @@ export function parseArgs(args: string[]): CliAction {
   const flag = parseFlagCommands(args);
   if (flag) return flag;
 
-  return {
-    mode: "say",
-    message: filterFlags(args).join(" "),
-    json: hasFlag(args, "--json"),
-    wait: parseWaitFlag(args),
-  };
+  throw new Error(
+    `Unknown command: ${args.join(" ")}\nRun tuicraft --help for usage.`,
+  );
 }
