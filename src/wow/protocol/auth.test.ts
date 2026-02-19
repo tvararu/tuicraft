@@ -9,6 +9,7 @@ import {
   parseLogonChallengeResponse,
   parseLogonProofResponse,
   parseRealmList,
+  parseReconnectChallengeResponse,
 } from "wow/protocol/auth";
 import { beBytesToBigInt } from "wow/crypto/srp";
 
@@ -269,3 +270,33 @@ test("parseRealmList skips version info when flags & 0x04", () => {
   expect(realms[1]!.port).toBe(8086);
   expect(realms[1]!.id).toBe(42);
 });
+
+test("parseReconnectChallengeResponse extracts challenge data on success", () => {
+  const w = new PacketWriter();
+  w.uint8(0x00);
+  w.uint8(0x00);
+  const challengeData = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) challengeData[i] = i + 0xa0;
+  w.rawBytes(challengeData);
+  w.uint16LE(0);
+  w.uint32LE(0);
+
+  const r = new PacketReader(w.finish());
+  const result = parseReconnectChallengeResponse(r);
+
+  expect(result.status).toBe(0x00);
+  expect(result.challengeData).toEqual(challengeData);
+});
+
+test("parseReconnectChallengeResponse returns error status", () => {
+  const w = new PacketWriter();
+  w.uint8(0x00);
+  w.uint8(0x05);
+
+  const r = new PacketReader(w.finish());
+  const result = parseReconnectChallengeResponse(r);
+
+  expect(result.status).toBe(0x05);
+  expect(result.challengeData).toBeUndefined();
+});
+
