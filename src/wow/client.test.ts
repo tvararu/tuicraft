@@ -318,6 +318,78 @@ describe("auth error paths", () => {
     }
   });
 
+  test("rejects when reconnect challenge status is non-zero", async () => {
+    const server = Bun.listen({
+      hostname: "127.0.0.1",
+      port: 0,
+      socket: {
+        data(socket) {
+          const w = new PacketWriter();
+          w.uint8(AuthOpcode.RECONNECT_CHALLENGE);
+          w.uint8(0x04);
+          socket.write(w.finish());
+        },
+        open() {},
+        close() {},
+        error() {},
+      },
+    });
+
+    try {
+      await expect(
+        authHandshake({
+          ...base,
+          host: "127.0.0.1",
+          port: server.port,
+          cachedSessionKey: sessionKey,
+        }),
+      ).rejects.toThrow("Reconnect challenge failed: status 0x4");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("rejects when reconnect proof status is non-zero", async () => {
+    const server = Bun.listen({
+      hostname: "127.0.0.1",
+      port: 0,
+      socket: {
+        data(socket, data) {
+          const opcode = new Uint8Array(data)[0];
+          if (opcode === AuthOpcode.LOGON_CHALLENGE) {
+            const w = new PacketWriter();
+            w.uint8(AuthOpcode.RECONNECT_CHALLENGE);
+            w.uint8(0x00);
+            w.rawBytes(reconnectChallengeData);
+            w.rawBytes(new Uint8Array(16));
+            socket.write(w.finish());
+          } else if (opcode === AuthOpcode.RECONNECT_PROOF) {
+            const w = new PacketWriter();
+            w.uint8(AuthOpcode.RECONNECT_PROOF);
+            w.uint8(0x0b);
+            socket.write(w.finish());
+          }
+        },
+        open() {},
+        close() {},
+        error() {},
+      },
+    });
+
+    try {
+      await expect(
+        authHandshake({
+          ...base,
+          host: "127.0.0.1",
+          port: server.port,
+          cachedSessionKey: sessionKey,
+        }),
+      ).rejects.toThrow("Reconnect proof failed: status 0xb");
+    } finally {
+      server.stop(true);
+    }
+  });
+
   test("reconnect challenge without cached key throws ReconnectRequiredError", async () => {
     const authServer = await startMockAuthServer({
       realmAddress: "127.0.0.1:1234",
