@@ -95,7 +95,7 @@ export function parseReconnectChallengeResponse(
     return { status };
   }
   const challengeData = r.bytes(16);
-  r.skip(6);
+  r.skip(16);
   return { status, challengeData };
 }
 
