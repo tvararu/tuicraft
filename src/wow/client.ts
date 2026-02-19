@@ -239,6 +239,15 @@ function handleReconnectChallenge(
   );
 }
 
+function handleReconnectProof(raw: Uint8Array): void {
+  const r = new PacketReader(raw);
+  r.skip(1);
+  const status = r.uint8();
+  if (status !== 0x00) {
+    throw new Error(`Reconnect proof failed: status 0x${status.toString(16)}`);
+  }
+}
+
 export async function authWithRetry(
   config: ClientConfig,
   opts?: { maxAttempts?: number; baseDelayMs?: number },
@@ -261,21 +270,55 @@ export async function authWithRetry(
   throw lastError;
 }
 
+type AuthContext = {
+  buf: AccumulatorBuffer;
+  srp: SRP;
+  phase: "challenge" | "proof" | "reconnect_proof" | "realms";
+  config: ClientConfig;
+  srpResult?: SRPResult;
+  sessionKey?: Uint8Array;
+};
+
+function advanceAuth(ctx: AuthContext, socket: Socket): AuthResult | undefined {
+  const raw = ctx.buf.peek(ctx.buf.length);
+  let result: AuthResult | undefined;
+
+  if (ctx.phase === "challenge") {
+    if (raw[0] === AuthOpcode.RECONNECT_CHALLENGE) {
+      socket.write(handleReconnectChallenge(raw, ctx.config));
+      ctx.sessionKey = ctx.config.cachedSessionKey!;
+      ctx.phase = "reconnect_proof";
+    } else {
+      ctx.srpResult = handleChallenge(raw, ctx.config, ctx.srp);
+      ctx.sessionKey = ctx.srpResult.K;
+      socket.write(buildLogonProof(ctx.srpResult));
+      ctx.phase = "proof";
+    }
+  } else if (ctx.phase === "proof") {
+    handleProof(raw, ctx.srpResult!);
+    socket.write(buildRealmListRequest());
+    ctx.phase = "realms";
+  } else if (ctx.phase === "reconnect_proof") {
+    handleReconnectProof(raw);
+    socket.write(buildRealmListRequest());
+    ctx.phase = "realms";
+  } else {
+    result = { sessionKey: ctx.sessionKey!, ...handleRealms(raw) };
+  }
+
+  ctx.buf.drain(ctx.buf.length);
+  return result;
+}
+
 export function authHandshake(config: ClientConfig): Promise<AuthResult> {
   return new Promise((resolve, reject) => {
-    const buf = new AccumulatorBuffer();
-    const srp = new SRP(config.account, config.password);
-    let state: "challenge" | "proof" | "reconnect_proof" | "realms" =
-      "challenge";
-    let srpResult: SRPResult;
-    let resolvedSessionKey: Uint8Array;
+    const ctx: AuthContext = {
+      buf: new AccumulatorBuffer(),
+      srp: new SRP(config.account, config.password),
+      phase: "challenge",
+      config,
+    };
     let done = false;
-
-    function fail(err: unknown, socket: Socket) {
-      done = true;
-      reject(err);
-      socket.end();
-    }
 
     Bun.connect({
       hostname: config.host,
@@ -285,57 +328,19 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
           socket.write(buildLogonChallenge(config.account));
         },
         data(socket, data) {
-          buf.append(new Uint8Array(data));
-
+          ctx.buf.append(new Uint8Array(data));
           try {
-            const raw = buf.peek(buf.length);
-            if (state === "challenge") {
-              const opcode = raw[0];
-              if (opcode === AuthOpcode.RECONNECT_CHALLENGE) {
-                const proofPacket = handleReconnectChallenge(raw, config);
-                buf.drain(buf.length);
-                resolvedSessionKey = config.cachedSessionKey!;
-                socket.write(proofPacket);
-                state = "reconnect_proof";
-              } else {
-                srpResult = handleChallenge(raw, config, srp);
-                buf.drain(buf.length);
-                resolvedSessionKey = srpResult.K;
-                socket.write(buildLogonProof(srpResult));
-                state = "proof";
-              }
-            } else if (state === "proof") {
-              handleProof(raw, srpResult);
-              buf.drain(buf.length);
-              socket.write(buildRealmListRequest());
-              state = "realms";
-            } else if (state === "reconnect_proof") {
-              const r = new PacketReader(raw);
-              r.skip(1);
-              const status = r.uint8();
-              if (status !== 0x00) {
-                throw new Error(
-                  `Reconnect proof failed: status 0x${status.toString(16)}`,
-                );
-              }
-              buf.drain(buf.length);
-              socket.write(buildRealmListRequest());
-              state = "realms";
-            } else if (state === "realms") {
-              const { realmHost, realmPort, realmId } = handleRealms(raw);
-              buf.drain(buf.length);
+            const result = advanceAuth(ctx, socket);
+            if (result) {
               done = true;
               socket.end();
-              resolve({
-                sessionKey: resolvedSessionKey,
-                realmHost,
-                realmPort,
-                realmId,
-              });
+              resolve(result);
             }
           } catch (err) {
             if (err instanceof RangeError) return;
-            fail(err, socket);
+            done = true;
+            reject(err);
+            socket.end();
           }
         },
         close() {
