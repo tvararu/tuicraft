@@ -1034,6 +1034,51 @@ describe("world error paths", () => {
     }
   });
 
+  test("group_list resolves self as leader when leader GUID matches", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<GroupEvent>((resolve) => {
+        handle.onGroupEvent(resolve);
+      });
+
+      const list = new PacketWriter();
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0);
+      list.uint32LE(0);
+      list.uint32LE(1);
+      list.uint32LE(1);
+      list.cString("Voidtrix");
+      list.uint32LE(0x10);
+      list.uint32LE(0x00);
+      list.uint8(1);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0x42);
+      list.uint32LE(0x00);
+      ws.inject(GameOpcode.SMSG_GROUP_LIST, list.finish());
+
+      const event = await received;
+      expect(event.type).toBe("group_list");
+      if (event.type === "group_list") {
+        expect(event.leader).toBe("Testchar");
+      }
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("setLeader reports missing party member", async () => {
     const ws = await startMockWorldServer();
     try {
