@@ -58,7 +58,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
 - `mock.module()` leaks across test files in Bun — only mock `"paths"` (safe via
-  dynamic imports), never mock `"config"` or `"session-log"` in shared test runs
+  dynamic imports), never mock `"config"` or `"session-log"` in shared test runs.
+  For stdlib modules like `node:readline`, use dependency injection instead
 - `task_timeout = "500ms"` in mise.toml is the process-level kill switch — NEVER
   bypass it with `MISE_TASK_TIMEOUT=<longer>` env overrides. The full test suite
   runs under 100ms. If it hangs, there's a bug — fix the bug, not the timeout.
