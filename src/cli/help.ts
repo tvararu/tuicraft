@@ -31,6 +31,18 @@ SETUP FLAGS
   --language ID   Chat language code (default: 1/Orcish)
   --timeout_minutes N  Daemon idle timeout (default: 30)
 
+INTERACTIVE COMMANDS (TUI mode)
+  /s, /y, /w, /g, /p, /raid, /1, /2  Chat commands
+  /r              Reply to last whisper
+  /who [filter]   Who search
+  /invite <name>  Invite player to group
+  /kick <name>    Remove player from group
+  /leave          Leave the current group
+  /leader <name>  Transfer group leadership
+  /accept         Accept a group invitation
+  /decline        Decline a group invitation
+  /quit           Disconnect and exit
+
 DAEMON
   The daemon starts automatically when needed and stays running
   for 30 minutes of inactivity. It maintains the WoW connection
