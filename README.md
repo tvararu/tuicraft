@@ -7,6 +7,29 @@ with Bun and TypeScript, zero runtime dependencies.
 tuicraft targets AzerothCore private servers and is designed to be both human
 and LLM friendly.
 
+## Features
+
+🔐 **Authentication** — SRP-6 login, Arc4-encrypted world session, realm
+selection, character select
+
+💬 **Chat** — Say, yell, whisper, guild, party, raid, and channel messages with
+`/r` reply support
+
+👥 **Party Management** — Invite, kick, leave, leader transfer, accept/decline
+invitations, live group roster with member stats
+
+🔍 **Who Search** — Query online players with filters, human and JSON output
+
+🖥️ **Interactive TUI** — Readline-based terminal UI with slash commands and
+channel switching
+
+🤖 **CLI & Daemon** — Auto-starting background daemon with Unix socket IPC, pipe
+mode, JSONL output for scripting
+
+📝 **Session Logging** — Persistent session log with `tuicraft logs` playback
+
+⚡ **Zero Dependencies** — Pure TypeScript on Bun, compiles to a single binary
+
 ## Development
 
 Requires [Bun](https://bun.sh) and [mise](https://mise.jdx.dev).
@@ -35,6 +58,7 @@ mise test:live
 ## Usage
 
 ```
+./dist/tuicraft help                # show help
 ./dist/tuicraft setup
 ./dist/tuicraft                     # interactive TUI
 ./dist/tuicraft "Hello world"       # send a say message (auto-starts daemon)
@@ -51,10 +75,12 @@ mise test:live
       character select, keepalive
 - [x] 💬 **0.2 — Chat:** Send/receive whispers, say, guild chat. TUI with
       interactive and pipe modes
-- [ ] 🌍 **0.3 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
+- [x] 👥 **0.3 — Party Management:** Invite, kick, leave, leader transfer,
+      group roster, member stats
+- [ ] 🌍 **0.4 — World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
-- [ ] 🏃 **0.4 — Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
-- [ ] 🤖 **0.5 — Automation:** Scriptable command sequences and event
+- [ ] 🏃 **0.5 — Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
+- [ ] 🤖 **0.6 — Automation:** Scriptable command sequences and event
       subscriptions
 
 ## Prior Art
