@@ -90,3 +90,29 @@ run = """
 git worktree remove --force .worktrees/$usage_branch
 git branch -D $usage_branch
 """
+
+[tasks.main]
+description = "Switch to main, pull, and clean up merged branches"
+run = '''
+set -e
+git checkout main
+git pull --rebase
+git fetch --prune
+
+cleaned=0
+for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do
+  if [ -d ".worktrees/${branch}" ]; then
+    git worktree remove --force ".worktrees/${branch}" 2>/dev/null || true
+  fi
+  git branch -D "$branch"
+  cleaned=$((cleaned + 1))
+done
+
+git worktree prune
+
+if [ "$cleaned" -gt 0 ]; then
+  echo "Cleaned up ${cleaned} merged branch(es)"
+else
+  echo "No stale branches to clean up"
+fi
+'''
