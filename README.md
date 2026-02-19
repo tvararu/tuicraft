@@ -7,6 +7,10 @@ with Bun and TypeScript, zero runtime dependencies.
 tuicraft targets AzerothCore private servers and is designed to be both human
 and LLM friendly.
 
+```sh
+curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+```
+
 ## Features
 
 🔐 **Authentication** — SRP-6 login, Arc4-encrypted world session, realm
@@ -30,9 +34,32 @@ mode, JSONL output for scripting
 
 ⚡ **Zero Dependencies** — Pure TypeScript on Bun, compiles to a single binary
 
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+```
+
+Override the install directory (default: `/usr/local/bin`):
+
+```sh
+TUICRAFT_INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/tvararu/tuicraft/main/.github/install.sh | sh
+```
+
+Pre-built binaries are available on the [releases
+page](https://github.com/tvararu/tuicraft/releases).
+
+## Compatibility
+
+| Platform | Architecture         | Status                        |
+| -------- | -------------------- | ----------------------------- |
+| Linux    | x64, ARM64           | Supported                     |
+| macOS    | Apple Silicon, Intel | Supported                     |
+| Windows  | WSL2                 | Supported (uses Linux binary) |
+
 ## Development
 
-Requires [Bun](https://bun.sh) and [mise](https://mise.jdx.dev).
+Requires [mise](https://mise.jdx.dev), automatically installs `bun`:
 
 ```
 mise trust -y
