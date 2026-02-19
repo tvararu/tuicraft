@@ -486,8 +486,14 @@ async function authenticateWorld(
 
   const resp = await conn.dispatch.expect(GameOpcode.SMSG_AUTH_RESPONSE);
   const status = resp.uint8();
-  if (status !== 0x0c)
-    throw new Error(`World auth failed: status 0x${status.toString(16)}`);
+  if (status !== 0x0c) {
+    const names: Record<number, string> = {
+      0x0d: "system error",
+      0x15: "account in use",
+    };
+    const label = names[status] ?? `status 0x${status.toString(16)}`;
+    throw new Error(`World auth failed: ${label}`);
+  }
 }
 
 async function selectCharacter(
