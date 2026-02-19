@@ -1,18 +1,8 @@
 # Known Bugs
 
-- [x] No reconnect challenge/proof handling — quick reconnects fail
 - [ ] No SMSG_CONTACT_LIST handler — friend list unavailable
 
 ---
-
-## No reconnect challenge/proof handling — quick reconnects fail
-
-If the server thinks a session is still alive, it sends RECONNECT_CHALLENGE
-(0x02) instead of LOGON_CHALLENGE (0x00). The auth handler doesn't recognize
-these opcodes and silently fails. This happens when reconnecting quickly after a
-disconnect.
-
-Reference: `../wowser/src/lib/auth/opcode.js`.
 
 ## No SMSG_CONTACT_LIST handler — friend list unavailable
 
