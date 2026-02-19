@@ -266,6 +266,22 @@ describe("parsePartyMemberStats", () => {
     expect(result.online).toBe(true);
   });
 
+  test("skips high-mask auras correctly", () => {
+    const w = new PacketWriter();
+    w.uint8(0x01);
+    w.uint8(0x11);
+    const mask = GroupUpdateFlag.STATUS | GroupUpdateFlag.AURAS;
+    w.uint32LE(mask);
+    w.uint16LE(0x01);
+    w.uint32LE(0x00);
+    w.uint32LE(0x02);
+    w.uint32LE(54321);
+    w.uint8(0);
+
+    const result = parsePartyMemberStats(new PacketReader(w.finish()));
+    expect(result.online).toBe(true);
+  });
+
   test("handles full stats variant with leading byte", () => {
     const w = new PacketWriter();
     w.uint8(0);
@@ -278,5 +294,25 @@ describe("parsePartyMemberStats", () => {
     const result = parsePartyMemberStats(new PacketReader(w.finish()), true);
     expect(result.guidLow).toBe(0x42);
     expect(result.hp).toBe(10000);
+  });
+
+  test("skips position and pet guid fields correctly", () => {
+    const w = new PacketWriter();
+    w.uint8(0x01);
+    w.uint8(0x10);
+    const mask =
+      GroupUpdateFlag.STATUS |
+      GroupUpdateFlag.POSITION |
+      GroupUpdateFlag.PET_GUID;
+    w.uint32LE(mask);
+    w.uint16LE(0x01);
+    w.uint16LE(1234);
+    w.uint16LE(5678);
+    w.uint32LE(0xaaaa);
+    w.uint32LE(0xbbbb);
+
+    const result = parsePartyMemberStats(new PacketReader(w.finish()));
+    expect(result.online).toBe(true);
+    expect(result.guidLow).toBe(0x10);
   });
 });

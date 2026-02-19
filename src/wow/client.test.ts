@@ -3,6 +3,7 @@ import {
   authHandshake,
   worldSession,
   type ChatMessage,
+  type GroupEvent,
   type WorldHandle,
 } from "wow/client";
 import type { AuthResult } from "wow/client";
@@ -14,6 +15,9 @@ import {
   GameOpcode,
   ChatType,
   ChannelNotify,
+  PartyOperation,
+  PartyResult,
+  GroupUpdateFlag,
 } from "wow/protocol/opcodes";
 import { bigIntToLeBytes } from "wow/crypto/srp";
 import {
@@ -46,6 +50,19 @@ async function waitForEchoProbe(
   });
   handle.sendSay("probe");
   await received;
+}
+
+function waitForGroupEvents(
+  handle: Pick<WorldHandle, "onGroupEvent">,
+  count: number,
+): Promise<GroupEvent[]> {
+  const events: GroupEvent[] = [];
+  return new Promise((resolve) => {
+    handle.onGroupEvent((event) => {
+      events.push(event);
+      if (events.length === count) resolve(events);
+    });
+  });
 }
 
 function buildChallengeResponse(): Uint8Array {
@@ -920,6 +937,172 @@ describe("world error paths", () => {
       await handle.closed;
     } finally {
       stderrSpy.mockRestore();
+      ws.stop();
+    }
+  });
+
+  test("group opcodes emit expected group events", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = waitForGroupEvents(handle, 9);
+
+      const result = new PacketWriter();
+      result.uint32LE(PartyOperation.INVITE);
+      result.cString("Voidtrix");
+      result.uint32LE(PartyResult.SUCCESS);
+      result.uint32LE(0);
+      ws.inject(GameOpcode.SMSG_PARTY_COMMAND_RESULT, result.finish());
+
+      const invite = new PacketWriter();
+      invite.uint8(1);
+      invite.cString("Leader");
+      invite.uint32LE(0);
+      invite.uint8(0);
+      invite.uint32LE(0);
+      ws.inject(GameOpcode.SMSG_GROUP_INVITE, invite.finish());
+
+      const leader = new PacketWriter();
+      leader.cString("Newleader");
+      ws.inject(GameOpcode.SMSG_GROUP_SET_LEADER, leader.finish());
+
+      const list = new PacketWriter();
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0);
+      list.uint32LE(0);
+      list.uint32LE(1);
+      list.uint32LE(1);
+      list.cString("Voidtrix");
+      list.uint32LE(0x10);
+      list.uint32LE(0x20);
+      list.uint8(1);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0x10);
+      list.uint32LE(0x20);
+      ws.inject(GameOpcode.SMSG_GROUP_LIST, list.finish());
+
+      ws.inject(GameOpcode.SMSG_GROUP_DESTROYED, new Uint8Array(0));
+      ws.inject(GameOpcode.SMSG_GROUP_UNINVITE, new Uint8Array(0));
+
+      const decline = new PacketWriter();
+      decline.cString("Decliner");
+      ws.inject(GameOpcode.SMSG_GROUP_DECLINE, decline.finish());
+
+      const stats = new PacketWriter();
+      stats.uint8(0x01);
+      stats.uint8(0x42);
+      stats.uint32LE(GroupUpdateFlag.STATUS | GroupUpdateFlag.CUR_HP);
+      stats.uint16LE(0x01);
+      stats.uint32LE(12000);
+      ws.inject(GameOpcode.SMSG_PARTY_MEMBER_STATS, stats.finish());
+
+      const fullStats = new PacketWriter();
+      fullStats.uint8(0);
+      fullStats.uint8(0x01);
+      fullStats.uint8(0x43);
+      fullStats.uint32LE(GroupUpdateFlag.STATUS | GroupUpdateFlag.LEVEL);
+      fullStats.uint16LE(0x01);
+      fullStats.uint16LE(80);
+      ws.inject(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, fullStats.finish());
+
+      const events = await received;
+      expect(events.map((event) => event.type)).toEqual([
+        "command_result",
+        "invite_received",
+        "leader_changed",
+        "group_list",
+        "group_destroyed",
+        "kicked",
+        "invite_declined",
+        "member_stats",
+        "member_stats",
+      ]);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("setLeader reports missing party member", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+
+      handle.setLeader("Ghostplayer");
+      const message = await received;
+      expect(message.type).toBe(ChatType.SYSTEM);
+      expect(message.message).toBe('"Ghostplayer" is not in your party.');
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("group command methods run after login", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const groupListReady = new Promise<void>((resolve) => {
+        handle.onGroupEvent((event) => {
+          if (event.type === "group_list") resolve();
+        });
+      });
+
+      const list = new PacketWriter();
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0);
+      list.uint32LE(0);
+      list.uint32LE(1);
+      list.uint32LE(1);
+      list.cString("Voidtrix");
+      list.uint32LE(0x10);
+      list.uint32LE(0x20);
+      list.uint8(1);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint8(0);
+      list.uint32LE(0x10);
+      list.uint32LE(0x20);
+      ws.inject(GameOpcode.SMSG_GROUP_LIST, list.finish());
+      await groupListReady;
+
+      handle.invite("Voidtrix");
+      handle.uninvite("Voidtrix");
+      handle.leaveGroup();
+      handle.acceptInvite();
+      handle.declineInvite();
+      handle.setLeader("Voidtrix");
+
+      handle.close();
+      await handle.closed;
+    } finally {
       ws.stop();
     }
   });

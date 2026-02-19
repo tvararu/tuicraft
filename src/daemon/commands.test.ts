@@ -795,6 +795,17 @@ describe("onGroupEvent", () => {
     );
   });
 
+  test("swallows group event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onGroupEvent({ type: "group_destroyed" }, events, log);
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
+
   test("pushes displayable events with text", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log: SessionLog = {
@@ -805,6 +816,52 @@ describe("onGroupEvent", () => {
 
     const drained = events.drain();
     expect(drained[0]!.text).toBe("[group] Bob invites you to a group");
+  });
+
+  test("serializes command_result event details", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log: SessionLog = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+
+    onGroupEvent(
+      {
+        type: "command_result",
+        operation: 1,
+        target: "Voidtrix",
+        result: 0,
+      },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(JSON.parse(drained[0]!.json)).toEqual({
+      type: "GROUP_COMMAND_RESULT",
+      operation: 1,
+      target: "Voidtrix",
+      result: 0,
+    });
+  });
+
+  test("serializes leader/group lifecycle events", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log: SessionLog = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+
+    onGroupEvent({ type: "leader_changed", name: "Alice" }, events, log);
+    onGroupEvent({ type: "group_destroyed" }, events, log);
+    onGroupEvent({ type: "kicked" }, events, log);
+    onGroupEvent({ type: "invite_declined", name: "Bob" }, events, log);
+
+    const drained = events.drain().map((entry) => JSON.parse(entry.json));
+    expect(drained).toEqual([
+      { type: "GROUP_LEADER_CHANGED", name: "Alice" },
+      { type: "GROUP_DESTROYED" },
+      { type: "GROUP_KICKED" },
+      { type: "GROUP_INVITE_DECLINED", name: "Bob" },
+    ]);
   });
 });
 
@@ -1008,6 +1065,13 @@ describe("IPC round-trip", () => {
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi"]);
+  });
+
+  test("onGroupEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerGroupEvent({ type: "group_destroyed" });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines).toEqual(["[group] Group has been disbanded"]);
   });
 
   test("dispatch error returns ERR internal", async () => {

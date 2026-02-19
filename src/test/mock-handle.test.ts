@@ -31,3 +31,23 @@ test("setLastChatMode updates getLastChatMode", () => {
     target: "Xiara",
   });
 });
+
+test("triggerMessage forwards to onMessage callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onMessage((msg) => {
+    seen = `${msg.sender}:${msg.message}`;
+  });
+  handle.triggerMessage({ type: 0, sender: "Alice", message: "hi" });
+  expect(seen).toBe("Alice:hi");
+});
+
+test("triggerGroupEvent forwards to onGroupEvent callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onGroupEvent((event) => {
+    seen = event.type;
+  });
+  handle.triggerGroupEvent({ type: "group_destroyed" });
+  expect(seen).toBe("group_destroyed");
+});
