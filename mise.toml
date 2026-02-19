@@ -108,7 +108,7 @@ git pull --rebase
 git fetch --prune
 
 cleaned=0
-for branch in $(git branch -vv | grep ': gone]' | awk '{print $1}'); do
+for branch in $(git branch -vv | grep ': gone]' | sed 's/^[*+] /  /' | awk '{print $1}'); do
   if [ -d ".worktrees/${branch}" ]; then
     git worktree remove --force ".worktrees/${branch}" 2>/dev/null || true
   fi
