@@ -127,6 +127,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
 - Capitalize the subject after the prefix: `feat: Add thing` not `feat: add thing`
+- Pick the right prefix — `feat:` is only for application features visible to
+  end users. Tooling and infra are `chore:`, README changes are `docs:`, CI
+  changes are `ci:`. When a commit spans types, split into separate commits.
 - Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
 - No bullet points, NEVER add "Co-Authored-By" or other footers
 - Check `git log -n 5` first to match existing style
