@@ -48,4 +48,5 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           coverage-files: coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
