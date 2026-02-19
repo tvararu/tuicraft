@@ -106,7 +106,7 @@ export function buildReconnectProof(
   clientData?: Uint8Array,
 ): Uint8Array {
   const cd = clientData ?? new Uint8Array(randomBytes(16));
-  const proof = createHash("md5")
+  const proof = createHash("sha1")
     .update(new TextEncoder().encode(account.toUpperCase()))
     .update(challengeData)
     .update(cd)
@@ -117,7 +117,6 @@ export function buildReconnectProof(
   w.uint8(AuthOpcode.RECONNECT_PROOF);
   w.rawBytes(cd);
   w.rawBytes(new Uint8Array(proof));
-  w.rawBytes(new Uint8Array(4));
   w.rawBytes(new Uint8Array(20));
   w.uint8(0x00);
   return w.finish();

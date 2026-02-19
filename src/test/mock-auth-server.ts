@@ -103,9 +103,9 @@ function handleReconnectProof(
   account: string,
 ) {
   const clientData = data.slice(1, 17);
-  const receivedProof = data.slice(17, 33);
+  const receivedProof = data.slice(17, 37);
 
-  const expectedProof = createHash("md5")
+  const expectedProof = createHash("sha1")
     .update(new TextEncoder().encode(account))
     .update(challengeData)
     .update(clientData)
