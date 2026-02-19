@@ -73,21 +73,6 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Use `'''` (TOML literal strings) for tasks with regex/backslashes — `"""`
   processes escapes and breaks sed/awk patterns
 
-## Commits
-
-Use Tim Pope style:
-
-- Subject line: imperative, ~50 chars, capitalized, no trailing punctuation
-- Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
-- No bullet points, NEVER add "Co-Authored-By" or other footers
-- Check `git log -n 5` first to match existing style
-- Never use `--oneline` — commit bodies carry important context
-
-PRs:
-
-- Write a short essay (1-2 paragraphs) describing why the changes are needed
-- NEVER add a Claude Code attribution footer
-
 ## Plans and Design Docs
 
 - Design docs and implementation plans live in
@@ -136,3 +121,17 @@ PRs:
   `src/daemon/start.test.ts` — update both when adding WorldHandle methods
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
+
+## Commits
+
+Use [Conventional Commits](https://www.conventionalcommits.org/), then:
+
+- Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
+- No bullet points, NEVER add "Co-Authored-By" or other footers
+- Check `git log -n 5` first to match existing style
+- Never use `--oneline` — commit bodies carry important context
+
+PRs:
+
+- Write a short essay (1-2 paragraphs) describing why the changes are needed
+- NEVER add a Claude Code attribution footer
