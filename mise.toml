@@ -26,7 +26,14 @@ run = "bun test ./src/test/live.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"
-run = "bun test --coverage"
+run = '''
+OUT="$(bun test --coverage 2>&1)"
+printf '%s\n' "$OUT"
+printf '%s\n' "$OUT" | rg -q 'All files[[:space:]]+\|[[:space:]]+100\.00[[:space:]]+\|[[:space:]]+100\.00' || {
+  echo "Coverage must be 100% for funcs and lines" >&2
+  exit 1
+}
+'''
 
 [tasks."test:slowest"]
 description = "Show 10 slowest tests"

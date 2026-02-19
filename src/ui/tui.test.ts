@@ -696,6 +696,91 @@ describe("startTui", () => {
     input.end();
     await done;
   });
+
+  test("/leader calls handle.setLeader", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/leader Voidtrix");
+    await flush();
+
+    expect(handle.setLeader).toHaveBeenCalledWith("Voidtrix");
+
+    input.end();
+    await done;
+  });
+
+  test("/accept calls handle.acceptInvite", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/accept");
+    await flush();
+
+    expect(handle.acceptInvite).toHaveBeenCalled();
+
+    input.end();
+    await done;
+  });
+
+  test("/decline calls handle.declineInvite", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/decline");
+    await flush();
+
+    expect(handle.declineInvite).toHaveBeenCalled();
+
+    input.end();
+    await done;
+  });
+
+  test("incoming displayable group event writes output", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    handle.triggerGroupEvent({
+      type: "invite_declined",
+      name: "Voidtrix",
+    });
+
+    expect(output.join("")).toContain(
+      "[group] Voidtrix has declined your invitation",
+    );
+
+    input.end();
+    await done;
+  });
+
+  test("incoming non-displayable group event is ignored", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    handle.triggerGroupEvent({
+      type: "group_list",
+      members: [],
+      leader: "",
+    });
+
+    expect(output).toEqual([]);
+
+    input.end();
+    await done;
+  });
 });
 
 describe("formatPrompt", () => {
@@ -763,6 +848,74 @@ describe("formatGroupEvent", () => {
         result: PartyResult.NOT_LEADER,
       }),
     ).toBe("[group] Cannot kick Voidtrix: you are not the leader");
+  });
+
+  test("invite failure with group full label", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.GROUP_FULL,
+      }),
+    ).toBe("[group] Cannot invite Voidtrix: group is full");
+  });
+
+  test("invite failure with already in group label", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.ALREADY_IN_GROUP,
+      }),
+    ).toBe("[group] Cannot invite Voidtrix: already in a group");
+  });
+
+  test("invite failure with wrong faction label", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.PLAYER_WRONG_FACTION,
+      }),
+    ).toBe("[group] Cannot invite Voidtrix: wrong faction");
+  });
+
+  test("invite failure with ignoring you label", () => {
+    expect(
+      formatGroupEvent({
+        type: "command_result",
+        operation: PartyOperation.INVITE,
+        target: "Voidtrix",
+        result: PartyResult.IGNORING_YOU,
+      }),
+    ).toBe("[group] Cannot invite Voidtrix: player is ignoring you");
+  });
+
+  test("leader changed", () => {
+    expect(formatGroupEvent({ type: "leader_changed", name: "Alice" })).toBe(
+      "[group] Alice is now the group leader",
+    );
+  });
+
+  test("group destroyed", () => {
+    expect(formatGroupEvent({ type: "group_destroyed" })).toBe(
+      "[group] Group has been disbanded",
+    );
+  });
+
+  test("kicked", () => {
+    expect(formatGroupEvent({ type: "kicked" })).toBe(
+      "[group] You have been removed from the group",
+    );
+  });
+
+  test("invite declined", () => {
+    expect(formatGroupEvent({ type: "invite_declined", name: "Bob" })).toBe(
+      "[group] Bob has declined your invitation",
+    );
   });
 
   test("group_list returns undefined", () => {
