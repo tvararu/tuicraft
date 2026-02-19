@@ -239,6 +239,28 @@ function handleReconnectChallenge(
   );
 }
 
+export async function authWithRetry(
+  config: ClientConfig,
+  opts?: { maxAttempts?: number; baseDelayMs?: number },
+): Promise<AuthResult> {
+  const maxAttempts = opts?.maxAttempts ?? 5;
+  const baseDelay = opts?.baseDelayMs ?? 5000;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await authHandshake(config);
+    } catch (err) {
+      if (!(err instanceof ReconnectRequiredError)) throw err;
+      lastError = err;
+      if (attempt + 1 < maxAttempts) {
+        const delay = Math.min(baseDelay * 2 ** attempt, 60000);
+        await Bun.sleep(delay);
+      }
+    }
+  }
+  throw lastError;
+}
+
 export function authHandshake(config: ClientConfig): Promise<AuthResult> {
   return new Promise((resolve, reject) => {
     const buf = new AccumulatorBuffer();
