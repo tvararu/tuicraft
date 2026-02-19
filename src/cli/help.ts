@@ -9,7 +9,7 @@ USAGE
   tuicraft send -y "message"  Yell
   tuicraft send -g "message"  Guild chat
   tuicraft send -p "message"  Party chat
-  tuicraft --who [filter]     Who query
+  tuicraft who [filter]       Who query
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
   tuicraft status             Show daemon status

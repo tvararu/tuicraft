@@ -7,6 +7,7 @@ test("help text includes all subcommands", () => {
   for (const cmd of [
     "setup",
     "send",
+    "who",
     "read",
     "tail",
     "logs",
@@ -18,8 +19,7 @@ test("help text includes all subcommands", () => {
 });
 
 test("help text includes all chat flags", () => {
-  for (const flag of ["-w", "-y", "-g", "-p", "--who"])
-    expect(text).toContain(flag);
+  for (const flag of ["-w", "-y", "-g", "-p"]) expect(text).toContain(flag);
 });
 
 test("help text includes all global flags", () => {
