@@ -41,12 +41,25 @@ jobs:
       - uses: jdx/mise-action@v3
         with: { cache: true, install: true }
       - run: mise bundle
-      - run: mise test:coverage
-      - uses: hrishikesh-kadam/setup-lcov@v1
+      - name: Run tests with coverage
+        run: mise test:coverage 2>&1 | tee /tmp/coverage.txt
+      - name: Comment coverage on PR
         if: github.event_name == 'pull_request'
-      - uses: zgosalvez/github-actions-report-lcov@v7
-        if: github.event_name == 'pull_request'
-        with:
-          coverage-files: coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          update-comment: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TABLE=$(sed -n '/^---/,/^Ran /p' /tmp/coverage.txt)
+          BODY="<!-- coverage -->
+          ## Test Coverage
+          \`\`\`
+          $TABLE
+          \`\`\`"
+          PR=${{ github.event.pull_request.number }}
+          COMMENT_ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.body | contains("<!-- coverage -->")) | .id' | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments/$COMMENT_ID" \
+              -X PATCH -f body="$BODY"
+          else
+            gh pr comment "$PR" --body "$BODY"
+          fi

@@ -41,7 +41,7 @@ run = "bun test ./src/test/live.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"
-run = "bun test --coverage --coverage-reporter=lcov --coverage-dir=./coverage"
+run = "bun test --coverage"
 
 [tasks."test:slowest"]
 description = "Show 10 slowest tests"
