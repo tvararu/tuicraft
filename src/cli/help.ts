@@ -4,11 +4,11 @@ export function helpText(): string {
 USAGE
   tuicraft                    Interactive TUI mode
   tuicraft setup [flags]      Configure account credentials
-  tuicraft "message"          Send a say message (auto-starts daemon)
-  tuicraft -w <name> "msg"    Whisper a player
-  tuicraft -y "message"       Yell
-  tuicraft -g "message"       Guild chat
-  tuicraft -p "message"       Party chat
+  tuicraft send "message"     Send a say message (auto-starts daemon)
+  tuicraft send -w <name> "m" Whisper a player
+  tuicraft send -y "message"  Yell
+  tuicraft send -g "message"  Guild chat
+  tuicraft send -p "message"  Party chat
   tuicraft --who [filter]     Who query
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
