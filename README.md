@@ -4,7 +4,7 @@ Chat in WoW 3.3.5a from your terminal. Targets AzerothCore private servers and
 is designed to be both human and LLM friendly.
 
 ```sh
-curl -fsSL tuicraft.vararu.org | sh
+curl -fsSL tuicraft.vararu.org/install.sh | sh
 ```
 
 ## Features
@@ -32,13 +32,13 @@ scripting
 ## Install
 
 ```sh
-curl -fsSL tuicraft.vararu.org | sh
+curl -fsSL tuicraft.vararu.org/install.sh | sh
 ```
 
 Override the install directory (default: `/usr/local/bin`):
 
 ```sh
-TUICRAFT_INSTALL_DIR=~/.local/bin curl -fsSL tuicraft.vararu.org | sh
+TUICRAFT_INSTALL_DIR=~/.local/bin curl -fsSL tuicraft.vararu.org/install.sh | sh
 ```
 
 Pre-built binaries are available on the [releases
