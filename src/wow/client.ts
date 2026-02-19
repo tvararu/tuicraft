@@ -155,6 +155,9 @@ type WorldConn = {
   channels: string[];
   lastChatMode: ChatMode;
   onMessage?: (msg: ChatMessage) => void;
+  selfName: string;
+  selfGuidLow: number;
+  selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
   onGroupEvent?: (event: GroupEvent) => void;
 };
@@ -406,6 +409,12 @@ function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
   const list = parseGroupList(r);
   conn.partyMembers.clear();
   let leaderName = "";
+  if (
+    conn.selfGuidLow === list.leaderGuidLow &&
+    conn.selfGuidHigh === list.leaderGuidHigh
+  ) {
+    leaderName = conn.selfName;
+  }
   for (const m of list.members) {
     conn.partyMembers.set(m.name, {
       guidLow: m.guidLow,
@@ -498,6 +507,10 @@ async function selectCharacter(
     );
   }
 
+  conn.selfName = char.name;
+  conn.selfGuidLow = char.guidLow;
+  conn.selfGuidHigh = char.guidHigh;
+
   const w = new PacketWriter();
   w.uint32LE(char.guidLow);
   w.uint32LE(char.guidHigh);
@@ -532,6 +545,9 @@ export function worldSession(
       pendingMessages: new Map(),
       channels: [],
       lastChatMode: { type: "say" },
+      selfName: "",
+      selfGuidLow: 0,
+      selfGuidHigh: 0,
       partyMembers: new Map(),
     };
     let pingInterval: ReturnType<typeof setInterval>;
