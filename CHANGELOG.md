@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.1...tuicraft-v0.3.2) (2026-02-19)
+
+
+### Maintenance
+
+* Merge release workflows and simplify CI triggers ([62a9cce](https://github.com/tvararu/tuicraft/commit/62a9ccece5d75cacfe23c667a042523b8614228f))
+
 ## [0.3.1](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.0...tuicraft-v0.3.1) (2026-02-19)
 
 
