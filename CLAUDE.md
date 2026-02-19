@@ -138,4 +138,5 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 PRs:
 
 - Write a short essay (1-2 paragraphs) describing why the changes are needed
+- Don't hard-wrap PR body text — GitHub renders markdown with browser reflow
 - NEVER add a Claude Code attribution footer
