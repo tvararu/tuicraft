@@ -86,10 +86,7 @@ function handleRealmList(socket: Socket, realmAddress: string) {
   socket.write(w.finish());
 }
 
-function handleReconnectChallenge(
-  socket: Socket,
-  challengeData: Uint8Array,
-) {
+function handleReconnectChallenge(socket: Socket, challengeData: Uint8Array) {
   const w = new PacketWriter();
   w.uint8(AuthOpcode.RECONNECT_CHALLENGE);
   w.uint8(0x00);
@@ -118,8 +115,7 @@ function handleReconnectProof(
 
   const w = new PacketWriter();
   w.uint8(AuthOpcode.RECONNECT_PROOF);
-  const match =
-    Buffer.compare(Buffer.from(receivedProof), expectedProof) === 0;
+  const match = Buffer.compare(Buffer.from(receivedProof), expectedProof) === 0;
   w.uint8(match ? 0x00 : 0x0b);
   socket.write(w.finish());
 }

@@ -2,7 +2,12 @@ import type { Socket } from "bun";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { SRP, type SRPResult } from "wow/crypto/srp";
 import { Arc4 } from "wow/crypto/arc4";
-import { GameOpcode, ChatType, Language } from "wow/protocol/opcodes";
+import {
+  GameOpcode,
+  ChatType,
+  Language,
+  AuthOpcode,
+} from "wow/protocol/opcodes";
 import {
   parseChatMessage,
   buildChatMessage,
@@ -21,6 +26,8 @@ import {
   parseLogonProofResponse,
   buildRealmListRequest,
   parseRealmList,
+  parseReconnectChallengeResponse,
+  buildReconnectProof,
 } from "wow/protocol/auth";
 import {
   buildWorldAuthPacket,
@@ -56,6 +63,7 @@ export type ClientConfig = {
   clientSeed?: Uint8Array;
   pingIntervalMs?: number;
   language?: number;
+  cachedSessionKey?: Uint8Array;
 };
 
 export type AuthResult = {
@@ -205,12 +213,40 @@ function handleRealms(
   return { realmHost: realm.host, realmPort: realm.port, realmId: realm.id };
 }
 
+export class ReconnectRequiredError extends Error {
+  constructor() {
+    super("Server requires reconnect but no cached session key is available");
+    this.name = "ReconnectRequiredError";
+  }
+}
+
+function handleReconnectChallenge(
+  raw: Uint8Array,
+  config: ClientConfig,
+): Uint8Array {
+  if (!config.cachedSessionKey) throw new ReconnectRequiredError();
+  const r = new PacketReader(raw);
+  const result = parseReconnectChallengeResponse(r);
+  if (result.status !== 0x00) {
+    throw new Error(
+      `Reconnect challenge failed: status 0x${result.status.toString(16)}`,
+    );
+  }
+  return buildReconnectProof(
+    config.account,
+    result.challengeData!,
+    config.cachedSessionKey,
+  );
+}
+
 export function authHandshake(config: ClientConfig): Promise<AuthResult> {
   return new Promise((resolve, reject) => {
     const buf = new AccumulatorBuffer();
     const srp = new SRP(config.account, config.password);
-    let state: "challenge" | "proof" | "realms" = "challenge";
+    let state: "challenge" | "proof" | "reconnect_proof" | "realms" =
+      "challenge";
     let srpResult: SRPResult;
+    let resolvedSessionKey: Uint8Array;
     let done = false;
 
     function fail(err: unknown, socket: Socket) {
@@ -232,12 +268,34 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
           try {
             const raw = buf.peek(buf.length);
             if (state === "challenge") {
-              srpResult = handleChallenge(raw, config, srp);
-              buf.drain(buf.length);
-              socket.write(buildLogonProof(srpResult));
-              state = "proof";
+              const opcode = raw[0];
+              if (opcode === AuthOpcode.RECONNECT_CHALLENGE) {
+                const proofPacket = handleReconnectChallenge(raw, config);
+                buf.drain(buf.length);
+                resolvedSessionKey = config.cachedSessionKey!;
+                socket.write(proofPacket);
+                state = "reconnect_proof";
+              } else {
+                srpResult = handleChallenge(raw, config, srp);
+                buf.drain(buf.length);
+                resolvedSessionKey = srpResult.K;
+                socket.write(buildLogonProof(srpResult));
+                state = "proof";
+              }
             } else if (state === "proof") {
               handleProof(raw, srpResult);
+              buf.drain(buf.length);
+              socket.write(buildRealmListRequest());
+              state = "realms";
+            } else if (state === "reconnect_proof") {
+              const r = new PacketReader(raw);
+              r.skip(1);
+              const status = r.uint8();
+              if (status !== 0x00) {
+                throw new Error(
+                  `Reconnect proof failed: status 0x${status.toString(16)}`,
+                );
+              }
               buf.drain(buf.length);
               socket.write(buildRealmListRequest());
               state = "realms";
@@ -247,7 +305,7 @@ export function authHandshake(config: ClientConfig): Promise<AuthResult> {
               done = true;
               socket.end();
               resolve({
-                sessionKey: srpResult.K,
+                sessionKey: resolvedSessionKey,
                 realmHost,
                 realmPort,
                 realmId,
