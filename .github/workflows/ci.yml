@@ -42,7 +42,7 @@ jobs:
         with: { cache: true, install: true }
       - run: mise bundle
       - run: mise test:coverage
-      - uses: hrishikesh-kadam/setup-lcov@v2
+      - uses: hrishikesh-kadam/setup-lcov@v1
         if: github.event_name == 'pull_request'
       - uses: zgosalvez/github-actions-report-lcov@v7
         if: github.event_name == 'pull_request'
