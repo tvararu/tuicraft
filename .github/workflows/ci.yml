@@ -10,7 +10,6 @@ env:
 
 permissions:
   contents: read
-  issues: write
   pull-requests: write
 
 jobs:
@@ -56,11 +55,17 @@ jobs:
           $TABLE
           \`\`\`"
           PR=${{ github.event.pull_request.number }}
-          COMMENT_ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq '.[] | select(.body | contains("<!-- coverage -->")) | .id' | head -1)
-          if [ -n "$COMMENT_ID" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments/$COMMENT_ID" \
-              -X PATCH -f body="$BODY"
+          NODE_ID=$(gh pr view "$PR" --json comments \
+            --jq '[.comments[] | select(.body | test("<!-- coverage -->"))][0].id // empty')
+          if [ -n "$NODE_ID" ]; then
+            gh api graphql \
+              -F id="$NODE_ID" \
+              -F body="$BODY" \
+              -f query='mutation($id: ID!, $body: String!) {
+                updateIssueComment(input: {id: $id, body: $body}) {
+                  issueComment { id }
+                }
+              }'
           else
             gh pr comment "$PR" --body "$BODY"
           fi
