@@ -1,19 +1,34 @@
-name: Release
+name: Release Please
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
-
-env:
-  MISE_TASK_TIMEOUT: 60s
+  pull-requests: write
 
 jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+
   build:
     name: build / all platforms
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      MISE_TASK_TIMEOUT: 60s
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
@@ -25,5 +40,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" \
             dist/tuicraft-*
