@@ -1,4 +1,4 @@
-import { test, expect, jest } from "bun:test";
+import { test, expect, describe, jest } from "bun:test";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
   buildWorldAuthPacket,
@@ -166,4 +166,17 @@ test("INCOMING_HEADER_SIZE is 4", () => {
 
 test("OUTGOING_HEADER_SIZE is 6", () => {
   expect(OUTGOING_HEADER_SIZE).toBe(6);
+});
+
+describe("OpcodeDispatch", () => {
+  test("has() returns false for unregistered opcode", () => {
+    const d = new OpcodeDispatch();
+    expect(d.has(0x9999)).toBe(false);
+  });
+
+  test("has() returns true after on()", () => {
+    const d = new OpcodeDispatch();
+    d.on(0x42, () => {});
+    expect(d.has(0x42)).toBe(true);
+  });
 });

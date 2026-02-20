@@ -145,6 +145,10 @@ export class OpcodeDispatch {
     this.expects = new Map();
   }
 
+  has(opcode: number): boolean {
+    return this.handlers.has(opcode);
+  }
+
   on(opcode: number, handler: (reader: PacketReader) => void) {
     this.handlers.set(opcode, handler);
   }
