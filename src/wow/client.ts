@@ -710,11 +710,13 @@ export function worldSession(
     );
 
     registerStubs(conn.dispatch, (msg) => {
-      conn.onMessage?.({
+      if (!conn.onMessage) return false;
+      conn.onMessage({
         type: ChatType.SYSTEM,
         sender: "",
         message: msg,
       });
+      return true;
     });
 
     async function login() {
