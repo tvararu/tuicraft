@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  MISE_TASK_TIMEOUT: 10s
+  MISE_TASK_TIMEOUT: 60s
 
 permissions:
   contents: read
