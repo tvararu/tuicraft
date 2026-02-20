@@ -36,7 +36,8 @@ export type IpcCommand =
   | { type: "leave" }
   | { type: "leader"; target: string }
   | { type: "accept" }
-  | { type: "decline" };
+  | { type: "decline" }
+  | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
   const spaceIdx = line.indexOf(" ");
@@ -96,6 +97,26 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "accept" };
     case "DECLINE":
       return { type: "decline" };
+    case "FRIENDS":
+      return { type: "unimplemented", feature: "Friends list" };
+    case "IGNORE":
+      return { type: "unimplemented", feature: "Ignore list" };
+    case "JOIN":
+      return { type: "unimplemented", feature: "Channel join/leave" };
+    case "GINVITE":
+    case "GKICK":
+    case "GLEAVE":
+    case "GPROMOTE":
+      return { type: "unimplemented", feature: "Guild management" };
+    case "MAIL":
+      return { type: "unimplemented", feature: "Mail" };
+    case "ROLL":
+      return { type: "unimplemented", feature: "Random roll" };
+    case "DND":
+    case "AFK":
+      return { type: "unimplemented", feature: "Player status" };
+    case "EMOTE":
+      return { type: "unimplemented", feature: "Text emotes" };
     default:
       return line ? { type: "chat", message: line } : undefined;
   }
@@ -216,6 +237,9 @@ export async function dispatchCommand(
     case "decline":
       handle.declineInvite();
       writeLines(socket, ["OK"]);
+      return false;
+    case "unimplemented":
+      writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
   }
 }
