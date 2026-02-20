@@ -178,6 +178,32 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("LEADER")).toBeUndefined();
   });
 
+  describe("unimplemented IPC commands", () => {
+    const cases = [
+      ["FRIENDS", "Friends list"],
+      ["IGNORE Foo", "Ignore list"],
+      ["JOIN Trade", "Channel join/leave"],
+      ["GINVITE Foo", "Guild management"],
+      ["GKICK Foo", "Guild management"],
+      ["GLEAVE", "Guild management"],
+      ["GPROMOTE Foo", "Guild management"],
+      ["MAIL", "Mail"],
+      ["ROLL", "Random roll"],
+      ["DND", "Player status"],
+      ["AFK", "Player status"],
+      ["EMOTE waves", "Text emotes"],
+    ] as const;
+
+    for (const [input, feature] of cases) {
+      test(`${input.split(" ")[0]} returns unimplemented`, () => {
+        expect(parseIpcCommand(input)).toEqual({
+          type: "unimplemented",
+          feature,
+        });
+      });
+    }
+  });
+
   test("unrecognized verb becomes chat", () => {
     expect(parseIpcCommand("DANCE")).toEqual({
       type: "chat",
@@ -619,6 +645,24 @@ describe("dispatchCommand", () => {
     expect(parsed.type).toBe("WHO");
     expect(parsed.count).toBe(1);
     expect(parsed.results[0].name).toBe("Test");
+  });
+
+  test("unimplemented writes UNIMPLEMENTED response", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    const result = await dispatchCommand(
+      { type: "unimplemented", feature: "Friends list" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(result).toBe(false);
+    expect(socket.written()).toBe("UNIMPLEMENTED Friends list\n\n");
   });
 
   test("chat sends via sendInCurrentMode and responds with mode", async () => {
