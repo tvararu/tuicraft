@@ -1349,6 +1349,32 @@ describe("world error paths", () => {
     }
   });
 
+  test("stubbed opcode notifies via onMessage", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage((msg) => {
+          if (msg.message.includes("not yet implemented")) resolve(msg);
+        });
+      });
+
+      ws.inject(GameOpcode.SMSG_CONTACT_LIST, new Uint8Array(0));
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.message).toContain("Friends list");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("group command methods run after login", async () => {
     const ws = await startMockWorldServer();
     try {

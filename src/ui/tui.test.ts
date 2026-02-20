@@ -847,6 +847,24 @@ describe("startTui", () => {
     await done;
   });
 
+  test("unimplemented command writes error message", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/friends");
+    await flush();
+
+    expect(output.join("")).toContain("Friends list is not yet implemented");
+
+    input.end();
+    await done;
+  });
+
   test("incoming displayable group event writes output", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
