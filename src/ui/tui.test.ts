@@ -135,9 +135,9 @@ describe("parseCommand", () => {
   });
 
   test("unknown slash command becomes say with full input", () => {
-    expect(parseCommand("/emote hello")).toEqual({
+    expect(parseCommand("/dance hello")).toEqual({
       type: "say",
-      message: "/emote hello",
+      message: "/dance hello",
     });
   });
 
@@ -192,6 +192,93 @@ describe("parseCommand", () => {
     expect(parseCommand("/leader")).toEqual({
       type: "say",
       message: "/leader",
+    });
+  });
+
+  describe("unimplemented commands", () => {
+    test("/friends returns unimplemented", () => {
+      expect(parseCommand("/friends")).toEqual({
+        type: "unimplemented",
+        feature: "Friends list",
+      });
+    });
+    test("/f returns unimplemented", () => {
+      expect(parseCommand("/f")).toEqual({
+        type: "unimplemented",
+        feature: "Friends list",
+      });
+    });
+    test("/ignore returns unimplemented", () => {
+      expect(parseCommand("/ignore Foo")).toEqual({
+        type: "unimplemented",
+        feature: "Ignore list",
+      });
+    });
+    test("/join returns unimplemented", () => {
+      expect(parseCommand("/join Trade")).toEqual({
+        type: "unimplemented",
+        feature: "Channel join/leave",
+      });
+    });
+    test("/ginvite returns unimplemented", () => {
+      expect(parseCommand("/ginvite Foo")).toEqual({
+        type: "unimplemented",
+        feature: "Guild management",
+      });
+    });
+    test("/gkick returns unimplemented", () => {
+      expect(parseCommand("/gkick Foo")).toEqual({
+        type: "unimplemented",
+        feature: "Guild management",
+      });
+    });
+    test("/gleave returns unimplemented", () => {
+      expect(parseCommand("/gleave")).toEqual({
+        type: "unimplemented",
+        feature: "Guild management",
+      });
+    });
+    test("/gpromote returns unimplemented", () => {
+      expect(parseCommand("/gpromote Foo")).toEqual({
+        type: "unimplemented",
+        feature: "Guild management",
+      });
+    });
+    test("/mail returns unimplemented", () => {
+      expect(parseCommand("/mail")).toEqual({
+        type: "unimplemented",
+        feature: "Mail",
+      });
+    });
+    test("/roll returns unimplemented", () => {
+      expect(parseCommand("/roll")).toEqual({
+        type: "unimplemented",
+        feature: "Random roll",
+      });
+    });
+    test("/dnd returns unimplemented", () => {
+      expect(parseCommand("/dnd")).toEqual({
+        type: "unimplemented",
+        feature: "Player status",
+      });
+    });
+    test("/afk returns unimplemented", () => {
+      expect(parseCommand("/afk")).toEqual({
+        type: "unimplemented",
+        feature: "Player status",
+      });
+    });
+    test("/e returns unimplemented", () => {
+      expect(parseCommand("/e waves")).toEqual({
+        type: "unimplemented",
+        feature: "Text emotes",
+      });
+    });
+    test("/emote returns unimplemented", () => {
+      expect(parseCommand("/emote waves")).toEqual({
+        type: "unimplemented",
+        feature: "Text emotes",
+      });
     });
   });
 });
