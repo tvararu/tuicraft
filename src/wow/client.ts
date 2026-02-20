@@ -52,6 +52,7 @@ import {
   parseGroupList,
   parsePartyMemberStats,
 } from "wow/protocol/group";
+import { registerStubs } from "wow/protocol/stubs";
 
 export type ClientConfig = {
   host: string;
@@ -707,6 +708,14 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, (r) =>
       handlePartyMemberStatsMsg(conn, r, true),
     );
+
+    registerStubs(conn.dispatch, (msg) => {
+      conn.onMessage?.({
+        type: ChatType.SYSTEM,
+        sender: "",
+        message: msg,
+      });
+    });
 
     async function login() {
       await authenticateWorld(conn, config, auth);
