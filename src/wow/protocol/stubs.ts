@@ -872,7 +872,7 @@ export const STUBS: StubEntry[] = [
 
 export function registerStubs(
   dispatch: OpcodeDispatch,
-  notify: (message: string) => void,
+  notify: (message: string) => boolean,
 ): void {
   for (const stub of STUBS) {
     const name = Object.entries(GameOpcode).find(
@@ -885,8 +885,7 @@ export function registerStubs(
     let fired = false;
     dispatch.on(stub.opcode, () => {
       if (!fired) {
-        fired = true;
-        notify(`[tuicraft] ${stub.label} is not yet implemented`);
+        fired = notify(`[tuicraft] ${stub.label} is not yet implemented`);
       }
     });
   }
