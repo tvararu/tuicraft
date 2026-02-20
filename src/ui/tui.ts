@@ -27,7 +27,8 @@ export type Command =
   | { type: "leader"; target: string }
   | { type: "accept" }
   | { type: "decline" }
-  | { type: "quit" };
+  | { type: "quit" }
+  | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
   if (!input.startsWith("/")) return { type: "chat", message: input };
@@ -86,6 +87,28 @@ export function parseCommand(input: string): Command {
       return { type: "decline" };
     case "/quit":
       return { type: "quit" };
+    case "/friends":
+    case "/f":
+      return { type: "unimplemented", feature: "Friends list" };
+    case "/ignore":
+      return { type: "unimplemented", feature: "Ignore list" };
+    case "/join":
+      return { type: "unimplemented", feature: "Channel join/leave" };
+    case "/ginvite":
+    case "/gkick":
+    case "/gleave":
+    case "/gpromote":
+      return { type: "unimplemented", feature: "Guild management" };
+    case "/mail":
+      return { type: "unimplemented", feature: "Mail" };
+    case "/roll":
+      return { type: "unimplemented", feature: "Random roll" };
+    case "/dnd":
+    case "/afk":
+      return { type: "unimplemented", feature: "Player status" };
+    case "/e":
+    case "/emote":
+      return { type: "unimplemented", feature: "Text emotes" };
     default: {
       const channelMatch = cmd.match(/^\/(\d+)$/);
       if (channelMatch) {
@@ -333,6 +356,9 @@ export async function executeCommand(
       break;
     case "quit":
       return true;
+    case "unimplemented":
+      state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
+      break;
   }
   return false;
 }
