@@ -5,6 +5,25 @@ import {
 import { type Config, writeConfig } from "lib/config";
 
 type CreateInterfaceFn = typeof createInterface;
+type WriteFn = NodeJS.WritableStream["write"];
+
+function rlOutput(rl: ReadlineInterface): NodeJS.WritableStream {
+  return (rl as unknown as { output: NodeJS.WritableStream }).output;
+}
+
+function maskEcho(output: NodeJS.WritableStream, label: string): () => void {
+  const orig = output.write;
+  let prompted = false;
+  output.write = ((s: string | Uint8Array, ...args: unknown[]) => {
+    if (!prompted && s === label) prompted = true;
+    else if (typeof s === "string" && /^[\x20-\x7e]+$/.test(s))
+      return orig.call(output, "*".repeat(s.length));
+    return (orig as Function).call(output, s, ...args);
+  }) as WriteFn;
+  return () => {
+    output.write = orig;
+  };
+}
 
 export function parseSetupFlags(args: string[]): Config {
   const get = (name: string): string | undefined => {
@@ -43,13 +62,21 @@ function ask(
   );
 }
 
+function askSecret(rl: ReadlineInterface, prompt: string): Promise<string> {
+  const label = `${prompt}: `;
+  const unmask = maskEcho(rlOutput(rl), label);
+  return new Promise<string>((resolve) => {
+    rl.question(label, (answer) => resolve(answer.trim()));
+  }).finally(unmask);
+}
+
 export async function runSetupWizard(
   factory: CreateInterfaceFn = createInterface,
 ): Promise<Config> {
   const rl = factory({ input: process.stdin, output: process.stdout });
   try {
     const account = await ask(rl, "Account");
-    const password = await ask(rl, "Password");
+    const password = await askSecret(rl, "Password");
     const character = await ask(rl, "Character");
     const host = await ask(rl, "Host", "t1");
     const port = parseInt(await ask(rl, "Port", "3724"), 10);
