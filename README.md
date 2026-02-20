@@ -107,6 +107,113 @@ tuicraft stop              # stop daemon
 - [ ] 🤖 **0.6 - Automation:** Scriptable command sequences and event
       subscriptions
 
+## Feature coverage
+
+Based on the list of all possible opcodes. Might still be missing some things
+that the official game client does.
+
+### 🔐 Authentication
+
+| Feature               | Status |
+| --------------------- | ------ |
+| SRP-6 login           | ✅     |
+| Reconnect proof       | ✅     |
+| Realm selection       | ✅     |
+| Character select      | ✅     |
+| Arc4 encryption       | ✅     |
+| Keepalive / time sync | ✅     |
+| Warden anticheat      | ❌     |
+
+### 💬 Chat
+
+| Feature                                 | Status |
+| --------------------------------------- | ------ |
+| Say, yell                               | ✅     |
+| Whisper (`/w`, `/r`)                    | ✅     |
+| Guild, officer                          | ✅     |
+| Party, raid                             | ✅     |
+| Channels (`/1`, `/2`, …)                | ✅     |
+| MOTD                                    | ✅     |
+| Server broadcast messages               | ❌     |
+| Chat restricted / wrong faction notices | ❌     |
+| Text emotes (`/e`, `/emote`)            | ❌     |
+| DND / AFK status                        | ❌     |
+
+### 👥 Social
+
+| Feature                              | Status |
+| ------------------------------------ | ------ |
+| Who search                           | ✅     |
+| Party invite / kick / leave / leader | ✅     |
+| Group roster + member stats          | ✅     |
+| Friends list                         | ❌     |
+| Ignore list                          | ❌     |
+| Channel join / leave                 | ❌     |
+| Duel accept / decline                | ❌     |
+
+### 🏰 Guild
+
+| Feature                               | Status |
+| ------------------------------------- | ------ |
+| Guild chat                            | ✅     |
+| Guild roster                          | ❌     |
+| Guild events                          | ❌     |
+| Guild invite / kick / leave / promote | ❌     |
+| Guild bank                            | ❌     |
+
+### ✉️ Mail
+
+| Feature             | Status |
+| ------------------- | ------ |
+| Send / receive mail | ❌     |
+| Mail notifications  | ❌     |
+
+### 🏪 Economy
+
+| Feature       | Status |
+| ------------- | ------ |
+| Auction house | ❌     |
+| Vendors       | ❌     |
+| Trade         | ❌     |
+
+### 🌍 World
+
+| Feature           | Status |
+| ----------------- | ------ |
+| Object updates    | ❌     |
+| Movement          | ❌     |
+| Spells / auras    | ❌     |
+| Combat log        | ❌     |
+| Loot              | ❌     |
+| Items / inventory | ❌     |
+
+### 📜 PvE
+
+| Feature              | Status |
+| -------------------- | ------ |
+| Quests               | ❌     |
+| NPC gossip           | ❌     |
+| Trainers             | ❌     |
+| Taxi                 | ❌     |
+| Instances / dungeons | ❌     |
+
+### ⚔️ PvP
+
+| Feature               | Status |
+| --------------------- | ------ |
+| Battlegrounds         | ❌     |
+| Arena                 | ❌     |
+| Random roll (`/roll`) | ❌     |
+
+### 📊 Progression
+
+| Feature              | Status |
+| -------------------- | ------ |
+| Achievements         | ❌     |
+| Talents              | ❌     |
+| LFG / dungeon finder | ❌     |
+| Calendar             | ❌     |
+
 ## Prior art
 
 - [swiftmatt/wow-chat-client](https://github.com/swiftmatt/wow-chat-client) -
