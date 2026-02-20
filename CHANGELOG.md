@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.3.6](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.5...tuicraft-v0.3.6) (2026-02-20)
+
+
+### Features
+
+* Add comprehensive 3.3.5a opcode constants ([4d7bbfe](https://github.com/tvararu/tuicraft/commit/4d7bbfe895f6f4bf5d12e14858df3937759b569d))
+* Add has() method to OpcodeDispatch ([f92d2c6](https://github.com/tvararu/tuicraft/commit/f92d2c6449e70254949346cf847d46fdda0b7902))
+* Add IPC command stubs for unimplemented features ([059fc08](https://github.com/tvararu/tuicraft/commit/059fc08ffb4d807860ae10d17033a057a1873dc5))
+* Add opcode stub registry ([47695d3](https://github.com/tvararu/tuicraft/commit/47695d36bc063a7b5784acdc8482d8536a66a57a))
+* Add TUI command stubs for unimplemented features ([8ec6be5](https://github.com/tvararu/tuicraft/commit/8ec6be55edd39acaa3bfeba944bc99494cf17c61))
+* Register opcode stubs in world session ([87b113d](https://github.com/tvararu/tuicraft/commit/87b113db40f7980500d973382f41e3f4f683cdd6))
+
+
+### Bug Fixes
+
+* Auto-launch setup wizard when running without config ([03d38bb](https://github.com/tvararu/tuicraft/commit/03d38bbcd12215fe156aaace0ede025198407b65))
+* **ci:** Increase task timeout to 60s for cold-cache tsc ([7889b53](https://github.com/tvararu/tuicraft/commit/7889b53f63da1fabd2df83e029874e93256d294b))
+* Defer stub notification until onMessage is attached ([ca1047f](https://github.com/tvararu/tuicraft/commit/ca1047f0cf698f901d0aebb2407549ac7e663daf))
+* Mask password echo during interactive setup ([4ea9a1a](https://github.com/tvararu/tuicraft/commit/4ea9a1a35404cdd7a4be6f1e3b679ca27cb3d436))
+* **site:** Improve muted text contrast to WCAG AAA ([b5447f6](https://github.com/tvararu/tuicraft/commit/b5447f6dc60cfb4c1923dffd9b4a117664b8f8a6))
+* Use ~/.local/bin on Linux when /usr/local/bin is not writable ([6e21c79](https://github.com/tvararu/tuicraft/commit/6e21c794789916a94d5472f3543f59d553abee9a))
+
+
+### Documentation
+
+* Add feature coverage section to README ([75483b3](https://github.com/tvararu/tuicraft/commit/75483b3e1298eeeacb67ddc33c3d0b8d772c58e6))
+* Add opcode stubs design document ([06f97da](https://github.com/tvararu/tuicraft/commit/06f97daccc50a913f13b462a0becb86ff4196f72))
+* Add opcode stubs implementation plan ([f20132d](https://github.com/tvararu/tuicraft/commit/f20132de6347fc54ef3c482d69b88dabb0acff76))
+
+
+### Maintenance
+
+* Cover stub notification paths in TUI and client ([3c59099](https://github.com/tvararu/tuicraft/commit/3c59099e5bbfe1b09d1624f9d6df02394d032673))
+* Remove bugs.md ([382276a](https://github.com/tvararu/tuicraft/commit/382276abba06759725753dafc162eadcefcfba96))
+
 ## [0.3.5](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.4...tuicraft-v0.3.5) (2026-02-19)
 
 
