@@ -14,8 +14,11 @@ import type { Interface as ReadlineInterface } from "node:readline";
 let answers: string[] = [];
 const mockClose = mock(() => {});
 
+const fakeOutput = { write: () => true };
+
 function fakeCreateInterface(): ReadlineInterface {
   return {
+    output: fakeOutput,
     question: (_prompt: string, cb: (answer: string) => void) => {
       cb(answers.shift() ?? "");
     },
