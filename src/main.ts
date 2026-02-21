@@ -1,5 +1,6 @@
 import { parseArgs } from "cli/args";
 import { sendToSocket, ensureDaemon } from "cli/ipc";
+import { formatSendOutput } from "cli/send-output";
 
 const action = parseArgs(Bun.argv.slice(2));
 
@@ -72,22 +73,16 @@ async function main() {
       await ensureDaemon();
       const cmd = `${action.mode.toUpperCase()} ${action.message}`;
       const lines = await sendToSocket(cmd);
-      if (action.json) {
-        console.log(JSON.stringify({ status: "ok" }));
-      } else {
-        for (const line of lines) console.log(line);
-      }
+      for (const line of formatSendOutput(lines, action.json, false))
+        console.log(line);
       await waitForEvents(action.wait, action.json);
       break;
     }
     case "slash": {
       await ensureDaemon();
       const lines = await sendToSocket(action.input);
-      if (action.json) {
-        console.log(JSON.stringify({ status: "ok" }));
-      } else {
-        for (const line of lines) console.log(line);
-      }
+      for (const line of formatSendOutput(lines, action.json, true))
+        console.log(line);
       await waitForEvents(action.wait, action.json);
       break;
     }
@@ -96,11 +91,8 @@ async function main() {
       const lines = await sendToSocket(
         `WHISPER ${action.target} ${action.message}`,
       );
-      if (action.json) {
-        console.log(JSON.stringify({ status: "ok" }));
-      } else {
-        for (const line of lines) console.log(line);
-      }
+      for (const line of formatSendOutput(lines, action.json, false))
+        console.log(line);
       await waitForEvents(action.wait, action.json);
       break;
     }
