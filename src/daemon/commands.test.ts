@@ -170,6 +170,50 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/accept")).toEqual({ type: "accept" });
   });
 
+  test("slash /whisper maps to whisper", () => {
+    expect(parseIpcCommand("/whisper Xiara hi")).toEqual({
+      type: "whisper",
+      target: "Xiara",
+      message: "hi",
+    });
+  });
+
+  test("slash /who maps to who with filter", () => {
+    expect(parseIpcCommand("/who mage")).toEqual({
+      type: "who",
+      filter: "mage",
+    });
+  });
+
+  test("slash /who maps to who without filter", () => {
+    expect(parseIpcCommand("/who")).toEqual({ type: "who" });
+  });
+
+  test("slash /invite maps to invite", () => {
+    expect(parseIpcCommand("/invite Voidtrix")).toEqual({
+      type: "invite",
+      target: "Voidtrix",
+    });
+  });
+
+  test("slash /kick maps to kick", () => {
+    expect(parseIpcCommand("/kick Voidtrix")).toEqual({
+      type: "kick",
+      target: "Voidtrix",
+    });
+  });
+
+  test("slash /leave maps to leave", () => {
+    expect(parseIpcCommand("/leave")).toEqual({ type: "leave" });
+  });
+
+  test("slash unimplemented maps to unimplemented", () => {
+    expect(parseIpcCommand("/friends")).toEqual({
+      type: "unimplemented",
+      feature: "Friends list",
+    });
+  });
+
   test("unknown slash command maps to say with full input", () => {
     expect(parseIpcCommand("/dance hello")).toEqual({
       type: "say",
