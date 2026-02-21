@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.7](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.6...tuicraft-v0.3.7) (2026-02-21)
+
+
+### Bug Fixes
+
+* Parse Slash Commands In Send Mode ([241866c](https://github.com/tvararu/tuicraft/commit/241866c1f204acfd945c553e3a396db08fa20fb0))
+* Preserve Slash Responses In JSON Send Mode ([cfc47ae](https://github.com/tvararu/tuicraft/commit/cfc47ae65d9a1c11657bc89cb7febc602ae74df5))
+
+
+### Documentation
+
+* Add TUI vision design document ([f991fab](https://github.com/tvararu/tuicraft/commit/f991fab42c202ae3e77293454c014548c2940d89))
+
+
+### Maintenance
+
+* Cover Slash Fallback Path In Daemon Parser ([1b98a32](https://github.com/tvararu/tuicraft/commit/1b98a329f74c6782fb4cfd20ce81eae21e704381))
+* Cover Slash Parsing Branches In Daemon Commands ([f49b63d](https://github.com/tvararu/tuicraft/commit/f49b63dc918ae72f0223f28dc15ae7bed89290e4))
+* Integrate Entire.io for session tracking ([029a51c](https://github.com/tvararu/tuicraft/commit/029a51c7f883d5d1d1ce78d40f2776fb36ca5102))
+
 ## [0.3.6](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.5...tuicraft-v0.3.6) (2026-02-20)
 
 
