@@ -170,6 +170,34 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/accept")).toEqual({ type: "accept" });
   });
 
+  test("slash /say maps to say", () => {
+    expect(parseIpcCommand("/say hello")).toEqual({
+      type: "say",
+      message: "hello",
+    });
+  });
+
+  test("slash /yell maps to yell", () => {
+    expect(parseIpcCommand("/yell hey")).toEqual({
+      type: "yell",
+      message: "hey",
+    });
+  });
+
+  test("slash /guild maps to guild", () => {
+    expect(parseIpcCommand("/guild inv pls")).toEqual({
+      type: "guild",
+      message: "inv pls",
+    });
+  });
+
+  test("slash /party maps to party", () => {
+    expect(parseIpcCommand("/party pull")).toEqual({
+      type: "party",
+      message: "pull",
+    });
+  });
+
   test("slash /whisper maps to whisper", () => {
     expect(parseIpcCommand("/whisper Xiara hi")).toEqual({
       type: "whisper",
@@ -218,6 +246,13 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/dance hello")).toEqual({
       type: "say",
       message: "/dance hello",
+    });
+  });
+
+  test("slash command unsupported by daemon falls back to say", () => {
+    expect(parseIpcCommand("/r hello")).toEqual({
+      type: "say",
+      message: "/r hello",
     });
   });
 
