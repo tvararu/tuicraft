@@ -166,6 +166,17 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("DECLINE")).toEqual({ type: "decline" });
   });
 
+  test("slash /accept maps to accept", () => {
+    expect(parseIpcCommand("/accept")).toEqual({ type: "accept" });
+  });
+
+  test("unknown slash command maps to say with full input", () => {
+    expect(parseIpcCommand("/dance hello")).toEqual({
+      type: "say",
+      message: "/dance hello",
+    });
+  });
+
   test("INVITE with no target returns undefined", () => {
     expect(parseIpcCommand("INVITE")).toBeUndefined();
   });

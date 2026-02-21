@@ -5,6 +5,7 @@ import {
   formatWhoResults,
   formatWhoResultsJson,
   formatGroupEvent,
+  parseCommand,
 } from "ui/tui";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
@@ -40,6 +41,34 @@ export type IpcCommand =
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
+  if (line.startsWith("/")) {
+    const parsed = parseCommand(line);
+    switch (parsed.type) {
+      case "say":
+      case "yell":
+      case "guild":
+      case "party":
+        return parsed;
+      case "whisper":
+        return parsed;
+      case "who":
+        return parsed.target
+          ? { type: "who", filter: parsed.target }
+          : { type: "who" };
+      case "invite":
+      case "kick":
+      case "leave":
+      case "leader":
+      case "accept":
+      case "decline":
+        return parsed;
+      case "unimplemented":
+        return parsed;
+      default:
+        return { type: "say", message: line };
+    }
+  }
+
   const spaceIdx = line.indexOf(" ");
   const verb = spaceIdx === -1 ? line : line.slice(0, spaceIdx);
   const rest = spaceIdx === -1 ? "" : line.slice(spaceIdx + 1);
