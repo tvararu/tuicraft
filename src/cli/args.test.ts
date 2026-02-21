@@ -111,6 +111,15 @@ describe("parseArgs", () => {
     });
   });
 
+  test("send slash command uses slash mode", () => {
+    expect(parseArgs(["send", "/accept"])).toEqual({
+      mode: "slash",
+      input: "/accept",
+      json: false,
+      wait: undefined,
+    });
+  });
+
   test("send -w = whisper", () => {
     expect(parseArgs(["send", "-w", "Xiara", "follow me"])).toEqual({
       mode: "whisper",

@@ -80,6 +80,17 @@ async function main() {
       await waitForEvents(action.wait, action.json);
       break;
     }
+    case "slash": {
+      await ensureDaemon();
+      const lines = await sendToSocket(action.input);
+      if (action.json) {
+        console.log(JSON.stringify({ status: "ok" }));
+      } else {
+        for (const line of lines) console.log(line);
+      }
+      await waitForEvents(action.wait, action.json);
+      break;
+    }
     case "whisper": {
       await ensureDaemon();
       const lines = await sendToSocket(

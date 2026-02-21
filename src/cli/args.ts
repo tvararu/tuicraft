@@ -10,6 +10,7 @@ export type CliAction =
   | { mode: "read"; wait: number | undefined; json: boolean }
   | { mode: "tail"; json: boolean }
   | { mode: "say"; message: string; json: boolean; wait: number | undefined }
+  | { mode: "slash"; input: string; json: boolean; wait: number | undefined }
   | { mode: "yell"; message: string; json: boolean; wait: number | undefined }
   | { mode: "guild"; message: string; json: boolean; wait: number | undefined }
   | { mode: "party"; message: string; json: boolean; wait: number | undefined }
@@ -121,6 +122,8 @@ function parseSend(args: string[]): CliAction {
   }
 
   const message = filtered.filter((a) => a !== "-s").join(" ");
+  if (message.startsWith("/"))
+    return { mode: "slash", input: message, json, wait };
   return { mode: "say", message, json, wait };
 }
 
