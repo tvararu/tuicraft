@@ -1,5 +1,5 @@
 import { parseArgs } from "cli/args";
-import { sendToSocket, ensureDaemon } from "cli/ipc";
+import { sendToSocket, ensureDaemon, streamFromSocket } from "cli/ipc";
 import { formatSendOutput } from "cli/send-output";
 
 const action = parseArgs(Bun.argv.slice(2));
@@ -109,11 +109,9 @@ async function main() {
     }
     case "tail": {
       await ensureDaemon();
-      const verb = action.json ? "READ_WAIT_JSON" : "READ_WAIT";
-      while (true) {
-        const lines = await sendToSocket(`${verb} 1000`);
-        for (const line of lines) console.log(line);
-      }
+      const cmd = action.json ? "SUBSCRIBE_JSON" : "SUBSCRIBE";
+      const stream = await streamFromSocket(cmd, (line) => console.log(line));
+      await stream.closed;
       break;
     }
     case "status": {
