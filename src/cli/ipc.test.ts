@@ -18,7 +18,8 @@ mock.module("lib/paths", () => ({
 
 await mkdir(rtDir, { recursive: true });
 
-const { sendToSocket, ensureDaemon } = await import("cli/ipc");
+const { sendToSocket, ensureDaemon, streamFromSocket } =
+  await import("cli/ipc");
 
 const origSpawn = Bun.spawn;
 const origSleep = Bun.sleep;
@@ -146,6 +147,58 @@ describe("sendToSocket", () => {
       ).rejects.toThrow("connect boom");
     } finally {
       Bun.connect = originalConnect;
+    }
+  });
+});
+
+describe("streamFromSocket", () => {
+  test("sends command once and emits streamed lines", async () => {
+    const path = `./tmp/test-stream-${Date.now()}.sock`;
+    let command = "";
+    const server = Bun.listen({
+      unix: path,
+      socket: {
+        data(socket, data) {
+          command += Buffer.from(data).toString();
+          socket.write("one\n");
+          socket.write("two\n");
+          socket.flush();
+        },
+      },
+    });
+    try {
+      const lines: string[] = [];
+      const stream = await streamFromSocket(
+        "SUBSCRIBE",
+        (line) => lines.push(line),
+        path,
+      );
+      await Bun.sleep(1);
+      expect(command).toBe("SUBSCRIBE\n");
+      expect(lines).toEqual(["one", "two"]);
+      stream.close();
+      await stream.closed;
+    } finally {
+      server.stop(true);
+      await unlink(path).catch(() => {});
+    }
+  });
+
+  test("close ends the stream and resolves closed", async () => {
+    const path = `./tmp/test-stream-close-${Date.now()}.sock`;
+    const server = Bun.listen({
+      unix: path,
+      socket: {
+        data() {},
+      },
+    });
+    try {
+      const stream = await streamFromSocket("SUBSCRIBE", () => {}, path);
+      stream.close();
+      await expect(stream.closed).resolves.toBeUndefined();
+    } finally {
+      server.stop(true);
+      await unlink(path).catch(() => {});
     }
   });
 });

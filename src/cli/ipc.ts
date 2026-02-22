@@ -39,6 +39,71 @@ export async function sendToSocket(
   });
 }
 
+export async function streamFromSocket(
+  command: string,
+  onLine: (line: string) => void,
+  path?: string,
+): Promise<{ close: () => void; closed: Promise<void> }> {
+  const sock = path ?? (await import("lib/paths")).socketPath();
+  let buffer = "";
+  let socketRef:
+    | {
+        end(): void;
+      }
+    | undefined;
+  let rejectOpen: ((err: unknown) => void) | undefined;
+  let resolveOpen: (() => void) | undefined;
+  const opened = new Promise<void>((resolve, reject) => {
+    resolveOpen = resolve;
+    rejectOpen = reject;
+  });
+  let resolveClosed: (() => void) | undefined;
+  const closed = new Promise<void>((resolve) => {
+    resolveClosed = resolve;
+  });
+
+  Bun.connect({
+    unix: sock,
+    socket: {
+      open(socket) {
+        socketRef = socket;
+        socket.write(command + "\n");
+        socket.flush();
+        resolveOpen?.();
+      },
+      data(_socket, data) {
+        buffer += Buffer.from(data).toString();
+        while (true) {
+          const breakIdx = buffer.indexOf("\n");
+          if (breakIdx === -1) return;
+          const line = buffer.slice(0, breakIdx);
+          buffer = buffer.slice(breakIdx + 1);
+          if (!line) continue;
+          onLine(line);
+        }
+      },
+      close() {
+        resolveClosed?.();
+      },
+      error(_socket, err) {
+        if (socketRef) {
+          resolveClosed?.();
+          return;
+        }
+        rejectOpen?.(err);
+      },
+    },
+  }).catch((err) => rejectOpen?.(err));
+
+  await opened;
+  return {
+    close() {
+      socketRef?.end();
+    },
+    closed,
+  };
+}
+
 async function socketExists(path: string): Promise<boolean> {
   const { access } = await import("node:fs/promises");
   return access(path)
