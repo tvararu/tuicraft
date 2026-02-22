@@ -85,6 +85,16 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("READ")).toEqual({ type: "read" });
   });
 
+  test("SUBSCRIBE", () => {
+    expect(parseIpcCommand("SUBSCRIBE")).toEqual({ type: "subscribe" });
+  });
+
+  test("SUBSCRIBE_JSON", () => {
+    expect(parseIpcCommand("SUBSCRIBE_JSON")).toEqual({
+      type: "subscribe_json",
+    });
+  });
+
   test("READ_WAIT", () => {
     expect(parseIpcCommand("READ_WAIT 3000")).toEqual({
       type: "read_wait",
@@ -365,7 +375,7 @@ describe("dispatchCommand", () => {
       cleanup,
     );
 
-    expect(result).toBe(false);
+    expect(result).toEqual({ keepOpen: false, shouldExit: false });
     expect(handle.sendSay).toHaveBeenCalledWith("hello");
     expect(socket.written()).toBe("OK\n\n");
   });
@@ -517,7 +527,7 @@ describe("dispatchCommand", () => {
       cleanup,
     );
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ keepOpen: false, shouldExit: true });
     expect(cleanup).toHaveBeenCalled();
     expect(socket.written()).toBe("OK\n\n");
   });
@@ -751,7 +761,7 @@ describe("dispatchCommand", () => {
       cleanup,
     );
 
-    expect(result).toBe(false);
+    expect(result).toEqual({ keepOpen: false, shouldExit: false });
     expect(socket.written()).toBe("UNIMPLEMENTED Friends list\n\n");
   });
 
@@ -772,7 +782,7 @@ describe("dispatchCommand", () => {
       cleanup,
     );
 
-    expect(result).toBe(false);
+    expect(result).toEqual({ keepOpen: false, shouldExit: false });
     expect(handle.sendInCurrentMode).toHaveBeenCalledWith("hello");
     expect(socket.written()).toBe("OK SAY\n\n");
   });
@@ -1006,6 +1016,63 @@ describe("IPC round-trip", () => {
   let result: ReturnType<typeof startDaemonServer>;
   let exitSpy: ReturnType<typeof jest.fn>;
 
+  async function openSubscription(command: string) {
+    const lines: string[] = [];
+    const waiters: Array<(line: string) => void> = [];
+    let socketRef:
+      | {
+          end(): void;
+        }
+      | undefined;
+    let buffer = "";
+
+    await new Promise<void>((resolve, reject) => {
+      Bun.connect({
+        unix: sockPath,
+        socket: {
+          open(socket) {
+            socketRef = socket;
+            socket.write(command + "\n");
+            socket.flush();
+            resolve();
+          },
+          data(_socket, data) {
+            buffer += Buffer.from(data).toString();
+            while (true) {
+              const breakIdx = buffer.indexOf("\n");
+              if (breakIdx === -1) return;
+              const line = buffer.slice(0, breakIdx);
+              buffer = buffer.slice(breakIdx + 1);
+              if (!line) continue;
+              const waiter = waiters.shift();
+              if (waiter) waiter(line);
+              else lines.push(line);
+            }
+          },
+          error(_socket, err) {
+            reject(err);
+          },
+        },
+      }).catch(reject);
+    });
+
+    return {
+      close() {
+        socketRef?.end();
+      },
+      async nextLine(timeoutMs = 50): Promise<string> {
+        const line = lines.shift();
+        if (line !== undefined) return line;
+        return Promise.race([
+          new Promise<string>((resolve) => waiters.push(resolve)),
+          Bun.sleep(timeoutMs).then(() => {
+            throw new Error(`timed out waiting for stream line (${command})`);
+          }),
+        ]);
+      },
+    };
+  }
+
   function startTestServer(opts?: { onActivity?: () => void }) {
     sockPath = `./tmp/test-daemon-${++sockCounter}-${Date.now()}.sock`;
     handle = createMockHandle();
@@ -1047,6 +1114,47 @@ describe("IPC round-trip", () => {
     result.events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
+  });
+
+  test("SUBSCRIBE streams live events and READ still drains", async () => {
+    startTestServer();
+    const sub = await openSubscription("SUBSCRIBE");
+    await Bun.sleep(1);
+    handle.triggerMessage({
+      type: ChatType.SAY,
+      sender: "Alice",
+      message: "hi",
+    });
+    expect(await sub.nextLine()).toBe("[say] Alice: hi");
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines).toEqual(["[say] Alice: hi"]);
+    sub.close();
+  });
+
+  test("SUBSCRIBE_JSON streams JSON lines", async () => {
+    startTestServer();
+    const sub = await openSubscription("SUBSCRIBE_JSON");
+    await Bun.sleep(1);
+    handle.triggerGroupEvent({ type: "group_destroyed" });
+    const line = await sub.nextLine();
+    expect(JSON.parse(line)).toEqual({ type: "GROUP_DESTROYED" });
+    sub.close();
+  });
+
+  test("multiple SUBSCRIBE clients receive the same event", async () => {
+    startTestServer();
+    const a = await openSubscription("SUBSCRIBE");
+    const b = await openSubscription("SUBSCRIBE");
+    await Bun.sleep(1);
+    handle.triggerMessage({
+      type: ChatType.SAY,
+      sender: "Alice",
+      message: "yo",
+    });
+    expect(await a.nextLine()).toBe("[say] Alice: yo");
+    expect(await b.nextLine()).toBe("[say] Alice: yo");
+    a.close();
+    b.close();
   });
 
   test("bare text sends via sticky mode", async () => {
@@ -1097,6 +1205,20 @@ describe("IPC round-trip", () => {
     await unlink(sockPath);
     result.cleanup();
     expect(handle.close).toHaveBeenCalledTimes(1);
+  });
+
+  test("disconnecting a subscriber does not break daemon commands", async () => {
+    startTestServer();
+    const sub = await openSubscription("SUBSCRIBE");
+    sub.close();
+    await Bun.sleep(1);
+    handle.triggerMessage({
+      type: ChatType.SAY,
+      sender: "Alice",
+      message: "after close",
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines).toEqual(["[say] Alice: after close"]);
   });
 
   test("STOP triggers process.exit", async () => {

@@ -20,6 +20,10 @@ type SocketState = { buffer: string; processing: boolean; ended: boolean };
 type ServerCtx = {
   handle: WorldHandle;
   events: RingBuffer<EventEntry>;
+  subscribers: {
+    text: Set<IpcSocket>;
+    json: Set<IpcSocket>;
+  };
   cleanup: () => void;
   onActivity?: () => void;
   onStop?: () => void;
@@ -66,6 +70,8 @@ function drainNextLine(ctx: ServerCtx, socket: IpcSocket): void {
     return;
   }
   state.ended = true;
+  ctx.subscribers.text.delete(socket);
+  ctx.subscribers.json.delete(socket);
   socket.end();
 }
 
@@ -82,12 +88,27 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, line: string): void {
     socket.end();
     return;
   }
-  dispatchCommand(cmd, ctx.handle, ctx.events, socket, ctx.cleanup)
-    .then((shouldExit) => {
+  dispatchCommand(
+    cmd,
+    ctx.handle,
+    ctx.events,
+    socket,
+    ctx.cleanup,
+    ctx.subscribers,
+  )
+    .then(({ keepOpen, shouldExit }) => {
       if (shouldExit) (ctx.onStop ?? (() => process.exit(0)))();
+      if (keepOpen) {
+        state.processing = false;
+        return;
+      }
+      drainNextLine(ctx, socket);
     })
     .catch(() => writeLines(socket, ["ERR internal"]))
-    .finally(() => drainNextLine(ctx, socket));
+    .finally(() => {
+      if (!state.processing) return;
+      drainNextLine(ctx, socket);
+    });
 }
 
 function onSocketData(ctx: ServerCtx, socket: IpcSocket, data: Buffer): void {
@@ -103,8 +124,12 @@ function onSocketData(ctx: ServerCtx, socket: IpcSocket, data: Buffer): void {
 export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   const { handle, sock, log, onActivity, onStop } = args;
   const events = new RingBuffer<EventEntry>(1000);
-  handle.onMessage((msg) => onChatMessage(msg, events, log));
-  handle.onGroupEvent((event) => onGroupEvent(event, events, log));
+  const subscribers = {
+    text: new Set<IpcSocket>(),
+    json: new Set<IpcSocket>(),
+  };
+  handle.onMessage((msg) => onChatMessage(msg, events, log, subscribers));
+  handle.onGroupEvent((event) => onGroupEvent(event, events, log, subscribers));
 
   let cleaned = false;
   function cleanup(): void {
@@ -115,10 +140,31 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
     unlink(sock).catch(() => {});
   }
 
-  const ctx: ServerCtx = { handle, events, cleanup, onActivity, onStop };
+  const ctx: ServerCtx = {
+    handle,
+    events,
+    subscribers,
+    cleanup,
+    onActivity,
+    onStop,
+  };
   const server = Bun.listen({
     unix: sock,
-    socket: { data: (socket, data) => onSocketData(ctx, socket, data) },
+    socket: {
+      data: (socket, data) => onSocketData(ctx, socket, data),
+      close: (socket) => {
+        ctx.subscribers.text.delete(socket);
+        ctx.subscribers.json.delete(socket);
+      },
+      error: (socket) => {
+        ctx.subscribers.text.delete(socket);
+        ctx.subscribers.json.delete(socket);
+      },
+      end: (socket) => {
+        ctx.subscribers.text.delete(socket);
+        ctx.subscribers.json.delete(socket);
+      },
+    },
   });
 
   return { server, events, cleanup };
