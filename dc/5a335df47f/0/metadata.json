@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "dc5a335df47f",
+  "session_id": "3df60d6c-f9f1-46a8-9ac6-0d3400afa6ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-23T23:50:33.497725Z",
+  "branch": "skill",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.json",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "CLAUDE.md",
+    "mise.toml"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "28cf2db0fa4e",
+  "transcript_identifier_at_start": "efdd2401-8979-4815-a793-77525a5d925d",
+  "token_usage": {
+    "input_tokens": 221,
+    "cache_creation_tokens": 159407,
+    "cache_read_tokens": 11926750,
+    "output_tokens": 5893,
+    "api_call_count": 151
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-23T23:50:33.256364Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 3,
+    "human_removed": 16,
+    "total_committed": 0,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/3df60d6c-f9f1-46a8-9ac6-0d3400afa6ff.jsonl"
+}

@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "dc5a335df47f",
+  "strategy": "manual-commit",
+  "branch": "skill",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.json",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "CLAUDE.md",
+    "mise.toml"
+  ],
+  "sessions": [
+    {
+      "metadata": "/dc/5a335df47f/0/metadata.json",
+      "transcript": "/dc/5a335df47f/0/full.jsonl",
+      "context": "/dc/5a335df47f/0/context.md",
+      "content_hash": "/dc/5a335df47f/0/content_hash.txt",
+      "prompt": "/dc/5a335df47f/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 221,
+    "cache_creation_tokens": 159407,
+    "cache_read_tokens": 11926750,
+    "output_tokens": 5893,
+    "api_call_count": 151
+  }
+}
