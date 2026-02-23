@@ -21,7 +21,8 @@ export type CliAction =
       json: boolean;
       wait: number | undefined;
     }
-  | { mode: "who"; filter: string | undefined; json: boolean };
+  | { mode: "who"; filter: string | undefined; json: boolean }
+  | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
   "setup",
@@ -34,6 +35,7 @@ const SUBCOMMANDS = new Set([
   "version",
   "send",
   "who",
+  "skill",
 ]);
 
 function hasFlag(args: string[], flag: string): boolean {
