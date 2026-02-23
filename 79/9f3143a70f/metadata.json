@@ -3,7 +3,7 @@
   "checkpoint_id": "799f3143a70f",
   "strategy": "manual-commit",
   "branch": "entire-skill",
-  "checkpoints_count": 3,
+  "checkpoints_count": 1,
   "files_touched": [
     ".claude/settings.json"
   ],
@@ -17,10 +17,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 2959,
-    "cache_creation_tokens": 197631,
-    "cache_read_tokens": 12549795,
-    "output_tokens": 16749,
-    "api_call_count": 140
+    "input_tokens": 2965,
+    "cache_creation_tokens": 198715,
+    "cache_read_tokens": 12988945,
+    "output_tokens": 17081,
+    "api_call_count": 144
   }
 }
