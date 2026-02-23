@@ -3,9 +3,11 @@
   "checkpoint_id": "ee3cdc5fa037",
   "strategy": "manual-commit",
   "branch": "skill",
-  "checkpoints_count": 5,
+  "checkpoints_count": 1,
   "files_touched": [
     ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
     "mise.toml",
     "src/cli/args.ts",
     "src/cli/help.ts",
@@ -29,10 +31,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 3144,
-    "cache_creation_tokens": 344169,
-    "cache_read_tokens": 21378027,
-    "output_tokens": 21510,
-    "api_call_count": 263
+    "input_tokens": 2984,
+    "cache_creation_tokens": 202630,
+    "cache_read_tokens": 14596086,
+    "output_tokens": 17964,
+    "api_call_count": 159
   }
 }

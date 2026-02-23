@@ -215,3 +215,17 @@ Ah, `mise build` isn't working because `sources` is only set to ts
 
 PR
 
+### Prompt 34
+
+Do we need to update README to reference it?
+
+### Prompt 35
+
+[Request interrupted by user for tool use]
+
+### Prompt 36
+
+What about manual.md?
+
+Also amend
+
