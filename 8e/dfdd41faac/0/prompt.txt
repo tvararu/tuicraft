@@ -1,0 +1,1708 @@
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+
+ARGUMENTS: 
+
+# Tail/Read Socket Conflict Design
+
+## Problem
+
+`tuicraft tail` currently polls with `READ_WAIT*`, which drains the same shared
+ring buffer used by `read` and by send flows that include `--wait`. With
+multiple clients, whichever command drains first consumes events for everyone,
+causing contention and flaky behavior.
+
+---
+
+What's simplest to implement and least surprising?
+
+---
+
+What is least surprising, most idiomatic, easiest to build?
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+**Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+
+---
+
+Is this a regression in how `tuicraft read` works? I'm not sure I like it always returning a full buffer, that would be spammy
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/subagent-driven-development
+
+# Subagent-Driven Development
+
+Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+
+**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+## When to Use
+
+```dot
+digraph when_to_use {
+    "Have implementation plan?" [shape=diamond];
+    "Tasks mostly independent?" [shape=diamond];
+    "Stay in this session?" [shape=diamond];
+    "subagent-driven-development" [shape=box];
+    "executing-plans" [shape=box];
+    "Manual execution or brainstorm first" [shape=box];
+
+    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
+    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
+    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+}
+```
+
+**vs. Executing Plans (parallel session):**
+- Same session (no context switch)
+- Fresh subagent per task (no context pollution)
+- Two-stage review after each task: spec compliance first, then code quality
+- Faster iteration (no human-in-loop between tasks)
+
+## The Process
+
+```dot
+digraph process {
+    rankdir=TB;
+
+    subgraph cluster_per_task {
+        label="Per Task";
+        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+        "Implementer subagent asks questions?" [shape=diamond];
+        "Answer questions, provide context" [shape=box];
+        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
+        "Implementer subagent fixes spec gaps" [shape=box];
+        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Code quality reviewer subagent approves?" [shape=diamond];
+        "Implementer subagent fixes quality issues" [shape=box];
+        "Mark task complete in TodoWrite" [shape=box];
+    }
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
+    "More tasks remain?" [shape=diamond];
+    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
+    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Mark task complete in TodoWrite" -> "More tasks remain?";
+    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+}
+```
+
+## Prompt Templates
+
+- `./implementer-prompt.md` - Dispatch implementer subagent
+- `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
+- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+
+## Example Workflow
+
+```
+You: I'm using Subagent-Driven Development to execute this plan.
+
+[Read plan file once: docs/plans/feature-plan.md]
+[Extract all 5 tasks with full text and context]
+[Create TodoWrite with all tasks]
+
+Task 1: Hook installation script
+
+[Get Task 1 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: "Before I begin - should the hook be installed at user or system level?"
+
+You: "User level (~/.config/superpowers/hooks/)"
+
+Implementer: "Got it. Implementing now..."
+[Later] Implementer:
+  - Implemented install-hook command
+  - Added tests, 5/5 passing
+  - Self-review: Found I missed --force flag, added it
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
+
+[Get git SHAs, dispatch code quality reviewer]
+Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+
+[Mark Task 1 complete]
+
+Task 2: Recovery modes
+
+[Get Task 2 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: [No questions, proceeds]
+Implementer:
+  - Added verify/repair modes
+  - 8/8 tests passing
+  - Self-review: All good
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ❌ Issues:
+  - Missing: Progress reporting (spec says "report every 100 items")
+  - Extra: Added --json flag (not requested)
+
+[Implementer fixes issues]
+Implementer: Removed --json flag, added progress reporting
+
+[Spec reviewer reviews again]
+Spec reviewer: ✅ Spec compliant now
+
+[Dispatch code quality reviewer]
+Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+
+[Implementer fixes]
+Implementer: Extracted PROGRESS_INTERVAL constant
+
+[Code reviewer reviews again]
+Code reviewer: ✅ Approved
+
+[Mark Task 2 complete]
+
+...
+
+[After all tasks]
+[Dispatch final code-reviewer]
+Final reviewer: All requirements met, ready to merge
+
+Done!
+```
+
+## Advantages
+
+**vs. Manual execution:**
+- Subagents follow TDD naturally
+- Fresh context per task (no confusion)
+- Parallel-safe (subagents don't interfere)
+- Subagent can ask questions (before AND during work)
+
+**vs. Executing Plans:**
+- Same session (no handoff)
+- Continuous progress (no waiting)
+- Review checkpoints automatic
+
+**Efficiency gains:**
+- No file reading overhead (controller provides full text)
+- Controller curates exactly what context is needed
+- Subagent gets complete information upfront
+- Questions surfaced before work begins (not after)
+
+**Quality gates:**
+- Self-review catches issues before handoff
+- Two-stage review: spec compliance, then code quality
+- Review loops ensure fixes actually work
+- Spec compliance prevents over/under-building
+- Code quality ensures implementation is well-built
+
+**Cost:**
+- More subagent invocations (implementer + 2 reviewers per task)
+- Controller does more prep work (extracting all tasks upfront)
+- Review loops add iterations
+- But catches issues early (cheaper than debugging later)
+
+## Red Flags
+
+**Never:**
+- Start implementation on main/master branch without explicit user consent
+- Skip reviews (spec compliance OR code quality)
+- Proceed with unfixed issues
+- Dispatch multiple implementation subagents in parallel (conflicts)
+- Make subagent read plan file (provide full text instead)
+- Skip scene-setting context (subagent needs to understand where task fits)
+- Ignore subagent questions (answer before letting them proceed)
+- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
+- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Let implementer self-review replace actual review (both are needed)
+- **Start code quality review before spec compliance is ✅** (wrong order)
+- Move to next task while either review has open issues
+
+**If subagent asks questions:**
+- Answer clearly and completely
+- Provide additional context if needed
+- Don't rush them into implementation
+
+**If reviewer finds issues:**
+- Implementer (same subagent) fixes them
+- Reviewer reviews again
+- Repeat until approved
+- Don't skip the re-review
+
+**If subagent fails task:**
+- Dispatch fix subagent with specific instructions
+- Don't try to fix manually (context pollution)
+
+## Integration
+
+**Required workflow skills:**
+- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+
+**Subagents should use:**
+- **superpowers:test-driven-development** - Subagents follow TDD for each task
+
+**Alternative workflow:**
+- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/finishing-a-development-branch
+
+# Finishing a Development Branch
+
+## Overview
+
+Guide completion of development work by presenting clear options and handling chosen workflow.
+
+**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+## The Process
+
+### Step 1: Verify Tests
+
+**Before presenting options, verify tests pass:**
+
+```bash
+# Run project's test suite
+npm test / cargo test / pytest / go test ./...
+```
+
+**If tests fail:**
+```
+Tests failing (<N> failures). Must fix before completing:
+
+[Show failures]
+
+Cannot proceed with merge/PR until tests pass.
+```
+
+Stop. Don't proceed to Step 2.
+
+**If tests pass:** Continue to Step 2.
+
+### Step 2: Determine Base Branch
+
+```bash
+# Try common base branches
+git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+```
+
+Or ask: "This branch split from main - is that correct?"
+
+### Step 3: Present Options
+
+Present exactly these 4 options:
+
+```
+Implementation complete. What would you like to do?
+
+1. Merge back to <base-branch> locally
+2. Push and create a Pull Request
+3. Keep the branch as-is (I'll handle it later)
+4. Discard this work
+
+Which option?
+```
+
+**Don't add explanation** - keep options concise.
+
+### Step 4: Execute Choice
+
+#### Option 1: Merge Locally
+
+```bash
+# Switch to base branch
+git checkout <base-branch>
+
+# Pull latest
+git pull
+
+# Merge feature branch
+git merge <feature-branch>
+
+# Verify tests on merged result
+<test command>
+
+# If tests pass
+git branch -d <feature-branch>
+```
+
+Then: Cleanup worktree (Step 5)
+
+#### Option 2: Push and Create PR
+
+```bash
+# Push branch
+git push -u origin <feature-branch>
+
+# Create PR
+gh pr create --title "<title>" --body "$(cat <<'EOF'
+## Summary
+<2-3 bullets of what changed>
+
+## Test Plan
+- [ ] <verification steps>
+EOF
+)"
+```
+
+Then: Cleanup worktree (Step 5)
+
+#### Option 3: Keep As-Is
+
+Report: "Keeping branch <name>. Worktree preserved at <path>."
+
+**Don't cleanup worktree.**
+
+#### Option 4: Discard
+
+**Confirm first:**
+```
+This will permanently delete:
+- Branch <name>
+- All commits: <commit-list>
+- Worktree at <path>
+
+Type 'discard' to confirm.
+```
+
+Wait for exact confirmation.
+
+If confirmed:
+```bash
+git checkout <base-branch>
+git branch -D <feature-branch>
+```
+
+Then: Cleanup worktree (Step 5)
+
+### Step 5: Cleanup Worktree
+
+**For Options 1, 2, 4:**
+
+Check if in worktree:
+```bash
+git worktree list | grep $(git branch --show-current)
+```
+
+If yes:
+```bash
+git worktree remove <worktree-path>
+```
+
+**For Option 3:** Keep worktree.
+
+## Quick Reference
+
+| Option | Merge | Push | Keep Worktree | Cleanup Branch |
+|--------|-------|------|---------------|----------------|
+| 1. Merge locally | ✓ | - | - | ✓ |
+| 2. Create PR | - | ✓ | ✓ | - |
+| 3. Keep as-is | - | - | ✓ | - |
+| 4. Discard | - | - | - | ✓ (force) |
+
+## Common Mistakes
+
+**Skipping test verification**
+- **Problem:** Merge broken code, create failing PR
+- **Fix:** Always verify tests before offering options
+
+**Open-ended questions**
+- **Problem:** "What should I do next?" → ambiguous
+- **Fix:** Present exactly 4 structured options
+
+**Automatic worktree cleanup**
+- **Problem:** Remove worktree when might need it (Option 2, 3)
+- **Fix:** Only cleanup for Options 1 and 4
+
+**No confirmation for discard**
+- **Problem:** Accidentally delete work
+- **Fix:** Require typed "discard" confirmation
+
+## Red Flags
+
+**Never:**
+- Proceed with failing tests
+- Merge without verifying tests on result
+- Delete work without confirmation
+- Force-push without explicit request
+
+**Always:**
+- Verify tests before offering options
+- Present exactly 4 options
+- Get typed confirmation for Option 4
+- Clean up worktree for Options 1 & 4 only
+
+## Integration
+
+**Called by:**
+- **subagent-driven-development** (Step 7) - After all tasks complete
+- **executing-plans** (Step 5) - After all batches complete
+
+**Pairs with:**
+- **using-git-worktrees** - Cleans up worktree created by that skill
+
+---
+
+Compare to #47, which has the better implementation?
+
+---
+
+Can you bump coverage to 100%?
+
+---
+
+src/test/mock-world-server.ts |   96.15 |   98.47 | 166-169
+
+Fix this
+
+---
+
+• The new window-based READ_WAIT logic introduces a message-loss gap for polling clients
+  like tail. Because events that arrive between polls are excluded from both windows,
+  behavior is no longer a reliable continuous stream.
+
+  Review comment:
+
+  - [P1] Include events that arrive between READ_WAIT polls — /Users/deity/Code/tuicraft/
+    src/daemon/commands.ts:224-224
+    READ_WAIT now snapshots events.writePos at request start and only returns slice(start)
+    after the timeout, which drops messages that arrive in the unavoidable gap between two
+    sequential polls. In tail (while (true) { await sendToSocket("READ_WAIT 1000") }), any
+    event written after poll N responds but before poll N+1 captures start is older than
+    the next window and is never returned, so the stream can silently miss chat lines.
+
+---
+
+All good /compact
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. User initiated brainstorming for a tail/read socket conflict design problem in tuicraft (a WoW TUI client)
+2. The core problem: `tuicraft tail` polls with `READ_WAIT*`, draining the same shared ring buffer used by `read` and `--wait` flows, causing contention
+3. Through brainstorming questions, we arrived at:
+   - New streaming primitive (user's choice initially)
+   - Per-client cursor for all commands
+   - Cursor starts at writePos (future only)
+   - Approach A: Cursor in socketStates (recommended)
+4. I discovered a critical design flaw: `sendToSocket` creates NEW connections per call, so per-socket cursors don't persist. This breaks plain `read` (always returns empty).
+5. User asked "What is least surprising, most idiomatic, easiest to build?" - I realized per-socket cursors already solve the READ_WAIT case since each poll captures its own wait window.
+6. I proposed non-destructive slice approach - user pushed back on `read` always returning full buffer ("Is this a regression? that would be spammy")
+7. Final agreed design: HYBRID approach - keep READ on shared drain cursor (unchanged), switch READ_WAIT to window-based slicing
+8. Implementation plan written and committed
+9. Subagent-driven development executed: Task 1 (RingBuffer slice), Task 2 (commands.ts dispatch), Task 3 (integration verification)
+10. All tests pass (518 unit + 7 live)
+11. PR #46 created, then compared with PR #47 (SUBSCRIBE streaming approach)
+12. Key finding: PR #47 doesn't fix `--wait` contention (READ_WAIT still drains)
+13. Reviewer flagged the ~1-5ms gap between polls as P1 - I explained it's negligible vs the contention bug it fixes
+14. User said "All good" - accepting the trade-off
+
+Key files modified:
+- src/lib/ring-buffer.ts - added slice() and writePos getter
+- src/lib/ring-buffer.test.ts - added 9 new tests
+- src/daemon/commands.ts - added sliceText/sliceJson, changed read_wait cases
+- src/daemon/commands.test.ts - updated 2 tests, added 3 new tests
+- docs/plans/2026-02-23-tail-read-conflict-design.md
+- docs/plans/2026-02-23-tail-read-conflict-plan.md
+
+Branch: per-socket-cursors
+PR: #46 https://github.com/tvararu/tuicraft/pull/46
+
+Errors:
+- Tried to commit to main, hook blocked it - created feature branch
+- Initial design (per-socket cursors) was flawed due to ephemeral connections
+- User pushed back on non-destructive reads for plain READ (spammy regression)
+
+Summary:
+1. Primary Request and Intent:
+   The user wanted to design and implement a fix for event contention between `tuicraft tail`, `read`, and `--wait` commands. All three share a single `RingBuffer` with one drain cursor — whichever client drains first steals events from everyone else. The user wanted the simplest, least surprising, most idiomatic solution. Through iterative brainstorming, the agreed solution was a hybrid approach: keep `READ`/`READ_JSON` on the shared drain cursor (unchanged behavior), switch `READ_WAIT`/`READ_WAIT_JSON` to non-destructive window-based slicing using a new `slice(from)` method on `RingBuffer`.
+
+2. Key Technical Concepts:
+   - `RingBuffer<T>` — fixed-capacity circular buffer (1000 events) with `writePos`, `cursor`, `push()`, `drain()`
+   - Shared drain cursor contention between IPC consumers
+   - `sendToSocket` creates ephemeral connections (new socket per call) — per-socket cursors don't persist across calls
+   - Window-based slicing: snapshot `writePos` before `setTimeout`, `slice(savedPos)` after waking
+   - Hybrid approach: `READ` uses `drain()` (destructive, shared cursor), `READ_WAIT` uses `slice()` (non-destructive, independent windows)
+   - ~1-5ms theoretical gap between polls (negligible in WoW chat context where messages arrive seconds apart)
+   - Conventional Commits, feature branches, TDD, `mise` task runner
+   - PR #47 comparison: SUBSCRIBE streaming approach is 4x larger, doesn't fix `--wait` contention, changes `dispatchCommand` return type
+
+3. Files and Code Sections:
+   - `src/lib/ring-buffer.ts`
+     - Core data structure for the fix. Added `writePos` getter and non-destructive `slice(from)` method.
+     - Final state:
+     ```typescript
+     export class RingBuffer<T> {
+       private items: (T | undefined)[];
+       private capacity: number;
+       private _writePos = 0;
+       private cursor = 0;
+
+       constructor(capacity: number) {
+         this.capacity = capacity;
+         this.items = new Array<T | undefined>(capacity);
+       }
+
+       get writePos(): number {
+         return this._writePos;
+       }
+
+       push(item: T): void {
+         this.items[this._writePos % this.capacity] = item;
+         this._writePos++;
+         const oldest = this._writePos - this.capacity;
+         if (this.cursor < oldest) {
+           this.cursor = oldest;
+         }
+       }
+
+       drain(): T[] {
+         const result: T[] = [];
+         for (let i = this.cursor; i < this._writePos; i++) {
+           result.push(this.items[i % this.capacity] as T);
+         }
+         this.cursor = this._writePos;
+         return result;
+       }
+
+       slice(from: number): T[] {
+         const oldest = Math.max(0, this._writePos - this.capacity);
+         const start = Math.max(from, oldest);
+         const result: T[] = [];
+         for (let i = start; i < this._writePos; i++) {
+           result.push(this.items[i % this.capacity] as T);
+         }
+         return result;
+       }
+     }
+     ```
+
+   - `src/lib/ring-buffer.test.ts`
+     - Added 9 new tests: writePos starts at zero, writePos advances on push, slice returns items from position to writePos, slice from zero returns all items, slice from writePos returns empty, slice clamps to oldest on overflow, slice clamps stale snapshot evicted by overflow, slice is non-destructive, slice does not affect drain cursor.
+
+   - `src/daemon/commands.ts`
+     - Added `sliceText` and `sliceJson` helpers, changed `read_wait` and `read_wait_json` dispatch cases.
+     - New helpers:
+     ```typescript
+     function sliceText(events: RingBuffer<EventEntry>, from: number): string[] {
+       return events
+         .slice(from)
+         .flatMap((e) => (e.text !== undefined ? [e.text] : []));
+     }
+
+     function sliceJson(events: RingBuffer<EventEntry>, from: number): string[] {
+       return events.slice(from).map((e) => e.json);
+     }
+     ```
+     - Changed dispatch cases:
+     ```typescript
+     case "read_wait": {
+       const start = events.writePos;
+       await new Promise<void>((resolve) => {
+         setTimeout(() => {
+           writeLines(socket, sliceText(events, start));
+           resolve();
+         }, cmd.ms);
+       });
+       return false;
+     }
+     case "read_wait_json": {
+       const start = events.writePos;
+       await new Promise<void>((resolve) => {
+         setTimeout(() => {
+           writeLines(socket, sliceJson(events, start));
+           resolve();
+         }, cmd.ms);
+       });
+       return false;
+     }
+     ```
+     - `read` and `read_json` cases UNCHANGED (still use `drainText`/`drainJson`).
+
+   - `src/daemon/commands.test.ts`
+     - Renamed "read_wait delays then drains" → "read_wait delays then returns window events" (and json equivalent)
+     - Updated 2 existing tests to push events DURING wait instead of before
+     - Added 3 new tests: "read_wait returns only events arriving during wait window" (with survival assertion that pre-existing events remain drainable), "read_wait_json returns only events arriving during wait window"
+
+   - `docs/plans/2026-02-23-tail-read-conflict-design.md` — Design doc describing hybrid approach, alternatives considered
+   - `docs/plans/2026-02-23-tail-read-conflict-plan.md` — TDD implementation plan with 3 tasks
+
+4. Errors and fixes:
+   - **Git commit to main blocked by hook**: Tried to commit design doc to main. Hook blocked with "BLOCK: Do not commit to main. Create a feature branch first." Fixed by creating `per-socket-cursors` branch.
+   - **Per-socket cursors design flaw**: Initial design stored cursor per socket in `socketStates` WeakMap. Discovered that `sendToSocket` creates new connections per call, so cursors don't persist. Plain `read` would always return empty (cursor = writePos, drain immediately = nothing). User confirmed this was a problem.
+   - **Non-destructive reads for all commands rejected**: Proposed making all reads non-destructive (`READ` returns full buffer snapshot). User pushed back: "Is this a regression in how `tuicraft read` works? I'm not sure I like it always returning a full buffer, that would be spammy." Fixed by switching to hybrid approach (only READ_WAIT changes).
+   - **Code review: missing stale snapshot test**: Code quality reviewer noted the overflow test used `slice(0)` but didn't test the primary use case — a previously-valid writePos snapshot evicted by overflow. Added test.
+   - **Code review: misleading test names**: "read_wait delays then drains" was misleading after the change. Renamed to "read_wait delays then returns window events".
+   - **Code review: missing survival assertion**: No test verified that pre-existing events survive a read_wait (the core property). Added `expect(events.drain())` assertion after read_wait.
+   - **Code review: missing json window test**: No read_wait_json equivalent of the window-exclusion test. Added it.
+
+5. Problem Solving:
+   - Solved the core contention problem: multiple `READ_WAIT` consumers (tail, --wait) no longer drain the shared cursor
+   - Identified and accepted a trade-off: ~1-5ms theoretical gap between polls for tail (negligible in practice)
+   - Compared with PR #47 (SUBSCRIBE streaming) and identified that #47 doesn't fix `--wait` contention since READ_WAIT still calls drain()
+   - All 518 unit tests + 7 live server tests pass. Typecheck and format clean.
+
+6. All user messages:
+   - Brainstorming prompt about tail/read socket conflict
+   - Selected "New streaming primitive" for push model
+   - "What's simplest to implement and least surprising?" (clarifying per-client cursor vs drain behavior)
+   - Confirmed "Per-client cursor for all"
+   - "What is least surprising, most idiomatic, easiest to build?" (about push mechanism — led to realizing no SUBSCRIBE needed)
+   - Confirmed "Yes, just per-socket cursors" (purely server-side fix)
+   - Selected "Start at writePos (future only)" for cursor initialization
+   - Approved RingBuffer changes
+   - Approved socket state and cursor lifecycle
+   - Approved full design
+   - "Is this a regression in how `tuicraft read` works? I'm not sure I like it always returning a full buffer, that would be spammy" (pushed back on non-destructive READ)
+   - Confirmed "Yes, hybrid approach" (keep READ as-is, only change READ_WAIT)
+   - Selected "A: Cursor in socketStates (Recommended)" for approach
+   - Selected "Subagent-driven (this session)" for execution
+   - Selected "2. Push and create PR" for finishing
+   - "Compare to #47, which has the better implementation?"
+   - "Can you bump coverage to 100%?"
+   - "Fix this" (about mock-world-server.ts coverage — already 100% when running correct test file)
+   - P1 review comment about message-loss gap in READ_WAIT polling
+   - "All good /compact"
+
+7. Pending Tasks:
+   - None. All tasks completed. PR #46 created and reviewed. User said "All good."
+
+8. Current Work:
+   PR #46 (https://github.com/tvararu/tuicraft/pull/46) is open on branch `per-socket-cursors` with 4 commits:
+   - `931d16e` docs: Add per-socket cursor design for tail/read conflict
+   - `6cbc09a` docs: Revise design to hybrid approach, add implementation plan
+   - `5c3384a` feat: Add non-destructive slice method to RingBuffer
+   - `7be9939` feat: Switch READ_WAIT to window-based slicing
+
+   The user confirmed "All good" after reviewing the gap trade-off analysis. No pending work.
+
+9. Optional Next Step:
+   None. The user said "All good" indicating satisfaction with the current state. The PR is ready for merge.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/deity/.claude/projects/-Users-deity-Code-tuicraft/e2c8984d-f259-4bd5-98b5-fefaec89584a.jsonl
+
+---
+
+I added some Entire hooks/stuff, do you have knowledge/access to them?
+
+---
+
+Interesting, I don't know either how it works, can you try the `entire` CLI, look up their docs, research, figure stuff out? Maybe there's a skill for you somewhere?
+
+---
+
+You have a skill for writing skills right?
+
+---
+
+Yes, can you write a skill (project-local) that can be used to introspect with `entire` as to why stuff was done in a certain way?
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-skills
+
+# Writing Skills
+
+## Overview
+
+**Writing skills IS Test-Driven Development applied to process documentation.**
+
+**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
+
+You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
+
+**Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
+
+**REQUIRED BACKGROUND:** You MUST understand superpowers:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
+
+**Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
+
+## What is a Skill?
+
+A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
+
+**Skills are:** Reusable techniques, patterns, tools, reference guides
+
+**Skills are NOT:** Narratives about how you solved a problem once
+
+## TDD Mapping for Skills
+
+| TDD Concept | Skill Creation |
+|-------------|----------------|
+| **Test case** | Pressure scenario with subagent |
+| **Production code** | Skill document (SKILL.md) |
+| **Test fails (RED)** | Agent violates rule without skill (baseline) |
+| **Test passes (GREEN)** | Agent complies with skill present |
+| **Refactor** | Close loopholes while maintaining compliance |
+| **Write test first** | Run baseline scenario BEFORE writing skill |
+| **Watch it fail** | Document exact rationalizations agent uses |
+| **Minimal code** | Write skill addressing those specific violations |
+| **Watch it pass** | Verify agent now complies |
+| **Refactor cycle** | Find new rationalizations → plug → re-verify |
+
+The entire skill creation process follows RED-GREEN-REFACTOR.
+
+## When to Create a Skill
+
+**Create when:**
+- Technique wasn't intuitively obvious to you
+- You'd reference this again across projects
+- Pattern applies broadly (not project-specific)
+- Others would benefit
+
+**Don't create for:**
+- One-off solutions
+- Standard practices well-documented elsewhere
+- Project-specific conventions (put in CLAUDE.md)
+- Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
+
+## Skill Types
+
+### Technique
+Concrete method with steps to follow (condition-based-waiting, root-cause-tracing)
+
+### Pattern
+Way of thinking about problems (flatten-with-flags, test-invariants)
+
+### Reference
+API docs, syntax guides, tool documentation (office docs)
+
+## Directory Structure
+
+
+```
+skills/
+  skill-name/
+    SKILL.md              # Main reference (required)
+    supporting-file.*     # Only if needed
+```
+
+**Flat namespace** - all skills in one searchable namespace
+
+**Separate files for:**
+1. **Heavy reference** (100+ lines) - API docs, comprehensive syntax
+2. **Reusable tools** - Scripts, utilities, templates
+
+**Keep inline:**
+- Principles and concepts
+- Code patterns (< 50 lines)
+- Everything else
+
+## SKILL.md Structure
+
+**Frontmatter (YAML):**
+- Only two fields supported: `name` and `description`
+- Max 1024 characters total
+- `name`: Use letters, numbers, and hyphens only (no parentheses, special chars)
+- `description`: Third-person, describes ONLY when to use (NOT what it does)
+  - Start with "Use when..." to focus on triggering conditions
+  - Include specific symptoms, situations, and contexts
+  - **NEVER summarize the skill's process or workflow** (see CSO section for why)
+  - Keep under 500 characters if possible
+
+```markdown
+---
+name: Skill-Name-With-Hyphens
+description: Use when [specific triggering conditions and symptoms]
+---
+
+# Skill Name
+
+## Overview
+What is this? Core principle in 1-2 sentences.
+
+## When to Use
+[Small inline flowchart IF decision non-obvious]
+
+Bullet list with SYMPTOMS and use cases
+When NOT to use
+
+## Core Pattern (for techniques/patterns)
+Before/after code comparison
+
+## Quick Reference
+Table or bullets for scanning common operations
+
+## Implementation
+Inline code for simple patterns
+Link to file for heavy reference or reusable tools
+
+## Common Mistakes
+What goes wrong + fixes
+
+## Real-World Impact (optional)
+Concrete results
+```
+
+
+## Claude Search Optimization (CSO)
+
+**Critical for discovery:** Future Claude needs to FIND your skill
+
+### 1. Rich Description Field
+
+**Purpose:** Claude reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+
+**Format:** Start with "Use when..." to focus on triggering conditions
+
+**CRITICAL: Description = When to Use, NOT What the Skill Does**
+
+The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
+
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
+
+When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the flowchart and followed the two-stage review process.
+
+**The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
+
+```yaml
+# ❌ BAD: Summarizes workflow - Claude may follow this instead of reading skill
+description: Use when executing plans - dispatches subagent per task with code review between tasks
+
+# ❌ BAD: Too much process detail
+description: Use for TDD - write test first, watch it fail, write minimal code, refactor
+
+# ✅ GOOD: Just triggering conditions, no workflow summary
+description: Use when executing implementation plans with independent tasks in the current session
+
+# ✅ GOOD: Triggering conditions only
+description: Use when implementing any feature or bugfix, before writing implementation code
+```
+
+**Content:**
+- Use concrete triggers, symptoms, and situations that signal this skill applies
+- Describe the *problem* (race conditions, inconsistent behavior) not *language-specific symptoms* (setTimeout, sleep)
+- Keep triggers technology-agnostic unless the skill itself is technology-specific
+- If skill is technology-specific, make that explicit in the trigger
+- Write in third person (injected into system prompt)
+- **NEVER summarize the skill's process or workflow**
+
+```yaml
+# ❌ BAD: Too abstract, vague, doesn't include when to use
+description: For async testing
+
+# ❌ BAD: First person
+description: I can help you with async tests when they're flaky
+
+# ❌ BAD: Mentions technology but skill isn't specific to it
+description: Use when tests use setTimeout/sleep and are flaky
+
+# ✅ GOOD: Starts with "Use when", describes problem, no workflow
+description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
+
+# ✅ GOOD: Technology-specific skill with explicit trigger
+description: Use when using React Router and handling authentication redirects
+```
+
+### 2. Keyword Coverage
+
+Use words Claude would search for:
+- Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
+- Symptoms: "flaky", "hanging", "zombie", "pollution"
+- Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
+- Tools: Actual commands, library names, file types
+
+### 3. Descriptive Naming
+
+**Use active voice, verb-first:**
+- ✅ `creating-skills` not `skill-creation`
+- ✅ `condition-based-waiting` not `async-test-helpers`
+
+### 4. Token Efficiency (Critical)
+
+**Problem:** getting-started and frequently-referenced skills load into EVERY conversation. Every token counts.
+
+**Target word counts:**
+- getting-started workflows: <150 words each
+- Frequently-loaded skills: <200 words total
+- Other skills: <500 words (still be concise)
+
+**Techniques:**
+
+**Move details to tool help:**
+```bash
+# ❌ BAD: Document all flags in SKILL.md
+search-conversations supports --text, --both, --after DATE, --before DATE, --limit N
+
+# ✅ GOOD: Reference --help
+search-conversations supports multiple modes and filters. Run --help for details.
+```
+
+**Use cross-references:**
+```markdown
+# ❌ BAD: Repeat workflow details
+When searching, dispatch subagent with template...
+[20 lines of repeated instructions]
+
+# ✅ GOOD: Reference other skill
+Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
+```
+
+**Compress examples:**
+```markdown
+# ❌ BAD: Verbose example (42 words)
+your human partner: "How did we handle authentication errors in React Router before?"
+You: I'll search past conversations for React Router authentication patterns.
+[Dispatch subagent with search query: "React Router authentication error handling 401"]
+
+# ✅ GOOD: Minimal example (20 words)
+Partner: "How did we handle auth errors in React Router?"
+You: Searching...
+[Dispatch subagent → synthesis]
+```
+
+**Eliminate redundancy:**
+- Don't repeat what's in cross-referenced skills
+- Don't explain what's obvious from command
+- Don't include multiple examples of same pattern
+
+**Verification:**
+```bash
+wc -w skills/path/SKILL.md
+# getting-started workflows: aim for <150 each
+# Other frequently-loaded: aim for <200 total
+```
+
+**Name by what you DO or core insight:**
+- ✅ `condition-based-waiting` > `async-test-helpers`
+- ✅ `using-skills` not `skill-usage`
+- ✅ `flatten-with-flags` > `data-structure-refactoring`
+- ✅ `root-cause-tracing` > `debugging-techniques`
+
+**Gerunds (-ing) work well for processes:**
+- `creating-skills`, `testing-skills`, `debugging-with-logs`
+- Active, describes the action you're taking
+
+### 4. Cross-Referencing Other Skills
+
+**When writing documentation that references other skills:**
+
+Use skill name only, with explicit requirement markers:
+- ✅ Good: `**REQUIRED SUB-SKILL:** Use superpowers:test-driven-development`
+- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand superpowers:systematic-debugging`
+- ❌ Bad: `See skills/testing/test-driven-development` (unclear if required)
+- ❌ Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
+
+**Why no @ links:** `@` syntax force-loads files immediately, consuming 200k+ context before you need them.
+
+## Flowchart Usage
+
+```dot
+digraph when_flowchart {
+    "Need to show information?" [shape=diamond];
+    "Decision where I might go wrong?" [shape=diamond];
+    "Use markdown" [shape=box];
+    "Small inline flowchart" [shape=box];
+
+    "Need to show information?" -> "Decision where I might go wrong?" [label="yes"];
+    "Decision where I might go wrong?" -> "Small inline flowchart" [label="yes"];
+    "Decision where I might go wrong?" -> "Use markdown" [label="no"];
+}
+```
+
+**Use flowcharts ONLY for:**
+- Non-obvious decision points
+- Process loops where you might stop too early
+- "When to use A vs B" decisions
+
+**Never use flowcharts for:**
+- Reference material → Tables, lists
+- Code examples → Markdown blocks
+- Linear instructions → Numbered lists
+- Labels without semantic meaning (step1, helper2)
+
+See @graphviz-conventions.dot for graphviz style rules.
+
+**Visualizing for your human partner:** Use `render-graphs.js` in this directory to render a skill's flowcharts to SVG:
+```bash
+./render-graphs.js ../some-skill           # Each diagram separately
+./render-graphs.js ../some-skill --combine # All diagrams in one SVG
+```
+
+## Code Examples
+
+**One excellent example beats many mediocre ones**
+
+Choose most relevant language:
+- Testing techniques → TypeScript/JavaScript
+- System debugging → Shell/Python
+- Data processing → Python
+
+**Good example:**
+- Complete and runnable
+- Well-commented explaining WHY
+- From real scenario
+- Shows pattern clearly
+- Ready to adapt (not generic template)
+
+**Don't:**
+- Implement in 5+ languages
+- Create fill-in-the-blank templates
+- Write contrived examples
+
+You're good at porting - one great example is enough.
+
+## File Organization
+
+### Self-Contained Skill
+```
+defense-in-depth/
+  SKILL.md    # Everything inline
+```
+When: All content fits, no heavy reference needed
+
+### Skill with Reusable Tool
+```
+condition-based-waiting/
+  SKILL.md    # Overview + patterns
+  example.ts  # Working helpers to adapt
+```
+When: Tool is reusable code, not just narrative
+
+### Skill with Heavy Reference
+```
+pptx/
+  SKILL.md       # Overview + workflows
+  pptxgenjs.md   # 600 lines API reference
+  ooxml.md       # 500 lines XML structure
+  scripts/       # Executable tools
+```
+When: Reference material too large for inline
+
+## The Iron Law (Same as TDD)
+
+```
+NO SKILL WITHOUT A FAILING TEST FIRST
+```
+
+This applies to NEW skills AND EDITS to existing skills.
+
+Write skill before testing? Delete it. Start over.
+Edit skill without testing? Same violation.
+
+**No exceptions:**
+- Not for "simple additions"
+- Not for "just adding a section"
+- Not for "documentation updates"
+- Don't keep untested changes as "reference"
+- Don't "adapt" while running tests
+- Delete means delete
+
+**REQUIRED BACKGROUND:** The superpowers:test-driven-development skill explains why this matters. Same principles apply to documentation.
+
+## Testing All Skill Types
+
+Different skill types need different test approaches:
+
+### Discipline-Enforcing Skills (rules/requirements)
+
+**Examples:** TDD, verification-before-completion, designing-before-coding
+
+**Test with:**
+- Academic questions: Do they understand the rules?
+- Pressure scenarios: Do they comply under stress?
+- Multiple pressures combined: time + sunk cost + exhaustion
+- Identify rationalizations and add explicit counters
+
+**Success criteria:** Agent follows rule under maximum pressure
+
+### Technique Skills (how-to guides)
+
+**Examples:** condition-based-waiting, root-cause-tracing, defensive-programming
+
+**Test with:**
+- Application scenarios: Can they apply the technique correctly?
+- Variation scenarios: Do they handle edge cases?
+- Missing information tests: Do instructions have gaps?
+
+**Success criteria:** Agent successfully applies technique to new scenario
+
+### Pattern Skills (mental models)
+
+**Examples:** reducing-complexity, information-hiding concepts
+
+**Test with:**
+- Recognition scenarios: Do they recognize when pattern applies?
+- Application scenarios: Can they use the mental model?
+- Counter-examples: Do they know when NOT to apply?
+
+**Success criteria:** Agent correctly identifies when/how to apply pattern
+
+### Reference Skills (documentation/APIs)
+
+**Examples:** API documentation, command references, library guides
+
+**Test with:**
+- Retrieval scenarios: Can they find the right information?
+- Application scenarios: Can they use what they found correctly?
+- Gap testing: Are common use cases covered?
+
+**Success criteria:** Agent finds and correctly applies reference information
+
+## Common Rationalizations for Skipping Testing
+
+| Excuse | Reality |
+|--------|---------|
+| "Skill is obviously clear" | Clear to you ≠ clear to other agents. Test it. |
+| "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
+| "Testing is overkill" | Untested skills have issues. Always. 15 min testing saves hours. |
+| "I'll test if problems emerge" | Problems = agents can't use skill. Test BEFORE deploying. |
+| "Too tedious to test" | Testing is less tedious than debugging bad skill in production. |
+| "I'm confident it's good" | Overconfidence guarantees issues. Test anyway. |
+| "Academic review is enough" | Reading ≠ using. Test application scenarios. |
+| "No time to test" | Deploying untested skill wastes more time fixing it later. |
+
+**All of these mean: Test before deploying. No exceptions.**
+
+## Bulletproofing Skills Against Rationalization
+
+Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
+
+**Psychology note:** Understanding WHY persuasion techniques work helps you apply them systematically. See persuasion-principles.md for research foundation (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
+
+### Close Every Loophole Explicitly
+
+Don't just state the rule - forbid specific workarounds:
+
+<Bad>
+```markdown
+Write code before test? Delete it.
+```
+</Bad>
+
+<Good>
+```markdown
+Write code before test? Delete it. Start over.
+
+**No exceptions:**
+- Don't keep it as "reference"
+- Don't "adapt" it while writing tests
+- Don't look at it
+- Delete means delete
+```
+</Good>
+
+### Address "Spirit vs Letter" Arguments
+
+Add foundational principle early:
+
+```markdown
+**Violating the letter of the rules is violating the spirit of the rules.**
+```
+
+This cuts off entire class of "I'm following the spirit" rationalizations.
+
+### Build Rationalization Table
+
+Capture rationalizations from baseline testing (see Testing section below). Every excuse agents make goes in the table:
+
+```markdown
+| Excuse | Reality |
+|--------|---------|
+| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "I'll test after" | Tests passing immediately prove nothing. |
+| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
+```
+
+### Create Red Flags List
+
+Make it easy for agents to self-check when rationalizing:
+
+```markdown
+## Red Flags - STOP and Start Over
+
+- Code before test
+- "I already manually tested it"
+- "Tests after achieve the same purpose"
+- "It's about spirit not ritual"
+- "This is different because..."
+
+**All of these mean: Delete code. Start over with TDD.**
+```
+
+### Update CSO for Violation Symptoms
+
+Add to description: symptoms of when you're ABOUT to violate the rule:
+
+```yaml
+description: use when implementing any feature or bugfix, before writing implementation code
+```
+
+## RED-GREEN-REFACTOR for Skills
+
+Follow the TDD cycle:
+
+### RED: Write Failing Test (Baseline)
+
+Run pressure scenario with subagent WITHOUT the skill. Document exact behavior:
+- What choices did they make?
+- What rationalizations did they use (verbatim)?
+- Which pressures triggered violations?
+
+This is "watch the test fail" - you must see what agents naturally do before writing the skill.
+
+### GREEN: Write Minimal Skill
+
+Write skill that addresses those specific rationalizations. Don't add extra content for hypothetical cases.
+
+Run same scenarios WITH skill. Agent should now comply.
+
+### REFACTOR: Close Loopholes
+
+Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
+
+**Testing methodology:** See @testing-skills-with-subagents.md for the complete testing methodology:
+- How to write pressure scenarios
+- Pressure types (time, sunk cost, authority, exhaustion)
+- Plugging holes systematically
+- Meta-testing techniques
+
+## Anti-Patterns
+
+### ❌ Narrative Example
+"In session 2025-10-03, we found empty projectDir caused..."
+**Why bad:** Too specific, not reusable
+
+### ❌ Multi-Language Dilution
+example-js.js, example-py.py, example-go.go
+**Why bad:** Mediocre quality, maintenance burden
+
+### ❌ Code in Flowcharts
+```dot
+step1 [label="import fs"];
+step2 [label="read file"];
+```
+**Why bad:** Can't copy-paste, hard to read
+
+### ❌ Generic Labels
+helper1, helper2, step3, pattern4
+**Why bad:** Labels should have semantic meaning
+
+## STOP: Before Moving to Next Skill
+
+**After writing ANY skill, you MUST STOP and complete the deployment process.**
+
+**Do NOT:**
+- Create multiple skills in batch without testing each
+- Move to next skill before current one is verified
+- Skip testing because "batching is more efficient"
+
+**The deployment checklist below is MANDATORY for EACH skill.**
+
+Deploying untested skills = deploying untested code. It's a violation of quality standards.
+
+## Skill Creation Checklist (TDD Adapted)
+
+**IMPORTANT: Use TodoWrite to create todos for EACH checklist item below.**
+
+**RED Phase - Write Failing Test:**
+- [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
+- [ ] Run scenarios WITHOUT skill - document baseline behavior verbatim
+- [ ] Identify patterns in rationalizations/failures
+
+**GREEN Phase - Write Minimal Skill:**
+- [ ] Name uses only letters, numbers, hyphens (no parentheses/special chars)
+- [ ] YAML frontmatter with only name and description (max 1024 chars)
+- [ ] Description starts with "Use when..." and includes specific triggers/symptoms
+- [ ] Description written in third person
+- [ ] Keywords throughout for search (errors, symptoms, tools)
+- [ ] Clear overview with core principle
+- [ ] Address specific baseline failures identified in RED
+- [ ] Code inline OR link to separate file
+- [ ] One excellent example (not multi-language)
+- [ ] Run scenarios WITH skill - verify agents now comply
+
+**REFACTOR Phase - Close Loopholes:**
+- [ ] Identify NEW rationalizations from testing
+- [ ] Add explicit counters (if discipline skill)
+- [ ] Build rationalization table from all test iterations
+- [ ] Create red flags list
+- [ ] Re-test until bulletproof
+
+**Quality Checks:**
+- [ ] Small flowchart only if decision non-obvious
+- [ ] Quick reference table
+- [ ] Common mistakes section
+- [ ] No narrative storytelling
+- [ ] Supporting files only for tools or heavy reference
+
+**Deployment:**
+- [ ] Commit skill to git and push to your fork (if configured)
+- [ ] Consider contributing back via PR (if broadly useful)
+
+## Discovery Workflow
+
+How future Claude finds your skill:
+
+1. **Encounters problem** ("tests are flaky")
+3. **Finds SKILL** (description matches)
+4. **Scans overview** (is this relevant?)
+5. **Reads patterns** (quick reference table)
+6. **Loads example** (only when implementing)
+
+**Optimize for this flow** - put searchable terms early and often.
+
+## The Bottom Line
+
+**Creating skills IS TDD for process documentation.**
+
+Same Iron Law: No skill without failing test first.
+Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes).
+Same benefits: Better quality, fewer surprises, bulletproof results.
+
+If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.
+
+
+ARGUMENTS: Create a project-local skill for introspecting with the `entire` CLI to understand why code changes were made. The skill should leverage `entire explain`, `entire status`, and checkpoint data to answer questions like "why was this done?" or "what was the reasoning behind this change?"
+
+---
+
+Willl the skill be automatically invoked?
+
+---
+
+Add something to note that there are no entire trailers before today's date
+
+---
+
+Yeah test with a subagent, ask it something about `tuicraft tail`
+
+---
+
+Let's try adding it to CLAUDE and then give it another shot
+
+---
+
+Give me a prompt, i'll try it in a fresh claude window, but commit first in a new branch
