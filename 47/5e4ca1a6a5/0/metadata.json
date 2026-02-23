@@ -3,29 +3,29 @@
   "checkpoint_id": "475e4ca1a6a5",
   "session_id": "e2c8984d-f259-4bd5-98b5-fefaec89584a",
   "strategy": "manual-commit",
-  "created_at": "2026-02-23T00:28:12.22099Z",
+  "created_at": "2026-02-23T00:30:27.075635Z",
   "branch": "per-socket-cursors",
   "checkpoints_count": 1,
   "files_touched": [
-    "src/daemon/commands.test.ts",
-    "src/daemon/commands.ts"
+    "src/daemon/commands.ts",
+    "src/daemon/commands.test.ts"
   ],
   "agent": "Claude Code",
   "turn_id": "4f51530b7dd6",
   "token_usage": {
-    "input_tokens": 63,
-    "cache_creation_tokens": 86945,
-    "cache_read_tokens": 3531813,
-    "output_tokens": 10422,
-    "api_call_count": 52
+    "input_tokens": 74,
+    "cache_creation_tokens": 97048,
+    "cache_read_tokens": 4830781,
+    "output_tokens": 11526,
+    "api_call_count": 63
   },
   "initial_attribution": {
-    "calculated_at": "2026-02-23T00:28:12.032173Z",
+    "calculated_at": "2026-02-23T00:30:26.839048Z",
     "agent_lines": 0,
-    "human_added": 37,
-    "human_modified": 9,
+    "human_added": 30,
+    "human_modified": 2,
     "human_removed": 0,
-    "total_committed": 37,
+    "total_committed": 30,
     "agent_percentage": 0
   },
   "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/e2c8984d-f259-4bd5-98b5-fefaec89584a.jsonl"
