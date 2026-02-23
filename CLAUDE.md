@@ -78,6 +78,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - Design docs and implementation plans live in
   `docs/plans/YYYY-MM-DD-<topic>-{design,plan}.md`
+- Use the `/entire` skill and the `entire` CLI to investigate why past changes
+  were made — it recovers full agent session context (prompts, decisions,
+  trade-offs) from checkpoints linked to commits
 
 ## Reference Codebases
 
