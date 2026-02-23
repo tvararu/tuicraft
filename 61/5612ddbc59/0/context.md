@@ -41,3 +41,15 @@ What's simplest to implement and least surprising?
 
 What is least surprising, most idiomatic, easiest to build?
 
+### Prompt 5
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+...
+
