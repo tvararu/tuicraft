@@ -164,6 +164,16 @@ function drainJson(events: RingBuffer<EventEntry>): string[] {
   return events.drain().map((e) => e.json);
 }
 
+function sliceText(events: RingBuffer<EventEntry>, from: number): string[] {
+  return events
+    .slice(from)
+    .flatMap((e) => (e.text !== undefined ? [e.text] : []));
+}
+
+function sliceJson(events: RingBuffer<EventEntry>, from: number): string[] {
+  return events.slice(from).map((e) => e.json);
+}
+
 export async function dispatchCommand(
   cmd: IpcCommand,
   handle: WorldHandle,
@@ -210,22 +220,26 @@ export async function dispatchCommand(
     case "read_json":
       writeLines(socket, drainJson(events));
       return false;
-    case "read_wait":
+    case "read_wait": {
+      const start = events.writePos;
       await new Promise<void>((resolve) => {
         setTimeout(() => {
-          writeLines(socket, drainText(events));
+          writeLines(socket, sliceText(events, start));
           resolve();
         }, cmd.ms);
       });
       return false;
-    case "read_wait_json":
+    }
+    case "read_wait_json": {
+      const start = events.writePos;
       await new Promise<void>((resolve) => {
         setTimeout(() => {
-          writeLines(socket, drainJson(events));
+          writeLines(socket, sliceJson(events, start));
           resolve();
         }, cmd.ms);
       });
       return false;
+    }
     case "stop":
       writeLines(socket, ["OK"]);
       cleanup();
