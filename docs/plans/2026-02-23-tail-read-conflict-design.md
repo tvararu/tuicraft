@@ -1,61 +1,71 @@
-# Per-Socket Cursor Design
+# Tail/Read Conflict Design
 
 ## Problem
 
 `tuicraft tail` polls with `READ_WAIT`, which drains the same shared ring
-buffer cursor used by `read` and `--wait` flows. When multiple clients connect,
-whichever drains first consumes events for everyone else.
+buffer cursor used by `read` and by send flows that include `--wait`. When
+multiple clients connect, whichever drains first consumes events for everyone
+else, causing contention and flaky behavior.
 
 ## Solution
 
-Replace the single shared cursor on `RingBuffer` with per-socket cursors stored
-in the existing `socketStates` WeakMap. Each connected client reads independently
-from the same underlying buffer.
+Hybrid approach: keep `READ` on the shared drain cursor (unchanged behavior),
+switch `READ_WAIT` to a non-destructive window-based slice.
+
+The contention is between `READ_WAIT` consumers (`tail`, `--wait`). Plain `read`
+is a one-shot drain that isn't part of the conflict. Only the polling paths need
+to change.
 
 ## RingBuffer Changes
 
-Add `drainFrom(cursor: number): { items: T[], cursor: number }` — a pure read
-that takes an external cursor, returns items from that position to `writePos`,
-and returns the updated cursor. If the caller's cursor has fallen behind the
-oldest slot (buffer overwrote past it), clamp to `writePos - capacity`.
+Add `slice(from: number): T[]` — a non-destructive read that returns items from
+position `from` to `writePos`, clamped to the oldest available slot if `from`
+has been overwritten. Does not mutate any internal state.
 
-Remove the internal `cursor` field and `drain()` method — all consumers use
-`drainFrom()` with their own external cursor.
+Add a `writePos` getter to expose the current write position.
 
-## Socket State
+Keep the existing `drain()` method and internal `cursor` — `READ`/`READ_JSON`
+still use them.
 
-On connect, initialize `cursor` to `events.writePos` (future-only — new
-connections see only events arriving after they connect).
+## Command Dispatch Changes
 
-On `READ`/`READ_WAIT`, call `events.drainFrom(state.cursor)`, update the
-socket's stored cursor, write items to the socket.
+`READ` and `READ_JSON`: unchanged. Still call `drain()` on the shared cursor.
 
-On disconnect, WeakMap auto-cleans — no explicit teardown.
+`READ_WAIT` and `READ_WAIT_JSON`: snapshot `events.writePos` before the
+setTimeout, then call `slice(savedPos)` after the sleep. Returns only events
+that arrived during the wait window. No cursor mutation.
 
 ## What Stays The Same
 
 - Protocol commands: `READ`, `READ_JSON`, `READ_WAIT`, `READ_WAIT_JSON` unchanged
 - Client code: `main.ts`, `ipc.ts`, `args.ts` untouched
-- `tail` still loops `READ_WAIT 1000` — it just gets its own cursor now
+- `tail` still loops `READ_WAIT 1000`
 - SessionLog: unchanged, still appends independently
 - Event creation: `onChatMessage`/`onGroupEvent` still push to one ring buffer
 - Ring buffer capacity: still 1000
+- `SocketState` type in `server.ts`: unchanged
+- `dispatchCommand` signature: unchanged
 
 ## Files Changed
 
-1. `src/lib/ring-buffer.ts` — add `drainFrom()`, remove `drain()` and internal cursor
-2. `src/lib/ring-buffer.test.ts` — test `drainFrom()`, remove `drain()` tests
-3. `src/daemon/server.ts` — add `cursor` to socket state init
-4. `src/daemon/commands.ts` — pass cursor to `drainFrom()`, return new cursor
-5. `src/daemon/commands.test.ts` — update tests to use per-client cursors
+1. `src/lib/ring-buffer.ts` — add `slice()` method and `writePos` getter
+2. `src/lib/ring-buffer.test.ts` — add tests for `slice()`
+3. `src/daemon/commands.ts` — change `read_wait` and `read_wait_json` cases
+4. `src/daemon/commands.test.ts` — update tests for window-based read_wait
 
 ## Alternatives Considered
 
+**Per-socket cursors:** Store a cursor per socket in the `socketStates` WeakMap.
+Rejected — `sendToSocket` creates a new connection per call, so per-socket state
+is ephemeral. Plain `read` (no wait) would always return empty because the
+cursor starts at `writePos` and drain happens immediately.
+
+**Non-destructive reads everywhere:** Make `READ` also use `slice()` instead of
+`drain()`. Rejected — returns the full buffer every time, which is spammy and a
+regression from the current drain-and-advance behavior.
+
 **Multiple RingBuffer instances per client:** Fan-out events to per-client
 buffers. Rejected — memory scales with connections, duplicates data needlessly.
-The ring buffer already stores data once; we just need independent read
-positions.
 
 **Append-only event log with sequence numbers:** Replace ring buffer with a log
 indexed by sequence number. Rejected — rewrites working code for the same result.
-The circular overwrite already handles capacity management.
