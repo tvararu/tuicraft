@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.9](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.8...tuicraft-v0.3.9) (2026-02-23)
+
+
+### Features
+
+* Add `tuicraft skill` subcommand ([d6c6507](https://github.com/tvararu/tuicraft/commit/d6c650753a1b00218b7e09045ef2c3db435f5881))
+
+
+### Maintenance
+
+* Add entire introspect skill and CLAUDE.md reference ([f5e6f64](https://github.com/tvararu/tuicraft/commit/f5e6f6443ffc56643b51504b9f5e37d57d79e609))
+* Add shared permission allow-list to project settings ([275006a](https://github.com/tvararu/tuicraft/commit/275006aa93a4ad09d504db592de202297acc563c))
+* Remove MISE_TASK_TIMEOUT and task_timeout entirely ([87ab591](https://github.com/tvararu/tuicraft/commit/87ab59111491c657fae37b2e48cda3d726797f93))
+
 ## [0.3.8](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.7...tuicraft-v0.3.8) (2026-02-23)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "tuicraft",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "module": "src/main.ts",
   "type": "module",
   "private": true,
