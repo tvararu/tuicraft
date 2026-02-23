@@ -3,16 +3,18 @@
   "checkpoint_id": "ee3cdc5fa037",
   "session_id": "e2c8984d-f259-4bd5-98b5-fefaec89584a",
   "strategy": "manual-commit",
-  "created_at": "2026-02-23T23:45:46.764284Z",
+  "created_at": "2026-02-23T23:47:30.859493Z",
   "branch": "skill",
   "checkpoints_count": 1,
   "files_touched": [
-    "src/cli/help.ts",
-    "src/main.ts",
     "src/md.d.ts",
     ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
     "mise.toml",
-    "src/cli/args.ts"
+    "src/cli/args.ts",
+    "src/cli/help.ts",
+    "src/main.ts"
   ],
   "agent": "Claude Code",
   "turn_id": "9617e7fc058c",
@@ -24,12 +26,12 @@
     "api_call_count": 145
   },
   "initial_attribution": {
-    "calculated_at": "2026-02-23T23:45:46.273001Z",
+    "calculated_at": "2026-02-23T23:47:30.371942Z",
     "agent_lines": 0,
-    "human_added": 113,
-    "human_modified": 2,
+    "human_added": 4,
+    "human_modified": 1,
     "human_removed": 0,
-    "total_committed": 113,
+    "total_committed": 4,
     "agent_percentage": 0
   },
   "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/e2c8984d-f259-4bd5-98b5-fefaec89584a.jsonl"
