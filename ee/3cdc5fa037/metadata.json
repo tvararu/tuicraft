@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "ee3cdc5fa037",
+  "strategy": "manual-commit",
+  "branch": "skill",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "mise.toml",
+    "src/cli/args.ts",
+    "src/cli/help.ts",
+    "src/main.ts",
+    "src/md.d.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ee/3cdc5fa037/0/metadata.json",
+      "transcript": "/ee/3cdc5fa037/0/full.jsonl",
+      "context": "/ee/3cdc5fa037/0/context.md",
+      "content_hash": "/ee/3cdc5fa037/0/content_hash.txt",
+      "prompt": "/ee/3cdc5fa037/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 178,
+    "cache_creation_tokens": 145184,
+    "cache_read_tokens": 8278487,
+    "output_tokens": 4409,
+    "api_call_count": 118
+  }
+}
