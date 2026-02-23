@@ -10,7 +10,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format:fix` — fix formatting (`prettier --write`)
 - `mise bundle` — install dependencies (`bun install`)
 - `mise ci` — run typecheck, test, and format in parallel
-- `MISE_TASK_TIMEOUT=60s mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
+- `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
 - `mise worktree <branch>` — create a feature worktree under `.worktrees/`
@@ -35,7 +35,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Testing
 
-- **Always run `MISE_TASK_TIMEOUT=60s mise test:live` yourself after protocol or
+- **Always run `mise test:live` yourself after protocol or
   daemon changes.** The live server is always available. Do not ask the user to
   run it — run it. If it fails for infrastructure reasons (server down, env vars
   missing), then defer to the user.
@@ -60,9 +60,6 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mock.module()` leaks across test files in Bun — only mock `"paths"` (safe via
   dynamic imports), never mock `"config"` or `"session-log"` in shared test runs.
   For stdlib modules like `node:readline`, use dependency injection instead
-- `task_timeout = "500ms"` in mise.toml is the process-level kill switch — NEVER
-  bypass it with `MISE_TASK_TIMEOUT=<longer>` env overrides. The full test suite
-  runs under 100ms. If it hangs, there's a bug — fix the bug, not the timeout.
 - `Bun.sleep(0)` yields one microtask tick (enough for `.then()` chains);
   `Bun.sleep(1)` yields one full event loop turn (needed for filesystem I/O like
   `unlink` to complete) — prefer the minimum needed in tests
@@ -112,7 +109,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   when decoding
 - `drainWorldPackets` must catch handler errors — one bad packet breaks all
   subsequent processing
-- Always run `MISE_TASK_TIMEOUT=60s mise test:live` after protocol changes —
+- Always run `mise test:live` after protocol changes —
   never claim something works without verifying against the real server
 - Live-first testing: validate behavior against the real server, then encode it
   in mock integration tests as a living spec

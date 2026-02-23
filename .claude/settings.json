@@ -116,7 +116,6 @@
   "permissions": {
     "allow": [
       "Bash(./dist/tuicraft:*)",
-      "Bash(MISE_TASK_TIMEOUT=60s mise test:live:*)",
       "Bash(entire doctor:*)",
       "Bash(entire explain:*)",
       "Bash(entire help:*)",
