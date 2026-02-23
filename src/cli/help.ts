@@ -15,6 +15,7 @@ USAGE
   tuicraft status             Show daemon status
   tuicraft stop               Stop the daemon
   tuicraft logs               Print session log
+  tuicraft skill              Print SKILL.md for AI agents
   tuicraft version            Print version and exit
   tuicraft help               Show this help
 

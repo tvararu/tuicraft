@@ -91,6 +91,7 @@ tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
 tuicraft status            # daemon status
 tuicraft stop              # stop daemon
+tuicraft skill             # print SKILL.md for AI agents
 ```
 
 ## Roadmap

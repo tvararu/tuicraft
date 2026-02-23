@@ -12,7 +12,7 @@ tuicraft [--who [filter]] [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME]
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
-tuicraft status | stop | logs | help
+tuicraft status | stop | logs | skill | help
 ```
 
 ## Description
@@ -51,6 +51,9 @@ idles out after 30 minutes of inactivity.
 
 `tuicraft logs`
 : Print the JSONL session log to stdout.
+
+`tuicraft skill`
+: Print a SKILL.md reference for AI agents. Includes command usage, event types, and integration examples.
 
 `tuicraft help`
 : Print usage summary.

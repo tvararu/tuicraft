@@ -15,7 +15,7 @@ run = "bun install"
 [tasks.build]
 description = "Compile single binary"
 depends = ["bundle"]
-sources = ["src/**/*.ts"]
+sources = ["src/**/*.ts", ".claude/skills/**/*.md"]
 outputs = ["dist/tuicraft"]
 run = "bun build --compile src/main.ts --outfile dist/tuicraft"
 
