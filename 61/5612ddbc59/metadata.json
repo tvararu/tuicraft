@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "615612ddbc59",
+  "strategy": "manual-commit",
+  "branch": "per-socket-cursors",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-02-23-tail-read-conflict-design.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/61/5612ddbc59/0/metadata.json",
+      "transcript": "/61/5612ddbc59/0/full.jsonl",
+      "context": "/61/5612ddbc59/0/context.md",
+      "content_hash": "/61/5612ddbc59/0/content_hash.txt",
+      "prompt": "/61/5612ddbc59/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 31,
+    "cache_creation_tokens": 23918,
+    "cache_read_tokens": 1015559,
+    "output_tokens": 1994,
+    "api_call_count": 24
+  }
+}

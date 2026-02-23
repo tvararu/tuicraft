@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "615612ddbc59",
+  "session_id": "e2c8984d-f259-4bd5-98b5-fefaec89584a",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-23T00:10:23.680744Z",
+  "branch": "per-socket-cursors",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-02-23-tail-read-conflict-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "1292fdb0eb11",
+  "token_usage": {
+    "input_tokens": 31,
+    "cache_creation_tokens": 23918,
+    "cache_read_tokens": 1015559,
+    "output_tokens": 1994,
+    "api_call_count": 24
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-23T00:10:23.599392Z",
+    "agent_lines": 61,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 61,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/e2c8984d-f259-4bd5-98b5-fefaec89584a.jsonl"
+}
