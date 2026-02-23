@@ -3,7 +3,7 @@
   "checkpoint_id": "c916066d7ba5",
   "session_id": "e2c8984d-f259-4bd5-98b5-fefaec89584a",
   "strategy": "manual-commit",
-  "created_at": "2026-02-23T00:24:39.067022Z",
+  "created_at": "2026-02-23T00:26:23.449105Z",
   "branch": "per-socket-cursors",
   "checkpoints_count": 0,
   "files_touched": [
@@ -12,23 +12,23 @@
   ],
   "agent": "Claude Code",
   "turn_id": "4f51530b7dd6",
-  "checkpoint_transcript_start": 218,
-  "transcript_lines_at_start": 218,
+  "checkpoint_transcript_start": 279,
+  "transcript_lines_at_start": 279,
   "token_usage": {
-    "input_tokens": 10,
-    "cache_creation_tokens": 9257,
-    "cache_read_tokens": 882366,
-    "output_tokens": 2277,
-    "api_call_count": 9
+    "input_tokens": 6,
+    "cache_creation_tokens": 7934,
+    "cache_read_tokens": 643502,
+    "output_tokens": 435,
+    "api_call_count": 6
   },
   "initial_attribution": {
-    "calculated_at": "2026-02-23T00:24:38.914864Z",
-    "agent_lines": 79,
-    "human_added": 0,
+    "calculated_at": "2026-02-23T00:26:23.288275Z",
+    "agent_lines": 0,
+    "human_added": 11,
     "human_modified": 0,
     "human_removed": 0,
-    "total_committed": 79,
-    "agent_percentage": 100
+    "total_committed": 11,
+    "agent_percentage": 0
   },
   "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/e2c8984d-f259-4bd5-98b5-fefaec89584a.jsonl"
 }
