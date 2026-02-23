@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.8](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.7...tuicraft-v0.3.8) (2026-02-23)
+
+
+### Features
+
+* Add non-destructive slice method to RingBuffer ([9f9558e](https://github.com/tvararu/tuicraft/commit/9f9558e9312fc882d5630e59aea56262cd757557))
+* Switch READ_WAIT to window-based slicing ([b6e1b94](https://github.com/tvararu/tuicraft/commit/b6e1b944b02167808f5bba95ba00fa730bc4ae9c))
+
+
+### Documentation
+
+* Add per-socket cursor design for tail/read conflict ([b3509a6](https://github.com/tvararu/tuicraft/commit/b3509a68bda920f6bd2b8dc6cb46d8a889510e6d))
+* Revise design to hybrid approach, add implementation plan ([26f95ce](https://github.com/tvararu/tuicraft/commit/26f95ced98957709581fcda7423c5c36eb81a62c))
+
 ## [0.3.7](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.6...tuicraft-v0.3.7) (2026-02-21)
 
 
