@@ -3,7 +3,7 @@
   "checkpoint_id": "01c199ac708a",
   "strategy": "manual-commit",
   "branch": "v0.4-entity-parsing",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
     "docs/plans/2026-02-25-entity-parsing-design.md"
   ],
@@ -14,13 +14,20 @@
       "context": "/01/c199ac708a/0/context.md",
       "content_hash": "/01/c199ac708a/0/content_hash.txt",
       "prompt": "/01/c199ac708a/0/prompt.txt"
+    },
+    {
+      "metadata": "/01/c199ac708a/1/metadata.json",
+      "transcript": "/01/c199ac708a/1/full.jsonl",
+      "context": "/01/c199ac708a/1/context.md",
+      "content_hash": "/01/c199ac708a/1/content_hash.txt",
+      "prompt": "/01/c199ac708a/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 90,
-    "cache_creation_tokens": 142487,
-    "cache_read_tokens": 2060995,
-    "output_tokens": 2132,
-    "api_call_count": 40
+    "input_tokens": 312,
+    "cache_creation_tokens": 302263,
+    "cache_read_tokens": 14107857,
+    "output_tokens": 8026,
+    "api_call_count": 192
   }
 }
