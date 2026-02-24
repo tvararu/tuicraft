@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.10](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.9...tuicraft-v0.3.10) (2026-02-24)
+
+
+### Maintenance
+
+* Switch to AGPLv3 ([c2c3b26](https://github.com/tvararu/tuicraft/commit/c2c3b265f442cbcfc22d449e88d99bcf995342de))
+
 ## [0.3.9](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.8...tuicraft-v0.3.9) (2026-02-23)
 
 
