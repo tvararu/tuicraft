@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "01c199ac708a",
+  "session_id": "14138feb-bf4b-4209-96de-bd5941cf98ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-24T23:50:06.074579Z",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-02-25-entity-parsing-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "faa4fb7a1c28",
+  "token_usage": {
+    "input_tokens": 90,
+    "cache_creation_tokens": 142487,
+    "cache_read_tokens": 2060995,
+    "output_tokens": 2132,
+    "api_call_count": 40
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-24T23:50:05.929782Z",
+    "agent_lines": 225,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 225,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/14138feb-bf4b-4209-96de-bd5941cf98ff.jsonl"
+}
