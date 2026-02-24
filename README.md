@@ -239,4 +239,4 @@ that the official game client does.
 
 ## License
 
-[MIT](LICENSE).
+[AGPLv3](LICENSE).
