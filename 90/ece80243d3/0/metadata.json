@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "90ece80243d3",
+  "session_id": "14138feb-bf4b-4209-96de-bd5941cf98ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-25T01:00:26.265162Z",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/protocol/entity-queries.test.ts",
+    "src/wow/protocol/entity-queries.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "ad30617e91f6",
+  "token_usage": {
+    "input_tokens": 129,
+    "cache_creation_tokens": 231072,
+    "cache_read_tokens": 6209394,
+    "output_tokens": 4498,
+    "api_call_count": 75
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-25T01:00:25.215838Z",
+    "agent_lines": 0,
+    "human_added": 132,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 132,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/14138feb-bf4b-4209-96de-bd5941cf98ff.jsonl"
+}
