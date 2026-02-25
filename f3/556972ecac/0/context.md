@@ -181,3 +181,21 @@ Let me chronologically analyze the entire conversation:
 
 2. **User expresses interest in v0.4**: "I think I'd like something related to v0.4, actually parsing nearby NPCs ...
 
+### Prompt 32
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/finishing-a-development-branch
+
+# Finishing a Development Branch
+
+## Overview
+
+Guide completion of development work by presenting clear options and handling chosen workflow.
+
+**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+## The Process
+
+### Ste...
+
