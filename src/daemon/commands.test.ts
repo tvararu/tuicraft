@@ -5,6 +5,7 @@ import {
   dispatchCommand,
   onChatMessage,
   onGroupEvent,
+  onEntityEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -12,6 +13,8 @@ import { startDaemonServer } from "daemon/server";
 import { sendToSocket } from "cli/ipc";
 import { RingBuffer } from "lib/ring-buffer";
 import { ChatType } from "wow/protocol/opcodes";
+import { ObjectType } from "wow/protocol/entity-fields";
+import type { UnitEntity, GameObjectEntity } from "wow/entity-store";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 
@@ -164,6 +167,14 @@ describe("parseIpcCommand", () => {
 
   test("DECLINE", () => {
     expect(parseIpcCommand("DECLINE")).toEqual({ type: "decline" });
+  });
+
+  test("NEARBY", () => {
+    expect(parseIpcCommand("NEARBY")).toEqual({ type: "nearby" });
+  });
+
+  test("NEARBY_JSON", () => {
+    expect(parseIpcCommand("NEARBY_JSON")).toEqual({ type: "nearby_json" });
   });
 
   test("slash /accept maps to accept", () => {
@@ -790,6 +801,123 @@ describe("dispatchCommand", () => {
     expect(parsed.results[0].name).toBe("Test");
   });
 
+  test("nearby returns formatted entity list", async () => {
+    const handle = createMockHandle();
+    const testUnit: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "Thrall",
+      level: 80,
+      health: 5000,
+      maxHealth: 5000,
+      entry: 0,
+      scale: 1,
+      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const testGo: GameObjectEntity = {
+      guid: 2n,
+      objectType: ObjectType.GAMEOBJECT,
+      name: "Mailbox",
+      entry: 0,
+      scale: 1,
+      position: { mapId: 1, x: 1.5, y: 4.6, z: 7.89, orientation: 0 },
+      rawFields: new Map(),
+      displayId: 0,
+      flags: 0,
+      gameObjectType: 19,
+      bytes1: 0,
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testUnit,
+      testGo,
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+
+    const output = socket.written();
+    expect(output).toContain(
+      "Thrall (NPC, level 80) HP 5000/5000 at 1.23, 4.56, 7.89",
+    );
+    expect(output).toContain("Mailbox (GameObject) at 1.50, 4.60, 7.89");
+  });
+
+  test("nearby_json returns JSONL entity list", async () => {
+    const handle = createMockHandle();
+    const testUnit: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "Thrall",
+      level: 80,
+      health: 5000,
+      maxHealth: 5000,
+      entry: 0,
+      scale: 1,
+      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testUnit,
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const lines = socket.written().trim().split("\n").filter(Boolean);
+    const parsed = JSON.parse(lines[0]!);
+    expect(parsed.guid).toBe("0x1");
+    expect(parsed.type).toBe("unit");
+    expect(parsed.name).toBe("Thrall");
+    expect(parsed.level).toBe(80);
+    expect(parsed.health).toBe(5000);
+    expect(parsed.maxHealth).toBe(5000);
+    expect(parsed.x).toBe(1.23);
+    expect(parsed.y).toBe(4.56);
+    expect(parsed.z).toBe(7.89);
+  });
+
+  test("nearby with no entities returns just terminator", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+
+    expect(socket.written()).toBe("\n");
+  });
+
   test("unimplemented writes UNIMPLEMENTED response", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
@@ -1052,6 +1180,87 @@ describe("onGroupEvent", () => {
   });
 });
 
+describe("onEntityEvent", () => {
+  test("pushes appear event to ring buffer with text and json", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const entity: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "Test NPC",
+      level: 10,
+      health: 100,
+      maxHealth: 100,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+
+    onEntityEvent({ type: "appear", entity }, events);
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Test NPC");
+    expect(drained[0]!.text).toContain("appeared");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("ENTITY_APPEAR");
+    expect(json.name).toBe("Test NPC");
+  });
+
+  test("pushes disappear event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+
+    onEntityEvent({ type: "disappear", guid: 1n, name: "Gone NPC" }, events);
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Gone NPC");
+    expect(drained[0]!.text).toContain("left range");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("ENTITY_DISAPPEAR");
+  });
+
+  test("skips update events with no obj", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const entity: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "Test NPC",
+      level: 10,
+      health: 100,
+      maxHealth: 100,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+
+    onEntityEvent({ type: "update", entity, changed: ["health"] }, events);
+
+    expect(events.drain()).toHaveLength(0);
+  });
+});
+
 describe("IPC round-trip", () => {
   let sockCounter = 0;
   let sockPath: string;
@@ -1259,6 +1468,102 @@ describe("IPC round-trip", () => {
     handle.triggerGroupEvent({ type: "group_destroyed" });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[group] Group has been disbanded"]);
+  });
+
+  test("onEntityEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Test NPC",
+        level: 10,
+        health: 100,
+        maxHealth: 100,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [0, 0, 0, 0, 0, 0, 0],
+        maxPower: [0, 0, 0, 0, 0, 0, 0],
+      } satisfies UnitEntity,
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines[0]).toContain("Test NPC");
+  });
+
+  test("onEntityEvent wiring round-trip via READ_JSON", async () => {
+    startTestServer();
+    handle.triggerEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Test NPC",
+        level: 10,
+        health: 100,
+        maxHealth: 100,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [0, 0, 0, 0, 0, 0, 0],
+        maxPower: [0, 0, 0, 0, 0, 0, 0],
+      } satisfies UnitEntity,
+    });
+    const lines = await sendToSocket("READ_JSON", sockPath);
+    const parsed = JSON.parse(lines[0]!);
+    expect(parsed.type).toBe("ENTITY_APPEAR");
+    expect(parsed.name).toBe("Test NPC");
+  });
+
+  test("NEARBY round-trip returns formatted entities", async () => {
+    startTestServer();
+    const testUnit: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "Thrall",
+      level: 80,
+      health: 5000,
+      maxHealth: 5000,
+      entry: 0,
+      scale: 1,
+      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testUnit,
+    ]);
+    const lines = await sendToSocket("NEARBY", sockPath);
+    expect(lines[0]).toContain("Thrall");
+    expect(lines[0]).toContain("level 80");
   });
 
   test("dispatch error returns ERR internal", async () => {
