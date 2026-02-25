@@ -653,3 +653,452 @@ Done!
 
 **Alternative workflow:**
 - **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the entire conversation:
+
+1. **Opening**: User asks "What's the next big thing to work on?" - I explored the project's recent history, plans, and design docs to understand the project state.
+
+2. **User expresses interest in v0.4**: "I think I'd like something related to v0.4, actually parsing nearby NPCs and game objects" and invokes /using-superpowers and /brainstorming skills.
+
+3. **Brainstorming phase**: I followed the brainstorming skill checklist:
+   - Explored project context (dispatched Explore agent for comprehensive research)
+   - Asked clarifying questions one at a time:
+     - Use case → "Both, but awareness first" (bot foundation + awareness display)
+     - Entity types → User asked "Is it hard to do everything in one go?" → I said not really, recommended "parse everything, interpret selectively" → User agreed
+     - Display method → User was "afraid of adding commands that are not part of the standard wow slash command set" → We settled on daemon/IPC for programmatic, TUI events in chat log
+     - Verbosity → "Simple to begin with" → Off/on toggle, default off
+     - Name resolution → "Any downside to eager?" → Eager with caching, like retail client
+     - Position tracking → "Store positions"
+     - ECS question from user → I explained why ECS is overkill, simple typed Map instead → User agreed
+     - User requested "100% test coverage"
+     - User suggested two-character live test with Xia and Yia
+     - User liked `/tuicraft` as the namespace for the toggle
+
+4. **Design doc written**: Saved to `docs/plans/2026-02-25-entity-parsing-design.md`, committed on `v0.4-entity-parsing` branch.
+
+5. **Implementation plan written**: Using writing-plans skill, created detailed 13-task TDD plan at `docs/plans/2026-02-25-entity-parsing-plan.md`.
+
+6. **Execution approach**: User chose "1 sdd using this branch" (subagent-driven development on current branch).
+
+7. **Task execution** (Tasks 1-10 completed):
+   - Task 1: PacketReader uint64LE - Added to packet.ts, 5 tests
+   - Task 2: Entity field definitions - Created entity-fields.ts with all enums/types/offset tables, 44 tests
+   - Task 3: Update mask parser - Created update-mask.ts, 7 tests
+   - Task 4: Movement block parser - Created movement-block.ts with full conditional parsing, 21 tests
+   - Task 5: Entity store - Created entity-store.ts with EntityStore class, 17 tests
+   - Task 6: Update object packet parser - Created update-object.ts, 10 tests
+   - Task 7: Field extraction logic - Created extract-fields.ts, 22 tests
+   - Task 8: Name query packets - Created entity-queries.ts, 7 tests
+   - Task 9: Client integration - Modified client.ts, stubs.ts, mock-handle.ts, start.test.ts
+   - Task 10: TUI integration - Modified tui.ts and tui.test.ts
+
+8. **Error encountered**: When trying to commit the design doc, a pre-commit hook blocked committing to main. I created the `v0.4-entity-parsing` feature branch.
+
+9. **Spec reviews**: I ran spec review agents after Tasks 1 and 2 (both passed). For later tasks I relied on the implementer's self-review + full test suite passing.
+
+Let me now document all the files, pending tasks, and current state.
+
+Files created/modified:
+- `docs/plans/2026-02-25-entity-parsing-design.md` - Design doc
+- `docs/plans/2026-02-25-entity-parsing-plan.md` - Implementation plan (13 tasks)
+- `src/wow/protocol/packet.ts` - Added uint64LE to PacketReader and PacketWriter
+- `src/wow/protocol/packet.test.ts` - Added 5 tests for uint64LE
+- `src/wow/protocol/entity-fields.ts` - ObjectType, UpdateType, UpdateFlag, MovementFlag, field offset tables
+- `src/wow/protocol/entity-fields.test.ts` - 44 tests
+- `src/wow/protocol/update-mask.ts` - parseUpdateMask function
+- `src/wow/protocol/update-mask.test.ts` - 7 tests
+- `src/wow/protocol/movement-block.ts` - parseMovementBlock with all conditional branches
+- `src/wow/protocol/movement-block.test.ts` - 21 tests
+- `src/wow/entity-store.ts` - EntityStore class, Entity types, EntityEvent
+- `src/wow/entity-store.test.ts` - 17 tests
+- `src/wow/protocol/update-object.ts` - parseUpdateObject, readGuidBigint, UpdateEntry type
+- `src/wow/protocol/update-object.test.ts` - 10 tests
+- `src/wow/protocol/extract-fields.ts` - extractObjectFields, extractUnitFields, extractGameObjectFields
+- `src/wow/protocol/extract-fields.test.ts` - 22 tests
+- `src/wow/protocol/entity-queries.ts` - build/parse creature and gameobject queries
+- `src/wow/protocol/entity-queries.test.ts` - 7 tests
+- `src/wow/client.ts` - Major integration: handlers, WorldConn extension, WorldHandle extension
+- `src/wow/protocol/stubs.ts` - Removed SMSG_UPDATE_OBJECT from stubs
+- `src/test/mock-handle.ts` - Added entity methods
+- `src/daemon/start.test.ts` - Added entity mocks
+- `src/ui/tui.ts` - /tuicraft command, formatEntityEvent, formatEntityEventObj
+- `src/ui/tui.test.ts` - Added tests for tuicraft command and entity events
+
+Pending tasks: 11, 17, 18, 19 (Tasks 11-13 of the plan)
+
+Current work: Just completed Task 10 (TUI Integration). Was about to move to Task 11 (Daemon Integration).
+
+Summary:
+1. Primary Request and Intent:
+   The user wants to implement v0.4 entity parsing for the tuicraft project — a WoW 3.3.5a TUI client in TypeScript/Bun. Specifically: parse `SMSG_UPDATE_OBJECT` packets to build an in-memory model of all nearby entities (NPCs, players, game objects, corpses, dynamic objects), with awareness display in the TUI and programmatic access via daemon IPC. This serves dual purposes: immediate user awareness and foundation for the v5 healer bot. The user explicitly requested 100% test coverage, a two-character live test (Xia sees Yia appear/disappear), `/tuicraft entities on|off` as the toggle namespace, off/on verbosity toggle (default off), eager name resolution, position tracking, and "parse everything, interpret selectively" architecture. No ECS — simple typed Maps mirroring the protocol's fixed field sets.
+
+2. Key Technical Concepts:
+   - WoW 3.3.5a `SMSG_UPDATE_OBJECT` wire format: 6 update types (VALUES, MOVEMENT, CREATE_OBJECT, CREATE_OBJECT2, OUT_OF_RANGE, NEAR_OBJECTS)
+   - Variable-length update mask: u8 block count + N uint32 bitmask blocks + values for set bits
+   - Movement block: deeply nested conditional structure keyed on UpdateFlag (u16) and MovementFlag (u32+u16), with LIVING/HAS_POSITION/POSITION branches plus transport, falling, spline sub-branches
+   - Entity field definitions from AzerothCore `UpdateFields.h`: OBJECT_FIELDS, UNIT_FIELDS, GAMEOBJECT_FIELDS, DYNAMICOBJECT_FIELDS, CORPSE_FIELDS
+   - Field extraction: mapping raw uint32 mask values to typed entity properties (u32, u64, f32, bytes4 types)
+   - Name resolution via CMSG_CREATURE_QUERY/CMSG_GAMEOBJECT_QUERY/CMSG_NAME_QUERY with eager queries and entry-based caching
+   - Three-layer architecture: wire parser → field definitions as data → entity store
+   - Discriminated union entity types (UnitEntity | GameObjectEntity | BaseEntity)
+   - EntityStore with `Map<bigint, Entity>` primary store + `Map<number, Set<bigint>>` type index
+   - EntityEvent callbacks (appear/disappear/update) following GroupEvent pattern
+   - Subagent-driven development (SDD): fresh subagent per task + spec review
+   - TDD throughout: write failing test first, implement, verify, commit
+
+3. Files and Code Sections:
+   - `docs/plans/2026-02-25-entity-parsing-design.md`
+     - Approved design document covering data model, wire format, field definitions, name resolution, entity store lifecycle, TUI/daemon integration, testing strategy
+     - Committed on `v0.4-entity-parsing` branch
+   
+   - `docs/plans/2026-02-25-entity-parsing-plan.md`
+     - 13-task implementation plan with TDD steps, exact file paths, code snippets, and commit messages
+     - Tasks: PacketReader extensions, entity fields, update mask, movement block, entity store, update object parser, field extraction, name queries, client integration, TUI integration, daemon integration, live tests, final cleanup
+
+   - `src/wow/protocol/packet.ts`
+     - Added `uint64LE(): bigint` to PacketReader (line ~45) and `uint64LE(v: bigint)` to PacketWriter (line ~141)
+     - Needed for 8-byte GUIDs and rotation fields in SMSG_UPDATE_OBJECT
+
+   - `src/wow/protocol/packet.test.ts`
+     - 5 new tests for uint64LE read/write/roundtrip
+
+   - `src/wow/protocol/entity-fields.ts`
+     - ObjectType enum (OBJECT=0 through CORPSE=7), UpdateType enum, UpdateFlag/MovementFlag/MovementFlagExtra const objects
+     - OBJECT_END=0x0006, UNIT_END=0x0094, GAMEOBJECT_END=0x0012, etc.
+     - FieldDef type: `{ offset: number; size: number; type: "u32"|"u64"|"f32"|"bytes4" }`
+     - Field tables: OBJECT_FIELDS, UNIT_FIELDS (29 fields), GAMEOBJECT_FIELDS (8 fields), DYNAMICOBJECT_FIELDS, CORPSE_FIELDS
+     - `fieldForBit(objectType, bitIndex)` lookup function with prebuilt Maps
+   
+   - `src/wow/protocol/entity-fields.test.ts` - 44 tests
+
+   - `src/wow/protocol/update-mask.ts`
+     - `parseUpdateMask(r: PacketReader): Map<number, number>` — reads blockCount, mask blocks, then values for set bits
+   
+   - `src/wow/protocol/update-mask.test.ts` - 7 tests including wowm reference data
+
+   - `src/wow/protocol/movement-block.ts`
+     - `MovementData` type: `{ updateFlags, x, y, z, orientation, walkSpeed?, runSpeed? }`
+     - `parseMovementBlock(r: PacketReader): MovementData` — handles all conditional branches: LIVING (with ON_TRANSPORT, SWIMMING, FALLING, SPLINE_ELEVATION, SPLINE_ENABLED sub-branches), POSITION, HAS_POSITION, plus trailing conditionals (HIGH_GUID, LOW_GUID, HAS_ATTACKING_TARGET, TRANSPORT, VEHICLE, ROTATION)
+   
+   - `src/wow/protocol/movement-block.test.ts` - 21 tests covering every conditional branch
+
+   - `src/wow/entity-store.ts`
+     - Types: `Position`, `BaseEntity`, `UnitEntity`, `GameObjectEntity`, `Entity` (union), `EntityEvent` (appear/disappear/update)
+     - `EntityStore` class: `create()`, `update()`, `destroy()`, `clear()`, `get()`, `getByType()`, `all()`, `setName()`, `setPosition()`, `onEvent()`
+     - Secondary index via `byType: Map<number, Set<bigint>>`
+   
+   - `src/wow/entity-store.test.ts` - 17 tests
+
+   - `src/wow/protocol/update-object.ts`
+     - `UpdateEntry` discriminated union: create | values | movement | outOfRange | nearObjects
+     - `parseUpdateObject(r: PacketReader): UpdateEntry[]` — dispatches by UpdateType
+     - `readGuidBigint(r: PacketReader): bigint` — exported helper composing packed GUID to bigint
+   
+   - `src/wow/protocol/update-object.test.ts` - 10 tests including wowm reference packet
+
+   - `src/wow/protocol/extract-fields.ts`
+     - `extractObjectFields(raw)` — entry, scale, guid from OBJECT_FIELDS offsets
+     - `extractUnitFields(raw)` — health, maxHealth, level, factionTemplate, displayId, npcFlags, unitFlags, target, race/class_/gender (BYTES_0 unpacking), power/maxPower arrays, modCastSpeed
+     - `extractGameObjectFields(raw)` — displayId, flags, state (BYTES_1 unpacking), bytes1, dynamic, faction, level
+     - All return `_changed: string[]` tracking extracted field names
+     - Helper: `uint32ToFloat(v)` for IEEE 754 reinterpretation
+   
+   - `src/wow/protocol/extract-fields.test.ts` - 22 tests
+
+   - `src/wow/protocol/entity-queries.ts`
+     - `buildCreatureQuery(entry, guid)`, `parseCreatureQueryResponse(r)` — CMSG/SMSG 0x0060/0x0061
+     - `buildGameObjectQuery(entry, guid)`, `parseGameObjectQueryResponse(r)` — CMSG/SMSG 0x005E/0x005F
+     - High-bit (0x80000000) detection for unknown entries
+   
+   - `src/wow/protocol/entity-queries.test.ts` - 7 tests
+
+   - `src/wow/client.ts` (major modifications)
+     - Extended `WorldConn` with: `entityStore: EntityStore`, `creatureNameCache: Map<number, string>`, `gameObjectNameCache: Map<number, string>`, `onEntityEvent?: (event: EntityEvent) => void`
+     - Extended `WorldHandle` type with: `onEntityEvent(cb)`, `getNearbyEntities(): Entity[]`
+     - Added handlers: `handleUpdateObject()`, `handleCreatureQueryResponse()`, `handleGameObjectQueryResponse()`
+     - Added helper: `queryEntityName()` — checks caches, sends appropriate query packet
+     - Updated `handleNameQueryResponse()` to backfill entity store for player entities
+     - Registered 3 new dispatch handlers for SMSG_UPDATE_OBJECT, SMSG_CREATURE_QUERY_RESPONSE, SMSG_GAMEOBJECT_QUERY_RESPONSE
+     - Added `conn.entityStore.clear()` on socket close
+     - Re-exported Entity and EntityEvent types
+
+   - `src/wow/protocol/stubs.ts`
+     - Removed SMSG_UPDATE_OBJECT entry from STUBS array
+
+   - `src/test/mock-handle.ts`
+     - Added `onEntityEvent`, `getNearbyEntities`, `triggerEntityEvent` to mock
+
+   - `src/daemon/start.test.ts`
+     - Added `onEntityEvent` and `getNearbyEntities` jest mocks to inline WorldHandle mock
+
+   - `src/ui/tui.ts`
+     - Added `{ type: "tuicraft"; subcommand: string; value: string }` to Command union
+     - Added `/tuicraft` case in `parseCommand`
+     - Added `formatEntityEvent(event: EntityEvent): string | undefined` — formats appear/disappear for TUI display
+     - Added `formatEntityEventObj(event: EntityEvent): Record<string, unknown> | undefined` — JSON representation
+     - Added `showEntityEvents: boolean` to TuiState (default false)
+     - Added `tuicraft` case in `executeCommand` handling `entities on|off`
+     - Wired `handle.onEntityEvent` in `startTui`
+   
+   - `src/ui/tui.test.ts`
+     - Added tests: parseCommand for /tuicraft, formatEntityEvent for all entity types, integration tests for toggle behavior
+
+4. Errors and fixes:
+   - **Git hook blocked commit to main**: When trying to commit the design doc, a pre-commit hook (`jq -r '.tool_input.command' | grep -q 'git commit' && [ "$(git branch --show-current)" = "main" ]`) blocked the commit. Fixed by creating the `v0.4-entity-parsing` feature branch first with `git checkout -b v0.4-entity-parsing`, then committing.
+   - **AskUserQuestion rejection**: The first attempt to use AskUserQuestion for the use case question was rejected by the user. I re-asked the same question in plain text instead of using the tool.
+
+5. Problem Solving:
+   - Resolved architecture question: User asked about ECS. Explained that WoW's entity model has fixed field sets per type (not dynamically composed), so a simple typed Map with discriminated union is more appropriate than ECS.
+   - Resolved the "parse everything vs selective" question: Since the hard work (movement block, update mask) is shared infrastructure, adding more entity types is just field mappings — recommended parsing all types, interpreting selectively.
+   - Resolved name query strategy: Eager queries with caching (matching retail client behavior), shared entry-based cache for creatures/gameobjects (many entities share templates).
+   - Resolved TUI command namespace: User was concerned about adding non-WoW slash commands, so we used `/tuicraft entities on|off` as the meta-command namespace.
+
+6. All user messages:
+   - "What's the next big thing to work on?"
+   - "I think I'd like something related to v0.4, actually parsing nearby NPCs and game objects" + invoked /using-superpowers and /brainstorming
+   - "Sorry, ask me again" (after rejecting AskUserQuestion tool)
+   - "Both, but awareness first"
+   - "Do we need something like an entity component system?"
+   - "yes" (agreeing ECS is overkill)
+   - "Is it hard to do everything in one go?" (re: entity types)
+   - "yes" (agreeing to parse everything, interpret selectively)
+   - "I'm afraid of adding commands that are not part of the standard wow slash command set..."
+   - "Yeah, events in the chat log but we might need a verbosity setting as it can be quite spammy by default"
+   - "Simple to begin with" (re: verbosity toggle)
+   - "Any downside to eager? what does the game client do?" (re: name queries)
+   - "yes" (agreeing to eager queries)
+   - "Store positions" (re: position tracking)
+   - "yes" (approving data model section)
+   - "yes" (approving wire format section)
+   - "yes" (approving field definitions section)
+   - "yes" (approving name resolution section)
+   - "yes" (approving entity store lifecycle section)
+   - "I like slash tuicraft as the namespace" + "yes" (approving TUI/daemon section)
+   - "Perhaps a live test which logs in as a second character and tests that the first instance sees it? We have Xia and Yia for this purpose"
+   - "100% test coverage :nerd:" 
+   - "yes" (approving full design summary)
+   - "yes" (ready to write design doc)
+   - "B" (choosing layered parser approach)
+   - "yes" (approving design doc write-up)
+   - "1 sdd using this branch" (choosing subagent-driven development on current branch)
+
+7. Pending Tasks:
+   - **Task 11: Daemon Integration** (task #17) — Add NEARBY and NEARBY_JSON IPC verbs, entity events in ring buffer, formatEntityEventObj
+   - **Task 12: Live Server Tests** (task #18) — Two-character Xia/Yia test, getNearbyEntities validation
+   - **Task 13: Final Cleanup** (task #19) — Remove remaining implemented opcodes from stubs, run mise ci, run mise test:live
+
+8. Current Work:
+   I just completed Task 10 (TUI Integration) — added `/tuicraft entities on|off` toggle, `formatEntityEvent`, `formatEntityEventObj`, and wired entity events into `startTui`. The implementer reported all 665 tests passing, typecheck clean, committed as `30e48d1`. I had updated task #16 to in_progress and was about to dispatch Task 11 (Daemon Integration) when the summary was requested.
+
+   The SDD workflow state: 10 of 13 plan tasks completed. Tasks 1-10 all implemented, tested, and committed on the `v0.4-entity-parsing` branch. Total test count has grown from 523 to 665.
+
+9. Optional Next Step:
+   Continue with Task 11: Daemon Integration. This was the natural next step in the SDD execution flow. The last completed task was Task 10 (TUI Integration), and the task list shows task #17 (Task 11: Daemon Integration) as pending. The plan specifies adding `NEARBY` and `NEARBY_JSON` IPC verbs to `src/daemon/commands.ts`, entity events in the ring buffer via `src/daemon/server.ts`, and `formatEntityEventObj` usage (already implemented in tui.ts during Task 10). After that, Task 12 (Live Tests) and Task 13 (Final Cleanup) remain.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/deity/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/finishing-a-development-branch
+
+# Finishing a Development Branch
+
+## Overview
+
+Guide completion of development work by presenting clear options and handling chosen workflow.
+
+**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+## The Process
+
+### Step 1: Verify Tests
+
+**Before presenting options, verify tests pass:**
+
+```bash
+# Run project's test suite
+npm test / cargo test / pytest / go test ./...
+```
+
+**If tests fail:**
+```
+Tests failing (<N> failures). Must fix before completing:
+
+[Show failures]
+
+Cannot proceed with merge/PR until tests pass.
+```
+
+Stop. Don't proceed to Step 2.
+
+**If tests pass:** Continue to Step 2.
+
+### Step 2: Determine Base Branch
+
+```bash
+# Try common base branches
+git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+```
+
+Or ask: "This branch split from main - is that correct?"
+
+### Step 3: Present Options
+
+Present exactly these 4 options:
+
+```
+Implementation complete. What would you like to do?
+
+1. Merge back to <base-branch> locally
+2. Push and create a Pull Request
+3. Keep the branch as-is (I'll handle it later)
+4. Discard this work
+
+Which option?
+```
+
+**Don't add explanation** - keep options concise.
+
+### Step 4: Execute Choice
+
+#### Option 1: Merge Locally
+
+```bash
+# Switch to base branch
+git checkout <base-branch>
+
+# Pull latest
+git pull
+
+# Merge feature branch
+git merge <feature-branch>
+
+# Verify tests on merged result
+<test command>
+
+# If tests pass
+git branch -d <feature-branch>
+```
+
+Then: Cleanup worktree (Step 5)
+
+#### Option 2: Push and Create PR
+
+```bash
+# Push branch
+git push -u origin <feature-branch>
+
+# Create PR
+gh pr create --title "<title>" --body "$(cat <<'EOF'
+## Summary
+<2-3 bullets of what changed>
+
+## Test Plan
+- [ ] <verification steps>
+EOF
+)"
+```
+
+Then: Cleanup worktree (Step 5)
+
+#### Option 3: Keep As-Is
+
+Report: "Keeping branch <name>. Worktree preserved at <path>."
+
+**Don't cleanup worktree.**
+
+#### Option 4: Discard
+
+**Confirm first:**
+```
+This will permanently delete:
+- Branch <name>
+- All commits: <commit-list>
+- Worktree at <path>
+
+Type 'discard' to confirm.
+```
+
+Wait for exact confirmation.
+
+If confirmed:
+```bash
+git checkout <base-branch>
+git branch -D <feature-branch>
+```
+
+Then: Cleanup worktree (Step 5)
+
+### Step 5: Cleanup Worktree
+
+**For Options 1, 2, 4:**
+
+Check if in worktree:
+```bash
+git worktree list | grep $(git branch --show-current)
+```
+
+If yes:
+```bash
+git worktree remove <worktree-path>
+```
+
+**For Option 3:** Keep worktree.
+
+## Quick Reference
+
+| Option | Merge | Push | Keep Worktree | Cleanup Branch |
+|--------|-------|------|---------------|----------------|
+| 1. Merge locally | ✓ | - | - | ✓ |
+| 2. Create PR | - | ✓ | ✓ | - |
+| 3. Keep as-is | - | - | ✓ | - |
+| 4. Discard | - | - | - | ✓ (force) |
+
+## Common Mistakes
+
+**Skipping test verification**
+- **Problem:** Merge broken code, create failing PR
+- **Fix:** Always verify tests before offering options
+
+**Open-ended questions**
+- **Problem:** "What should I do next?" → ambiguous
+- **Fix:** Present exactly 4 structured options
+
+**Automatic worktree cleanup**
+- **Problem:** Remove worktree when might need it (Option 2, 3)
+- **Fix:** Only cleanup for Options 1 and 4
+
+**No confirmation for discard**
+- **Problem:** Accidentally delete work
+- **Fix:** Require typed "discard" confirmation
+
+## Red Flags
+
+**Never:**
+- Proceed with failing tests
+- Merge without verifying tests on result
+- Delete work without confirmation
+- Force-push without explicit request
+
+**Always:**
+- Verify tests before offering options
+- Present exactly 4 options
+- Get typed confirmation for Option 4
+- Clean up worktree for Options 1 & 4 only
+
+## Integration
+
+**Called by:**
+- **subagent-driven-development** (Step 7) - After all tasks complete
+- **executing-plans** (Step 5) - After all batches complete
+
+**Pairs with:**
+- **using-git-worktrees** - Cleans up worktree created by that skill
