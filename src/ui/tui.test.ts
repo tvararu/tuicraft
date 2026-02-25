@@ -5,10 +5,12 @@ import {
   formatMessage,
   formatMessageJson,
   formatGroupEvent,
+  formatEntityEvent,
   formatPrompt,
   startTui,
 } from "ui/tui";
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
+import { ObjectType } from "wow/protocol/entity-fields";
 import { createMockHandle } from "test/mock-handle";
 
 function writeLine(stream: PassThrough, line: string): void {
@@ -1085,5 +1087,278 @@ describe("formatGroupEvent", () => {
         leader: "",
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("tuicraft command", () => {
+  test("parseCommand handles /tuicraft entities on", () => {
+    const cmd = parseCommand("/tuicraft entities on");
+    expect(cmd).toEqual({
+      type: "tuicraft",
+      subcommand: "entities",
+      value: "on",
+    });
+  });
+
+  test("parseCommand handles /tuicraft entities off", () => {
+    const cmd = parseCommand("/tuicraft entities off");
+    expect(cmd).toEqual({
+      type: "tuicraft",
+      subcommand: "entities",
+      value: "off",
+    });
+  });
+
+  test("parseCommand handles /tuicraft with unknown subcommand", () => {
+    const cmd = parseCommand("/tuicraft foo");
+    expect(cmd).toEqual({ type: "tuicraft", subcommand: "foo", value: "" });
+  });
+
+  test("entities on enables display", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/tuicraft entities on");
+    await flush();
+
+    expect(output.join("")).toContain("Entity events enabled");
+
+    input.end();
+    await done;
+  });
+
+  test("entities off disables display", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/tuicraft entities off");
+    await flush();
+
+    expect(output.join("")).toContain("Entity events disabled");
+
+    input.end();
+    await done;
+  });
+
+  test("unknown subcommand shows error", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/tuicraft foo");
+    await flush();
+
+    expect(output.join("")).toContain("Unknown tuicraft command: foo");
+
+    input.end();
+    await done;
+  });
+
+  test("entity events displayed when enabled", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/tuicraft entities on");
+    await flush();
+
+    handle.triggerEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Innkeeper Palla",
+        level: 55,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        health: 100,
+        maxHealth: 100,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+
+    expect(output.join("")).toContain(
+      "[world] Innkeeper Palla appeared (NPC, level 55)",
+    );
+
+    input.end();
+    await done;
+  });
+
+  test("entity events suppressed when disabled", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+
+    handle.triggerEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Innkeeper Palla",
+        level: 55,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        health: 100,
+        maxHealth: 100,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+
+    expect(output.join("")).not.toContain("[world]");
+
+    input.end();
+    await done;
+  });
+});
+
+describe("formatEntityEvent", () => {
+  test("formats unit appear with name and level", () => {
+    const result = formatEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Innkeeper Palla",
+        level: 55,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        health: 100,
+        maxHealth: 100,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+    expect(result).toBe("[world] Innkeeper Palla appeared (NPC, level 55)");
+  });
+
+  test("formats player appear", () => {
+    const result = formatEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 2n,
+        objectType: ObjectType.PLAYER,
+        name: "Thrall",
+        level: 80,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        health: 100,
+        maxHealth: 100,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+    expect(result).toBe("[world] Thrall appeared (Player, level 80)");
+  });
+
+  test("formats gameobject appear", () => {
+    const result = formatEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 3n,
+        objectType: ObjectType.GAMEOBJECT,
+        name: "Mailbox",
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        displayId: 0,
+        flags: 0,
+        gameObjectType: 19,
+        bytes1: 0,
+      },
+    });
+    expect(result).toBe("[world] Mailbox appeared (GameObject)");
+  });
+
+  test("formats disappear", () => {
+    const result = formatEntityEvent({
+      type: "disappear",
+      guid: 1n,
+      name: "Silvermoon Guardian",
+    });
+    expect(result).toBe("[world] Silvermoon Guardian left range");
+  });
+
+  test("formats disappear without name", () => {
+    const result = formatEntityEvent({
+      type: "disappear",
+      guid: 1n,
+    });
+    expect(result).toBe("[world] Unknown entity left range");
+  });
+
+  test("update returns undefined", () => {
+    const result = formatEntityEvent({
+      type: "update",
+      entity: { guid: 1n } as any,
+      changed: ["health"],
+    });
+    expect(result).toBeUndefined();
   });
 });

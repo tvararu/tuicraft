@@ -1,5 +1,6 @@
 import { createInterface } from "node:readline";
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
+import { ObjectType } from "wow/protocol/entity-fields";
 import type {
   WorldHandle,
   ChatMessage,
@@ -7,6 +8,7 @@ import type {
   WhoResult,
   GroupEvent,
 } from "wow/client";
+import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
 
@@ -28,6 +30,7 @@ export type Command =
   | { type: "accept" }
   | { type: "decline" }
   | { type: "quit" }
+  | { type: "tuicraft"; subcommand: string; value: string }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -87,6 +90,14 @@ export function parseCommand(input: string): Command {
       return { type: "decline" };
     case "/quit":
       return { type: "quit" };
+    case "/tuicraft": {
+      const parts = rest.split(" ");
+      return {
+        type: "tuicraft",
+        subcommand: parts[0] ?? "",
+        value: parts[1] ?? "",
+      };
+    }
     case "/friends":
     case "/f":
       return { type: "unimplemented", feature: "Friends list" };
@@ -278,10 +289,78 @@ export function formatGroupEvent(event: GroupEvent): string | undefined {
   }
 }
 
+export function formatEntityEvent(event: EntityEvent): string | undefined {
+  switch (event.type) {
+    case "appear": {
+      const e = event.entity;
+      if (
+        e.objectType === ObjectType.UNIT ||
+        e.objectType === ObjectType.PLAYER
+      ) {
+        const unit = e as UnitEntity;
+        const kind = e.objectType === ObjectType.PLAYER ? "Player" : "NPC";
+        const name = e.name ?? "Unknown";
+        const levelStr = unit.level > 0 ? `, level ${unit.level}` : "";
+        return `[world] ${name} appeared (${kind}${levelStr})`;
+      }
+      if (e.objectType === ObjectType.GAMEOBJECT) {
+        return `[world] ${e.name ?? "Unknown"} appeared (GameObject)`;
+      }
+      return `[world] Entity appeared`;
+    }
+    case "disappear": {
+      const name = event.name ?? "Unknown entity";
+      return `[world] ${name} left range`;
+    }
+    case "update":
+      return undefined;
+  }
+}
+
+export function formatEntityEventObj(
+  event: EntityEvent,
+): Record<string, unknown> | undefined {
+  switch (event.type) {
+    case "appear": {
+      const e = event.entity;
+      const obj: Record<string, unknown> = {
+        type: "ENTITY_APPEAR",
+        guid: `0x${e.guid.toString(16)}`,
+        objectType: e.objectType,
+        name: e.name,
+      };
+      if (
+        e.objectType === ObjectType.UNIT ||
+        e.objectType === ObjectType.PLAYER
+      ) {
+        const unit = e as UnitEntity;
+        obj["level"] = unit.level;
+        obj["health"] = unit.health;
+        obj["maxHealth"] = unit.maxHealth;
+      }
+      if (e.position) {
+        obj["x"] = e.position.x;
+        obj["y"] = e.position.y;
+        obj["z"] = e.position.z;
+      }
+      return obj;
+    }
+    case "disappear":
+      return {
+        type: "ENTITY_DISAPPEAR",
+        guid: `0x${event.guid.toString(16)}`,
+        name: event.name,
+      };
+    case "update":
+      return undefined;
+  }
+}
+
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;
   lastWhisperFrom: string | undefined;
+  showEntityEvents: boolean;
 };
 
 export async function executeCommand(
@@ -356,6 +435,21 @@ export async function executeCommand(
       break;
     case "quit":
       return true;
+    case "tuicraft":
+      if (cmd.subcommand === "entities") {
+        if (cmd.value === "on") {
+          state.showEntityEvents = true;
+          state.write("[system] Entity events enabled\n");
+        } else if (cmd.value === "off") {
+          state.showEntityEvents = false;
+          state.write("[system] Entity events disabled\n");
+        } else {
+          state.write("[system] Usage: /tuicraft entities on|off\n");
+        }
+      } else {
+        state.write(`[system] Unknown tuicraft command: ${cmd.subcommand}\n`);
+      }
+      break;
     case "unimplemented":
       state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
       break;
@@ -378,6 +472,7 @@ export function startTui(
     handle,
     write,
     lastWhisperFrom: undefined,
+    showEntityEvents: false,
   };
 
   return new Promise<void>((resolve) => {
@@ -390,6 +485,14 @@ export function startTui(
 
     handle.onGroupEvent((event) => {
       const line = formatGroupEvent(event);
+      if (!line) return;
+      write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
+      if (interactive) rl.prompt(true);
+    });
+
+    handle.onEntityEvent((event) => {
+      if (!state.showEntityEvents) return;
+      const line = formatEntityEvent(event);
       if (!line) return;
       write(interactive ? `\r\x1b[K${line}\n` : line + "\n");
       if (interactive) rl.prompt(true);
