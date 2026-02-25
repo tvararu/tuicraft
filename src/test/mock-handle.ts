@@ -5,14 +5,17 @@ import type {
   ChatMode,
   GroupEvent,
 } from "wow/client";
+import type { Entity, EntityEvent } from "wow/entity-store";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
   triggerGroupEvent(event: GroupEvent): void;
+  triggerEntityEvent(event: EntityEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
   let groupEventCb: ((event: GroupEvent) => void) | undefined;
+  let entityEventCb: ((event: EntityEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -48,11 +51,18 @@ export function createMockHandle(): WorldHandle & {
     onGroupEvent(cb) {
       groupEventCb = cb;
     },
+    onEntityEvent(cb) {
+      entityEventCb = cb;
+    },
+    getNearbyEntities: jest.fn((): Entity[] => []),
     triggerMessage(msg) {
       messageCb?.(msg);
     },
     triggerGroupEvent(event) {
       groupEventCb?.(event);
+    },
+    triggerEntityEvent(event) {
+      entityEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();

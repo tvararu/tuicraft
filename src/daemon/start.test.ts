@@ -64,6 +64,8 @@ function makeMockClient(): {
         acceptInvite: jest.fn(),
         declineInvite: jest.fn(),
         onGroupEvent: jest.fn(),
+        onEntityEvent: jest.fn(),
+        getNearbyEntities: jest.fn(() => []),
       }),
     ),
     mockHandleClose,

@@ -369,12 +369,6 @@ export const STUBS: StubEntry[] = [
   },
 
   {
-    opcode: GameOpcode.SMSG_UPDATE_OBJECT,
-    area: "world",
-    label: "World object update",
-    priority: "low",
-  },
-  {
     opcode: GameOpcode.SMSG_DESTROY_OBJECT,
     area: "world",
     label: "World object destroyed",

@@ -53,6 +53,20 @@ import {
   parsePartyMemberStats,
 } from "wow/protocol/group";
 import { registerStubs } from "wow/protocol/stubs";
+import { EntityStore, type Entity, type EntityEvent } from "wow/entity-store";
+import { parseUpdateObject } from "wow/protocol/update-object";
+import { ObjectType } from "wow/protocol/entity-fields";
+import {
+  extractObjectFields,
+  extractUnitFields,
+  extractGameObjectFields,
+} from "wow/protocol/extract-fields";
+import {
+  buildCreatureQuery,
+  parseCreatureQueryResponse,
+  buildGameObjectQuery,
+  parseGameObjectQueryResponse,
+} from "wow/protocol/entity-queries";
 
 export type ClientConfig = {
   host: string;
@@ -113,6 +127,7 @@ export type GroupEvent =
     };
 
 export type { WhoResult };
+export type { Entity, EntityEvent };
 
 export type ChatMode =
   | { type: "say" }
@@ -150,6 +165,8 @@ export type WorldHandle = {
   acceptInvite(): void;
   declineInvite(): void;
   onGroupEvent(cb: (event: GroupEvent) => void): void;
+  onEntityEvent(cb: (event: EntityEvent) => void): void;
+  getNearbyEntities(): Entity[];
 };
 
 type WorldConn = {
@@ -169,6 +186,10 @@ type WorldConn = {
   selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
   onGroupEvent?: (event: GroupEvent) => void;
+  entityStore: EntityStore;
+  creatureNameCache: Map<number, string>;
+  gameObjectNameCache: Map<number, string>;
+  onEntityEvent?: (event: EntityEvent) => void;
 };
 
 function handleChallenge(
@@ -442,12 +463,23 @@ function handleGmChatMessage(conn: WorldConn, r: PacketReader): void {
 
 function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseNameQueryResponse(r);
-  const pending = conn.pendingMessages.get(result.guidLow);
-  if (!pending) return;
 
   const name = result.found && result.name ? result.name : "";
-  if (result.found && result.name)
+  if (result.found && result.name) {
     conn.nameCache.set(result.guidLow, result.name);
+    for (const entity of conn.entityStore.all()) {
+      if (
+        entity.objectType === ObjectType.PLAYER &&
+        Number(entity.guid & 0xffffffffn) === result.guidLow &&
+        !entity.name
+      ) {
+        conn.entityStore.setName(entity.guid, result.name);
+      }
+    }
+  }
+
+  const pending = conn.pendingMessages.get(result.guidLow);
+  if (!pending) return;
   for (const raw of pending) deliverMessage(conn, raw, name);
   conn.pendingMessages.delete(result.guidLow);
 }
@@ -546,6 +578,142 @@ function handleGroupUninvite(conn: WorldConn): void {
 function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
   const { name } = parseGroupDecline(r);
   conn.onGroupEvent?.({ type: "invite_declined", name });
+}
+
+function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
+  const entries = parseUpdateObject(r);
+  for (const entry of entries) {
+    switch (entry.type) {
+      case "create": {
+        const objFields = extractObjectFields(entry.fields);
+        let extraFields: Record<string, unknown> = {};
+        if (
+          entry.objectType === ObjectType.UNIT ||
+          entry.objectType === ObjectType.PLAYER
+        ) {
+          extraFields = extractUnitFields(entry.fields);
+        } else if (entry.objectType === ObjectType.GAMEOBJECT) {
+          extraFields = extractGameObjectFields(entry.fields);
+        }
+        conn.entityStore.create(entry.guid, entry.objectType, {
+          ...objFields,
+          ...extraFields,
+        } as any);
+        if (entry.position) {
+          conn.entityStore.setPosition(entry.guid, entry.position);
+        }
+        queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
+        break;
+      }
+      case "values": {
+        const entity = conn.entityStore.get(entry.guid);
+        if (!entity) break;
+        const objFields = extractObjectFields(entry.fields);
+        let extraFields: Record<string, unknown> = {};
+        if (
+          entity.objectType === ObjectType.UNIT ||
+          entity.objectType === ObjectType.PLAYER
+        ) {
+          extraFields = extractUnitFields(entry.fields);
+        } else if (entity.objectType === ObjectType.GAMEOBJECT) {
+          extraFields = extractGameObjectFields(entry.fields);
+        }
+        const allChanged = [
+          ...(objFields._changed || []),
+          ...((extraFields as any)._changed || []),
+        ];
+        const merged: Record<string, unknown> = {};
+        for (const key of allChanged) {
+          if (key in extraFields) merged[key] = (extraFields as any)[key];
+          else if (key in objFields) merged[key] = (objFields as any)[key];
+        }
+        conn.entityStore.update(entry.guid, merged);
+        for (const [k, v] of entry.fields) {
+          const existing = conn.entityStore.get(entry.guid);
+          if (existing) existing.rawFields.set(k, v);
+        }
+        break;
+      }
+      case "movement": {
+        conn.entityStore.setPosition(entry.guid, entry.position);
+        break;
+      }
+      case "outOfRange": {
+        for (const guid of entry.guids) conn.entityStore.destroy(guid);
+        break;
+      }
+      case "nearObjects": {
+        break;
+      }
+    }
+  }
+}
+
+function queryEntityName(
+  conn: WorldConn,
+  guid: bigint,
+  objectType: number,
+  entry: number | undefined,
+): void {
+  if (entry === undefined) return;
+  if (objectType === ObjectType.PLAYER) {
+    const guidLow = Number(guid & 0xffffffffn);
+    if (conn.nameCache.has(guidLow)) {
+      conn.entityStore.setName(guid, conn.nameCache.get(guidLow)!);
+    }
+    if (!conn.nameCache.has(guidLow)) {
+      const w = new PacketWriter();
+      w.uint64LE(guid);
+      sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, w.finish());
+    }
+    return;
+  }
+  if (objectType === ObjectType.UNIT) {
+    if (conn.creatureNameCache.has(entry)) {
+      conn.entityStore.setName(guid, conn.creatureNameCache.get(entry)!);
+      return;
+    }
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_CREATURE_QUERY,
+      buildCreatureQuery(entry, guid),
+    );
+    return;
+  }
+  if (objectType === ObjectType.GAMEOBJECT) {
+    if (conn.gameObjectNameCache.has(entry)) {
+      conn.entityStore.setName(guid, conn.gameObjectNameCache.get(entry)!);
+      return;
+    }
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_GAMEOBJECT_QUERY,
+      buildGameObjectQuery(entry, guid),
+    );
+    return;
+  }
+}
+
+function handleCreatureQueryResponse(conn: WorldConn, r: PacketReader): void {
+  const result = parseCreatureQueryResponse(r);
+  if (!result.name) return;
+  conn.creatureNameCache.set(result.entry, result.name);
+  for (const entity of conn.entityStore.all()) {
+    if (entity.entry === result.entry && !entity.name) {
+      conn.entityStore.setName(entity.guid, result.name);
+    }
+  }
+}
+
+function handleGameObjectQueryResponse(conn: WorldConn, r: PacketReader): void {
+  const result = parseGameObjectQueryResponse(r);
+  if (!result.name) return;
+  conn.gameObjectNameCache.set(result.entry, result.name);
+  for (const entity of conn.entityStore.all()) {
+    if (entity.entry === result.entry && !entity.name) {
+      conn.entityStore.setName(entity.guid, result.name);
+    }
+  }
 }
 
 function handlePartyMemberStatsMsg(
@@ -654,7 +822,12 @@ export function worldSession(
       selfGuidLow: 0,
       selfGuidHigh: 0,
       partyMembers: new Map(),
+      entityStore: new EntityStore(),
+      creatureNameCache: new Map(),
+      gameObjectNameCache: new Map(),
     };
+    conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
+
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
     let closedResolve: () => void;
@@ -707,6 +880,15 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, (r) =>
       handlePartyMemberStatsMsg(conn, r, true),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_UPDATE_OBJECT, (r) =>
+      handleUpdateObject(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CREATURE_QUERY_RESPONSE, (r) =>
+      handleCreatureQueryResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GAMEOBJECT_QUERY_RESPONSE, (r) =>
+      handleGameObjectQueryResponse(conn, r),
     );
 
     registerStubs(conn.dispatch, (msg) => {
@@ -872,6 +1054,12 @@ export function worldSession(
         onGroupEvent(cb) {
           conn.onGroupEvent = cb;
         },
+        onEntityEvent(cb) {
+          conn.onEntityEvent = cb;
+        },
+        getNearbyEntities() {
+          return conn.entityStore.all();
+        },
       };
       resolve(handle);
     }
@@ -896,6 +1084,7 @@ export function worldSession(
         },
         close() {
           clearInterval(pingInterval);
+          conn.entityStore.clear();
           if (!done) reject(new Error("World connection closed"));
           closedResolve();
         },
