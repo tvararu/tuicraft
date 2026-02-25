@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "45bdca97143b",
+  "strategy": "manual-commit",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/protocol/movement-block.test.ts",
+    "src/wow/protocol/movement-block.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/45/bdca97143b/0/metadata.json",
+      "transcript": "/45/bdca97143b/0/full.jsonl",
+      "context": "/45/bdca97143b/0/context.md",
+      "content_hash": "/45/bdca97143b/0/content_hash.txt",
+      "prompt": "/45/bdca97143b/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 121,
+    "cache_creation_tokens": 216828,
+    "cache_read_tokens": 5017731,
+    "output_tokens": 4292,
+    "api_call_count": 67
+  }
+}

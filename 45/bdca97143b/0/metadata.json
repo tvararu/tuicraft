@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "45bdca97143b",
+  "session_id": "14138feb-bf4b-4209-96de-bd5941cf98ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-25T00:50:34.800971Z",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/protocol/movement-block.test.ts",
+    "src/wow/protocol/movement-block.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "ad30617e91f6",
+  "token_usage": {
+    "input_tokens": 121,
+    "cache_creation_tokens": 216828,
+    "cache_read_tokens": 5017731,
+    "output_tokens": 4292,
+    "api_call_count": 67
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-25T00:50:34.156497Z",
+    "agent_lines": 0,
+    "human_added": 628,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 628,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-deity-Code-tuicraft/14138feb-bf4b-4209-96de-bd5941cf98ff.jsonl"
+}
