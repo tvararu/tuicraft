@@ -1,4 +1,4 @@
-import { test, expect } from "bun:test";
+import { test, expect, describe } from "bun:test";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 test("PacketWriter writes and PacketReader reads uint8", () => {
@@ -138,4 +138,45 @@ test("PacketReader reads packed GUID with sparse bytes", () => {
   const { low, high } = r.packedGuid();
   expect(low).toBe(0xaa | (0xbb << 16));
   expect(high).toBe(0);
+});
+
+describe("PacketReader.uint64LE", () => {
+  test("reads 8-byte little-endian bigint", () => {
+    const buf = new Uint8Array([0x08, 0, 0, 0, 0, 0, 0, 0]);
+    const r = new PacketReader(buf);
+    expect(r.uint64LE()).toBe(8n);
+  });
+
+  test("reads large values", () => {
+    const buf = new Uint8Array([
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+    ]);
+    const r = new PacketReader(buf);
+    expect(r.uint64LE()).toBe(0x7fffffffffffffffn);
+  });
+
+  test("advances position by 8", () => {
+    const buf = new Uint8Array(16);
+    const r = new PacketReader(buf);
+    r.uint64LE();
+    expect(r.offset).toBe(8);
+  });
+});
+
+describe("PacketWriter.uint64LE", () => {
+  test("writes 8-byte little-endian bigint", () => {
+    const w = new PacketWriter();
+    w.uint64LE(42n);
+    const buf = w.finish();
+    expect(buf.byteLength).toBe(8);
+    const r = new PacketReader(buf);
+    expect(r.uint64LE()).toBe(42n);
+  });
+
+  test("roundtrips large values", () => {
+    const w = new PacketWriter();
+    w.uint64LE(0x7fffffffffffffffn);
+    const r = new PacketReader(w.finish());
+    expect(r.uint64LE()).toBe(0x7fffffffffffffffn);
+  });
 });
