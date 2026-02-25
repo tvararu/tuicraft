@@ -42,6 +42,12 @@ export class PacketReader {
     return v;
   }
 
+  uint64LE(): bigint {
+    const v = this.view.getBigUint64(this.pos, true);
+    this.pos += 8;
+    return v;
+  }
+
   floatLE(): number {
     const v = this.view.getFloat32(this.pos, true);
     this.pos += 4;
@@ -130,6 +136,12 @@ export class PacketWriter {
     this.grow(4);
     this.view.setUint32(this.pos, v, true);
     this.pos += 4;
+  }
+
+  uint64LE(v: bigint) {
+    this.grow(8);
+    this.view.setBigUint64(this.pos, v, true);
+    this.pos += 8;
   }
 
   floatLE(v: number) {
