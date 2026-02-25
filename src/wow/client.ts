@@ -1,4 +1,5 @@
 import type { Socket } from "bun";
+import { inflateSync } from "node:zlib";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { SRP, type SRPResult } from "wow/crypto/srp";
 import { Arc4 } from "wow/crypto/arc4";
@@ -649,25 +650,41 @@ function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
   }
 }
 
+function handleCompressedUpdateObject(conn: WorldConn, r: PacketReader): void {
+  const uncompressedSize = r.uint32LE();
+  const compressed = r.bytes(r.remaining);
+  const decompressed = inflateSync(compressed);
+  if (decompressed.length !== uncompressedSize) {
+    throw new Error(
+      `Compressed update size mismatch: expected ${uncompressedSize}, got ${decompressed.length}`,
+    );
+  }
+  handleUpdateObject(conn, new PacketReader(new Uint8Array(decompressed)));
+}
+
+function handleDestroyObject(conn: WorldConn, r: PacketReader): void {
+  const guid = r.uint64LE();
+  conn.entityStore.destroy(guid);
+}
+
 function queryEntityName(
   conn: WorldConn,
   guid: bigint,
   objectType: number,
   entry: number | undefined,
 ): void {
-  if (entry === undefined) return;
   if (objectType === ObjectType.PLAYER) {
     const guidLow = Number(guid & 0xffffffffn);
     if (conn.nameCache.has(guidLow)) {
       conn.entityStore.setName(guid, conn.nameCache.get(guidLow)!);
-    }
-    if (!conn.nameCache.has(guidLow)) {
+    } else {
       const w = new PacketWriter();
       w.uint64LE(guid);
       sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, w.finish());
     }
     return;
   }
+  if (entry === undefined) return;
   if (objectType === ObjectType.UNIT) {
     if (conn.creatureNameCache.has(entry)) {
       conn.entityStore.setName(guid, conn.creatureNameCache.get(entry)!);
@@ -883,6 +900,12 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_UPDATE_OBJECT, (r) =>
       handleUpdateObject(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, (r) =>
+      handleCompressedUpdateObject(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DESTROY_OBJECT, (r) =>
+      handleDestroyObject(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_CREATURE_QUERY_RESPONSE, (r) =>
       handleCreatureQueryResponse(conn, r),
