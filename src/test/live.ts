@@ -4,6 +4,7 @@ import {
   worldSession,
   type ChatMessage,
   type GroupEvent,
+  type EntityEvent,
 } from "wow/client";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
@@ -237,4 +238,67 @@ describe("daemon IPC", () => {
       await unlink(logFile).catch(() => {});
     }
   }, 60_000);
+});
+
+describe("entity tracking", () => {
+  test("character sees another character appear", async () => {
+    const auth1 = await authHandshake(config1);
+    const auth2 = await authHandshake(config2);
+
+    const handle1 = await worldSession(config1, auth1);
+    let handle2: Awaited<ReturnType<typeof worldSession>> | undefined;
+
+    try {
+      await Bun.sleep(2000);
+
+      const events: EntityEvent[] = [];
+      handle1.onEntityEvent((e) => events.push(e));
+
+      handle2 = await worldSession(config2, auth2);
+
+      await Bun.sleep(5000);
+
+      const namedEntity = events.find(
+        (e) =>
+          (e.type === "appear" && e.entity.name === config2.character) ||
+          (e.type === "update" &&
+            e.changed.includes("name") &&
+            e.entity.name === config2.character),
+      );
+      expect(namedEntity).toBeDefined();
+
+      const inStore = handle1
+        .getNearbyEntities()
+        .filter((e) => e.name === config2.character);
+      expect(inStore.length).toBe(1);
+    } finally {
+      handle2?.close();
+      handle1.close();
+      await Promise.all([handle2?.closed, handle1.closed]);
+    }
+  }, 30_000);
+
+  test("getNearbyEntities returns entities with positions", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+
+    try {
+      await Bun.sleep(3000);
+
+      const entities = handle1.getNearbyEntities();
+      expect(entities.length).toBeGreaterThan(0);
+
+      const withPosition = entities.filter((e) => e.position);
+      expect(withPosition.length).toBeGreaterThan(0);
+
+      for (const e of withPosition) {
+        expect(e.position!.x).not.toBeNaN();
+        expect(e.position!.y).not.toBeNaN();
+        expect(e.position!.z).not.toBeNaN();
+      }
+    } finally {
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 15_000);
 });
