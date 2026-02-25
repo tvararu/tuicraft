@@ -5,10 +5,19 @@ import {
   formatWhoResults,
   formatWhoResultsJson,
   formatGroupEvent,
+  formatEntityEvent,
+  formatEntityEventObj,
   parseCommand,
 } from "ui/tui";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
+import { ObjectType } from "wow/protocol/entity-fields";
+import type {
+  Entity,
+  UnitEntity,
+  GameObjectEntity,
+  EntityEvent,
+} from "wow/entity-store";
 
 export type EventEntry = { text: string | undefined; json: string };
 
@@ -38,6 +47,8 @@ export type IpcCommand =
   | { type: "leader"; target: string }
   | { type: "accept" }
   | { type: "decline" }
+  | { type: "nearby" }
+  | { type: "nearby_json" }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -126,6 +137,10 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "accept" };
     case "DECLINE":
       return { type: "decline" };
+    case "NEARBY":
+      return { type: "nearby" };
+    case "NEARBY_JSON":
+      return { type: "nearby_json" };
     case "FRIENDS":
       return { type: "unimplemented", feature: "Friends list" };
     case "IGNORE":
@@ -281,10 +296,100 @@ export async function dispatchCommand(
       handle.declineInvite();
       writeLines(socket, ["OK"]);
       return false;
+    case "nearby": {
+      const entities = handle.getNearbyEntities();
+      writeLines(socket, entities.map(formatNearbyLine));
+      return false;
+    }
+    case "nearby_json": {
+      const entities = handle.getNearbyEntities();
+      writeLines(
+        socket,
+        entities.map((e) => JSON.stringify(formatNearbyObj(e))),
+      );
+      return false;
+    }
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
   }
+}
+
+function objectTypeName(type: ObjectType): string {
+  switch (type) {
+    case ObjectType.UNIT:
+      return "NPC";
+    case ObjectType.PLAYER:
+      return "Player";
+    case ObjectType.GAMEOBJECT:
+      return "GameObject";
+    default:
+      return `type ${type}`;
+  }
+}
+
+function formatNearbyLine(entity: Entity): string {
+  if (
+    entity.objectType === ObjectType.UNIT ||
+    entity.objectType === ObjectType.PLAYER
+  ) {
+    const unit = entity as UnitEntity;
+    const name = entity.name ?? "Unknown";
+    const kind = objectTypeName(entity.objectType);
+    const level = unit.level > 0 ? `, level ${unit.level}` : "";
+    const hp = `HP ${unit.health}/${unit.maxHealth}`;
+    const pos = entity.position
+      ? ` at ${entity.position.x.toFixed(2)}, ${entity.position.y.toFixed(2)}, ${entity.position.z.toFixed(2)}`
+      : "";
+    return `${name} (${kind}${level}) ${hp}${pos}`;
+  }
+  if (entity.objectType === ObjectType.GAMEOBJECT) {
+    const name = entity.name ?? "Unknown";
+    const pos = entity.position
+      ? ` at ${entity.position.x.toFixed(2)}, ${entity.position.y.toFixed(2)}, ${entity.position.z.toFixed(2)}`
+      : "";
+    return `${name} (GameObject)${pos}`;
+  }
+  return `Entity 0x${entity.guid.toString(16)} (${objectTypeName(entity.objectType)})`;
+}
+
+function objectTypeString(type: ObjectType): string {
+  switch (type) {
+    case ObjectType.UNIT:
+      return "unit";
+    case ObjectType.PLAYER:
+      return "player";
+    case ObjectType.GAMEOBJECT:
+      return "gameobject";
+    default:
+      return "object";
+  }
+}
+
+function formatNearbyObj(entity: Entity): Record<string, unknown> {
+  const obj: Record<string, unknown> = {
+    guid: `0x${entity.guid.toString(16)}`,
+    type: objectTypeString(entity.objectType),
+    name: entity.name,
+  };
+  if (
+    entity.objectType === ObjectType.UNIT ||
+    entity.objectType === ObjectType.PLAYER
+  ) {
+    const unit = entity as UnitEntity;
+    obj["level"] = unit.level;
+    obj["health"] = unit.health;
+    obj["maxHealth"] = unit.maxHealth;
+  }
+  if (entity.objectType === ObjectType.GAMEOBJECT) {
+    obj["gameObjectType"] = (entity as GameObjectEntity).gameObjectType;
+  }
+  if (entity.position) {
+    obj["x"] = entity.position.x;
+    obj["y"] = entity.position.y;
+    obj["z"] = entity.position.z;
+  }
+  return obj;
 }
 
 function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
@@ -346,4 +451,15 @@ export function onChatMessage(
   const obj = formatMessageObj(msg);
   events.push({ text: formatMessage(msg), json: JSON.stringify(obj) });
   log.append(obj).catch(() => {});
+}
+
+export function onEntityEvent(
+  event: EntityEvent,
+  events: RingBuffer<EventEntry>,
+): void {
+  const text = formatEntityEvent(event);
+  const obj = formatEntityEventObj(event);
+  if (obj) {
+    events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
+  }
 }
