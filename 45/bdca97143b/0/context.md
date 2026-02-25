@@ -170,3 +170,32 @@ Execute plan by dispatching fresh subagent per task, with two-stage review after
 digraph when_to_use {
     "Have implementat...
 
+### Prompt 31
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the entire conversation:
+
+1. **Opening**: User asks "What's the next big thing to work on?" - I explored the project's recent history, plans, and design docs to understand the project state.
+
+2. **User expresses interest in v0.4**: "I think I'd like something related to v0.4, actually parsing nearby NPCs ...
+
+### Prompt 32
+
+Base directory for this skill: /Users/deity/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/finishing-a-development-branch
+
+# Finishing a Development Branch
+
+## Overview
+
+Guide completion of development work by presenting clear options and handling chosen workflow.
+
+**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+## The Process
+
+### Ste...
+
