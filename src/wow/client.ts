@@ -664,6 +664,7 @@ function handleCompressedUpdateObject(conn: WorldConn, r: PacketReader): void {
 
 function handleDestroyObject(conn: WorldConn, r: PacketReader): void {
   const guid = r.uint64LE();
+  r.skip(1);
   conn.entityStore.destroy(guid);
 }
 
