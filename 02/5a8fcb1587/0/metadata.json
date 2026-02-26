@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "025a8fcb1587",
+  "session_id": "14138feb-bf4b-4209-96de-bd5941cf98ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-26T08:00:00.070684Z",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/ui/tui.test.ts",
+    "src/wow/client.test.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "1d7e5cbfd4ab",
+  "token_usage": {
+    "input_tokens": 2132,
+    "cache_creation_tokens": 1165698,
+    "cache_read_tokens": 46209106,
+    "output_tokens": 131679,
+    "api_call_count": 452
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-26T07:59:37.080347Z",
+    "agent_lines": 1009,
+    "human_added": 4,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1013,
+    "agent_percentage": 99.60513326752222
+  }
+}
