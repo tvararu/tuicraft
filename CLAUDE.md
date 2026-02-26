@@ -67,6 +67,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `unlink` to complete) — prefer the minimum needed in tests
 - `bun test` suppresses per-test lines when piped — use `mise test:slowest` or
   `--reporter=junit --reporter-outfile=<file>` for timing data
+- Bun counts implicit class constructors (from field initializers) and
+  `.catch(() => {})` callbacks as separate functions — use explicit
+  constructors and test rejection paths to reach 100% function coverage
 
 ## Mise Task Authoring
 
@@ -136,10 +139,16 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `_changed: string[]` — destructure it out on the create path, use it on the
   values path to filter which fields to pass to `entityStore.update()`
 
+## Documentation
+
+- When adding user-visible features, update all four: `src/cli/help.ts`,
+  `docs/manual.md`, `.claude/skills/tuicraft/SKILL.md`, and `README.md`
+
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
+- Keep the subject line to 50 characters or fewer (including prefix)
 - Capitalize the subject after the prefix: `feat: Add thing` not `feat: add thing`
 - Pick the right prefix — `feat:` is only for application features visible to
   end users. Tooling and infra are `chore:`, README changes are `docs:`, CI
