@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll, jest } from "bun:test";
+import { test, expect, describe, beforeAll, afterAll } from "bun:test";
 import {
   authHandshake,
   authWithRetry,
@@ -1161,28 +1161,28 @@ describe("world error paths", () => {
     }
   });
 
-  test("handler error in drainWorldPackets logs to stderr", async () => {
+  test("handler error in drainWorldPackets calls onPacketError", async () => {
     const ws = await startMockWorldServer();
-    const stderrSpy = jest
-      .spyOn(process.stderr, "write")
-      .mockImplementation(() => true);
     try {
       const handle = await worldSession(
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
 
+      const errors: { opcode: number; message: string }[] = [];
+      handle.onPacketError((opcode, err) => {
+        errors.push({ opcode, message: err.message });
+      });
+
       ws.inject(GameOpcode.SMSG_TIME_SYNC_REQ, new Uint8Array(0));
       await waitForEchoProbe(handle);
 
-      expect(stderrSpy).toHaveBeenCalled();
-      const output = String(stderrSpy.mock.calls[0]![0]);
-      expect(output).toContain("0x390");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0]!.opcode).toBe(GameOpcode.SMSG_TIME_SYNC_REQ);
 
       handle.close();
       await handle.closed;
     } finally {
-      stderrSpy.mockRestore();
       ws.stop();
     }
   });

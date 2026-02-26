@@ -54,6 +54,7 @@ export function createMockHandle(): WorldHandle & {
     onEntityEvent(cb) {
       entityEventCb = cb;
     },
+    onPacketError: jest.fn(),
     getNearbyEntities: jest.fn((): Entity[] => []),
     triggerMessage(msg) {
       messageCb?.(msg);

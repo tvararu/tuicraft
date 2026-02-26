@@ -167,6 +167,7 @@ export type WorldHandle = {
   declineInvite(): void;
   onGroupEvent(cb: (event: GroupEvent) => void): void;
   onEntityEvent(cb: (event: EntityEvent) => void): void;
+  onPacketError(cb: (opcode: number, err: Error) => void): void;
   getNearbyEntities(): Entity[];
 };
 
@@ -191,6 +192,7 @@ type WorldConn = {
   creatureNameCache: Map<number, string>;
   gameObjectNameCache: Map<number, string>;
   onEntityEvent?: (event: EntityEvent) => void;
+  onPacketError?: (opcode: number, err: Error) => void;
 };
 
 function handleChallenge(
@@ -400,9 +402,7 @@ function drainWorldPackets(conn: WorldConn): void {
       conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
     } catch (err) {
       if (err instanceof Error) {
-        process.stderr.write(
-          `opcode 0x${opcode.toString(16)} size=${bodySize}: ${err.message}\n`,
-        );
+        conn.onPacketError?.(opcode, err);
       }
     }
   }
@@ -1093,6 +1093,9 @@ export function worldSession(
         },
         onEntityEvent(cb) {
           conn.onEntityEvent = cb;
+        },
+        onPacketError(cb) {
+          conn.onPacketError = cb;
         },
         getNearbyEntities() {
           return conn.entityStore.all();
