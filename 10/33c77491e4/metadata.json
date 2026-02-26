@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "1033c77491e4",
+  "strategy": "manual-commit",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/server.ts",
+    "src/wow/client.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/10/33c77491e4/0/metadata.json",
+      "transcript": "/10/33c77491e4/0/full.jsonl",
+      "context": "/10/33c77491e4/0/context.md",
+      "content_hash": "/10/33c77491e4/0/content_hash.txt",
+      "prompt": "/10/33c77491e4/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1982,
+    "cache_creation_tokens": 977516,
+    "cache_read_tokens": 33273807,
+    "output_tokens": 89773,
+    "api_call_count": 333
+  }
+}
