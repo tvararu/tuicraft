@@ -35,6 +35,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Testing
 
+- Always trend towards 100% test coverage — every new function, branch, and
+  edge case should have a corresponding test
 - **Always run `mise test:live` yourself after protocol or
   daemon changes.** The live server is always available. Do not ask the user to
   run it — run it. If it fails for infrastructure reasons (server down, env vars
@@ -122,6 +124,17 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `src/daemon/start.test.ts` — update both when adding WorldHandle methods
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
+- Clear event callbacks before socket teardown — `entityStore.clear()` in the
+  socket close handler fires disappear for every entity, so `onEntityEvent`
+  must be unset first
+- All event handlers (chat, group, entity) must both push to the ring buffer
+  and call `log.append()` — follow existing handlers when adding new event types
+
+## Entity Fields
+
+- `extractObjectFields` / `extractUnitFields` / `extractGameObjectFields` return
+  `_changed: string[]` — destructure it out on the create path, use it on the
+  values path to filter which fields to pass to `entityStore.update()`
 
 ## Commits
 
