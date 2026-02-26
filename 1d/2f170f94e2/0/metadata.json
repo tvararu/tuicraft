@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "1d2f170f94e2",
+  "session_id": "14138feb-bf4b-4209-96de-bd5941cf98ff",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-26T05:24:29.464796Z",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 11,
+  "files_touched": [
+    "src/test/live.ts",
+    "src/wow/client.ts",
+    "src/wow/entity-store.test.ts",
+    "src/wow/entity-store.ts",
+    "src/wow/protocol/extract-fields.test.ts",
+    "src/wow/protocol/extract-fields.ts",
+    "src/wow/protocol/movement-block.test.ts",
+    "src/wow/protocol/movement-block.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "ca5794b352f4",
+  "token_usage": {
+    "input_tokens": 1837,
+    "cache_creation_tokens": 818293,
+    "cache_read_tokens": 20091260,
+    "output_tokens": 38208,
+    "api_call_count": 205
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-26T05:24:26.885852Z",
+    "agent_lines": 212,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 212,
+    "agent_percentage": 100
+  }
+}
