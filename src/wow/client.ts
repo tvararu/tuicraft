@@ -193,6 +193,7 @@ type WorldConn = {
   gameObjectNameCache: Map<number, string>;
   onEntityEvent?: (event: EntityEvent) => void;
   onPacketError?: (opcode: number, err: Error) => void;
+  pendingNameQueries: Set<string>;
 };
 
 function handleChallenge(
@@ -466,6 +467,7 @@ function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseNameQueryResponse(r);
 
   const name = result.found && result.name ? result.name : "";
+  conn.pendingNameQueries.delete(`player:${result.guidLow}`);
   if (result.found && result.name) {
     conn.nameCache.set(result.guidLow, result.name);
     for (const entity of conn.entityStore.all()) {
@@ -586,15 +588,21 @@ function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
   for (const entry of entries) {
     switch (entry.type) {
       case "create": {
-        const objFields = extractObjectFields(entry.fields);
+        const { _changed: _co, ...objFields } = extractObjectFields(
+          entry.fields,
+        );
         let extraFields: Record<string, unknown> = {};
         if (
           entry.objectType === ObjectType.UNIT ||
           entry.objectType === ObjectType.PLAYER
         ) {
-          extraFields = extractUnitFields(entry.fields);
+          const { _changed: _cu, ...rest } = extractUnitFields(entry.fields);
+          extraFields = rest;
         } else if (entry.objectType === ObjectType.GAMEOBJECT) {
-          extraFields = extractGameObjectFields(entry.fields);
+          const { _changed: _cg, ...rest } = extractGameObjectFields(
+            entry.fields,
+          );
+          extraFields = rest;
         }
         const cachedName = lookupCachedName(
           conn,
@@ -606,10 +614,9 @@ function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           ...objFields,
           ...extraFields,
           ...(cachedName ? { name: cachedName } : {}),
+          ...(entry.position ? { position: entry.position } : {}),
+          rawFields: new Map(entry.fields),
         } as any);
-        if (entry.position) {
-          conn.entityStore.setPosition(entry.guid, entry.position);
-        }
         if (!cachedName) {
           queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
         }
@@ -701,12 +708,19 @@ function queryEntityName(
   entry: number | undefined,
 ): void {
   if (objectType === ObjectType.PLAYER) {
+    const guidLow = Number(guid & 0xffffffffn);
+    const key = `player:${guidLow}`;
+    if (conn.pendingNameQueries.has(key)) return;
+    conn.pendingNameQueries.add(key);
     const w = new PacketWriter();
     w.uint64LE(guid);
     sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, w.finish());
     return;
   }
   if (entry === undefined) return;
+  const key = `${objectType}:${entry}`;
+  if (conn.pendingNameQueries.has(key)) return;
+  conn.pendingNameQueries.add(key);
   if (objectType === ObjectType.UNIT) {
     sendPacket(
       conn,
@@ -727,6 +741,7 @@ function queryEntityName(
 
 function handleCreatureQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseCreatureQueryResponse(r);
+  conn.pendingNameQueries.delete(`${ObjectType.UNIT}:${result.entry}`);
   if (!result.name) return;
   conn.creatureNameCache.set(result.entry, result.name);
   for (const entity of conn.entityStore.all()) {
@@ -738,11 +753,17 @@ function handleCreatureQueryResponse(conn: WorldConn, r: PacketReader): void {
 
 function handleGameObjectQueryResponse(conn: WorldConn, r: PacketReader): void {
   const result = parseGameObjectQueryResponse(r);
+  conn.pendingNameQueries.delete(`${ObjectType.GAMEOBJECT}:${result.entry}`);
   if (!result.name) return;
   conn.gameObjectNameCache.set(result.entry, result.name);
   for (const entity of conn.entityStore.all()) {
-    if (entity.entry === result.entry && !entity.name) {
-      conn.entityStore.setName(entity.guid, result.name);
+    if (entity.entry === result.entry) {
+      if (!entity.name) conn.entityStore.setName(entity.guid, result.name);
+      if (result.gameObjectType !== undefined) {
+        conn.entityStore.update(entity.guid, {
+          gameObjectType: result.gameObjectType,
+        });
+      }
     }
   }
 }
@@ -856,6 +877,7 @@ export function worldSession(
       entityStore: new EntityStore(),
       creatureNameCache: new Map(),
       gameObjectNameCache: new Map(),
+      pendingNameQueries: new Set(),
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
 

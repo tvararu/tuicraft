@@ -1206,7 +1206,9 @@ describe("onEntityEvent", () => {
       maxPower: [0, 0, 0, 0, 0, 0, 0],
     };
 
-    onEntityEvent({ type: "appear", entity }, events);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+    onEntityEvent({ type: "appear", entity }, events, log);
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
@@ -1215,12 +1217,18 @@ describe("onEntityEvent", () => {
     const json = JSON.parse(drained[0]!.json);
     expect(json.type).toBe("ENTITY_APPEAR");
     expect(json.name).toBe("Test NPC");
+    expect(append).toHaveBeenCalledTimes(1);
   });
 
   test("pushes disappear event to ring buffer", () => {
     const events = new RingBuffer<EventEntry>(10);
-
-    onEntityEvent({ type: "disappear", guid: 1n, name: "Gone NPC" }, events);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+    onEntityEvent(
+      { type: "disappear", guid: 1n, name: "Gone NPC" },
+      events,
+      log,
+    );
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
@@ -1255,9 +1263,12 @@ describe("onEntityEvent", () => {
       maxPower: [0, 0, 0, 0, 0, 0, 0],
     };
 
-    onEntityEvent({ type: "update", entity, changed: ["health"] }, events);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+    onEntityEvent({ type: "update", entity, changed: ["health"] }, events, log);
 
     expect(events.drain()).toHaveLength(0);
+    expect(append).not.toHaveBeenCalled();
   });
 });
 
