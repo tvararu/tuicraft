@@ -276,4 +276,28 @@ describe("parseUpdateObject", () => {
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(0);
   });
+
+  test("malformed entry returns partial results", () => {
+    const w = new PacketWriter();
+    w.uint32LE(3);
+
+    w.uint8(0);
+    writePackedGuid(w, 1n);
+    writeUpdateMask(w, new Map([[3, 42]]));
+
+    w.uint8(0);
+    writePackedGuid(w, 2n);
+    writeUpdateMask(w, new Map([[3, 99]]));
+
+    w.uint8(3);
+    writePackedGuid(w, 3n);
+    w.uint8(4);
+    w.uint8(0xff);
+
+    const r = new PacketReader(w.finish());
+    const entries = parseUpdateObject(r);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.type).toBe("values");
+    expect(entries[1]!.type).toBe("values");
+  });
 });

@@ -65,6 +65,7 @@ function makeMockClient(): {
         declineInvite: jest.fn(),
         onGroupEvent: jest.fn(),
         onEntityEvent: jest.fn(),
+        onPacketError: jest.fn(),
         getNearbyEntities: jest.fn(() => []),
       }),
     ),
