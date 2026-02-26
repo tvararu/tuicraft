@@ -1287,6 +1287,19 @@ describe("formatEntityEvent", () => {
     expect(result).toBe("[world] Innkeeper Palla appeared (NPC, level 55)");
   });
 
+  test("suppresses appear without name", () => {
+    const result = formatEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 2n,
+        objectType: ObjectType.UNIT,
+        name: undefined,
+        level: 1,
+      } as any,
+    });
+    expect(result).toBeUndefined();
+  });
+
   test("formats player appear", () => {
     const result = formatEntityEvent({
       type: "appear",
@@ -1353,12 +1366,53 @@ describe("formatEntityEvent", () => {
     expect(result).toBe("[world] Unknown entity left range");
   });
 
-  test("update returns undefined", () => {
+  test("update returns undefined for non-name changes", () => {
     const result = formatEntityEvent({
       type: "update",
       entity: { guid: 1n } as any,
       changed: ["health"],
     });
     expect(result).toBeUndefined();
+  });
+
+  test("update with name change formats appear-like message for NPC", () => {
+    const result = formatEntityEvent({
+      type: "update",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Springpaw Cub",
+        level: 1,
+      } as any,
+      changed: ["name"],
+    });
+    expect(result).toBe("[world] Springpaw Cub appeared (NPC, level 1)");
+  });
+
+  test("update with name change formats appear-like message for player", () => {
+    const result = formatEntityEvent({
+      type: "update",
+      entity: {
+        guid: 2n,
+        objectType: ObjectType.PLAYER,
+        name: "Xia",
+        level: 80,
+      } as any,
+      changed: ["name"],
+    });
+    expect(result).toBe("[world] Xia appeared (Player, level 80)");
+  });
+
+  test("update with name change formats appear-like message for game object", () => {
+    const result = formatEntityEvent({
+      type: "update",
+      entity: {
+        guid: 3n,
+        objectType: ObjectType.GAMEOBJECT,
+        name: "Mailbox",
+      } as any,
+      changed: ["name"],
+    });
+    expect(result).toBe("[world] Mailbox appeared (GameObject)");
   });
 });

@@ -293,27 +293,30 @@ export function formatEntityEvent(event: EntityEvent): string | undefined {
   switch (event.type) {
     case "appear": {
       const e = event.entity;
+      if (!e.name) return undefined;
       if (
         e.objectType === ObjectType.UNIT ||
         e.objectType === ObjectType.PLAYER
       ) {
         const unit = e as UnitEntity;
         const kind = e.objectType === ObjectType.PLAYER ? "Player" : "NPC";
-        const name = e.name ?? "Unknown";
         const levelStr = unit.level > 0 ? `, level ${unit.level}` : "";
-        return `[world] ${name} appeared (${kind}${levelStr})`;
+        return `[world] ${e.name} appeared (${kind}${levelStr})`;
       }
       if (e.objectType === ObjectType.GAMEOBJECT) {
-        return `[world] ${e.name ?? "Unknown"} appeared (GameObject)`;
+        return `[world] ${e.name} appeared (GameObject)`;
       }
-      return `[world] Entity appeared`;
+      return undefined;
     }
     case "disappear": {
       const name = event.name ?? "Unknown entity";
       return `[world] ${name} left range`;
     }
-    case "update":
-      return undefined;
+    case "update": {
+      if (!event.changed.includes("name") || !event.entity.name)
+        return undefined;
+      return formatEntityEvent({ type: "appear", entity: event.entity });
+    }
   }
 }
 
