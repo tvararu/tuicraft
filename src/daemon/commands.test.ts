@@ -14,7 +14,11 @@ import { sendToSocket } from "cli/ipc";
 import { RingBuffer } from "lib/ring-buffer";
 import { ChatType } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
-import type { UnitEntity, GameObjectEntity } from "wow/entity-store";
+import type {
+  UnitEntity,
+  GameObjectEntity,
+  BaseEntity,
+} from "wow/entity-store";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 
@@ -916,6 +920,145 @@ describe("dispatchCommand", () => {
     await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
 
     expect(socket.written()).toBe("\n");
+  });
+
+  test("nearby formats player entity", async () => {
+    const handle = createMockHandle();
+    const testPlayer: UnitEntity = {
+      guid: 10n,
+      objectType: ObjectType.PLAYER,
+      name: "Arthas",
+      level: 55,
+      health: 3000,
+      maxHealth: 4000,
+      entry: 0,
+      scale: 1,
+      position: { mapId: 0, x: 10.0, y: 20.0, z: 30.0, orientation: 0 },
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testPlayer,
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+
+    const output = socket.written();
+    expect(output).toContain(
+      "Arthas (Player, level 55) HP 3000/4000 at 10.00, 20.00, 30.00",
+    );
+  });
+
+  test("nearby formats unknown entity type", async () => {
+    const handle = createMockHandle();
+    const testCorpse: BaseEntity = {
+      guid: 0xabn,
+      objectType: ObjectType.CORPSE,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      name: undefined,
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testCorpse,
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+
+    const output = socket.written();
+    expect(output).toContain("Entity 0xab (type 7)");
+  });
+
+  test("nearby_json formats player and gameobject types", async () => {
+    const handle = createMockHandle();
+    const testPlayer: UnitEntity = {
+      guid: 1n,
+      objectType: ObjectType.PLAYER,
+      name: "Jaina",
+      level: 70,
+      health: 8000,
+      maxHealth: 8000,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const testGo: GameObjectEntity = {
+      guid: 2n,
+      objectType: ObjectType.GAMEOBJECT,
+      name: "Chest",
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      displayId: 0,
+      flags: 0,
+      gameObjectType: 3,
+      bytes1: 0,
+    };
+    const testCorpse: BaseEntity = {
+      guid: 3n,
+      objectType: ObjectType.CORPSE,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      name: undefined,
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testPlayer,
+      testGo,
+      testCorpse,
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const lines = socket.written().trim().split("\n").filter(Boolean);
+    expect(lines).toHaveLength(3);
+    const player = JSON.parse(lines[0]!);
+    const go = JSON.parse(lines[1]!);
+    const corpse = JSON.parse(lines[2]!);
+    expect(player.type).toBe("player");
+    expect(player.level).toBe(70);
+    expect(player.health).toBe(8000);
+    expect(go.type).toBe("gameobject");
+    expect(go.gameObjectType).toBe(3);
+    expect(corpse.type).toBe("object");
   });
 
   test("unimplemented writes UNIMPLEMENTED response", async () => {

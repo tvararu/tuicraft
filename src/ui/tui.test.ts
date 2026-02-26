@@ -6,6 +6,7 @@ import {
   formatMessageJson,
   formatGroupEvent,
   formatEntityEvent,
+  formatEntityEventObj,
   formatPrompt,
   startTui,
 } from "ui/tui";
@@ -1132,6 +1133,24 @@ describe("tuicraft command", () => {
     await done;
   });
 
+  test("entities with invalid value shows usage", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/tuicraft entities toggle");
+    await flush();
+
+    expect(output.join("")).toContain("Usage: /tuicraft entities on|off");
+
+    input.end();
+    await done;
+  });
+
   test("entities off disables display", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
@@ -1414,5 +1433,193 @@ describe("formatEntityEvent", () => {
       changed: ["name"],
     });
     expect(result).toBe("[world] Mailbox appeared (GameObject)");
+  });
+
+  test("appear for CORPSE returns undefined", () => {
+    const result = formatEntityEvent({
+      type: "appear",
+      entity: {
+        guid: 10n,
+        objectType: ObjectType.CORPSE,
+        name: "Some Corpse",
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+      },
+    });
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("formatEntityEventObj", () => {
+  test("appear for UNIT with position", () => {
+    const result = formatEntityEventObj({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Innkeeper Palla",
+        level: 55,
+        entry: 0,
+        scale: 1,
+        position: { mapId: 0, x: 100.5, y: 200.5, z: 50.0, orientation: 0 },
+        rawFields: new Map(),
+        health: 4200,
+        maxHealth: 5000,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+    expect(result).toEqual({
+      type: "ENTITY_APPEAR",
+      guid: "0x1",
+      objectType: ObjectType.UNIT,
+      name: "Innkeeper Palla",
+      level: 55,
+      health: 4200,
+      maxHealth: 5000,
+      x: 100.5,
+      y: 200.5,
+      z: 50.0,
+    });
+  });
+
+  test("appear for UNIT without position", () => {
+    const result = formatEntityEventObj({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.UNIT,
+        name: "Guard",
+        level: 75,
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        health: 100,
+        maxHealth: 100,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+    expect(result).toEqual({
+      type: "ENTITY_APPEAR",
+      guid: "0x1",
+      objectType: ObjectType.UNIT,
+      name: "Guard",
+      level: 75,
+      health: 100,
+      maxHealth: 100,
+    });
+    expect(result).not.toHaveProperty("x");
+    expect(result).not.toHaveProperty("y");
+    expect(result).not.toHaveProperty("z");
+  });
+
+  test("appear for PLAYER with position", () => {
+    const result = formatEntityEventObj({
+      type: "appear",
+      entity: {
+        guid: 5n,
+        objectType: ObjectType.PLAYER,
+        name: "Thrall",
+        level: 80,
+        entry: 0,
+        scale: 1,
+        position: { mapId: 0, x: 1, y: 2, z: 3, orientation: 0 },
+        rawFields: new Map(),
+        health: 9000,
+        maxHealth: 9000,
+        factionTemplate: 0,
+        displayId: 0,
+        npcFlags: 0,
+        unitFlags: 0,
+        target: 0n,
+        race: 0,
+        class_: 0,
+        gender: 0,
+        power: [],
+        maxPower: [],
+      },
+    });
+    expect(result).toEqual({
+      type: "ENTITY_APPEAR",
+      guid: "0x5",
+      objectType: ObjectType.PLAYER,
+      name: "Thrall",
+      level: 80,
+      health: 9000,
+      maxHealth: 9000,
+      x: 1,
+      y: 2,
+      z: 3,
+    });
+  });
+
+  test("appear for GAMEOBJECT", () => {
+    const result = formatEntityEventObj({
+      type: "appear",
+      entity: {
+        guid: 1n,
+        objectType: ObjectType.GAMEOBJECT,
+        name: "Mailbox",
+        entry: 0,
+        scale: 1,
+        position: undefined,
+        rawFields: new Map(),
+        displayId: 0,
+        flags: 0,
+        gameObjectType: 19,
+        bytes1: 0,
+      },
+    });
+    expect(result).toEqual({
+      type: "ENTITY_APPEAR",
+      guid: "0x1",
+      objectType: ObjectType.GAMEOBJECT,
+      name: "Mailbox",
+    });
+    expect(result).not.toHaveProperty("level");
+    expect(result).not.toHaveProperty("health");
+    expect(result).not.toHaveProperty("maxHealth");
+  });
+
+  test("disappear", () => {
+    const result = formatEntityEventObj({
+      type: "disappear",
+      guid: 1n,
+      name: "Silvermoon Guardian",
+    });
+    expect(result).toEqual({
+      type: "ENTITY_DISAPPEAR",
+      guid: "0x1",
+      name: "Silvermoon Guardian",
+    });
+  });
+
+  test("update returns undefined", () => {
+    const result = formatEntityEventObj({
+      type: "update",
+      entity: { guid: 1n, objectType: ObjectType.UNIT } as any,
+      changed: ["health"],
+    });
+    expect(result).toBeUndefined();
   });
 });

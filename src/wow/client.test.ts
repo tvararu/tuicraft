@@ -1,4 +1,5 @@
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
+import { deflateSync } from "node:zlib";
 import {
   authHandshake,
   authWithRetry,
@@ -22,6 +23,13 @@ import {
   GroupUpdateFlag,
 } from "wow/protocol/opcodes";
 import { bigIntToLeBytes } from "wow/crypto/srp";
+import type { EntityEvent } from "wow/entity-store";
+import {
+  UpdateFlag,
+  OBJECT_FIELDS,
+  UNIT_FIELDS,
+  GAMEOBJECT_FIELDS,
+} from "wow/protocol/entity-fields";
 import {
   FIXTURE_ACCOUNT,
   FIXTURE_PASSWORD,
@@ -1422,5 +1430,656 @@ describe("world error paths", () => {
     } finally {
       ws.stop();
     }
+  });
+
+  describe("entity handling", () => {
+    function writePackedGuid(w: PacketWriter, guid: bigint) {
+      const low = Number(guid & 0xffffffffn);
+      const high = Number((guid >> 32n) & 0xffffffffn);
+      let mask = 0;
+      const bytes: number[] = [];
+      for (let i = 0; i < 4; i++) {
+        const b = (low >> (i * 8)) & 0xff;
+        if (b !== 0) {
+          mask |= 1 << i;
+          bytes.push(b);
+        }
+      }
+      for (let i = 0; i < 4; i++) {
+        const b = (high >> (i * 8)) & 0xff;
+        if (b !== 0) {
+          mask |= 1 << (i + 4);
+          bytes.push(b);
+        }
+      }
+      w.uint8(mask);
+      for (const b of bytes) w.uint8(b);
+    }
+
+    function writeLivingMovementBlock(
+      w: PacketWriter,
+      x: number,
+      y: number,
+      z: number,
+      orientation: number,
+    ) {
+      w.uint16LE(UpdateFlag.LIVING);
+      w.uint32LE(0);
+      w.uint16LE(0);
+      w.uint32LE(0);
+      w.floatLE(x);
+      w.floatLE(y);
+      w.floatLE(z);
+      w.floatLE(orientation);
+      w.floatLE(0);
+      for (let i = 0; i < 9; i++) w.floatLE(0);
+    }
+
+    function writeHasPositionMovementBlock(
+      w: PacketWriter,
+      x: number,
+      y: number,
+      z: number,
+      orientation: number,
+    ) {
+      w.uint16LE(UpdateFlag.HAS_POSITION);
+      w.floatLE(x);
+      w.floatLE(y);
+      w.floatLE(z);
+      w.floatLE(orientation);
+    }
+
+    function writeUpdateMask(w: PacketWriter, fields: Map<number, number>) {
+      let maxBit = 0;
+      for (const bit of fields.keys()) {
+        if (bit > maxBit) maxBit = bit;
+      }
+      const blockCount =
+        maxBit === 0 && fields.size === 0 ? 0 : Math.floor(maxBit / 32) + 1;
+      w.uint8(blockCount);
+      const masks = new Array<number>(blockCount).fill(0);
+      for (const bit of fields.keys()) {
+        masks[Math.floor(bit / 32)]! |= 1 << (bit % 32);
+      }
+      for (const m of masks) w.uint32LE(m);
+      for (let block = 0; block < blockCount; block++) {
+        for (let bit = 0; bit < 32; bit++) {
+          const index = block * 32 + bit;
+          if (fields.has(index)) {
+            w.uint32LE(fields.get(index)!);
+          }
+        }
+      }
+    }
+
+    function buildCreateUnitPacket(
+      guid: bigint,
+      entry: number,
+      health: number,
+      maxHealth: number,
+    ): Uint8Array {
+      const w = new PacketWriter();
+      w.uint32LE(1);
+      w.uint8(3);
+      writePackedGuid(w, guid);
+      w.uint8(3);
+      writeLivingMovementBlock(w, 100, 200, 300, 1.5);
+      const fields = new Map<number, number>([
+        [OBJECT_FIELDS.ENTRY.offset, entry],
+        [UNIT_FIELDS.HEALTH.offset, health],
+        [UNIT_FIELDS.MAXHEALTH.offset, maxHealth],
+      ]);
+      writeUpdateMask(w, fields);
+      return w.finish();
+    }
+
+    function waitForEntityEvents(
+      handle: Pick<WorldHandle, "onEntityEvent">,
+      count: number,
+    ): Promise<EntityEvent[]> {
+      const events: EntityEvent[] = [];
+      return new Promise((resolve) => {
+        handle.onEntityEvent((event) => {
+          events.push(event);
+          if (events.length === count) resolve(events);
+        });
+      });
+    }
+
+    test("entity create and creature query response", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const events = waitForEntityEvents(handle, 2);
+
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(100n, 1234, 500, 1000),
+        );
+
+        const creatureResp = new PacketWriter();
+        creatureResp.uint32LE(1234);
+        creatureResp.cString("Young Wolf");
+        ws.inject(
+          GameOpcode.SMSG_CREATURE_QUERY_RESPONSE,
+          creatureResp.finish(),
+        );
+
+        const [appear, nameUpdate] = await events;
+        expect(appear!.type).toBe("appear");
+        if (appear!.type === "appear") {
+          expect(appear!.entity.guid).toBe(100n);
+          expect(appear!.entity.objectType).toBe(3);
+        }
+        expect(nameUpdate!.type).toBe("update");
+        if (nameUpdate!.type === "update") {
+          expect(nameUpdate!.changed).toContain("name");
+          expect(nameUpdate!.entity.name).toBe("Young Wolf");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("entity values update", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appearReady = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(200n, 5000, 100, 200),
+        );
+        await appearReady;
+
+        const updateReady = waitForEntityEvents(handle, 1);
+
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.uint8(0);
+        writePackedGuid(w, 200n);
+        writeUpdateMask(w, new Map([[UNIT_FIELDS.HEALTH.offset, 50]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+
+        const [update] = await updateReady;
+        expect(update!.type).toBe("update");
+        if (update!.type === "update") {
+          expect(update!.changed).toContain("health");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("entity movement", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appearReady = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(300n, 6000, 100, 200),
+        );
+        await appearReady;
+
+        const moveReady = waitForEntityEvents(handle, 1);
+
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.uint8(1);
+        writePackedGuid(w, 300n);
+        writeHasPositionMovementBlock(w, 10.5, 20.5, 30.5, 1.25);
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+
+        const [move] = await moveReady;
+        expect(move!.type).toBe("update");
+        if (move!.type === "update") {
+          expect(move!.changed).toContain("position");
+          expect(move!.entity.position!.x).toBeCloseTo(10.5);
+          expect(move!.entity.position!.y).toBeCloseTo(20.5);
+          expect(move!.entity.position!.z).toBeCloseTo(30.5);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("out of range removes entities", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appear1 = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(400n, 7000, 100, 200),
+        );
+        await appear1;
+
+        const appear2 = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(401n, 7001, 100, 200),
+        );
+        await appear2;
+
+        expect(handle.getNearbyEntities().length).toBe(2);
+
+        const disappearReady = waitForEntityEvents(handle, 2);
+
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.uint8(4);
+        w.uint32LE(2);
+        writePackedGuid(w, 400n);
+        writePackedGuid(w, 401n);
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+
+        const events = await disappearReady;
+        expect(events[0]!.type).toBe("disappear");
+        expect(events[1]!.type).toBe("disappear");
+        expect(handle.getNearbyEntities().length).toBe(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_DESTROY_OBJECT removes entity", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appearReady = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(500n, 8000, 100, 200),
+        );
+        await appearReady;
+
+        const disappearReady = waitForEntityEvents(handle, 1);
+
+        const w = new PacketWriter();
+        w.uint64LE(500n);
+        w.uint8(0);
+        ws.inject(GameOpcode.SMSG_DESTROY_OBJECT, w.finish());
+
+        const [disappear] = await disappearReady;
+        expect(disappear!.type).toBe("disappear");
+        if (disappear!.type === "disappear") {
+          expect(disappear!.guid).toBe(500n);
+        }
+        expect(handle.getNearbyEntities().length).toBe(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("game object query response", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appearReady = waitForEntityEvents(handle, 1);
+
+        const createW = new PacketWriter();
+        createW.uint32LE(1);
+        createW.uint8(2);
+        writePackedGuid(createW, 600n);
+        createW.uint8(5);
+        writeHasPositionMovementBlock(createW, 50, 60, 70, 0.5);
+        writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 9999]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
+        await appearReady;
+
+        const updateReady = waitForEntityEvents(handle, 2);
+
+        const goResp = new PacketWriter();
+        goResp.uint32LE(9999);
+        goResp.uint32LE(19);
+        goResp.uint32LE(0);
+        goResp.cString("Mailbox");
+        ws.inject(GameOpcode.SMSG_GAMEOBJECT_QUERY_RESPONSE, goResp.finish());
+
+        const events = await updateReady;
+        const nameEvent = events.find(
+          (e) => e.type === "update" && e.changed.includes("name"),
+        );
+        const typeEvent = events.find(
+          (e) => e.type === "update" && e.changed.includes("gameObjectType"),
+        );
+        expect(nameEvent).toBeDefined();
+        expect(typeEvent).toBeDefined();
+        if (nameEvent?.type === "update") {
+          expect(nameEvent.entity.name).toBe("Mailbox");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("player name backfill via CMSG_NAME_QUERY", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const events = waitForEntityEvents(handle, 2);
+
+        const createW = new PacketWriter();
+        createW.uint32LE(1);
+        createW.uint8(3);
+        writePackedGuid(createW, 0x42n);
+        createW.uint8(4);
+        writeLivingMovementBlock(createW, 10, 20, 30, 0);
+        writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 0]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
+
+        const [appear, nameUpdate] = await events;
+        expect(appear!.type).toBe("appear");
+        expect(nameUpdate!.type).toBe("update");
+        if (nameUpdate!.type === "update") {
+          expect(nameUpdate!.entity.name).toBe(FIXTURE_CHARACTER);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("compressed update object", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appearReady = waitForEntityEvents(handle, 1);
+
+        const payload = buildCreateUnitPacket(700n, 3333, 250, 500);
+        const compressed = deflateSync(payload, { level: 6 });
+        const envelope = new PacketWriter();
+        envelope.uint32LE(payload.byteLength);
+        envelope.rawBytes(new Uint8Array(compressed));
+        ws.inject(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, envelope.finish());
+
+        const [appear] = await appearReady;
+        expect(appear!.type).toBe("appear");
+        if (appear!.type === "appear") {
+          expect(appear!.entity.guid).toBe(700n);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("cached creature name lookup", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const firstAppear = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(800n, 5555, 100, 200),
+        );
+        await firstAppear;
+
+        const nameReady = waitForEntityEvents(handle, 1);
+        const creatureResp = new PacketWriter();
+        creatureResp.uint32LE(5555);
+        creatureResp.cString("Stormwind Guard");
+        ws.inject(
+          GameOpcode.SMSG_CREATURE_QUERY_RESPONSE,
+          creatureResp.finish(),
+        );
+        await nameReady;
+
+        const secondAppear = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(801n, 5555, 100, 200),
+        );
+
+        const [appear] = await secondAppear;
+        expect(appear!.type).toBe("appear");
+        if (appear!.type === "appear") {
+          expect(appear!.entity.name).toBe("Stormwind Guard");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("gameobject values update", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appear = waitForEntityEvents(handle, 1);
+        const createW = new PacketWriter();
+        createW.uint32LE(1);
+        createW.uint8(2);
+        writePackedGuid(createW, 500n);
+        createW.uint8(5);
+        writeHasPositionMovementBlock(createW, 1, 2, 3, 0);
+        writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 100]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
+        await appear;
+
+        const update = waitForEntityEvents(handle, 1);
+        const valW = new PacketWriter();
+        valW.uint32LE(1);
+        valW.uint8(0);
+        writePackedGuid(valW, 500n);
+        writeUpdateMask(valW, new Map([[GAMEOBJECT_FIELDS.FLAGS.offset, 42]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, valW.finish());
+        const [evt] = await update;
+        expect(evt!.type).toBe("update");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("near objects entry is handled", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appear = waitForEntityEvents(handle, 1);
+        ws.inject(
+          GameOpcode.SMSG_UPDATE_OBJECT,
+          buildCreateUnitPacket(200n, 1, 100, 100),
+        );
+        await appear;
+
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.uint8(5);
+        w.uint32LE(1);
+        writePackedGuid(w, 200n);
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+
+        await Bun.sleep(50);
+        expect(handle.getNearbyEntities().length).toBeGreaterThanOrEqual(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("compressed size mismatch triggers packet error", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const gotError = new Promise<Error>((resolve) => {
+          handle.onPacketError((_op, err) => resolve(err));
+        });
+
+        const payload = buildCreateUnitPacket(300n, 1, 50, 50);
+        const compressed = deflateSync(payload);
+        const w = new PacketWriter();
+        w.uint32LE(payload.byteLength + 999);
+        w.rawBytes(new Uint8Array(compressed));
+        ws.inject(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, w.finish());
+
+        const err = await gotError;
+        expect(err.message).toContain("size mismatch");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("corpse entity create uses base entity", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const appear = waitForEntityEvents(handle, 1);
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.uint8(2);
+        writePackedGuid(w, 999n);
+        w.uint8(7);
+        writeHasPositionMovementBlock(w, 10, 20, 30, 0);
+        writeUpdateMask(w, new Map([[OBJECT_FIELDS.ENTRY.offset, 42]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+
+        const [evt] = await appear;
+        expect(evt!.type).toBe("appear");
+        if (evt!.type === "appear") {
+          expect(evt!.entity.objectType).toBe(7);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("cached game object name lookup", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const firstAppear = waitForEntityEvents(handle, 1);
+        const createW = new PacketWriter();
+        createW.uint32LE(1);
+        createW.uint8(2);
+        writePackedGuid(createW, 900n);
+        createW.uint8(5);
+        writeHasPositionMovementBlock(createW, 1, 2, 3, 0);
+        writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 7777]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
+        await firstAppear;
+
+        const nameReady = waitForEntityEvents(handle, 2);
+        const goResp = new PacketWriter();
+        goResp.uint32LE(7777);
+        goResp.uint32LE(19);
+        goResp.uint32LE(0);
+        goResp.cString("Forge");
+        ws.inject(GameOpcode.SMSG_GAMEOBJECT_QUERY_RESPONSE, goResp.finish());
+        await nameReady;
+
+        const secondAppear = waitForEntityEvents(handle, 1);
+        const create2 = new PacketWriter();
+        create2.uint32LE(1);
+        create2.uint8(2);
+        writePackedGuid(create2, 901n);
+        create2.uint8(5);
+        writeHasPositionMovementBlock(create2, 4, 5, 6, 0);
+        writeUpdateMask(create2, new Map([[OBJECT_FIELDS.ENTRY.offset, 7777]]));
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, create2.finish());
+
+        const [appear] = await secondAppear;
+        expect(appear!.type).toBe("appear");
+        if (appear!.type === "appear") {
+          expect(appear!.entity.name).toBe("Forge");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
   });
 });
