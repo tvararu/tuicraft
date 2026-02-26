@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "e47ebf0b06e5",
+  "strategy": "manual-commit",
+  "branch": "v0.4-entity-parsing",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e4/7ebf0b06e5/0/metadata.json",
+      "transcript": "/e4/7ebf0b06e5/0/full.jsonl",
+      "context": "/e4/7ebf0b06e5/0/context.md",
+      "content_hash": "/e4/7ebf0b06e5/0/content_hash.txt",
+      "prompt": "/e4/7ebf0b06e5/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2221,
+    "cache_creation_tokens": 1255248,
+    "cache_read_tokens": 51698309,
+    "output_tokens": 148927,
+    "api_call_count": 519
+  }
+}
