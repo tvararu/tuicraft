@@ -1932,37 +1932,13 @@ describe("world error paths", () => {
         const [evt] = await update;
         expect(evt!.type).toBe("update");
 
-        handle.close();
-        await handle.closed;
-      } finally {
-        ws.stop();
-      }
-    });
-
-    test("near objects entry is handled", async () => {
-      const ws = await startMockWorldServer();
-      try {
-        const handle = await worldSession(
-          { ...base, host: "127.0.0.1", port: ws.port },
-          fakeAuth(ws.port),
-        );
-
-        const appear = waitForEntityEvents(handle, 1);
-        ws.inject(
-          GameOpcode.SMSG_UPDATE_OBJECT,
-          buildCreateUnitPacket(200n, 1, 100, 100),
-        );
-        await appear;
-
-        const w = new PacketWriter();
-        w.uint32LE(1);
-        w.uint8(5);
-        w.uint32LE(1);
-        writePackedGuid(w, 200n);
-        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
-
-        await Bun.sleep(50);
-        expect(handle.getNearbyEntities().length).toBeGreaterThanOrEqual(0);
+        const nearW = new PacketWriter();
+        nearW.uint32LE(1);
+        nearW.uint8(5);
+        nearW.uint32LE(1);
+        writePackedGuid(nearW, 500n);
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, nearW.finish());
+        await Bun.sleep(1);
 
         handle.close();
         await handle.closed;

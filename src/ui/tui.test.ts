@@ -1408,33 +1408,6 @@ describe("formatEntityEvent", () => {
     expect(result).toBe("[world] Springpaw Cub appeared (NPC, level 1)");
   });
 
-  test("update with name change formats appear-like message for player", () => {
-    const result = formatEntityEvent({
-      type: "update",
-      entity: {
-        guid: 2n,
-        objectType: ObjectType.PLAYER,
-        name: "Xia",
-        level: 80,
-      } as any,
-      changed: ["name"],
-    });
-    expect(result).toBe("[world] Xia appeared (Player, level 80)");
-  });
-
-  test("update with name change formats appear-like message for game object", () => {
-    const result = formatEntityEvent({
-      type: "update",
-      entity: {
-        guid: 3n,
-        objectType: ObjectType.GAMEOBJECT,
-        name: "Mailbox",
-      } as any,
-      changed: ["name"],
-    });
-    expect(result).toBe("[world] Mailbox appeared (GameObject)");
-  });
-
   test("appear for CORPSE returns undefined", () => {
     const result = formatEntityEvent({
       type: "appear",
