@@ -1,3 +1,9 @@
+// Subset of 3.3.5a (build 12340) UpdateFields.
+// Full reference: azerothcore-wotlk UpdateFields.h
+// UNIT has ~142 field slots; only ~28 are defined here.
+// PLAYER fields (UNIT_END..0x0494) are not defined at all.
+// Add fields from UpdateFields.h as features need them.
+
 export const enum ObjectType {
   OBJECT = 0,
   ITEM = 1,
