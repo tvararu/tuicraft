@@ -321,8 +321,6 @@ function objectTypeName(type: ObjectType): string {
       return "NPC";
     case ObjectType.PLAYER:
       return "Player";
-    case ObjectType.GAMEOBJECT:
-      return "GameObject";
     default:
       return `type ${type}`;
   }
