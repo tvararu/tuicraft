@@ -111,26 +111,27 @@ idles out after 30 minutes of inactivity.
 
 When running in TUI mode, the following slash commands are available:
 
-| Command           | Action                      |
-| ----------------- | --------------------------- |
-| _text_            | Say (no slash needed)       |
-| `/s` _msg_        | Say (explicit)              |
-| `/y` _msg_        | Yell                        |
-| `/w` _name_ _msg_ | Whisper                     |
-| `/r` _msg_        | Reply to last whisper       |
-| `/g` _msg_        | Guild chat                  |
-| `/p` _msg_        | Party chat                  |
-| `/raid` _msg_     | Raid chat                   |
-| `/1` _msg_        | Channel 1 (usually General) |
-| `/2` _msg_        | Channel 2 (usually Trade)   |
-| `/who` _query_    | Who search                  |
-| `/invite` _name_  | Invite player to group      |
-| `/kick` _name_    | Remove player from group    |
-| `/leave`          | Leave the current group     |
-| `/leader` _name_  | Transfer group leadership   |
-| `/accept`         | Accept a group invitation   |
-| `/decline`        | Decline a group invitation  |
-| `/quit`           | Disconnect and exit         |
+| Command                      | Action                      |
+| ---------------------------- | --------------------------- |
+| _text_                       | Say (no slash needed)       |
+| `/s` _msg_                   | Say (explicit)              |
+| `/y` _msg_                   | Yell                        |
+| `/w` _name_ _msg_            | Whisper                     |
+| `/r` _msg_                   | Reply to last whisper       |
+| `/g` _msg_                   | Guild chat                  |
+| `/p` _msg_                   | Party chat                  |
+| `/raid` _msg_                | Raid chat                   |
+| `/1` _msg_                   | Channel 1 (usually General) |
+| `/2` _msg_                   | Channel 2 (usually Trade)   |
+| `/who` _query_               | Who search                  |
+| `/invite` _name_             | Invite player to group      |
+| `/kick` _name_               | Remove player from group    |
+| `/leave`                     | Leave the current group     |
+| `/leader` _name_             | Transfer group leadership   |
+| `/accept`                    | Accept a group invitation   |
+| `/decline`                   | Decline a group invitation  |
+| `/tuicraft entities on\|off` | Toggle entity event display |
+| `/quit`                      | Disconnect and exit         |
 
 ## Output Format
 
@@ -143,6 +144,8 @@ Human-readable (default):
 [who] 3 results: Xiara (80), Hemet (74), Sanu (14)
 [group] Voidtrix invites you to a group
 [group] Xia is now the group leader
+[world] Young Wolf appeared (NPC, level 6)
+[world] Young Wolf left range
 ```
 
 JSONL (`--json`):
