@@ -101,9 +101,14 @@ type EntityFields = Partial<
 >;
 
 export class EntityStore {
-  private entities = new Map<bigint, Entity>();
-  private byType = new Map<number, Set<bigint>>();
+  private entities: Map<bigint, Entity>;
+  private byType: Map<number, Set<bigint>>;
   private listener?: (event: EntityEvent) => void;
+
+  constructor() {
+    this.entities = new Map();
+    this.byType = new Map();
+  }
 
   onEvent(cb: (event: EntityEvent) => void): void {
     this.listener = cb;
