@@ -6,11 +6,18 @@ function uint32ToFloat(v: number): number {
   return new DataView(buf).getFloat32(0, true);
 }
 
-function readU64(raw: Map<number, number>, offset: number): bigint | undefined {
+function readU64(
+  raw: Map<number, number>,
+  offset: number,
+  fallback?: Map<number, number>,
+): bigint | undefined {
   const low = raw.get(offset);
   const high = raw.get(offset + 1);
   if (low === undefined && high === undefined) return undefined;
-  return (BigInt((high ?? 0) >>> 0) << 32n) | BigInt((low ?? 0) >>> 0);
+  return (
+    (BigInt((high ?? fallback?.get(offset + 1) ?? 0) >>> 0) << 32n) |
+    BigInt((low ?? fallback?.get(offset) ?? 0) >>> 0)
+  );
 }
 
 export type ObjectFieldsResult = {
@@ -22,6 +29,7 @@ export type ObjectFieldsResult = {
 
 export function extractObjectFields(
   raw: Map<number, number>,
+  fallback?: Map<number, number>,
 ): ObjectFieldsResult {
   const changed: string[] = [];
   const result: ObjectFieldsResult = { _changed: changed };
@@ -38,7 +46,7 @@ export function extractObjectFields(
     changed.push("scale");
   }
 
-  const guid = readU64(raw, OBJECT_FIELDS.GUID.offset);
+  const guid = readU64(raw, OBJECT_FIELDS.GUID.offset, fallback);
   if (guid !== undefined) {
     result.guid = guid;
     changed.push("guid");
@@ -102,7 +110,10 @@ const MAXPOWER_KEYS = [
   "MAXPOWER7",
 ] as const;
 
-export function extractUnitFields(raw: Map<number, number>): UnitFieldsResult {
+export function extractUnitFields(
+  raw: Map<number, number>,
+  fallback?: Map<number, number>,
+): UnitFieldsResult {
   const changed: string[] = [];
   const result: UnitFieldsResult = { _changed: changed };
 
@@ -122,7 +133,7 @@ export function extractUnitFields(raw: Map<number, number>): UnitFieldsResult {
     }
   }
 
-  const target = readU64(raw, UNIT_FIELDS.TARGET.offset);
+  const target = readU64(raw, UNIT_FIELDS.TARGET.offset, fallback);
   if (target !== undefined) {
     result.target = target;
     changed.push("target");

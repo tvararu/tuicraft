@@ -618,13 +618,13 @@ function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
       case "values": {
         const entity = conn.entityStore.get(entry.guid);
         if (!entity) break;
-        const objFields = extractObjectFields(entry.fields);
+        const objFields = extractObjectFields(entry.fields, entity.rawFields);
         let extraFields: Record<string, unknown> = {};
         if (
           entity.objectType === ObjectType.UNIT ||
           entity.objectType === ObjectType.PLAYER
         ) {
-          extraFields = extractUnitFields(entry.fields);
+          extraFields = extractUnitFields(entry.fields, entity.rawFields);
         } else if (entity.objectType === ObjectType.GAMEOBJECT) {
           extraFields = extractGameObjectFields(entry.fields);
         }

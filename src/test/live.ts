@@ -240,6 +240,35 @@ describe("daemon IPC", () => {
   }, 60_000);
 });
 
+function waitForEntityEvent<T extends EntityEvent["type"]>(
+  events: EntityEvent[],
+  type: T,
+  filter?: (e: Extract<EntityEvent, { type: T }>) => boolean,
+  timeoutMs = 10000,
+): Promise<Extract<EntityEvent, { type: T }>> {
+  const startIdx = events.length;
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      clearInterval(poll);
+      reject(new Error(`timeout waiting for entity ${type}`));
+    }, timeoutMs);
+    const poll = setInterval(() => {
+      for (let i = startIdx; i < events.length; i++) {
+        const e = events[i]!;
+        if (
+          e.type === type &&
+          (!filter || filter(e as Extract<EntityEvent, { type: T }>))
+        ) {
+          clearInterval(poll);
+          clearTimeout(deadline);
+          resolve(e as Extract<EntityEvent, { type: T }>);
+          return;
+        }
+      }
+    }, 50);
+  });
+}
+
 describe("entity tracking", () => {
   test("character sees another character appear", async () => {
     const auth1 = await authHandshake(config1);
@@ -256,15 +285,19 @@ describe("entity tracking", () => {
 
       handle2 = await worldSession(config2, auth2);
 
-      await Bun.sleep(5000);
+      const isChar2 = (
+        e: Extract<EntityEvent, { type: "appear" | "update" }>,
+      ) => e.entity.name === config2.character;
 
-      const namedEntity = events.find(
-        (e) =>
-          (e.type === "appear" && e.entity.name === config2.character) ||
-          (e.type === "update" &&
-            e.changed.includes("name") &&
-            e.entity.name === config2.character),
-      );
+      const namedEntity = await Promise.race([
+        waitForEntityEvent(events, "appear", isChar2),
+        waitForEntityEvent(
+          events,
+          "update",
+          (e) =>
+            e.changed.includes("name") && e.entity.name === config2.character,
+        ),
+      ]);
       expect(namedEntity).toBeDefined();
 
       const inStore = handle1
@@ -283,7 +316,14 @@ describe("entity tracking", () => {
     const handle1 = await worldSession(config1, auth1);
 
     try {
-      await Bun.sleep(3000);
+      const events: EntityEvent[] = [];
+      handle1.onEntityEvent((e) => events.push(e));
+
+      await waitForEntityEvent(
+        events,
+        "appear",
+        (e) => e.entity.position !== undefined,
+      );
 
       const entities = handle1.getNearbyEntities();
       expect(entities.length).toBeGreaterThan(0);
