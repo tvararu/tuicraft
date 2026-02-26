@@ -110,6 +110,12 @@ export class EntityStore {
   }
 
   create(guid: bigint, objectType: ObjectType, fields: EntityFields): void {
+    const existing = this.entities.get(guid);
+    if (existing) {
+      this.byType.get(existing.objectType)?.delete(guid);
+      this.listener?.({ type: "disappear", guid, name: existing.name });
+    }
+
     let entity: Entity;
     if (objectType === ObjectType.UNIT || objectType === ObjectType.PLAYER) {
       entity = Object.assign(createUnit(guid, objectType), fields);
@@ -136,12 +142,20 @@ export class EntityStore {
     if (!entity) return;
 
     const changed: string[] = [];
+    const rec = entity as Record<string, unknown>;
     for (const [key, value] of Object.entries(fields)) {
       changed.push(key);
-      (entity as Record<string, unknown>)[key] = value;
+      if (Array.isArray(value) && Array.isArray(rec[key])) {
+        const existing = rec[key] as unknown[];
+        rec[key] = existing.map((v, i) => (value as unknown[])[i] ?? v);
+      } else {
+        rec[key] = value;
+      }
     }
 
-    this.listener?.({ type: "update", entity, changed });
+    if (changed.length > 0) {
+      this.listener?.({ type: "update", entity, changed });
+    }
   }
 
   destroy(guid: bigint): void {

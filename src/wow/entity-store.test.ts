@@ -109,6 +109,19 @@ describe("EntityStore", () => {
     }
   });
 
+  test("update with empty fields does not fire event", () => {
+    const store = new EntityStore();
+    const events: EntityEvent[] = [];
+    store.onEvent((e) => events.push(e));
+
+    store.create(1n, ObjectType.UNIT, {});
+    events.length = 0;
+
+    store.update(1n, {});
+
+    expect(events).toHaveLength(0);
+  });
+
   test("update on nonexistent guid is a no-op", () => {
     const store = new EntityStore();
     const events: EntityEvent[] = [];
@@ -232,6 +245,34 @@ describe("EntityStore", () => {
     expect(store.all()).toHaveLength(3);
   });
 
+  test("partial power update preserves unaffected indices", () => {
+    const store = new EntityStore();
+    store.create(1n, ObjectType.UNIT, {
+      power: [100, 200, 300, 400, 500, 600, 700],
+    });
+
+    const sparse: number[] = [];
+    sparse[2] = 999;
+    store.update(1n, { power: sparse });
+
+    const entity = store.get(1n) as UnitEntity;
+    expect(entity.power).toEqual([100, 200, 999, 400, 500, 600, 700]);
+  });
+
+  test("partial maxPower update preserves unaffected indices", () => {
+    const store = new EntityStore();
+    store.create(1n, ObjectType.UNIT, {
+      maxPower: [1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    });
+
+    const sparse: number[] = [];
+    sparse[4] = 9999;
+    store.update(1n, { maxPower: sparse });
+
+    const entity = store.get(1n) as UnitEntity;
+    expect(entity.maxPower).toEqual([1000, 2000, 3000, 4000, 9999, 6000, 7000]);
+  });
+
   test("create replaces existing entity", () => {
     const store = new EntityStore();
     const events: EntityEvent[] = [];
@@ -243,5 +284,41 @@ describe("EntityStore", () => {
     const entity = store.get(1n) as UnitEntity;
     expect(entity.health).toBe(200);
     expect(store.all()).toHaveLength(1);
+  });
+
+  test("create with different objectType cleans old type from byType index", () => {
+    const store = new EntityStore();
+
+    store.create(1n, ObjectType.UNIT, { health: 100 });
+    expect(store.getByType(ObjectType.UNIT)).toHaveLength(1);
+
+    store.create(1n, ObjectType.GAMEOBJECT, {});
+
+    expect(store.getByType(ObjectType.UNIT)).toHaveLength(0);
+    expect(store.getByType(ObjectType.GAMEOBJECT)).toHaveLength(1);
+    expect(store.get(1n)!.objectType).toBe(ObjectType.GAMEOBJECT);
+  });
+
+  test("create replacing entity fires disappear then appear", () => {
+    const store = new EntityStore();
+    const events: EntityEvent[] = [];
+    store.onEvent((e) => events.push(e));
+
+    store.create(1n, ObjectType.UNIT, { health: 100 });
+    store.setName(1n, "OldUnit");
+    events.length = 0;
+
+    store.create(1n, ObjectType.GAMEOBJECT, {});
+
+    expect(events).toHaveLength(2);
+    expect(events[0]!.type).toBe("disappear");
+    if (events[0]!.type === "disappear") {
+      expect(events[0]!.guid).toBe(1n);
+      expect(events[0]!.name).toBe("OldUnit");
+    }
+    expect(events[1]!.type).toBe("appear");
+    if (events[1]!.type === "appear") {
+      expect(events[1]!.entity.objectType).toBe(ObjectType.GAMEOBJECT);
+    }
   });
 });

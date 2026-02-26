@@ -62,12 +62,12 @@ export function parseMovementBlock(r: PacketReader): MovementData {
 
     if (movementFlags & MovementFlag.SPLINE_ENABLED) {
       const splineFlags = r.uint32LE();
-      if (splineFlags & 0x00010000) {
-        r.skip(4);
-      } else if (splineFlags & 0x00020000) {
-        r.skip(8);
-      } else if (splineFlags & 0x00040000) {
+      if (splineFlags & 0x00008000) {
         r.skip(12);
+      } else if (splineFlags & 0x00010000) {
+        r.skip(8);
+      } else if (splineFlags & 0x00020000) {
+        r.skip(4);
       }
       r.skip(4);
       r.skip(4);

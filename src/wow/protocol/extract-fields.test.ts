@@ -50,6 +50,14 @@ describe("extractObjectFields", () => {
     const result = extractObjectFields(new Map());
     expect(result._changed).toHaveLength(0);
   });
+
+  test("fallback preserves guid high word on partial update", () => {
+    const raw = new Map([[OBJECT_FIELDS.GUID.offset, 99]]);
+    const fallback = new Map([[OBJECT_FIELDS.GUID.offset + 1, 7]]);
+    const result = extractObjectFields(raw, fallback);
+    expect(result.guid).toBe((7n << 32n) | 99n);
+    expect(result._changed).toContain("guid");
+  });
 });
 
 describe("extractUnitFields", () => {
@@ -162,9 +170,45 @@ describe("extractUnitFields", () => {
     expect(result._changed).toContain("modCastSpeed");
   });
 
+  test("sparse power array only sets updated indices", () => {
+    const raw = new Map([[UNIT_FIELDS.POWER3.offset, 500]]);
+    const result = extractUnitFields(raw);
+    expect(result.power).toBeDefined();
+    expect(result.power![2]).toBe(500);
+    expect(0 in result.power!).toBe(false);
+    expect(1 in result.power!).toBe(false);
+    expect(3 in result.power!).toBe(false);
+  });
+
   test("empty map returns empty changed", () => {
     const result = extractUnitFields(new Map());
     expect(result._changed).toHaveLength(0);
+  });
+
+  test("fallback preserves target high word on partial update", () => {
+    const raw = new Map([[UNIT_FIELDS.TARGET.offset, 5]]);
+    const fallback = new Map([[UNIT_FIELDS.TARGET.offset + 1, 10]]);
+    const result = extractUnitFields(raw, fallback);
+    expect(result.target).toBe((10n << 32n) | 5n);
+    expect(result._changed).toContain("target");
+  });
+
+  test("fallback preserves target low word on partial update", () => {
+    const raw = new Map([[UNIT_FIELDS.TARGET.offset + 1, 10]]);
+    const fallback = new Map([[UNIT_FIELDS.TARGET.offset, 5]]);
+    const result = extractUnitFields(raw, fallback);
+    expect(result.target).toBe((10n << 32n) | 5n);
+    expect(result._changed).toContain("target");
+  });
+
+  test("neither word present returns undefined even with fallback", () => {
+    const raw = new Map<number, number>();
+    const fallback = new Map([
+      [UNIT_FIELDS.TARGET.offset, 5],
+      [UNIT_FIELDS.TARGET.offset + 1, 10],
+    ]);
+    const result = extractUnitFields(raw, fallback);
+    expect(result.target).toBeUndefined();
   });
 });
 
