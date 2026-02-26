@@ -596,14 +596,23 @@ function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
         } else if (entry.objectType === ObjectType.GAMEOBJECT) {
           extraFields = extractGameObjectFields(entry.fields);
         }
+        const cachedName = lookupCachedName(
+          conn,
+          entry.guid,
+          entry.objectType,
+          objFields.entry,
+        );
         conn.entityStore.create(entry.guid, entry.objectType, {
           ...objFields,
           ...extraFields,
+          ...(cachedName ? { name: cachedName } : {}),
         } as any);
         if (entry.position) {
           conn.entityStore.setPosition(entry.guid, entry.position);
         }
-        queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
+        if (!cachedName) {
+          queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
+        }
         break;
       }
       case "values": {
@@ -668,6 +677,23 @@ function handleDestroyObject(conn: WorldConn, r: PacketReader): void {
   conn.entityStore.destroy(guid);
 }
 
+function lookupCachedName(
+  conn: WorldConn,
+  guid: bigint,
+  objectType: number,
+  entry: number | undefined,
+): string | undefined {
+  if (objectType === ObjectType.PLAYER) {
+    const guidLow = Number(guid & 0xffffffffn);
+    return conn.nameCache.get(guidLow);
+  }
+  if (entry === undefined) return undefined;
+  if (objectType === ObjectType.UNIT) return conn.creatureNameCache.get(entry);
+  if (objectType === ObjectType.GAMEOBJECT)
+    return conn.gameObjectNameCache.get(entry);
+  return undefined;
+}
+
 function queryEntityName(
   conn: WorldConn,
   guid: bigint,
@@ -675,22 +701,13 @@ function queryEntityName(
   entry: number | undefined,
 ): void {
   if (objectType === ObjectType.PLAYER) {
-    const guidLow = Number(guid & 0xffffffffn);
-    if (conn.nameCache.has(guidLow)) {
-      conn.entityStore.setName(guid, conn.nameCache.get(guidLow)!);
-    } else {
-      const w = new PacketWriter();
-      w.uint64LE(guid);
-      sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, w.finish());
-    }
+    const w = new PacketWriter();
+    w.uint64LE(guid);
+    sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, w.finish());
     return;
   }
   if (entry === undefined) return;
   if (objectType === ObjectType.UNIT) {
-    if (conn.creatureNameCache.has(entry)) {
-      conn.entityStore.setName(guid, conn.creatureNameCache.get(entry)!);
-      return;
-    }
     sendPacket(
       conn,
       GameOpcode.CMSG_CREATURE_QUERY,
@@ -699,10 +716,6 @@ function queryEntityName(
     return;
   }
   if (objectType === ObjectType.GAMEOBJECT) {
-    if (conn.gameObjectNameCache.has(entry)) {
-      conn.entityStore.setName(guid, conn.gameObjectNameCache.get(entry)!);
-      return;
-    }
     sendPacket(
       conn,
       GameOpcode.CMSG_GAMEOBJECT_QUERY,
