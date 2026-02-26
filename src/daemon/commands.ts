@@ -456,10 +456,12 @@ export function onChatMessage(
 export function onEntityEvent(
   event: EntityEvent,
   events: RingBuffer<EventEntry>,
+  log: SessionLog,
 ): void {
   const text = formatEntityEvent(event);
   const obj = formatEntityEventObj(event);
   if (obj) {
     events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
   }
 }

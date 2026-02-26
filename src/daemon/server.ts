@@ -106,7 +106,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   const events = new RingBuffer<EventEntry>(1000);
   handle.onMessage((msg) => onChatMessage(msg, events, log));
   handle.onGroupEvent((event) => onGroupEvent(event, events, log));
-  handle.onEntityEvent((event) => onEntityEvent(event, events));
+  handle.onEntityEvent((event) => onEntityEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
