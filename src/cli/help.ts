@@ -45,6 +45,7 @@ INTERACTIVE COMMANDS (TUI mode)
   /leader <name>  Transfer group leadership
   /accept         Accept a group invitation
   /decline        Decline a group invitation
+  /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 
 DAEMON

@@ -102,7 +102,7 @@ tuicraft skill             # print SKILL.md for AI agents
       interactive and pipe modes
 - [x] 👥 **0.3 - Party Management:** Invite, kick, leave, leader transfer,
       group roster, member stats
-- [ ] 🌍 **0.4 - World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
+- [x] 🌍 **0.4 - World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
 - [ ] 🏃 **0.5 - Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
 - [ ] 🤖 **0.6 - Automation:** Scriptable command sequences and event
@@ -181,7 +181,7 @@ that the official game client does.
 
 | Feature           | Status |
 | ----------------- | ------ |
-| Object updates    | ❌     |
+| Object updates    | ✅     |
 | Movement          | ❌     |
 | Spells / auras    | ❌     |
 | Combat log        | ❌     |

@@ -39,24 +39,29 @@ Add `--json` for structured output. Each JSON line:
 
 ## Event Types
 
-| Type         | Meaning                                          |
-| ------------ | ------------------------------------------------ |
-| SAY          | Nearby /say chat                                 |
-| YELL         | /yell chat                                       |
-| PARTY        | Party member message                             |
-| PARTY_LEADER | Party leader message                             |
-| GUILD        | Guild chat                                       |
-| OFFICER      | Officer chat                                     |
-| RAID         | Raid chat                                        |
-| RAID_LEADER  | Raid leader message                              |
-| RAID_WARNING | Raid warning                                     |
-| WHISPER      | Incoming whisper                                 |
-| WHISPER_TO   | Outgoing whisper confirmation                    |
-| CHANNEL      | Custom channel message                           |
-| EMOTE        | Player emote                                     |
-| SYSTEM       | System messages and unimplemented packet notices |
+| Type             | Meaning                                          |
+| ---------------- | ------------------------------------------------ |
+| SAY              | Nearby /say chat                                 |
+| YELL             | /yell chat                                       |
+| PARTY            | Party member message                             |
+| PARTY_LEADER     | Party leader message                             |
+| GUILD            | Guild chat                                       |
+| OFFICER          | Officer chat                                     |
+| RAID             | Raid chat                                        |
+| RAID_LEADER      | Raid leader message                              |
+| RAID_WARNING     | Raid warning                                     |
+| WHISPER          | Incoming whisper                                 |
+| WHISPER_TO       | Outgoing whisper confirmation                    |
+| CHANNEL          | Custom channel message                           |
+| EMOTE            | Player emote                                     |
+| SYSTEM           | System messages and unimplemented packet notices |
+| ENTITY_APPEAR    | NPC/player/object appeared nearby (--json only)  |
+| ENTITY_DISAPPEAR | Entity left range (--json only)                  |
+| ENTITY_UPDATE    | Entity field changed (--json only)               |
 
 The `channel` field appears on CHANNEL events only.
+
+Entity events include `guid`, `objectType`, `name`, and type-specific fields like `level`, `health`, `maxHealth`, `x`, `y`, `z`.
 
 ## Who Queries
 
@@ -71,6 +76,15 @@ The `channel` field appears on CHANNEL events only.
     tuicraft send "/leader PlayerName"   # transfer leadership
     tuicraft send "/accept"              # accept group invite
     tuicraft send "/decline"             # decline group invite
+
+## Entity Queries
+
+The daemon exposes `NEARBY` and `NEARBY_JSON` IPC verbs for querying tracked entities:
+
+    echo "NEARBY" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
+In the TUI, toggle entity event display with `/tuicraft entities on|off`.
 
 ## Openclaw Integration
 
