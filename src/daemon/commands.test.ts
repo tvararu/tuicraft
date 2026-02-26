@@ -1413,6 +1413,21 @@ describe("onEntityEvent", () => {
     expect(events.drain()).toHaveLength(0);
     expect(append).not.toHaveBeenCalled();
   });
+
+  test("swallows entity event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onEntityEvent(
+      { type: "disappear", guid: 1n, name: "Gone NPC" },
+      events,
+      log,
+    );
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
 });
 
 describe("IPC round-trip", () => {
