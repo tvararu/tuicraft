@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.4.0](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.10...tuicraft-v0.4.0) (2026-02-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add /tuicraft entities toggle and entity event display
+
+### Features
+
+* Add /tuicraft entities toggle and entity event display ([fad9124](https://github.com/tvararu/tuicraft/commit/fad9124e8486387e64de6b7be7e12fdd5d99996a))
+* Add creature and game object query builders and parsers ([d35d22c](https://github.com/tvararu/tuicraft/commit/d35d22c5a1e0199394525c81815f9bc5b6eda73c))
+* Add entity store with typed entities and event callbacks ([2809d04](https://github.com/tvararu/tuicraft/commit/2809d041e117b2d682eabf584057e4c30a7a595f))
+* Add entity type definitions and field offset tables ([62c3c45](https://github.com/tvararu/tuicraft/commit/62c3c45832f92e0f7a0f3639775f142b56798865))
+* Add field extraction from update mask to typed entities ([d248b22](https://github.com/tvararu/tuicraft/commit/d248b22c915ed63229ac00fecd448efcf2b9eaa7))
+* Add movement block parser for SMSG_UPDATE_OBJECT ([256850e](https://github.com/tvararu/tuicraft/commit/256850e391f4e782f805bfef83eef38ca79299a0))
+* Add NEARBY verb and entity events to daemon IPC ([6e1ee9b](https://github.com/tvararu/tuicraft/commit/6e1ee9b9c7d124dfcd83ceb9a0db71738e2d8de3))
+* Add SMSG_UPDATE_OBJECT top-level packet parser ([95d8b5f](https://github.com/tvararu/tuicraft/commit/95d8b5fa8a44461d7a32ab4cf7866558dfc6e9ba))
+* Add uint64LE to PacketReader and PacketWriter ([c60c89c](https://github.com/tvararu/tuicraft/commit/c60c89cca980e81387133af26cac916637b35dac))
+* Add update mask parser for SMSG_UPDATE_OBJECT ([679b81c](https://github.com/tvararu/tuicraft/commit/679b81c4bd36898e3e224c69810454eb8edfa823))
+* Wire SMSG_UPDATE_OBJECT handler into world session ([e40fc13](https://github.com/tvararu/tuicraft/commit/e40fc13ad7504c727906f84ca824d7bdefca2a75))
+
+
+### Bug Fixes
+
+* Clear entity event listener before closing socket ([4df0a3e](https://github.com/tvararu/tuicraft/commit/4df0a3e42989a99e9a75d33a410f3b2d2ab65b9c))
+* Correct spline flags, entity store edge cases, and partial field updates ([8e9322d](https://github.com/tvararu/tuicraft/commit/8e9322d314df2a632398b900642605b61ba5d4d1))
+* Replace stderr packet error logging with callback and recover partial updates ([823f59c](https://github.com/tvararu/tuicraft/commit/823f59c1e73823afc5914430320f5f3b8552b31c))
+* Strip leaked fields from entity create, deduplicate name queries, and log entity events ([d2bac0a](https://github.com/tvararu/tuicraft/commit/d2bac0a0828e2fc2285387145130a73182f18f5e))
+* Suppress unnamed entity appear events and resolve names eagerly ([213430a](https://github.com/tvararu/tuicraft/commit/213430aa75d83041cf4afd6af4480a69228cb598))
+
+
+### Documentation
+
+* Add entity parsing design for v0.4 ([45cf436](https://github.com/tvararu/tuicraft/commit/45cf4367fc746f3dd1b2cac4c52e29ba4493d09c))
+* Add entity parsing implementation plan ([7bba676](https://github.com/tvararu/tuicraft/commit/7bba676cd93cd4161c4d28923b2f95b095ef3f81))
+* Add entity tracking to help, manual, SKILL.md, and README ([11c62a7](https://github.com/tvararu/tuicraft/commit/11c62a7782cf96ddaccfd15ecf26613e36ad5968))
+* Add test coverage, teardown ordering, and entity field notes to CLAUDE.md ([271c9f5](https://github.com/tvararu/tuicraft/commit/271c9f5224b8925ea102cb834d830ee1ce4f78ad))
+* Note that entity-fields.ts is a subset of UpdateFields.h ([5d9aa6c](https://github.com/tvararu/tuicraft/commit/5d9aa6c7e20d78bb379976bd09a7db0a51a08b7d))
+* Update CLAUDE.md conventions ([6a89daa](https://github.com/tvararu/tuicraft/commit/6a89daa7b229eec25d5dd3aad9dae746c8e1b18c))
+
+
+### Maintenance
+
+* Add entity handler integration tests and reach 100% line coverage ([b7f6d89](https://github.com/tvararu/tuicraft/commit/b7f6d892ed0e80aad5ffe76ec6395132003252c1))
+* Add entity tracking live tests and fix three protocol bugs ([1f7e796](https://github.com/tvararu/tuicraft/commit/1f7e7965d8b4419f32f241696bc5320019b95bed))
+* Reach 100% function coverage across all files ([c4dd793](https://github.com/tvararu/tuicraft/commit/c4dd793e30a46f87b86a8c859fe435c6681e7973))
+* Remove 6 redundant tests and fold nearObjects into existing test ([409d2d3](https://github.com/tvararu/tuicraft/commit/409d2d3ef415f53fbcb14a97f5aeba6613c221bf))
+* Remove implemented opcodes from stub registry ([a2f867c](https://github.com/tvararu/tuicraft/commit/a2f867cb7eccc47e6696ea06f68b66dfb8a8b76c))
+* Update license reference ([6a43eda](https://github.com/tvararu/tuicraft/commit/6a43eda1973e9f62a19419f9dd14491b8fdaa2f4))
+
 ## [0.3.10](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.9...tuicraft-v0.3.10) (2026-02-24)
 
 
