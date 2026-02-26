@@ -948,6 +948,7 @@ export function worldSession(
         closed,
         close() {
           clearInterval(pingInterval);
+          conn.onEntityEvent = undefined;
           conn.socket.end();
         },
         onMessage(cb) {
