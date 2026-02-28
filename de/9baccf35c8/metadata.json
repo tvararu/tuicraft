@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "de9baccf35c8",
+  "strategy": "manual-commit",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/bugs.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/de/9baccf35c8/0/metadata.json",
+      "transcript": "/de/9baccf35c8/0/full.jsonl",
+      "context": "/de/9baccf35c8/0/context.md",
+      "content_hash": "/de/9baccf35c8/0/content_hash.txt",
+      "prompt": "/de/9baccf35c8/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 134,
+    "cache_creation_tokens": 685547,
+    "cache_read_tokens": 9482483,
+    "output_tokens": 53844,
+    "api_call_count": 115
+  }
+}

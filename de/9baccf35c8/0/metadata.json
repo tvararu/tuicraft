@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "de9baccf35c8",
+  "session_id": "68548b50-0484-4534-b835-ae6eb0f7a9f2",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-28T11:57:46.9443133Z",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/bugs.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "a21a8cdd3e25",
+  "token_usage": {
+    "input_tokens": 134,
+    "cache_creation_tokens": 685547,
+    "cache_read_tokens": 9482483,
+    "output_tokens": 53844,
+    "api_call_count": 115
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-28T11:57:46.656934151Z",
+    "agent_lines": 0,
+    "human_added": 143,
+    "human_modified": 3,
+    "human_removed": 0,
+    "total_committed": 146,
+    "agent_percentage": 0
+  }
+}
