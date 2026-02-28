@@ -498,7 +498,7 @@ export function onEntityEvent(
   const text = formatEntityEvent(event);
   const obj = formatEntityEventObj(event);
   if (obj) {
-    events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
+    events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
   }
 }
@@ -511,7 +511,7 @@ export function onFriendEvent(
   const text = formatFriendEvent(event);
   const obj = formatFriendEventObj(event);
   if (obj) {
-    events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
+    events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
   }
 }

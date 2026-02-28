@@ -8,6 +8,7 @@ import {
   formatEntityEvent,
   formatEntityEventObj,
   formatFriendList,
+  formatFriendListJson,
   formatFriendEvent,
   formatFriendEventObj,
   formatPrompt,
@@ -1688,6 +1689,44 @@ describe("formatFriendList", () => {
     ];
     const result = formatFriendList(friends);
     expect(result).toContain("guid:42 — Offline");
+  });
+});
+
+describe("formatFriendListJson", () => {
+  test("serializes friends with status, class, and area", () => {
+    const friends: FriendEntry[] = [
+      {
+        guid: 1n,
+        name: "Arthas",
+        note: "buddy",
+        status: FriendStatus.ONLINE,
+        area: 394,
+        level: 80,
+        playerClass: 6,
+      },
+      {
+        guid: 2n,
+        name: "Jaina",
+        note: "",
+        status: FriendStatus.OFFLINE,
+        area: 0,
+        level: 80,
+        playerClass: 8,
+      },
+    ];
+    const result = JSON.parse(formatFriendListJson(friends));
+    expect(result.type).toBe("FRIENDS");
+    expect(result.count).toBe(2);
+    expect(result.online).toBe(1);
+    expect(result.friends[0].name).toBe("Arthas");
+    expect(result.friends[0].note).toBe("buddy");
+    expect(result.friends[0].status).toBe("ONLINE");
+    expect(result.friends[0].level).toBe(80);
+    expect(result.friends[0].class).toBe("Death Knight");
+    expect(result.friends[0].area).toBe(394);
+    expect(result.friends[1].name).toBe("Jaina");
+    expect(result.friends[1].status).toBe("OFFLINE");
+    expect(result.friends[1].class).toBe("Mage");
   });
 });
 

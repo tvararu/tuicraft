@@ -2483,6 +2483,76 @@ describe("world error paths", () => {
       }
     });
 
+    test("SMSG_FRIEND_STATUS ADDED_OFFLINE adds with zero status", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x07,
+            guid: 0xabn,
+            note: "offline pal",
+          }),
+        );
+
+        const event = await eventReady;
+        expect(event.type).toBe("friend-added");
+
+        const friends = handle.getFriends();
+        expect(friends).toHaveLength(1);
+        expect(friends[0]!.guid).toBe(0xabn);
+        expect(friends[0]!.note).toBe("offline pal");
+        expect(friends[0]!.status).toBe(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_FRIEND_STATUS error fires friend-error event", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x04,
+            guid: 0x00n,
+          }),
+        );
+
+        const event = await eventReady;
+        expect(event.type).toBe("friend-error");
+        if (event.type === "friend-error") {
+          expect(event.result).toBe(0x04);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
     test("addFriend sends CMSG_ADD_FRIEND", async () => {
       const ws = await startMockWorldServer();
       try {
