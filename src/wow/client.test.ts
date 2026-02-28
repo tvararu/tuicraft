@@ -8,11 +8,12 @@ import {
   type ChatMessage,
   type GroupEvent,
   type WorldHandle,
+  type FriendEvent,
 } from "wow/client";
 import type { AuthResult } from "wow/client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
-import { PacketWriter } from "wow/protocol/packet";
+import { PacketWriter, PacketReader } from "wow/protocol/packet";
 import {
   AuthOpcode,
   GameOpcode,
@@ -2050,6 +2051,532 @@ describe("world error paths", () => {
         if (appear!.type === "appear") {
           expect(appear!.entity.name).toBe("Forge");
         }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+  });
+
+  describe("friend list", () => {
+    function buildContactList(
+      entries: {
+        guid: bigint;
+        flags: number;
+        note: string;
+        status?: number;
+        area?: number;
+        level?: number;
+        playerClass?: number;
+      }[],
+    ): Uint8Array {
+      const w = new PacketWriter();
+      w.uint32LE(7);
+      w.uint32LE(entries.length);
+      for (const e of entries) {
+        w.uint64LE(e.guid);
+        w.uint32LE(e.flags);
+        w.cString(e.note);
+        if (e.flags & 0x01) {
+          const status = e.status ?? 0;
+          w.uint8(status);
+          if (status !== 0) {
+            w.uint32LE(e.area ?? 0);
+            w.uint32LE(e.level ?? 0);
+            w.uint32LE(e.playerClass ?? 0);
+          }
+        }
+      }
+      return w.finish();
+    }
+
+    function buildFriendStatus(opts: {
+      result: number;
+      guid: bigint;
+      note?: string;
+      status?: number;
+      area?: number;
+      level?: number;
+      playerClass?: number;
+    }): Uint8Array {
+      const w = new PacketWriter();
+      w.uint8(opts.result);
+      w.uint64LE(opts.guid);
+      if (opts.result === 0x06 || opts.result === 0x07) {
+        w.cString(opts.note ?? "");
+      }
+      if (opts.result === 0x06 || opts.result === 0x02) {
+        w.uint8(opts.status ?? 1);
+        w.uint32LE(opts.area ?? 0);
+        w.uint32LE(opts.level ?? 0);
+        w.uint32LE(opts.playerClass ?? 0);
+      }
+      return w.finish();
+    }
+
+    function buildNameQueryResponse(guidLow: number, name: string): Uint8Array {
+      const w = new PacketWriter();
+      const mask = guidLow === 0 ? 0 : guidLow <= 0xff ? 0x01 : 0x03;
+      w.uint8(mask);
+      if (mask & 0x01) w.uint8(guidLow & 0xff);
+      if (mask & 0x02) w.uint8((guidLow >> 8) & 0xff);
+      w.uint8(0);
+      w.cString(name);
+      w.cString("");
+      w.uint32LE(1);
+      w.uint32LE(0);
+      w.uint32LE(1);
+      return w.finish();
+    }
+
+    test("SMSG_CONTACT_LIST with online friend", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0x99n,
+              flags: 0x01,
+              note: "best buddy",
+              status: 1,
+              area: 1519,
+              level: 80,
+              playerClass: 1,
+            },
+          ]),
+        );
+
+        const event = await eventReady;
+        expect(event.type).toBe("friend-list");
+
+        const friends = handle.getFriends();
+        expect(friends).toHaveLength(1);
+        expect(friends[0]!.guid).toBe(0x99n);
+        expect(friends[0]!.status).toBe(1);
+        expect(friends[0]!.area).toBe(1519);
+        expect(friends[0]!.level).toBe(80);
+        expect(friends[0]!.playerClass).toBe(1);
+        expect(friends[0]!.note).toBe("best buddy");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_CONTACT_LIST filters out ignored entries", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0x99n,
+              flags: 0x01,
+              note: "",
+              status: 1,
+              area: 10,
+              level: 70,
+              playerClass: 2,
+            },
+            {
+              guid: 0xaan,
+              flags: 0x02,
+              note: "ignored person",
+            },
+          ]),
+        );
+
+        await eventReady;
+
+        const friends = handle.getFriends();
+        expect(friends).toHaveLength(1);
+        expect(friends[0]!.guid).toBe(0x99n);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_CONTACT_LIST triggers name queries", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0x99n,
+              flags: 0x01,
+              note: "",
+              status: 1,
+              area: 10,
+              level: 80,
+              playerClass: 1,
+            },
+          ]),
+        );
+
+        await eventReady;
+        await Bun.sleep(1);
+
+        const nameQueries = ws.captured.filter(
+          (p) => p.opcode === GameOpcode.CMSG_NAME_QUERY,
+        );
+        const match = nameQueries.find((p) => {
+          const r = new PacketReader(p.body);
+          return r.uint32LE() === 0x99;
+        });
+        expect(match).toBeDefined();
+
+        ws.inject(
+          GameOpcode.SMSG_NAME_QUERY_RESPONSE,
+          buildNameQueryResponse(0x99, "Arthas"),
+        );
+        await Bun.sleep(1);
+
+        const friends = handle.getFriends();
+        expect(friends[0]!.name).toBe("Arthas");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_FRIEND_STATUS ADDED_ONLINE", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x06,
+            guid: 0xbbn,
+            note: "new friend",
+            status: 1,
+            area: 1537,
+            level: 55,
+            playerClass: 4,
+          }),
+        );
+
+        const event = await eventReady;
+        expect(event.type).toBe("friend-added");
+
+        const friends = handle.getFriends();
+        expect(friends).toHaveLength(1);
+        expect(friends[0]!.guid).toBe(0xbbn);
+        expect(friends[0]!.note).toBe("new friend");
+        expect(friends[0]!.status).toBe(1);
+        expect(friends[0]!.area).toBe(1537);
+        expect(friends[0]!.level).toBe(55);
+        expect(friends[0]!.playerClass).toBe(4);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_FRIEND_STATUS ONLINE updates existing friend", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const listReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0xccn,
+              flags: 0x01,
+              note: "",
+              status: 0,
+            },
+          ]),
+        );
+        await listReady;
+
+        const onlineReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x02,
+            guid: 0xccn,
+            status: 1,
+            area: 400,
+            level: 60,
+            playerClass: 8,
+          }),
+        );
+
+        const event = await onlineReady;
+        expect(event.type).toBe("friend-online");
+
+        const friends = handle.getFriends();
+        expect(friends[0]!.status).toBe(1);
+        expect(friends[0]!.area).toBe(400);
+        expect(friends[0]!.level).toBe(60);
+        expect(friends[0]!.playerClass).toBe(8);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_FRIEND_STATUS OFFLINE clears status", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const listReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0xddn,
+              flags: 0x01,
+              note: "",
+              status: 1,
+              area: 100,
+              level: 70,
+              playerClass: 5,
+            },
+          ]),
+        );
+        await listReady;
+
+        const offlineReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x03,
+            guid: 0xddn,
+          }),
+        );
+
+        const event = await offlineReady;
+        expect(event.type).toBe("friend-offline");
+
+        const friends = handle.getFriends();
+        expect(friends[0]!.status).toBe(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_FRIEND_STATUS REMOVED deletes from store", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const listReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0xeen,
+              flags: 0x01,
+              note: "",
+              status: 1,
+              area: 10,
+              level: 80,
+              playerClass: 1,
+            },
+          ]),
+        );
+        await listReady;
+
+        const removedReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_FRIEND_STATUS,
+          buildFriendStatus({
+            result: 0x05,
+            guid: 0xeen,
+          }),
+        );
+
+        const event = await removedReady;
+        expect(event.type).toBe("friend-removed");
+
+        expect(handle.getFriends()).toHaveLength(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("addFriend sends CMSG_ADD_FRIEND", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        handle.addFriend("Arthas");
+        await Bun.sleep(1);
+
+        const addPackets = ws.captured.filter(
+          (p) => p.opcode === GameOpcode.CMSG_ADD_FRIEND,
+        );
+        expect(addPackets).toHaveLength(1);
+        const r = new PacketReader(addPackets[0]!.body);
+        expect(r.cString()).toBe("Arthas");
+        expect(r.cString()).toBe("");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("removeFriend sends CMSG_DEL_FRIEND", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const listReady = new Promise<FriendEvent>((resolve) => {
+          handle.onFriendEvent(resolve);
+        });
+
+        ws.inject(
+          GameOpcode.SMSG_CONTACT_LIST,
+          buildContactList([
+            {
+              guid: 0xffn,
+              flags: 0x01,
+              note: "",
+              status: 1,
+              area: 10,
+              level: 80,
+              playerClass: 1,
+            },
+          ]),
+        );
+        await listReady;
+
+        ws.inject(
+          GameOpcode.SMSG_NAME_QUERY_RESPONSE,
+          buildNameQueryResponse(0xff, "Arthas"),
+        );
+        await Bun.sleep(1);
+
+        handle.removeFriend("Arthas");
+        await Bun.sleep(1);
+
+        const delPackets = ws.captured.filter(
+          (p) => p.opcode === GameOpcode.CMSG_DEL_FRIEND,
+        );
+        expect(delPackets).toHaveLength(1);
+        const r = new PacketReader(delPackets[0]!.body);
+        expect(r.uint64LE()).toBe(0xffn);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("removeFriend for unknown name triggers system message", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const received = new Promise<ChatMessage>((resolve) => {
+          handle.onMessage(resolve);
+        });
+
+        handle.removeFriend("Nobody");
+
+        const msg = await received;
+        expect(msg.type).toBe(ChatType.SYSTEM);
+        expect(msg.message).toBe('"Nobody" is not on your friends list.');
 
         handle.close();
         await handle.closed;
