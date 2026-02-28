@@ -55,6 +55,20 @@ import {
 } from "wow/protocol/group";
 import { registerStubs } from "wow/protocol/stubs";
 import { EntityStore, type Entity, type EntityEvent } from "wow/entity-store";
+import {
+  FriendStore,
+  type FriendEntry,
+  type FriendEvent,
+} from "wow/friend-store";
+import {
+  parseContactList,
+  parseFriendStatus,
+  buildAddFriend,
+  buildDelFriend,
+  SocialFlag,
+  FriendStatus,
+  FriendResult,
+} from "wow/protocol/social";
 import { parseUpdateObject } from "wow/protocol/update-object";
 import { ObjectType } from "wow/protocol/entity-fields";
 import {
@@ -129,6 +143,7 @@ export type GroupEvent =
 
 export type { WhoResult };
 export type { Entity, EntityEvent };
+export type { FriendEntry, FriendEvent };
 
 export type ChatMode =
   | { type: "say" }
@@ -169,6 +184,10 @@ export type WorldHandle = {
   onEntityEvent(cb: (event: EntityEvent) => void): void;
   onPacketError(cb: (opcode: number, err: Error) => void): void;
   getNearbyEntities(): Entity[];
+  getFriends(): FriendEntry[];
+  addFriend(name: string): void;
+  removeFriend(name: string): void;
+  onFriendEvent(cb: (event: FriendEvent) => void): void;
 };
 
 type WorldConn = {
@@ -194,6 +213,8 @@ type WorldConn = {
   onEntityEvent?: (event: EntityEvent) => void;
   onPacketError?: (opcode: number, err: Error) => void;
   pendingNameQueries: Set<string>;
+  friendStore: FriendStore;
+  onFriendEvent?: (event: FriendEvent) => void;
 };
 
 function handleChallenge(
@@ -477,6 +498,14 @@ function handleNameQueryResponse(conn: WorldConn, r: PacketReader): void {
         !entity.name
       ) {
         conn.entityStore.setName(entity.guid, result.name);
+      }
+    }
+    for (const friend of conn.friendStore.all()) {
+      if (
+        Number(friend.guid & 0xffffffffn) === result.guidLow &&
+        !friend.name
+      ) {
+        conn.friendStore.setName(friend.guid, result.name);
       }
     }
   }
@@ -784,6 +813,87 @@ function handlePartyMemberStatsMsg(
   });
 }
 
+function handleContactList(conn: WorldConn, r: PacketReader): void {
+  const list = parseContactList(r);
+  const friends: FriendEntry[] = [];
+  for (const contact of list.contacts) {
+    if (!(contact.flags & SocialFlag.FRIEND)) continue;
+    const guidLow = Number(contact.guid & 0xffffffffn);
+    const name = conn.nameCache.get(guidLow) ?? "";
+    friends.push({
+      guid: contact.guid,
+      name,
+      note: contact.note,
+      status: contact.status ?? 0,
+      area: contact.area ?? 0,
+      level: contact.level ?? 0,
+      playerClass: contact.playerClass ?? 0,
+    });
+    if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
+      conn.pendingNameQueries.add(`player:${guidLow}`);
+      sendPacket(
+        conn,
+        GameOpcode.CMSG_NAME_QUERY,
+        buildNameQuery(guidLow, Number((contact.guid >> 32n) & 0xffffffffn)),
+      );
+    }
+  }
+  conn.friendStore.set(friends);
+}
+
+function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
+  const packet = parseFriendStatus(r);
+  const guidLow = Number(packet.guid & 0xffffffffn);
+
+  switch (packet.result) {
+    case FriendResult.ADDED_ONLINE:
+    case FriendResult.ADDED_OFFLINE: {
+      const name = conn.nameCache.get(guidLow) ?? "";
+      conn.friendStore.add({
+        guid: packet.guid,
+        name,
+        note: packet.note ?? "",
+        status: packet.status ?? 0,
+        area: packet.area ?? 0,
+        level: packet.level ?? 0,
+        playerClass: packet.playerClass ?? 0,
+      });
+      if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
+        conn.pendingNameQueries.add(`player:${guidLow}`);
+        sendPacket(
+          conn,
+          GameOpcode.CMSG_NAME_QUERY,
+          buildNameQuery(guidLow, Number((packet.guid >> 32n) & 0xffffffffn)),
+        );
+      }
+      break;
+    }
+    case FriendResult.ONLINE:
+      conn.friendStore.update(packet.guid, {
+        status: packet.status ?? FriendStatus.ONLINE,
+        area: packet.area ?? 0,
+        level: packet.level ?? 0,
+        playerClass: packet.playerClass ?? 0,
+      });
+      break;
+    case FriendResult.OFFLINE:
+      conn.friendStore.update(packet.guid, { status: FriendStatus.OFFLINE });
+      break;
+    case FriendResult.REMOVED:
+      conn.friendStore.remove(packet.guid);
+      break;
+    default: {
+      const name = conn.nameCache.get(guidLow) ?? `guid:${guidLow}`;
+      conn.onFriendEvent?.({
+        type: "friend-error",
+        result: packet.result,
+        name,
+      });
+      break;
+    }
+  }
+}
+
 async function authenticateWorld(
   conn: WorldConn,
   config: ClientConfig,
@@ -878,8 +988,10 @@ export function worldSession(
       creatureNameCache: new Map(),
       gameObjectNameCache: new Map(),
       pendingNameQueries: new Set(),
+      friendStore: new FriendStore(),
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
+    conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
 
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -950,6 +1062,13 @@ export function worldSession(
       handleGameObjectQueryResponse(conn, r),
     );
 
+    conn.dispatch.on(GameOpcode.SMSG_CONTACT_LIST, (r) =>
+      handleContactList(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_FRIEND_STATUS, (r) =>
+      handleFriendStatus(conn, r),
+    );
+
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
       conn.onMessage({
@@ -971,6 +1090,7 @@ export function worldSession(
         close() {
           clearInterval(pingInterval);
           conn.onEntityEvent = undefined;
+          conn.onFriendEvent = undefined;
           conn.socket.end();
         },
         onMessage(cb) {
@@ -1122,6 +1242,35 @@ export function worldSession(
         },
         getNearbyEntities() {
           return conn.entityStore.all();
+        },
+        getFriends() {
+          return conn.friendStore.all();
+        },
+        addFriend(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_ADD_FRIEND,
+            buildAddFriend(name, ""),
+          );
+        },
+        removeFriend(name) {
+          const friend = conn.friendStore.findByName(name);
+          if (!friend) {
+            conn.onMessage?.({
+              type: ChatType.SYSTEM,
+              sender: "",
+              message: `"${name}" is not on your friends list.`,
+            });
+            return;
+          }
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_DEL_FRIEND,
+            buildDelFriend(friend.guid),
+          );
+        },
+        onFriendEvent(cb) {
+          conn.onFriendEvent = cb;
         },
       };
       resolve(handle);

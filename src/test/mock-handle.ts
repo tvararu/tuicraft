@@ -6,16 +6,19 @@ import type {
   GroupEvent,
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
+import type { FriendEntry, FriendEvent } from "wow/friend-store";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
   triggerGroupEvent(event: GroupEvent): void;
   triggerEntityEvent(event: EntityEvent): void;
+  triggerFriendEvent(event: FriendEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
   let groupEventCb: ((event: GroupEvent) => void) | undefined;
   let entityEventCb: ((event: EntityEvent) => void) | undefined;
+  let friendEventCb: ((event: FriendEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -56,6 +59,12 @@ export function createMockHandle(): WorldHandle & {
     },
     onPacketError: jest.fn(),
     getNearbyEntities: jest.fn((): Entity[] => []),
+    getFriends: jest.fn((): FriendEntry[] => []),
+    addFriend: jest.fn(),
+    removeFriend: jest.fn(),
+    onFriendEvent(cb) {
+      friendEventCb = cb;
+    },
     triggerMessage(msg) {
       messageCb?.(msg);
     },
@@ -64,6 +73,9 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerEntityEvent(event) {
       entityEventCb?.(event);
+    },
+    triggerFriendEvent(event) {
+      friendEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();
