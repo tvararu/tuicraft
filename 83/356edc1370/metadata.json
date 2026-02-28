@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "83356edc1370",
+  "strategy": "manual-commit",
+  "branch": "feat/text-emote",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/help.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/83/356edc1370/0/metadata.json",
+      "transcript": "/83/356edc1370/0/full.jsonl",
+      "context": "/83/356edc1370/0/context.md",
+      "content_hash": "/83/356edc1370/0/content_hash.txt",
+      "prompt": "/83/356edc1370/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 100,
+    "cache_creation_tokens": 252375,
+    "cache_read_tokens": 7851972,
+    "output_tokens": 24054,
+    "api_call_count": 88
+  }
+}
