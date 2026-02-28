@@ -130,6 +130,9 @@ When running in TUI mode, the following slash commands are available:
 | `/leader` _name_             | Transfer group leadership   |
 | `/accept`                    | Accept a group invitation   |
 | `/decline`                   | Decline a group invitation  |
+| `/friends`                   | Show your friends list      |
+| `/friend add` _name_         | Add a player to friends     |
+| `/friend remove` _name_      | Remove from friends         |
 | `/tuicraft entities on\|off` | Toggle entity event display |
 | `/quit`                      | Disconnect and exit         |
 
@@ -146,6 +149,8 @@ Human-readable (default):
 [group] Xia is now the group leader
 [world] Young Wolf appeared (NPC, level 6)
 [world] Young Wolf left range
+[friends] 2/3 online — Arthas — Online, Level 80 Death Knight | Jaina — AFK
+[friends] Arthas is now online (Level 80 Death Knight)
 ```
 
 JSONL (`--json`):

@@ -45,6 +45,9 @@ INTERACTIVE COMMANDS (TUI mode)
   /leader <name>  Transfer group leadership
   /accept         Accept a group invitation
   /decline        Decline a group invitation
+  /friends        Show your friends list
+  /friend add <n> Add a player to friends
+  /friend remove  Remove a player from friends
   /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 

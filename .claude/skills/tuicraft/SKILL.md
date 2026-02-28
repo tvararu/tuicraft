@@ -58,6 +58,11 @@ Add `--json` for structured output. Each JSON line:
 | ENTITY_APPEAR    | NPC/player/object appeared nearby (--json only)  |
 | ENTITY_DISAPPEAR | Entity left range (--json only)                  |
 | ENTITY_UPDATE    | Entity field changed (--json only)               |
+| FRIEND_ONLINE    | Friend came online                               |
+| FRIEND_OFFLINE   | Friend went offline                              |
+| FRIEND_ADDED     | Friend added to list                             |
+| FRIEND_REMOVED   | Friend removed from list                         |
+| FRIEND_ERROR     | Friend operation error                           |
 
 The `channel` field appears on CHANNEL events only.
 
@@ -76,6 +81,19 @@ Entity events include `guid`, `objectType`, `name`, and type-specific fields lik
     tuicraft send "/leader PlayerName"   # transfer leadership
     tuicraft send "/accept"              # accept group invite
     tuicraft send "/decline"             # decline group invite
+
+## Friends List
+
+    tuicraft send "/friends"                # show friends list
+    tuicraft send "/friend add PlayerName"  # add friend
+    tuicraft send "/friend remove PlayerName" # remove friend
+
+IPC verbs:
+
+    echo "FRIENDS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "FRIENDS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "ADD_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "DEL_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 ## Entity Queries
 

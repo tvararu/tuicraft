@@ -17,6 +17,9 @@ curl -fsSL tuicraft.vararu.org/install.sh | sh
 👥 **Party Management** - Invite, kick, leave, leader transfer, accept/decline
 invitations, live group roster with member stats
 
+👫 **Friends List** - View online/offline friends, add/remove friends, real-time
+online status notifications
+
 🔍 **Who Search** - Query online players with filters, human and JSON output
 
 🖥️ **Interactive TUI** - Full terminal UI with slash commands and channel
@@ -147,7 +150,7 @@ that the official game client does.
 | Who search                           | ✅     |
 | Party invite / kick / leave / leader | ✅     |
 | Group roster + member stats          | ✅     |
-| Friends list                         | ❌     |
+| Friends list                         | ✅     |
 | Ignore list                          | ❌     |
 | Channel join / leave                 | ❌     |
 | Duel accept / decline                | ❌     |
