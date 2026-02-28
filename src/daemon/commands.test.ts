@@ -235,6 +235,13 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/friends")).toEqual({ type: "friends" });
   });
 
+  test("slash /ignore maps to unimplemented", () => {
+    expect(parseIpcCommand("/ignore someone")).toEqual({
+      type: "unimplemented",
+      feature: "Ignore list",
+    });
+  });
+
   test("unknown slash command maps to say with full input", () => {
     expect(parseIpcCommand("/dance hello")).toEqual({
       type: "say",
@@ -1826,6 +1833,24 @@ describe("IPC round-trip", () => {
     handle.triggerGroupEvent({ type: "group_destroyed" });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[group] Group has been disbanded"]);
+  });
+
+  test("onFriendEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerFriendEvent({
+      type: "friend-online",
+      friend: {
+        guid: 1n,
+        name: "Arthas",
+        level: 80,
+        playerClass: 1,
+        area: 0,
+        status: 0,
+        note: "",
+      },
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines[0]).toContain("Arthas");
   });
 
   test("onEntityEvent wiring pushes to ring buffer", async () => {
