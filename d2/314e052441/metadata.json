@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "d2314e052441",
+  "strategy": "manual-commit",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/wow/client.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d2/314e052441/0/metadata.json",
+      "transcript": "/d2/314e052441/0/full.jsonl",
+      "context": "/d2/314e052441/0/context.md",
+      "content_hash": "/d2/314e052441/0/content_hash.txt",
+      "prompt": "/d2/314e052441/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 59,
+    "cache_creation_tokens": 199375,
+    "cache_read_tokens": 3816333,
+    "output_tokens": 33736,
+    "api_call_count": 49
+  }
+}
