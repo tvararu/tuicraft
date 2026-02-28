@@ -229,7 +229,9 @@ function handlePacket(
   body: Uint8Array,
   authStatus: number,
   sendTimeSync: boolean,
+  captured: CapturedPacket[],
 ): void {
+  captured.push({ opcode, body: new Uint8Array(body) });
   if (opcode === GameOpcode.CMSG_AUTH_SESSION)
     handleAuthSession(socket, authStatus);
   else if (opcode === GameOpcode.CMSG_CHAR_ENUM) handleCharEnum(socket);
@@ -246,6 +248,7 @@ function drainPackets(
   socket: Socket<ConnState>,
   authStatus: number,
   sendTimeSync: boolean,
+  captured: CapturedPacket[],
 ): void {
   while (true) {
     if (!socket.data.pendingHeader) {
@@ -267,7 +270,7 @@ function drainPackets(
     socket.data.buf = socket.data.buf.slice(bodySize);
     socket.data.pendingHeader = undefined;
 
-    handlePacket(socket, opcode, body, authStatus, sendTimeSync);
+    handlePacket(socket, opcode, body, authStatus, sendTimeSync, captured);
   }
 }
 
@@ -287,6 +290,8 @@ function appendToBuffer(socket: Socket<ConnState>, data: Uint8Array): void {
   socket.data.buf = next;
 }
 
+export type CapturedPacket = { opcode: number; body: Uint8Array };
+
 export function startMockWorldServer(opts?: {
   authStatus?: number;
   sendTimeSyncAfterLogin?: boolean;
@@ -294,10 +299,12 @@ export function startMockWorldServer(opts?: {
   port: number;
   stop(): void;
   inject(opcode: number, body: Uint8Array): void;
+  captured: CapturedPacket[];
 }> {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
   let activeSocket: Socket<ConnState> | undefined;
+  const captured: CapturedPacket[] = [];
 
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
@@ -311,7 +318,7 @@ export function startMockWorldServer(opts?: {
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
-          drainPackets(socket, authStatus, sendTimeSync);
+          drainPackets(socket, authStatus, sendTimeSync, captured);
         },
         close() {
           activeSocket = undefined;
@@ -330,6 +337,7 @@ export function startMockWorldServer(opts?: {
           buildServerPacket(opcode, body, activeSocket.data.arc4),
         );
       },
+      captured,
     });
   });
 }
