@@ -1,0 +1,46 @@
+Can we bump coverage to 100%?
+
+------------------------------------|---------|---------|-------------------
+File                                | % Funcs | % Lines | Uncovered Line #s
+------------------------------------|---------|---------|-------------------
+All files                           |   99.56 |   99.94 |
+ src/cli/args.ts                    |  100.00 |  100.00 |
+ src/cli/help.ts                    |  100.00 |  100.00 |
+ src/cli/ipc.ts                     |  100.00 |  100.00 |
+ src/cli/send-output.ts             |  100.00 |  100.00 |
+ src/cli/setup.ts                   |  100.00 |  100.00 |
+ src/daemon/commands.ts             |  100.00 |   99.76 |
+ src/daemon/server.ts               |   96.30 |  100.00 |
+ src/lib/config.ts                  |  100.00 |  100.00 |
+ src/lib/ring-buffer.ts             |  100.00 |  100.00 |
+ src/lib/session-log.ts             |  100.00 |  100.00 |
+ src/lib/strip-colors.ts            |  100.00 |  100.00 |
+ src/test/fixtures.ts               |  100.00 |  100.00 |
+ src/test/mock-auth-server.ts       |  100.00 |  100.00 |
+ src/test/mock-handle.ts            |   88.24 |   98.31 |
+ src/test/mock-world-server.ts      |  100.00 |  100.00 |
+ src/ui/tui.ts                      |  100.00 |  100.00 |
+ src/wow/client.ts                  |  100.00 |  100.00 |
+ src/wow/crypto/arc4.ts             |  100.00 |  100.00 |
+ src/wow/crypto/srp.ts              |  100.00 |  100.00 |
+ src/wow/entity-store.ts            |  100.00 |  100.00 |
+ src/wow/friend-store.ts            |  100.00 |  100.00 |
+ src/wow/protocol/auth.ts           |  100.00 |  100.00 |
+ src/wow/protocol/chat.ts           |  100.00 |  100.00 |
+ src/wow/protocol/entity-fields.ts  |  100.00 |  100.00 |
+ src/wow/protocol/entity-queries.ts |  100.00 |  100.00 |
+ src/wow/protocol/extract-fields.ts |  100.00 |  100.00 |
+ src/wow/protocol/group.ts          |  100.00 |  100.00 |
+ src/wow/protocol/movement-block.ts |  100.00 |  100.00 |
+ src/wow/protocol/opcodes.ts        |  100.00 |  100.00 |
+ src/wow/protocol/packet.ts         |  100.00 |  100.00 |
+ src/wow/protocol/social.ts         |  100.00 |  100.00 |
+ src/wow/protocol/stubs.ts          |  100.00 |  100.00 |
+ src/wow/protocol/update-mask.ts    |  100.00 |  100.00 |
+ src/wow/protocol/update-object.ts  |  100.00 |  100.00 |
+ src/wow/protocol/world.ts          |  100.00 |  100.00 |
+------------------------------------|---------|---------|-------------------
+
+---
+
+commit
