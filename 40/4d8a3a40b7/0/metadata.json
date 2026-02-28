@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "404d8a3a40b7",
+  "session_id": "68548b50-0484-4534-b835-ae6eb0f7a9f2",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-28T10:29:32.038153402Z",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-02-28-friend-list-design.md",
+    "docs/plans/2026-02-28-friend-list-plan.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "271a6ee46eed",
+  "token_usage": {
+    "input_tokens": 41,
+    "cache_creation_tokens": 183607,
+    "cache_read_tokens": 1700319,
+    "output_tokens": 24856,
+    "api_call_count": 32
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-28T10:29:31.918694793Z",
+    "agent_lines": 1765,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1765,
+    "agent_percentage": 100
+  }
+}
