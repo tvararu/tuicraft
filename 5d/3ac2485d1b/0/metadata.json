@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "5d3ac2485d1b",
+  "session_id": "68548b50-0484-4534-b835-ae6eb0f7a9f2",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-28T10:36:01.973892227Z",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/friend-store.test.ts",
+    "src/wow/friend-store.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "271a6ee46eed",
+  "token_usage": {
+    "input_tokens": 56,
+    "cache_creation_tokens": 197192,
+    "cache_read_tokens": 3424241,
+    "output_tokens": 30844,
+    "api_call_count": 46
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-28T10:36:01.837583103Z",
+    "agent_lines": 273,
+    "human_added": 12,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 285,
+    "agent_percentage": 95.78947368421052
+  }
+}
