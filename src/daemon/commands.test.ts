@@ -74,6 +74,13 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("EMOTE", () => {
+    expect(parseIpcCommand("EMOTE waves hello")).toEqual({
+      type: "emote",
+      message: "waves hello",
+    });
+  });
+
   test("WHISPER", () => {
     expect(parseIpcCommand("WHISPER Xiara follow me")).toEqual({
       type: "whisper",
@@ -202,6 +209,13 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("slash /emote maps to emote", () => {
+    expect(parseIpcCommand("/emote waves")).toEqual({
+      type: "emote",
+      message: "waves",
+    });
+  });
+
   test("slash /who maps to who with filter", () => {
     expect(parseIpcCommand("/who mage")).toEqual({
       type: "who",
@@ -280,7 +294,6 @@ describe("parseIpcCommand", () => {
       ["ROLL", "Random roll"],
       ["DND", "Player status"],
       ["AFK", "Player status"],
-      ["EMOTE waves", "Text emotes"],
     ] as const;
 
     for (const [input, feature] of cases) {
@@ -464,6 +477,24 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.sendParty).toHaveBeenCalledWith("pull");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("emote calls sendEmote and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "emote", message: "waves hello" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
     expect(socket.written()).toBe("OK\n\n");
   });
 
@@ -1659,6 +1690,13 @@ describe("IPC round-trip", () => {
     const lines = await sendToSocket("SAY hello world", sockPath);
     expect(lines).toEqual(["OK"]);
     expect(handle.sendSay).toHaveBeenCalledWith("hello world");
+  });
+
+  test("EMOTE returns OK and calls handle", async () => {
+    startTestServer();
+    const lines = await sendToSocket("EMOTE waves hello", sockPath);
+    expect(lines).toEqual(["OK"]);
+    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
   });
 
   test("WHISPER returns OK", async () => {

@@ -767,6 +767,25 @@ describe("world error paths", () => {
     }
   });
 
+  test("sendEmote sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendEmote("test emote");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.EMOTE);
+      expect(msg.message).toBe("test emote");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("sendChannel sends message and receives echo", async () => {
     const ws = await startMockWorldServer();
     try {
@@ -1143,6 +1162,26 @@ describe("world error paths", () => {
       const msg = await received;
       expect(msg.type).toBe(ChatType.RAID);
       expect(msg.message).toBe("raid test");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendInCurrentMode dispatches emote", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      handle.setLastChatMode({ type: "emote" });
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendInCurrentMode("emote test");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.EMOTE);
+      expect(msg.message).toBe("emote test");
       handle.close();
       await handle.closed;
     } finally {

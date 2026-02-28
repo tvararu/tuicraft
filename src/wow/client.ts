@@ -151,6 +151,7 @@ export type ChatMode =
   | { type: "guild" }
   | { type: "party" }
   | { type: "raid" }
+  | { type: "emote" }
   | { type: "whisper"; target: string }
   | { type: "channel"; channel: string };
 
@@ -164,6 +165,7 @@ export type WorldHandle = {
   sendGuild(message: string): void;
   sendParty(message: string): void;
   sendRaid(message: string): void;
+  sendEmote(message: string): void;
   sendChannel(channel: string, message: string): void;
   getChannel(index: number): string | undefined;
   who(opts?: {
@@ -1144,6 +1146,14 @@ export function worldSession(
             buildChatMessage(ChatType.RAID, lang, message),
           );
         },
+        sendEmote(message) {
+          conn.lastChatMode = { type: "emote" };
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.EMOTE, lang, message),
+          );
+        },
         sendChannel(channel, message) {
           conn.lastChatMode = { type: "channel", channel };
           sendPacket(
@@ -1183,6 +1193,9 @@ export function worldSession(
               break;
             case "raid":
               handle.sendRaid(message);
+              break;
+            case "emote":
+              handle.sendEmote(message);
               break;
             case "whisper":
               handle.sendWhisper(mode.target, message);

@@ -21,6 +21,7 @@ export type Command =
   | { type: "guild"; message: string }
   | { type: "party"; message: string }
   | { type: "raid"; message: string }
+  | { type: "emote"; message: string }
   | { type: "whisper"; target: string; message: string }
   | { type: "reply"; message: string }
   | { type: "channel"; target: string; message: string }
@@ -133,7 +134,7 @@ export function parseCommand(input: string): Command {
       return { type: "unimplemented", feature: "Player status" };
     case "/e":
     case "/emote":
-      return { type: "unimplemented", feature: "Text emotes" };
+      return { type: "emote", message: rest };
     default: {
       const channelMatch = cmd.match(/^\/(\d+)$/);
       if (channelMatch) {
@@ -519,6 +520,9 @@ export async function executeCommand(
       break;
     case "raid":
       state.handle.sendRaid(cmd.message);
+      break;
+    case "emote":
+      state.handle.sendEmote(cmd.message);
       break;
     case "whisper":
       state.handle.sendWhisper(cmd.target, cmd.message);
