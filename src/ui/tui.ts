@@ -9,6 +9,8 @@ import type {
   GroupEvent,
 } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import type { FriendEntry, FriendEvent } from "wow/friend-store";
+import { FriendStatus } from "wow/protocol/social";
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
 
@@ -31,6 +33,9 @@ export type Command =
   | { type: "decline" }
   | { type: "quit" }
   | { type: "tuicraft"; subcommand: string; value: string }
+  | { type: "friends" }
+  | { type: "add-friend"; target: string }
+  | { type: "remove-friend"; target: string }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -99,8 +104,17 @@ export function parseCommand(input: string): Command {
       };
     }
     case "/friends":
+      return { type: "friends" };
     case "/f":
-      return { type: "unimplemented", feature: "Friends list" };
+      return { type: "friends" };
+    case "/friend": {
+      const parts = rest.split(" ");
+      const sub = parts[0] ?? "";
+      const target = parts.slice(1).join(" ");
+      if (sub === "add" && target) return { type: "add-friend", target };
+      if (sub === "remove" && target) return { type: "remove-friend", target };
+      return { type: "friends" };
+    }
     case "/ignore":
       return { type: "unimplemented", feature: "Ignore list" };
     case "/join":
@@ -359,6 +373,123 @@ export function formatEntityEventObj(
   }
 }
 
+const CLASS_NAMES: Record<number, string> = {
+  1: "Warrior",
+  2: "Paladin",
+  3: "Hunter",
+  4: "Rogue",
+  5: "Priest",
+  6: "Death Knight",
+  7: "Shaman",
+  8: "Mage",
+  9: "Warlock",
+  11: "Druid",
+};
+
+function friendStatusLabel(status: number): string {
+  if (status === FriendStatus.AFK) return "AFK";
+  if (status === FriendStatus.DND) return "DND";
+  if (status !== FriendStatus.OFFLINE) return "Online";
+  return "Offline";
+}
+
+export function formatFriendList(friends: FriendEntry[]): string {
+  if (friends.length === 0) return "[friends] No friends on your list";
+  const lines = friends.map((f) => {
+    const name = f.name || `guid:${Number(f.guid & 0xffffffffn)}`;
+    if (f.status === FriendStatus.OFFLINE) return `  ${name} — Offline`;
+    const cls = CLASS_NAMES[f.playerClass] ?? `class ${f.playerClass}`;
+    const statusLabel = friendStatusLabel(f.status);
+    return `  ${name} — ${statusLabel}, Level ${f.level} ${cls}`;
+  });
+  const online = friends.filter(
+    (f) => f.status !== FriendStatus.OFFLINE,
+  ).length;
+  return `[friends] ${online}/${friends.length} online\n${lines.join("\n")}`;
+}
+
+export function formatFriendListJson(friends: FriendEntry[]): string {
+  return JSON.stringify({
+    type: "FRIENDS",
+    count: friends.length,
+    online: friends.filter((f) => f.status !== FriendStatus.OFFLINE).length,
+    friends: friends.map((f) => ({
+      guid: `0x${f.guid.toString(16)}`,
+      name: f.name,
+      note: f.note,
+      status: friendStatusLabel(f.status).toUpperCase(),
+      level: f.level,
+      class: CLASS_NAMES[f.playerClass] ?? `class ${f.playerClass}`,
+      area: f.area,
+    })),
+  });
+}
+
+function friendResultLabel(result: number): string {
+  const labels: Record<number, string> = {
+    0x00: "database error",
+    0x01: "friends list is full",
+    0x04: "player not found",
+    0x08: "already on friends list",
+    0x09: "cannot add yourself",
+    0x0a: "cannot add enemy faction",
+  };
+  return labels[result] ?? `error ${result}`;
+}
+
+export function formatFriendEvent(event: FriendEvent): string | undefined {
+  switch (event.type) {
+    case "friend-online": {
+      const f = event.friend;
+      const cls = CLASS_NAMES[f.playerClass] ?? "";
+      const lvl = f.level ? `Level ${f.level}` : "";
+      const detail = [lvl, cls].filter(Boolean).join(" ");
+      return `[friends] ${f.name || "Unknown"} is now online${detail ? ` (${detail})` : ""}`;
+    }
+    case "friend-offline":
+      return `[friends] ${event.name || "Unknown"} went offline`;
+    case "friend-added": {
+      const f = event.friend;
+      return `[friends] ${f.name || "Unknown"} added to friends list`;
+    }
+    case "friend-removed":
+      return `[friends] ${event.name || "Unknown"} removed from friends list`;
+    case "friend-error":
+      return `[friends] Error: ${friendResultLabel(event.result)}`;
+    case "friend-list":
+      return undefined;
+  }
+}
+
+export function formatFriendEventObj(
+  event: FriendEvent,
+): Record<string, unknown> | undefined {
+  switch (event.type) {
+    case "friend-online":
+      return {
+        type: "FRIEND_ONLINE",
+        name: event.friend.name,
+        level: event.friend.level,
+        class: CLASS_NAMES[event.friend.playerClass],
+        area: event.friend.area,
+      };
+    case "friend-offline":
+      return { type: "FRIEND_OFFLINE", name: event.name };
+    case "friend-added":
+      return { type: "FRIEND_ADDED", name: event.friend.name };
+    case "friend-removed":
+      return { type: "FRIEND_REMOVED", name: event.name };
+    case "friend-error":
+      return {
+        type: "FRIEND_ERROR",
+        result: event.result,
+        message: friendResultLabel(event.result),
+      };
+    case "friend-list":
+      return undefined;
+  }
+}
+
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;
@@ -452,6 +583,17 @@ export async function executeCommand(
       } else {
         state.write(`[system] Unknown tuicraft command: ${cmd.subcommand}\n`);
       }
+      break;
+    case "friends": {
+      const friends = state.handle.getFriends();
+      state.write(formatFriendList(friends) + "\n");
+      break;
+    }
+    case "add-friend":
+      state.handle.addFriend(cmd.target);
+      break;
+    case "remove-friend":
+      state.handle.removeFriend(cmd.target);
       break;
     case "unimplemented":
       state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");

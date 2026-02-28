@@ -7,11 +7,16 @@ import {
   formatGroupEvent,
   formatEntityEvent,
   formatEntityEventObj,
+  formatFriendList,
+  formatFriendEvent,
+  formatFriendEventObj,
   formatPrompt,
   startTui,
 } from "ui/tui";
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
+import { FriendStatus } from "wow/protocol/social";
+import type { FriendEntry } from "wow/friend-store";
 import { createMockHandle } from "test/mock-handle";
 
 function writeLine(stream: PassThrough, line: string): void {
@@ -198,19 +203,33 @@ describe("parseCommand", () => {
     });
   });
 
+  test("/friends returns friends", () => {
+    expect(parseCommand("/friends")).toEqual({ type: "friends" });
+  });
+
+  test("/f returns friends", () => {
+    expect(parseCommand("/f")).toEqual({ type: "friends" });
+  });
+
+  test("/friend add Arthas returns add-friend", () => {
+    expect(parseCommand("/friend add Arthas")).toEqual({
+      type: "add-friend",
+      target: "Arthas",
+    });
+  });
+
+  test("/friend remove Arthas returns remove-friend", () => {
+    expect(parseCommand("/friend remove Arthas")).toEqual({
+      type: "remove-friend",
+      target: "Arthas",
+    });
+  });
+
+  test("/friend bare returns friends", () => {
+    expect(parseCommand("/friend")).toEqual({ type: "friends" });
+  });
+
   describe("unimplemented commands", () => {
-    test("/friends returns unimplemented", () => {
-      expect(parseCommand("/friends")).toEqual({
-        type: "unimplemented",
-        feature: "Friends list",
-      });
-    });
-    test("/f returns unimplemented", () => {
-      expect(parseCommand("/f")).toEqual({
-        type: "unimplemented",
-        feature: "Friends list",
-      });
-    });
     test("/ignore returns unimplemented", () => {
       expect(parseCommand("/ignore Foo")).toEqual({
         type: "unimplemented",
@@ -859,10 +878,10 @@ describe("startTui", () => {
       input,
       write: (s) => void output.push(s),
     });
-    writeLine(input, "/friends");
+    writeLine(input, "/ignore");
     await flush();
 
-    expect(output.join("")).toContain("Friends list is not yet implemented");
+    expect(output.join("")).toContain("Ignore list is not yet implemented");
 
     input.end();
     await done;
@@ -1594,5 +1613,283 @@ describe("formatEntityEventObj", () => {
       changed: ["health"],
     });
     expect(result).toBeUndefined();
+  });
+});
+
+describe("formatFriendList", () => {
+  test("empty list returns no-friends message", () => {
+    expect(formatFriendList([])).toBe("[friends] No friends on your list");
+  });
+
+  test("shows online and offline friends", () => {
+    const friends: FriendEntry[] = [
+      {
+        guid: 1n,
+        name: "Arthas",
+        note: "",
+        status: FriendStatus.ONLINE,
+        area: 0,
+        level: 80,
+        playerClass: 6,
+      },
+      {
+        guid: 2n,
+        name: "Jaina",
+        note: "",
+        status: FriendStatus.OFFLINE,
+        area: 0,
+        level: 80,
+        playerClass: 8,
+      },
+    ];
+    const result = formatFriendList(friends);
+    expect(result).toContain("1/2 online");
+    expect(result).toContain("Arthas — Online, Level 80 Death Knight");
+    expect(result).toContain("Jaina — Offline");
+  });
+
+  test("shows AFK and DND statuses", () => {
+    const friends: FriendEntry[] = [
+      {
+        guid: 1n,
+        name: "Afker",
+        note: "",
+        status: FriendStatus.AFK,
+        area: 0,
+        level: 70,
+        playerClass: 1,
+      },
+      {
+        guid: 2n,
+        name: "Dnder",
+        note: "",
+        status: FriendStatus.DND,
+        area: 0,
+        level: 60,
+        playerClass: 4,
+      },
+    ];
+    const result = formatFriendList(friends);
+    expect(result).toContain("Afker — AFK, Level 70 Warrior");
+    expect(result).toContain("Dnder — DND, Level 60 Rogue");
+  });
+
+  test("falls back to guid when name is empty", () => {
+    const friends: FriendEntry[] = [
+      {
+        guid: 42n,
+        name: "",
+        note: "",
+        status: FriendStatus.OFFLINE,
+        area: 0,
+        level: 1,
+        playerClass: 1,
+      },
+    ];
+    const result = formatFriendList(friends);
+    expect(result).toContain("guid:42 — Offline");
+  });
+});
+
+describe("formatFriendEvent", () => {
+  test("friend-online with class and level", () => {
+    const result = formatFriendEvent({
+      type: "friend-online",
+      friend: {
+        guid: 1n,
+        name: "Arthas",
+        note: "",
+        status: FriendStatus.ONLINE,
+        area: 0,
+        level: 80,
+        playerClass: 6,
+      },
+    });
+    expect(result).toBe(
+      "[friends] Arthas is now online (Level 80 Death Knight)",
+    );
+  });
+
+  test("friend-offline", () => {
+    const result = formatFriendEvent({
+      type: "friend-offline",
+      guid: 1n,
+      name: "Arthas",
+    });
+    expect(result).toBe("[friends] Arthas went offline");
+  });
+
+  test("friend-added", () => {
+    const result = formatFriendEvent({
+      type: "friend-added",
+      friend: {
+        guid: 1n,
+        name: "Jaina",
+        note: "",
+        status: FriendStatus.OFFLINE,
+        area: 0,
+        level: 80,
+        playerClass: 8,
+      },
+    });
+    expect(result).toBe("[friends] Jaina added to friends list");
+  });
+
+  test("friend-removed", () => {
+    const result = formatFriendEvent({
+      type: "friend-removed",
+      guid: 1n,
+      name: "Jaina",
+    });
+    expect(result).toBe("[friends] Jaina removed from friends list");
+  });
+
+  test("friend-error", () => {
+    const result = formatFriendEvent({
+      type: "friend-error",
+      result: 0x04,
+      name: "Nobody",
+    });
+    expect(result).toBe("[friends] Error: player not found");
+  });
+
+  test("friend-error with unknown code", () => {
+    const result = formatFriendEvent({
+      type: "friend-error",
+      result: 0xff,
+      name: "Nobody",
+    });
+    expect(result).toBe("[friends] Error: error 255");
+  });
+
+  test("friend-list returns undefined", () => {
+    const result = formatFriendEvent({ type: "friend-list", friends: [] });
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("formatFriendEventObj", () => {
+  test("friend-online", () => {
+    const result = formatFriendEventObj({
+      type: "friend-online",
+      friend: {
+        guid: 1n,
+        name: "Arthas",
+        note: "",
+        status: FriendStatus.ONLINE,
+        area: 394,
+        level: 80,
+        playerClass: 6,
+      },
+    });
+    expect(result).toEqual({
+      type: "FRIEND_ONLINE",
+      name: "Arthas",
+      level: 80,
+      class: "Death Knight",
+      area: 394,
+    });
+  });
+
+  test("friend-offline", () => {
+    const result = formatFriendEventObj({
+      type: "friend-offline",
+      guid: 1n,
+      name: "Arthas",
+    });
+    expect(result).toEqual({ type: "FRIEND_OFFLINE", name: "Arthas" });
+  });
+
+  test("friend-added", () => {
+    const result = formatFriendEventObj({
+      type: "friend-added",
+      friend: {
+        guid: 1n,
+        name: "Jaina",
+        note: "",
+        status: FriendStatus.OFFLINE,
+        area: 0,
+        level: 80,
+        playerClass: 8,
+      },
+    });
+    expect(result).toEqual({ type: "FRIEND_ADDED", name: "Jaina" });
+  });
+
+  test("friend-removed", () => {
+    const result = formatFriendEventObj({
+      type: "friend-removed",
+      guid: 1n,
+      name: "Jaina",
+    });
+    expect(result).toEqual({ type: "FRIEND_REMOVED", name: "Jaina" });
+  });
+
+  test("friend-error", () => {
+    const result = formatFriendEventObj({
+      type: "friend-error",
+      result: 0x08,
+      name: "Self",
+    });
+    expect(result).toEqual({
+      type: "FRIEND_ERROR",
+      result: 0x08,
+      message: "already on friends list",
+    });
+  });
+
+  test("friend-list returns undefined", () => {
+    const result = formatFriendEventObj({ type: "friend-list", friends: [] });
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("friend TUI commands", () => {
+  test("/friends calls getFriends and writes output", async () => {
+    const handle = createMockHandle();
+    (handle.getFriends as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/friends");
+    await flush();
+
+    expect(handle.getFriends).toHaveBeenCalled();
+    expect(output.join("")).toContain("No friends on your list");
+
+    input.end();
+    await done;
+  });
+
+  test("/friend add calls addFriend", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/friend add Arthas");
+    await flush();
+
+    expect(handle.addFriend).toHaveBeenCalledWith("Arthas");
+
+    input.end();
+    await done;
+  });
+
+  test("/friend remove calls removeFriend", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/friend remove Arthas");
+    await flush();
+
+    expect(handle.removeFriend).toHaveBeenCalledWith("Arthas");
+
+    input.end();
+    await done;
   });
 });

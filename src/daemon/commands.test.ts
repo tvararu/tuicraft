@@ -6,6 +6,7 @@ import {
   onChatMessage,
   onGroupEvent,
   onEntityEvent,
+  onFriendEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -13,6 +14,7 @@ import { startDaemonServer } from "daemon/server";
 import { sendToSocket } from "cli/ipc";
 import { RingBuffer } from "lib/ring-buffer";
 import { ChatType } from "wow/protocol/opcodes";
+import { FriendStatus } from "wow/protocol/social";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
   UnitEntity,
@@ -229,11 +231,8 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/leave")).toEqual({ type: "leave" });
   });
 
-  test("slash unimplemented maps to unimplemented", () => {
-    expect(parseIpcCommand("/friends")).toEqual({
-      type: "unimplemented",
-      feature: "Friends list",
-    });
+  test("slash /friends maps to friends", () => {
+    expect(parseIpcCommand("/friends")).toEqual({ type: "friends" });
   });
 
   test("unknown slash command maps to say with full input", () => {
@@ -264,7 +263,6 @@ describe("parseIpcCommand", () => {
 
   describe("unimplemented IPC commands", () => {
     const cases = [
-      ["FRIENDS", "Friends list"],
       ["IGNORE Foo", "Ignore list"],
       ["JOIN Trade", "Channel join/leave"],
       ["GINVITE Foo", "Guild management"],
@@ -340,6 +338,50 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("READ_WAIT_JSON 999999")).toEqual({
       type: "read_wait_json",
       ms: 60_000,
+    });
+  });
+
+  test("FRIENDS", () => {
+    expect(parseIpcCommand("FRIENDS")).toEqual({ type: "friends" });
+  });
+
+  test("FRIENDS_JSON", () => {
+    expect(parseIpcCommand("FRIENDS_JSON")).toEqual({ type: "friends_json" });
+  });
+
+  test("ADD_FRIEND", () => {
+    expect(parseIpcCommand("ADD_FRIEND Arthas")).toEqual({
+      type: "add_friend",
+      target: "Arthas",
+    });
+  });
+
+  test("ADD_FRIEND with no target returns undefined", () => {
+    expect(parseIpcCommand("ADD_FRIEND")).toBeUndefined();
+  });
+
+  test("DEL_FRIEND", () => {
+    expect(parseIpcCommand("DEL_FRIEND Arthas")).toEqual({
+      type: "del_friend",
+      target: "Arthas",
+    });
+  });
+
+  test("DEL_FRIEND with no target returns undefined", () => {
+    expect(parseIpcCommand("DEL_FRIEND")).toBeUndefined();
+  });
+
+  test("slash /friend add maps to add_friend", () => {
+    expect(parseIpcCommand("/friend add Arthas")).toEqual({
+      type: "add_friend",
+      target: "Arthas",
+    });
+  });
+
+  test("slash /friend remove maps to del_friend", () => {
+    expect(parseIpcCommand("/friend remove Arthas")).toEqual({
+      type: "del_friend",
+      target: "Arthas",
     });
   });
 });
@@ -1040,6 +1082,76 @@ describe("dispatchCommand", () => {
     expect(corpse.type).toBe("object");
   });
 
+  test("friends calls getFriends and writes friend list", async () => {
+    const handle = createMockHandle();
+    (handle.getFriends as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "friends" }, handle, events, socket, cleanup);
+
+    expect(handle.getFriends).toHaveBeenCalled();
+    expect(socket.written()).toContain("No friends on your list");
+  });
+
+  test("friends_json calls getFriends and writes JSON", async () => {
+    const handle = createMockHandle();
+    (handle.getFriends as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "friends_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.getFriends).toHaveBeenCalled();
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("FRIENDS");
+    expect(parsed.count).toBe(0);
+  });
+
+  test("add_friend calls handle.addFriend and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "add_friend", target: "Arthas" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.addFriend).toHaveBeenCalledWith("Arthas");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("del_friend calls handle.removeFriend and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "del_friend", target: "Arthas" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.removeFriend).toHaveBeenCalledWith("Arthas");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
   test("unimplemented writes UNIMPLEMENTED response", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
@@ -1400,6 +1512,104 @@ describe("onEntityEvent", () => {
 
     onEntityEvent(
       { type: "disappear", guid: 1n, name: "Gone NPC" },
+      events,
+      log,
+    );
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
+});
+
+describe("onFriendEvent", () => {
+  test("pushes friend-online event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onFriendEvent(
+      {
+        type: "friend-online",
+        friend: {
+          guid: 1n,
+          name: "Arthas",
+          note: "",
+          status: FriendStatus.ONLINE,
+          area: 0,
+          level: 80,
+          playerClass: 6,
+        },
+      },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Arthas");
+    expect(drained[0]!.text).toContain("online");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("FRIEND_ONLINE");
+    expect(json.name).toBe("Arthas");
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  test("pushes friend-offline event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onFriendEvent(
+      { type: "friend-offline", guid: 1n, name: "Arthas" },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Arthas");
+    expect(drained[0]!.text).toContain("offline");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("FRIEND_OFFLINE");
+  });
+
+  test("skips friend-list events", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onFriendEvent({ type: "friend-list", friends: [] }, events, log);
+
+    expect(events.drain()).toHaveLength(0);
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  test("pushes friend-error event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onFriendEvent(
+      { type: "friend-error", result: 0x04, name: "Nobody" },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("player not found");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("FRIEND_ERROR");
+    expect(json.result).toBe(0x04);
+  });
+
+  test("swallows friend event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onFriendEvent(
+      { type: "friend-offline", guid: 1n, name: "Gone" },
       events,
       log,
     );

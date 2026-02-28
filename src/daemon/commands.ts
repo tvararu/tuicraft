@@ -7,8 +7,13 @@ import {
   formatGroupEvent,
   formatEntityEvent,
   formatEntityEventObj,
+  formatFriendList,
+  formatFriendListJson,
+  formatFriendEvent,
+  formatFriendEventObj,
   parseCommand,
 } from "ui/tui";
+import type { FriendEvent } from "wow/friend-store";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -49,6 +54,10 @@ export type IpcCommand =
   | { type: "decline" }
   | { type: "nearby" }
   | { type: "nearby_json" }
+  | { type: "friends" }
+  | { type: "friends_json" }
+  | { type: "add_friend"; target: string }
+  | { type: "del_friend"; target: string }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -73,6 +82,12 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "accept":
       case "decline":
         return parsed;
+      case "friends":
+        return { type: "friends" };
+      case "add-friend":
+        return { type: "add_friend", target: parsed.target };
+      case "remove-friend":
+        return { type: "del_friend", target: parsed.target };
       case "unimplemented":
         return parsed;
       default:
@@ -142,7 +157,13 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "NEARBY_JSON":
       return { type: "nearby_json" };
     case "FRIENDS":
-      return { type: "unimplemented", feature: "Friends list" };
+      return { type: "friends" };
+    case "FRIENDS_JSON":
+      return { type: "friends_json" };
+    case "ADD_FRIEND":
+      return rest ? { type: "add_friend", target: rest } : undefined;
+    case "DEL_FRIEND":
+      return rest ? { type: "del_friend", target: rest } : undefined;
     case "IGNORE":
       return { type: "unimplemented", feature: "Ignore list" };
     case "JOIN":
@@ -309,6 +330,24 @@ export async function dispatchCommand(
       );
       return false;
     }
+    case "friends": {
+      const friends = handle.getFriends();
+      writeLines(socket, formatFriendList(friends).split("\n"));
+      return false;
+    }
+    case "friends_json": {
+      const friends = handle.getFriends();
+      writeLines(socket, [formatFriendListJson(friends)]);
+      return false;
+    }
+    case "add_friend":
+      handle.addFriend(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "del_friend":
+      handle.removeFriend(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
@@ -458,6 +497,19 @@ export function onEntityEvent(
 ): void {
   const text = formatEntityEvent(event);
   const obj = formatEntityEventObj(event);
+  if (obj) {
+    events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+export function onFriendEvent(
+  event: FriendEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatFriendEvent(event);
+  const obj = formatFriendEventObj(event);
   if (obj) {
     events.push({ text: text ?? undefined, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
