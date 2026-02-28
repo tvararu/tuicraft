@@ -20,11 +20,10 @@ A typical feature build follows this rough workflow:
 ```sh
 $ claude
 > /superpowers:using-superpowers
-> Hey, I want to do <somewhat detailed description about thing>
+> (Describe the task)
 > /superpowers:brainstorming
-> ... Multiple back and forth messages, scoping, speccing ...
+> (Answer questions)
 > /superpowers:write-plan
-> /compact # Optional, if the session has grown too long by now
 > /superpowers:execute-plan
 ```
 
@@ -38,33 +37,16 @@ At the end, I ask Claude to open the branch as a PR.
 
 ## Reviewing
 
-This is the bottleneck and where I'm trying to improve.
-
-My process currently is running down this checklist:
-
-- [ ] `mise ci` to check that all tests are passing (and that it's still fast)
-- [ ] `mise test:live` to test against a live environment
-- [ ] `claude` and prompt it to `/security-review`
-- [ ] `claude` and prompt it to `/review`
-- [ ] `codex` and prompt it to `/review`
-- [ ] `sentry-bot` on GitHub also leaves comments independently
-- [ ] `mise test:coverage` to check if coverage is adequate
-- [ ] `claude` with findings from above automated investigations
+- [ ] `claude` 3x in parallel: `/security-review`, `/review`, `/simplify`
+- [ ] `mise ci` must pass
+- [ ] `mise test:live` must pass
+- [ ] `mise test:coverage`, must still be 100%
+- [ ] `sentry-bot` comments resolved
 - [ ] Human manual end to end testing, trying the TUI myself
 - [ ] Human review on GitHub, reading the full output after all LLM reviews
-- [ ] `claude` with tweaks and suggestions
 - [ ] Final sense-check and merge
 
-Of course, the first half of that process can be automated. I haven't yet, as I
-am still reviewing all the outputs and gathering trust in the system.
-
 ## Safeguards and improving
-
-I never run Claude with `--dangerously-skip-permissions`. I manually add
-commands to the allowlist in `.claude/settings.local.json`.
-
-This means that sometimes, Claude gets stuck when running for many hours. That's
-fine.
 
 If I notice Claude making the same mistake over and over again, that's a good
 time to revise the prompt. I've had good results with this skill:
