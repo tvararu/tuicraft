@@ -1,0 +1,1173 @@
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+I want to implement SMSG_CONTACT_LIST (friend list) support. This is the only item in docs/bugs.md. The server already sends this packet at login. I want: 1) Parse SMSG_CONTACT_LIST (0x0067) — the format is described in bugs.md. 2) Store friend entries somewhere sensible. 3) Add a /friends slash command to display the list in the TUI. 4) Add CMSG_ADD_FRIEND / CMSG_DEL_FRIEND so users can /friend add <name> and /friend remove <name>. 5) Handle SMSG_FRIEND_STATUS for real-time updates (friend comes online/offline). Look at the reference codebases (wow-chat-client, wow_messages, AzerothCore source) for packet formats. Let's brainstorm the design before writing any code. /superpowers:brainstorming
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+---
+
+Friends only. Parse all entry types from the packet but only store and expose friends for now. Ignored/muted can come later. Now write the implementation plan. /superpowers:write-plan
+
+---
+
+Design looks good. Proceed — write the implementation plan and then execute it. Branch, implement, get tests passing, open a PR. Don't ask me any more questions — make reasonable decisions yourself. /superpowers:write-plan
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+**Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/subagent-driven-development
+
+# Subagent-Driven Development
+
+Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+
+**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+## When to Use
+
+```dot
+digraph when_to_use {
+    "Have implementation plan?" [shape=diamond];
+    "Tasks mostly independent?" [shape=diamond];
+    "Stay in this session?" [shape=diamond];
+    "subagent-driven-development" [shape=box];
+    "executing-plans" [shape=box];
+    "Manual execution or brainstorm first" [shape=box];
+
+    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
+    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
+    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+}
+```
+
+**vs. Executing Plans (parallel session):**
+- Same session (no context switch)
+- Fresh subagent per task (no context pollution)
+- Two-stage review after each task: spec compliance first, then code quality
+- Faster iteration (no human-in-loop between tasks)
+
+## The Process
+
+```dot
+digraph process {
+    rankdir=TB;
+
+    subgraph cluster_per_task {
+        label="Per Task";
+        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+        "Implementer subagent asks questions?" [shape=diamond];
+        "Answer questions, provide context" [shape=box];
+        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
+        "Implementer subagent fixes spec gaps" [shape=box];
+        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Code quality reviewer subagent approves?" [shape=diamond];
+        "Implementer subagent fixes quality issues" [shape=box];
+        "Mark task complete in TodoWrite" [shape=box];
+    }
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
+    "More tasks remain?" [shape=diamond];
+    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
+    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Mark task complete in TodoWrite" -> "More tasks remain?";
+    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+}
+```
+
+## Prompt Templates
+
+- `./implementer-prompt.md` - Dispatch implementer subagent
+- `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
+- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+
+## Example Workflow
+
+```
+You: I'm using Subagent-Driven Development to execute this plan.
+
+[Read plan file once: docs/plans/feature-plan.md]
+[Extract all 5 tasks with full text and context]
+[Create TodoWrite with all tasks]
+
+Task 1: Hook installation script
+
+[Get Task 1 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: "Before I begin - should the hook be installed at user or system level?"
+
+You: "User level (~/.config/superpowers/hooks/)"
+
+Implementer: "Got it. Implementing now..."
+[Later] Implementer:
+  - Implemented install-hook command
+  - Added tests, 5/5 passing
+  - Self-review: Found I missed --force flag, added it
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
+
+[Get git SHAs, dispatch code quality reviewer]
+Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+
+[Mark Task 1 complete]
+
+Task 2: Recovery modes
+
+[Get Task 2 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: [No questions, proceeds]
+Implementer:
+  - Added verify/repair modes
+  - 8/8 tests passing
+  - Self-review: All good
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ❌ Issues:
+  - Missing: Progress reporting (spec says "report every 100 items")
+  - Extra: Added --json flag (not requested)
+
+[Implementer fixes issues]
+Implementer: Removed --json flag, added progress reporting
+
+[Spec reviewer reviews again]
+Spec reviewer: ✅ Spec compliant now
+
+[Dispatch code quality reviewer]
+Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+
+[Implementer fixes]
+Implementer: Extracted PROGRESS_INTERVAL constant
+
+[Code reviewer reviews again]
+Code reviewer: ✅ Approved
+
+[Mark Task 2 complete]
+
+...
+
+[After all tasks]
+[Dispatch final code-reviewer]
+Final reviewer: All requirements met, ready to merge
+
+Done!
+```
+
+## Advantages
+
+**vs. Manual execution:**
+- Subagents follow TDD naturally
+- Fresh context per task (no confusion)
+- Parallel-safe (subagents don't interfere)
+- Subagent can ask questions (before AND during work)
+
+**vs. Executing Plans:**
+- Same session (no handoff)
+- Continuous progress (no waiting)
+- Review checkpoints automatic
+
+**Efficiency gains:**
+- No file reading overhead (controller provides full text)
+- Controller curates exactly what context is needed
+- Subagent gets complete information upfront
+- Questions surfaced before work begins (not after)
+
+**Quality gates:**
+- Self-review catches issues before handoff
+- Two-stage review: spec compliance, then code quality
+- Review loops ensure fixes actually work
+- Spec compliance prevents over/under-building
+- Code quality ensures implementation is well-built
+
+**Cost:**
+- More subagent invocations (implementer + 2 reviewers per task)
+- Controller does more prep work (extracting all tasks upfront)
+- Review loops add iterations
+- But catches issues early (cheaper than debugging later)
+
+## Red Flags
+
+**Never:**
+- Start implementation on main/master branch without explicit user consent
+- Skip reviews (spec compliance OR code quality)
+- Proceed with unfixed issues
+- Dispatch multiple implementation subagents in parallel (conflicts)
+- Make subagent read plan file (provide full text instead)
+- Skip scene-setting context (subagent needs to understand where task fits)
+- Ignore subagent questions (answer before letting them proceed)
+- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
+- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Let implementer self-review replace actual review (both are needed)
+- **Start code quality review before spec compliance is ✅** (wrong order)
+- Move to next task while either review has open issues
+
+**If subagent asks questions:**
+- Answer clearly and completely
+- Provide additional context if needed
+- Don't rush them into implementation
+
+**If reviewer finds issues:**
+- Implementer (same subagent) fixes them
+- Reviewer reviews again
+- Repeat until approved
+- Don't skip the re-review
+
+**If subagent fails task:**
+- Dispatch fix subagent with specific instructions
+- Don't try to fix manually (context pollution)
+
+## Integration
+
+**Required workflow skills:**
+- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+
+**Subagents should use:**
+- **superpowers:test-driven-development** - Subagents follow TDD for each task
+
+**Alternative workflow:**
+- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+---
+
+Continue from where you left off.
+
+---
+
+You are a senior security engineer conducting a focused security review of the changes on this branch.
+
+GIT STATUS:
+
+```
+On branch feat/friend-list
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/bugs.md
+	docs/plans/2026-02-19-reconnect-auth-design.md
+	docs/plans/2026-02-19-reconnect-auth-plan.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+FILES MODIFIED:
+
+```
+docs/plans/2026-02-28-friend-list-design.md
+docs/plans/2026-02-28-friend-list-plan.md
+src/daemon/commands.test.ts
+src/daemon/commands.ts
+src/daemon/server.ts
+src/daemon/start.test.ts
+src/test/mock-handle.ts
+src/test/mock-world-server.ts
+src/ui/tui.test.ts
+src/ui/tui.ts
+src/wow/client.test.ts
+src/wow/client.ts
+src/wow/friend-store.test.ts
+src/wow/friend-store.ts
+src/wow/protocol/social.test.ts
+src/wow/protocol/social.ts
+```
+
+COMMITS:
+
+```
+commit a7ba5a692534b35b76767363d323a08a7524b104
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:54:59 2026 +0000
+
+    test: Add friend list integration tests
+    
+    Ten end-to-end tests covering SMSG_CONTACT_LIST parsing, ignored entry
+    filtering, name query triggering, all SMSG_FRIEND_STATUS result codes,
+    addFriend/removeFriend outgoing packets, and the unknown-name error
+    path. Adds packet capture to mock-world-server for verifying client-
+    sent opcodes.
+    
+    Entire-Checkpoint: fc26daa52020
+
+commit 1d2611c29ea7e7739ac54e70bbb7e15eda6b2786
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:48:40 2026 +0000
+
+    feat: Add friend list commands and event pipeline
+    
+    TUI gets /friends, /f, /friend add, /friend remove commands with
+    formatFriendList/formatFriendEvent/formatFriendEventObj helpers. IPC
+    gets FRIENDS, FRIENDS_JSON, ADD_FRIEND, DEL_FRIEND verbs plus
+    onFriendEvent wired into the daemon server event pipeline.
+    
+    Entire-Checkpoint: 6e28a91ebe70
+
+commit 65404405bee9c49274c4c75e3db9264ce19ce085
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:41:08 2026 +0000
+
+    feat: Wire friend list handlers in client
+    
+    Register SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS handlers, add
+    FriendStore to WorldConn, and expose getFriends/addFriend/removeFriend/
+    onFriendEvent on WorldHandle. Updates both mock handles and fixes the
+    stub test to use a still-stubbed opcode.
+    
+    Entire-Checkpoint: d2314e052441
+
+commit e1f761fb9c2538ebaa0868db65cabeb764a328c0
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:35:58 2026 +0000
+
+    feat: Add FriendStore for friend list state
+    
+    Map-based store with listener callback pattern matching EntityStore.
+    Tracks friend entries by GUID with set/add/update/remove operations,
+    fires online/offline/list/added/removed events on state changes.
+    
+    Entire-Checkpoint: 5d3ac2485d1b
+
+commit f84972dd9026a8050e5000eb14bceb3728b19587
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:32:27 2026 +0000
+
+    feat: Add social protocol module
+    
+    Implements builders for CMSG_ADD_FRIEND and CMSG_DEL_FRIEND, parsers
+    for SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS, and the SocialFlag,
+    FriendStatus, and FriendResult constant enums.
+    
+    Entire-Checkpoint: f1f0970aeb47
+
+commit 1b17528b14a760f9db1ff8501dde1dc6ce2cda46
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 10:29:22 2026 +0000
+
+    docs: Add friend list design and implementation plan
+    
+    Design covers SMSG_CONTACT_LIST/SMSG_FRIEND_STATUS parsing, FriendStore,
+    TUI/IPC commands, and the event pipeline. Friends-only scope for now.
+    
+    Entire-Checkpoint: 404d8a3a40b7
+```
+
+DIFF CONTENT:
+
+```
+<persisted-output>
+Output too large (123.1KB). Full output saved to: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/68548b50-0484-4534-b835-ae6eb0f7a9f2/tool-results/boncci9qu.txt
+
+Preview (first 2KB):
+diff --git a/docs/plans/2026-02-28-friend-list-design.md b/docs/plans/2026-02-28-friend-list-design.md
+new file mode 100644
+index 0000000..edc61fd
+--- /dev/null
++++ b/docs/plans/2026-02-28-friend-list-design.md
+@@ -0,0 +1,121 @@
++# Friend List Design
++
++## Goal
++
++Parse SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS, store friend entries in a
++FriendStore, and expose them through `/friends` (TUI), `/friend add|remove`
++commands, and IPC verbs.
++
++## Scope
++
++Friends only. The parser reads all contact types (friends, ignored, muted) but
++only stores entries with the FRIEND flag set. Ignored/muted support is deferred.
++
++## Packet Formats
++
++Six opcodes in the social family. Opcodes are already defined in `opcodes.ts`.
++
++### SMSG_CONTACT_LIST (0x0067)
++
++```
++u32       listMask        (RelationType flags echoed back)
++u32       count
++Relation[count]:
++  u64     guid
++  u32     relationMask    (FRIEND=0x01, IGNORED=0x02, MUTED=0x04)
++  CString note
++  if (relationMask & FRIEND):
++    u8    status          (0=offline, 1=online, 2=afk, 4=dnd)
++    if (status != 0):
++      u32 area            (zone ID)
++      u32 level
++      u32 playerClass
++```
++
++**Critical**: The packet does NOT include character names. Names must be
++resolved via CMSG_NAME_QUERY using the existing `nameCache` mechanism.
++
++### SMSG_FRIEND_STATUS (0x0068)
++
++```
++u8        result          (FriendResult enum)
++u64       guid
++if (result == ADDED_ONLINE || result == ADDED_OFFLINE):
++  CString note
++if (result == ADDED_ONLINE || result == ONLINE):
++  u8      status
++  u32     area
++  u32     level
++  u32     playerClass
++```
++
++Key result codes: DB_ERROR(0), LIST_FULL(1), ONLINE(2), OFFLINE(3),
++NOT_FOUND(4), REMOVED(5), ADDED_ONLINE(6), ADDED_OFFLINE(7), ALREADY(8),
++SELF(9), ENEMY(10).
++
++### CMSG_ADD_FRIEND (0x0069)
++
++```
++CString   name
++CString   note
++```
++
++### CMSG_DEL_FRIEND (0x006A)
++
++```
++u64       guid
++```
++
++Takes a GUID, not a name. The `/friend remove <name>` command must look up the
+...
+</persisted-output>
+```
+
+Review the complete diff above. This contains all code changes in the PR.
+
+
+OBJECTIVE:
+Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential. This is not a general code review - focus ONLY on security implications newly added by this PR. Do not comment on existing security concerns.
+
+CRITICAL INSTRUCTIONS:
+1. MINIMIZE FALSE POSITIVES: Only flag issues where you're >80% confident of actual exploitability
+2. AVOID NOISE: Skip theoretical issues, style concerns, or low-impact findings
+3. FOCUS ON IMPACT: Prioritize vulnerabilities that could lead to unauthorized access, data breaches, or system compromise
+4. EXCLUSIONS: Do NOT report the following issue types:
+   - Denial of Service (DOS) vulnerabilities, even if they allow service disruption
+   - Secrets or sensitive data stored on disk (these are handled by other processes)
+   - Rate limiting or resource exhaustion issues
+
+SECURITY CATEGORIES TO EXAMINE:
+
+**Input Validation Vulnerabilities:**
+- SQL injection via unsanitized user input
+- Command injection in system calls or subprocesses
+- XXE injection in XML parsing
+- Template injection in templating engines
+- NoSQL injection in database queries
+- Path traversal in file operations
+
+**Authentication & Authorization Issues:**
+- Authentication bypass logic
+- Privilege escalation paths
+- Session management flaws
+- JWT token vulnerabilities
+- Authorization logic bypasses
+
+**Crypto & Secrets Management:**
+- Hardcoded API keys, passwords, or tokens
+- Weak cryptographic algorithms or implementations
+- Improper key storage or management
+- Cryptographic randomness issues
+- Certificate validation bypasses
+
+**Injection & Code Execution:**
+- Remote code execution via deseralization
+- Pickle injection in Python
+- YAML deserialization vulnerabilities
+- Eval injection in dynamic code execution
+- XSS vulnerabilities in web applications (reflected, stored, DOM-based)
+
+**Data Exposure:**
+- Sensitive data logging or storage
+- PII handling violations
+- API endpoint data leakage
+- Debug information exposure
+
+Additional notes:
+- Even if something is only exploitable from the local network, it can still be a HIGH severity issue
+
+ANALYSIS METHODOLOGY:
+
+Phase 1 - Repository Context Research (Use file search tools):
+- Identify existing security frameworks and libraries in use
+- Look for established secure coding patterns in the codebase
+- Examine existing sanitization and validation patterns
+- Understand the project's security model and threat model
+
+Phase 2 - Comparative Analysis:
+- Compare new code changes against existing security patterns
+- Identify deviations from established secure practices
+- Look for inconsistent security implementations
+- Flag code that introduces new attack surfaces
+
+Phase 3 - Vulnerability Assessment:
+- Examine each modified file for security implications
+- Trace data flow from user inputs to sensitive operations
+- Look for privilege boundaries being crossed unsafely
+- Identify injection points and unsafe deserialization
+
+REQUIRED OUTPUT FORMAT:
+
+You MUST output your findings in markdown. The markdown output should contain the file, line number, severity, category (e.g. `sql_injection` or `xss`), description, exploit scenario, and fix recommendation.
+
+For example:
+
+# Vuln 1: XSS: `foo.py:42`
+
+* Severity: High
+* Description: User input from `username` parameter is directly interpolated into HTML without escaping, allowing reflected XSS attacks
+* Exploit Scenario: Attacker crafts URL like /bar?q=<script>alert(document.cookie)</script> to execute JavaScript in victim's browser, enabling session hijacking or data theft
+* Recommendation: Use Flask's escape() function or Jinja2 templates with auto-escaping enabled for all user inputs rendered in HTML
+
+SEVERITY GUIDELINES:
+- **HIGH**: Directly exploitable vulnerabilities leading to RCE, data breach, or authentication bypass
+- **MEDIUM**: Vulnerabilities requiring specific conditions but with significant impact
+- **LOW**: Defense-in-depth issues or lower-impact vulnerabilities
+
+CONFIDENCE SCORING:
+- 0.9-1.0: Certain exploit path identified, tested if possible
+- 0.8-0.9: Clear vulnerability pattern with known exploitation methods
+- 0.7-0.8: Suspicious pattern requiring specific conditions to exploit
+- Below 0.7: Don't report (too speculative)
+
+FINAL REMINDER:
+Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues than flood the report with false positives. Each finding should be something a security engineer would confidently raise in a PR review.
+
+FALSE POSITIVE FILTERING:
+
+> You do not need to run commands to reproduce the vulnerability, just read the code to determine if it is a real vulnerability. Do not use the bash tool or write to any files.
+>
+> HARD EXCLUSIONS - Automatically exclude findings matching these patterns:
+> 1. Denial of Service (DOS) vulnerabilities or resource exhaustion attacks.
+> 2. Secrets or credentials stored on disk if they are otherwise secured.
+> 3. Rate limiting concerns or service overload scenarios.
+> 4. Memory consumption or CPU exhaustion issues.
+> 5. Lack of input validation on non-security-critical fields without proven security impact.
+> 6. Input sanitization concerns for GitHub Action workflows unless they are clearly triggerable via untrusted input.
+> 7. A lack of hardening measures. Code is not expected to implement all security best practices, only flag concrete vulnerabilities.
+> 8. Race conditions or timing attacks that are theoretical rather than practical issues. Only report a race condition if it is concretely problematic.
+> 9. Vulnerabilities related to outdated third-party libraries. These are managed separately and should not be reported here.
+> 10. Memory safety issues such as buffer overflows or use-after-free-vulnerabilities are impossible in rust. Do not report memory safety issues in rust or any other memory safe languages.
+> 11. Files that are only unit tests or only used as part of running tests.
+> 12. Log spoofing concerns. Outputting un-sanitized user input to logs is not a vulnerability.
+> 13. SSRF vulnerabilities that only control the path. SSRF is only a concern if it can control the host or protocol.
+> 14. Including user-controlled content in AI system prompts is not a vulnerability.
+> 15. Regex injection. Injecting untrusted content into a regex is not a vulnerability.
+> 16. Regex DOS concerns.
+> 16. Insecure documentation. Do not report any findings in documentation files such as markdown files.
+> 17. A lack of audit logs is not a vulnerability.
+>
+> PRECEDENTS -
+> 1. Logging high value secrets in plaintext is a vulnerability. Logging URLs is assumed to be safe.
+> 2. UUIDs can be assumed to be unguessable and do not need to be validated.
+> 3. Environment variables and CLI flags are trusted values. Attackers are generally not able to modify them in a secure environment. Any attack that relies on controlling an environment variable is invalid.
+> 4. Resource management issues such as memory or file descriptor leaks are not valid.
+> 5. Subtle or low impact web vulnerabilities such as tabnabbing, XS-Leaks, prototype pollution, and open redirects should not be reported unless they are extremely high confidence.
+> 6. React and Angular are generally secure against XSS. These frameworks do not need to sanitize or escape user input unless it is using dangerouslySetInnerHTML, bypassSecurityTrustHtml, or similar methods. Do not report XSS vulnerabilities in React or Angular components or tsx files unless they are using unsafe methods.
+> 7. Most vulnerabilities in github action workflows are not exploitable in practice. Before validating a github action workflow vulnerability ensure it is concrete and has a very specific attack path.
+> 8. A lack of permission checking or authentication in client-side JS/TS code is not a vulnerability. Client-side code is not trusted and does not need to implement these checks, they are handled on the server-side. The same applies to all flows that send untrusted data to the backend, the backend is responsible for validating and sanitizing all inputs.
+> 9. Only include MEDIUM findings if they are obvious and concrete issues.
+> 10. Most vulnerabilities in ipython notebooks (*.ipynb files) are not exploitable in practice. Before validating a notebook vulnerability ensure it is concrete and has a very specific attack path where untrusted input can trigger the vulnerability.
+> 11. Logging non-PII data is not a vulnerability even if the data may be sensitive. Only report logging vulnerabilities if they expose sensitive information such as secrets, passwords, or personally identifiable information (PII).
+> 12. Command injection vulnerabilities in shell scripts are generally not exploitable in practice since shell scripts generally do not run with untrusted user input. Only report command injection vulnerabilities in shell scripts if they are concrete and have a very specific attack path for untrusted input.
+>
+> SIGNAL QUALITY CRITERIA - For remaining findings, assess:
+> 1. Is there a concrete, exploitable vulnerability with a clear attack path?
+> 2. Does this represent a real security risk vs theoretical best practice?
+> 3. Are there specific code locations and reproduction steps?
+> 4. Would this finding be actionable for a security team?
+>
+> For each finding, assign a confidence score from 1-10:
+> - 1-3: Low confidence, likely false positive or noise
+> - 4-6: Medium confidence, needs investigation
+> - 7-10: High confidence, likely true vulnerability
+
+START ANALYSIS:
+
+Begin your analysis now. Do this in 3 steps:
+
+1. Use a sub-task to identify vulnerabilities. Use the repository exploration tools to understand the codebase context, then analyze the PR changes for security implications. In the prompt for this sub-task, include all of the above.
+2. Then for each vulnerability identified by the above sub-task, create a new sub-task to filter out false-positives. Launch these sub-tasks as parallel sub-tasks. In the prompt for these sub-tasks, include everything in the "FALSE POSITIVE FILTERING" instructions.
+3. Filter out any vulnerabilities where the sub-task reported a confidence less than 8.
+
+Your final reply must contain the markdown report and nothing else.
+
+---
+
+You are an expert code reviewer. Follow these steps:
+
+      1. If no PR number is provided in the args, run `gh pr list` to show open PRs
+      2. If a PR number is provided, run `gh pr view <number>` to get PR details
+      3. Run `gh pr diff <number>` to get the diff
+      4. Analyze the changes and provide a thorough code review that includes:
+         - Overview of what the PR does
+         - Analysis of code quality and style
+         - Specific suggestions for improvements
+         - Any potential issues or risks
+
+      Keep your review concise but thorough. Focus on:
+      - Code correctness
+      - Following project conventions
+      - Performance implications
+      - Test coverage
+      - Security considerations
+
+      Format your review with clear sections and bullet points.
+
+      PR number:
+
+---
+
+Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: User wants to implement SMSG_CONTACT_LIST (friend list) support with 5 specific requirements: parse SMSG_CONTACT_LIST, store friend entries, add /friends command, add CMSG_ADD_FRIEND/CMSG_DEL_FRIEND, handle SMSG_FRIEND_STATUS.
+
+2. **Brainstorming Phase**: Used brainstorming skill. Explored project context extensively via subagents that researched:
+   - Packet formats from reference codebases (wow-chat-client, wow_messages, AzerothCore)
+   - Existing codebase architecture (opcodes, stores, commands, WorldHandle, IPC, packet utilities)
+   - Key finding: SMSG_CONTACT_LIST does NOT include character names, only GUIDs - needs CMSG_NAME_QUERY resolution
+
+3. **Scope Decision**: User chose "Friends only" - parse all entry types but only store/expose friends.
+
+4. **Design Presented**: Detailed design with packet parsing, FriendStore, name resolution, WorldHandle additions, TUI commands, IPC commands, event pipeline. User approved.
+
+5. **Implementation Plan Written**: Detailed 11-task plan saved to `docs/plans/2026-02-28-friend-list-plan.md`.
+
+6. **Branch Created**: `feat/friend-list` branch created.
+
+7. **Subagent-Driven Development**: Executed tasks via subagents:
+   - Tasks 1-3: Protocol module (social.ts) - enums, builders, parsers
+   - Task 4: FriendStore class
+   - Tasks 5-6: Wire handlers in client.ts + update mock handles
+   - Tasks 7-8: TUI + IPC commands + event pipeline
+   - Task 9: Integration tests
+
+8. **Security Review**: No vulnerabilities found.
+
+9. **Code Review**: Found 4 important issues and 1 cosmetic issue:
+   - FriendStore missing explicit constructor (CLAUDE.md coverage requirement)
+   - Missing formatFriendListJson unit test
+   - No integration test for handleFriendStatus error/default branch
+   - No integration test for ADDED_OFFLINE
+   - Cosmetic: `text ?? undefined` redundant
+
+10. **User's Last Request**: "Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions."
+
+11. **Current Work**: I read the relevant files to understand what needs to be fixed. I was in the process of reading files to make the fixes when the summary was requested. Specifically:
+    - Read friend-store.ts to see the constructor issue
+    - Read tui.test.ts imports to understand test patterns
+    - Read client.test.ts integration test patterns
+    - Read commands.ts for the cosmetic `text ?? undefined` issue
+    - Read the friend list integration tests to find where to add missing tests
+
+Key files modified across the branch:
+- `src/wow/protocol/social.ts` (new) - packet parsing
+- `src/wow/protocol/social.test.ts` (new) - 39 tests
+- `src/wow/friend-store.ts` (new) - FriendStore class
+- `src/wow/friend-store.test.ts` (new) - 13 tests
+- `src/wow/client.ts` - handlers, WorldHandle additions
+- `src/wow/client.test.ts` - integration tests
+- `src/ui/tui.ts` - TUI commands, format functions
+- `src/ui/tui.test.ts` - TUI tests
+- `src/daemon/commands.ts` - IPC commands, event pipeline
+- `src/daemon/commands.test.ts` - IPC tests
+- `src/daemon/server.ts` - wire onFriendEvent
+- `src/test/mock-handle.ts` - mock updates
+- `src/daemon/start.test.ts` - mock updates
+- `src/test/mock-world-server.ts` - packet capture
+
+Current state: 812 tests pass, typecheck clean, format clean. On branch `feat/friend-list`.
+
+Summary:
+1. Primary Request and Intent:
+   The user wants to implement SMSG_CONTACT_LIST (friend list) support for a WoW 3.3.5a chat client called tuicraft. The specific requirements are:
+   1. Parse SMSG_CONTACT_LIST (0x0067)
+   2. Store friend entries in a FriendStore
+   3. Add `/friends` slash command to display friends in TUI
+   4. Add CMSG_ADD_FRIEND / CMSG_DEL_FRIEND for `/friend add <name>` and `/friend remove <name>`
+   5. Handle SMSG_FRIEND_STATUS for real-time online/offline updates
+   
+   Scope was narrowed to **friends only** — parse all contact types from packets but only store/expose entries with the FRIEND flag. Ignored/muted deferred.
+
+   After implementation, a code review found 4 important issues and 1 cosmetic issue. The user explicitly asked: "Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions."
+
+2. Key Technical Concepts:
+   - WoW 3.3.5a binary protocol over TCP (PacketReader/PacketWriter)
+   - SMSG_CONTACT_LIST (0x0067) has conditional fields: status only when FRIEND flag set, area/level/class only when status != OFFLINE
+   - SMSG_FRIEND_STATUS (0x0068) has two independent conditional blocks: note (ADDED_ONLINE/ADDED_OFFLINE), online info (ADDED_ONLINE/ONLINE)
+   - SMSG_CONTACT_LIST does NOT include character names — requires CMSG_NAME_QUERY resolution via existing nameCache
+   - CMSG_DEL_FRIEND takes a 64-bit GUID, not a name — requires FriendStore.findByName() lookup
+   - EntityStore pattern: Map-based storage with event listener callback
+   - OpcodeDispatch: `conn.dispatch.on(opcode, handler)` registered before `registerStubs()`
+   - WorldHandle: public API type, WorldConn: internal state
+   - IPC protocol: line-delimited over Unix socket, uppercase verbs (FRIENDS, ADD_FRIEND, etc.)
+   - Event pipeline: format text + JSON → push to RingBuffer → append to SessionLog
+   - Bun test runner, strict TypeScript, no comments in code
+   - CLAUDE.md requires explicit constructors for 100% function coverage
+
+3. Files and Code Sections:
+
+   - **`src/wow/protocol/social.ts`** (new)
+     - Core protocol module with enums, builders, and parsers
+     - `SocialFlag` (FRIEND=0x01, IGNORED=0x02, MUTED=0x04), `FriendStatus` (OFFLINE=0, ONLINE=1, AFK=2, DND=4), `FriendResult` (11 codes)
+     - `buildAddFriend(name, note)` — writes two CStrings
+     - `buildDelFriend(guid: bigint)` — writes uint64LE
+     - `parseContactList(r: PacketReader): ContactList` — conditional parsing: status when FRIEND flag, area/level/class when status != 0
+     - `parseFriendStatus(r: PacketReader): FriendStatusPacket` — note for ADDED_ONLINE/ADDED_OFFLINE, online info for ADDED_ONLINE/ONLINE
+
+   - **`src/wow/protocol/social.test.ts`** (new)
+     - 39 tests covering all enums, builders (roundtrip), parseContactList (empty, online, offline, AFK, ignored, mixed), parseFriendStatus (all result codes)
+
+   - **`src/wow/friend-store.ts`** (new) — **NEEDS FIX: explicit constructor**
+     - Current code uses inline field initializers which Bun counts as separate functions:
+     ```typescript
+     export class FriendStore {
+       private friends = new Map<bigint, FriendEntry>();
+       private listener?: (event: FriendEvent) => void;
+     ```
+     - Needs explicit constructor per CLAUDE.md
+     - Methods: `set(entries)`, `add(entry)`, `update(guid, fields)`, `remove(guid)`, `setName(guid, name)`, `findByName(name)`, `all()`
+     - Events: friend-list, friend-online, friend-offline, friend-added, friend-removed, friend-error
+
+   - **`src/wow/friend-store.test.ts`** (new) — 13 tests
+
+   - **`src/wow/client.ts`** (modified)
+     - Added imports for FriendStore, social protocol types
+     - Added to WorldHandle type: `getFriends()`, `addFriend(name)`, `removeFriend(name)`, `onFriendEvent(cb)`
+     - Added to WorldConn: `friendStore: FriendStore`, `onFriendEvent?`
+     - `handleContactList()` — parses packet, filters by FRIEND flag, resolves names via nameCache + CMSG_NAME_QUERY
+     - `handleFriendStatus()` — switch on result: ADDED_ONLINE/OFFLINE → add, ONLINE → update, OFFLINE → update status 0, REMOVED → remove, default → friend-error event
+     - Name resolution hook in `handleNameQueryResponse` — iterates friendStore.all() for matching guidLow
+     - Handler registration before `registerStubs()`
+     - Re-exports: `FriendEntry`, `FriendEvent`
+
+   - **`src/wow/client.test.ts`** (modified) — **NEEDS 2 MORE TESTS**
+     - 10 integration tests added using mock world server
+     - Missing: SMSG_FRIEND_STATUS error/default branch test (e.g., NOT_FOUND firing friend-error event)
+     - Missing: SMSG_FRIEND_STATUS ADDED_OFFLINE test
+     - Helper functions: `buildContactList()`, `buildFriendStatus()`, `buildNameQueryResponse()`
+
+   - **`src/ui/tui.ts`** (modified)
+     - New Command variants: `friends`, `add-friend`, `remove-friend`
+     - `parseCommand` updated: `/friends`, `/f` → friends; `/friend add <name>`, `/friend remove <name>`
+     - `CLASS_NAMES` record, `friendStatusLabel()`, `formatFriendList()`, `formatFriendListJson()`, `formatFriendEvent()`, `formatFriendEventObj()`, `friendResultLabel()`
+     - `executeCommand` cases for friends, add-friend, remove-friend
+
+   - **`src/ui/tui.test.ts`** (modified) — **NEEDS formatFriendListJson test**
+     - Tests for parseCommand, formatFriendList (empty, online/offline, AFK/DND, guid fallback), formatFriendEvent, formatFriendEventObj, startTui integration
+     - Missing: direct unit test for `formatFriendListJson` with non-empty friends
+
+   - **`src/daemon/commands.ts`** (modified) — **NEEDS COSMETIC FIX**
+     - IpcCommand variants: friends, friends_json, add_friend, del_friend
+     - parseIpcCommand: slash commands route through parseCommand, uppercase verbs FRIENDS/FRIENDS_JSON/ADD_FRIEND/DEL_FRIEND
+     - dispatchCommand: friends → getFriends + formatFriendList, friends_json → formatFriendListJson, add_friend → addFriend, del_friend → removeFriend
+     - `onFriendEvent()` — follows onGroupEvent pattern
+     - Line 514: `text ?? undefined` is redundant, should be just `text`
+
+   - **`src/daemon/commands.test.ts`** (modified) — IPC command parse and dispatch tests, onFriendEvent tests
+
+   - **`src/daemon/server.ts`** (modified) — Added `handle.onFriendEvent((event) => onFriendEvent(event, events, log))` wiring
+
+   - **`src/test/mock-handle.ts`** (modified) — Added getFriends, addFriend, removeFriend mocks, triggerFriendEvent helper
+
+   - **`src/daemon/start.test.ts`** (modified) — Added friend methods to inline mock WorldHandle
+
+   - **`src/test/mock-world-server.ts`** (modified) — Added packet capture (`captured` array) for verifying outgoing packets
+
+   - **`docs/plans/2026-02-28-friend-list-design.md`** (new) — Design document
+   - **`docs/plans/2026-02-28-friend-list-plan.md`** (new) — 11-task implementation plan
+
+4. Errors and fixes:
+   - **Commit to main blocked**: Git hook blocked commit to main. Fixed by creating `feat/friend-list` branch first.
+   - **Missing DB_ERROR test**: Spec reviewer found parseFriendStatus missing test for DB_ERROR (0x00). Fixed by adding the test case and amending the commit.
+   - **Stub test breakage**: When real handlers were registered for SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS, the stub test that used SMSG_CONTACT_LIST needed updating. The implementer subagent changed it to use SMSG_CHAT_SERVER_MESSAGE instead.
+
+5. Problem Solving:
+   - Discovered SMSG_CONTACT_LIST doesn't include names (bugs.md was wrong) — solved by using existing nameCache + CMSG_NAME_QUERY mechanism
+   - CMSG_DEL_FRIEND requires GUID not name — solved with FriendStore.findByName() lookup
+   - Packet conditional parsing verified against AzerothCore source — status != 0 (not status == ONLINE) for area/level/class block
+   - Security review found no exploitable vulnerabilities
+
+6. All user messages:
+   - "I want to implement SMSG_CONTACT_LIST (friend list) support. This is the only item in docs/bugs.md. The server already sends this packet at login. I want: 1) Parse SMSG_CONTACT_LIST (0x0067)... 5) Handle SMSG_FRIEND_STATUS... Let's brainstorm the design before writing any code."
+   - "Friends only. Parse all entry types from the packet but only store and expose friends for now. Ignored/muted can come later. Now write the implementation plan."
+   - "Design looks good. Proceed — write the implementation plan and then execute it. Branch, implement, get tests passing, open a PR. Don't ask me any more questions — make reasonable decisions yourself."
+   - "Continue from where you left off."
+   - "/security-review" (system command)
+   - "/review" (system command requesting PR review)
+   - "Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions."
+
+7. Pending Tasks:
+   - **Fix review finding #1**: FriendStore needs explicit constructor (inline field initializers → explicit constructor in `src/wow/friend-store.ts`)
+   - **Fix review finding #2**: Add `formatFriendListJson` unit test with non-empty friends in `src/ui/tui.test.ts`
+   - **Fix review finding #3**: Add integration test for `handleFriendStatus` error/default branch (e.g., NOT_FOUND → friend-error event) in `src/wow/client.test.ts`
+   - **Fix review finding #4**: Add integration test for SMSG_FRIEND_STATUS ADDED_OFFLINE in `src/wow/client.test.ts`
+   - **Fix cosmetic #5**: Change `text ?? undefined` to `text` in `onFriendEvent` in `src/daemon/commands.ts` line 514
+   - **Task 10**: Update documentation (help.ts, manual.md, SKILL.md, README.md, bugs.md)
+   - **Task 11**: Run `mise test:live` for live server test
+   - **Final**: Run `mise ci` to verify, then open PR
+
+8. Current Work:
+   I was actively reading files to understand the exact code changes needed for the 5 review findings. I had read:
+   - `src/wow/friend-store.ts` (lines 23-25 need explicit constructor)
+   - `src/ui/tui.test.ts` imports (to understand where to add formatFriendListJson test)
+   - `src/wow/client.test.ts` friend list integration tests (lines 2063-2588, to understand patterns for adding ADDED_OFFLINE and error branch tests)
+   - `src/daemon/commands.ts` lines 506-514 (the `text ?? undefined` cosmetic issue)
+   
+   I had not yet started writing any fixes. The branch is at commit `a7ba5a6` with 812 tests passing.
+
+9. Optional Next Step:
+   Make all 5 review fixes. The user said: "Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions."
+   
+   Specifically:
+   1. Fix `src/wow/friend-store.ts` — add explicit constructor
+   2. Add `formatFriendListJson` test to `src/ui/tui.test.ts` with non-empty friend list
+   3. Add SMSG_FRIEND_STATUS error branch integration test to `src/wow/client.test.ts`
+   4. Add SMSG_FRIEND_STATUS ADDED_OFFLINE integration test to `src/wow/client.test.ts`
+   5. Fix `src/daemon/commands.ts` line 514 — change `text ?? undefined` to `text`
+   6. Then Task 10 (docs) and Task 11 (live test)
+   7. Run `mise ci` and `mise test:live`
+   8. Open PR
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/68548b50-0484-4534-b835-ae6eb0f7a9f2.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.

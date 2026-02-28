@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "5d3ac2485d1b",
+  "strategy": "manual-commit",
+  "branch": "feat/friend-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/friend-store.test.ts",
+    "src/wow/friend-store.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/5d/3ac2485d1b/0/metadata.json",
+      "transcript": "/5d/3ac2485d1b/0/full.jsonl",
+      "context": "/5d/3ac2485d1b/0/context.md",
+      "content_hash": "/5d/3ac2485d1b/0/content_hash.txt",
+      "prompt": "/5d/3ac2485d1b/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 56,
+    "cache_creation_tokens": 197192,
+    "cache_read_tokens": 3424241,
+    "output_tokens": 30844,
+    "api_call_count": 46
+  }
+}

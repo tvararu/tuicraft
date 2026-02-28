@@ -1,0 +1,128 @@
+# Session Context
+
+## User Prompts
+
+### Prompt 1
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+*...
+
+### Prompt 2
+
+I want to implement SMSG_CONTACT_LIST (friend list) support. This is the only item in docs/bugs.md. The server already sends this packet at login. I want: 1) Parse SMSG_CONTACT_LIST (0x0067) — the format is described in bugs.md. 2) Store friend entries somewhere sensible. 3) Add a /friends slash command to display the list in the TUI. 4) Add CMSG_ADD_FRIEND / CMSG_DEL_FRIEND so users can /friend add <name> and /friend remove <name>. 5) Handle SMSG_FRIEND_STATUS for real-time updates (friend c...
+
+### Prompt 3
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any imp...
+
+### Prompt 4
+
+Friends only. Parse all entry types from the packet but only store and expose friends for now. Ignored/muted can come later. Now write the implementation plan. /superpowers:write-plan
+
+### Prompt 5
+
+Design looks good. Proceed — write the implementation plan and then execute it. Branch, implement, get tests passing, open a PR. Don't ask me any more questions — make reasonable decisions yourself. /superpowers:write-plan
+
+### Prompt 6
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commi...
+
+### Prompt 7
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/subagent-driven-development
+
+# Subagent-Driven Development
+
+Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+
+**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+## When to Use
+
+```dot
+digraph when_to_use {
+    "Have implem...
+
+### Prompt 8
+
+Continue from where you left off.
+
+### Prompt 9
+
+You are a senior security engineer conducting a focused security review of the changes on this branch.
+
+GIT STATUS:
+
+```
+On branch feat/friend-list
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/bugs.md
+	docs/plans/2026-02-19-reconnect-auth-design.md
+	docs/plans/2026-02-19-reconnect-auth-plan.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+FILES MODIFIED:
+
+```
+docs/plans/2026-02-28-friend-list-design.md
+docs/plans/...
+
+### Prompt 10
+
+You are an expert code reviewer. Follow these steps:
+
+      1. If no PR number is provided in the args, run `gh pr list` to show open PRs
+      2. If a PR number is provided, run `gh pr view <number>` to get PR details
+      3. Run `gh pr diff <number>` to get the diff
+      4. Analyze the changes and provide a thorough code review that includes:
+         - Overview of what the PR does
+         - Analysis of code quality and style
+         - Specific suggestions for improvements
+         - An...
+
+### Prompt 11
+
+Yes — fix all 4 review findings and the cosmetic issue (#5). Then finish tasks 10 (docs) and 11 (live test). Run mise ci and mise test:live to verify. Then open the PR. Don't ask any more questions.
+
+### Prompt 12
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: User wants to implement SMSG_CONTACT_LIST (friend list) support with 5 specific requirements: parse SMSG_CONTACT_LIST, store friend entries, add /friends command, add CMSG_ADD_FRIEND/CMSG_DEL_FRIEND, handle SMSG_FRIEND_STATUS.
+
+2. **Brainstorming Phase**: Used...
+
