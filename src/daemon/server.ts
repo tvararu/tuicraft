@@ -11,6 +11,7 @@ import {
   onChatMessage,
   onGroupEvent,
   onEntityEvent,
+  onFriendEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
@@ -107,6 +108,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onMessage((msg) => onChatMessage(msg, events, log));
   handle.onGroupEvent((event) => onGroupEvent(event, events, log));
   handle.onEntityEvent((event) => onEntityEvent(event, events, log));
+  handle.onFriendEvent((event) => onFriendEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
