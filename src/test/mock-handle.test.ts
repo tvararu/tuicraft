@@ -51,3 +51,23 @@ test("triggerGroupEvent forwards to onGroupEvent callback", () => {
   handle.triggerGroupEvent({ type: "group_destroyed" });
   expect(seen).toBe("group_destroyed");
 });
+
+test("default getNearbyEntities returns empty list", () => {
+  const handle = createMockHandle();
+  expect(handle.getNearbyEntities()).toEqual([]);
+});
+
+test("default getFriends returns empty list", () => {
+  const handle = createMockHandle();
+  expect(handle.getFriends()).toEqual([]);
+});
+
+test("triggerFriendEvent forwards to onFriendEvent callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onFriendEvent((event) => {
+    seen = event.type;
+  });
+  handle.triggerFriendEvent({ type: "friend-list", friends: [] });
+  expect(seen).toBe("friend-list");
+});
