@@ -1371,10 +1371,10 @@ describe("world error paths", () => {
         });
       });
 
-      ws.inject(GameOpcode.SMSG_CONTACT_LIST, new Uint8Array(0));
+      ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, new Uint8Array(0));
       const msg = await received;
       expect(msg.type).toBe(ChatType.SYSTEM);
-      expect(msg.message).toContain("Friends list");
+      expect(msg.message).toContain("Server broadcast message");
 
       handle.close();
       await handle.closed;
