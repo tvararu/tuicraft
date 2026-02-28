@@ -36,7 +36,7 @@ SETUP FLAGS
   --timeout_minutes N  Daemon idle timeout (default: 30)
 
 INTERACTIVE COMMANDS (TUI mode)
-  /s, /y, /w, /g, /p, /raid, /e, /1   Chat commands
+  /s, /y, /w, /g, /p, /raid, /e, /1, /2  Chat commands
   /r              Reply to last whisper
   /who [filter]   Who search
   /invite <name>  Invite player to group
