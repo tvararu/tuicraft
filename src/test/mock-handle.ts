@@ -37,6 +37,7 @@ export function createMockHandle(): WorldHandle & {
     sendGuild: jest.fn(),
     sendParty: jest.fn(),
     sendRaid: jest.fn(),
+    sendEmote: jest.fn(),
     sendChannel: jest.fn(),
     getChannel: jest.fn(),
     who: jest.fn(async () => []),

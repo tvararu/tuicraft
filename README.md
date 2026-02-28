@@ -140,7 +140,7 @@ that the official game client does.
 | MOTD                                    | ✅     |
 | Server broadcast messages               | ❌     |
 | Chat restricted / wrong faction notices | ❌     |
-| Text emotes (`/e`, `/emote`)            | ❌     |
+| Text emotes (`/e`, `/emote`)            | ✅     |
 | DND / AFK status                        | ❌     |
 
 ### 👥 Social

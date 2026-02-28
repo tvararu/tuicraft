@@ -24,6 +24,7 @@ Returns CONNECTED or an error. Check this before other commands.
 Slash commands work too:
 
     tuicraft send "/raid message"         # raid chat
+    tuicraft send "/e waves hello"        # text emote
     tuicraft send "/1 message"            # channel 1
     tuicraft send "/2 message"            # channel 2
 

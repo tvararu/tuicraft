@@ -291,16 +291,16 @@ describe("parseCommand", () => {
         feature: "Player status",
       });
     });
-    test("/e returns unimplemented", () => {
+    test("/e sends emote", () => {
       expect(parseCommand("/e waves")).toEqual({
-        type: "unimplemented",
-        feature: "Text emotes",
+        type: "emote",
+        message: "waves",
       });
     });
-    test("/emote returns unimplemented", () => {
+    test("/emote sends emote", () => {
       expect(parseCommand("/emote waves")).toEqual({
-        type: "unimplemented",
-        feature: "Text emotes",
+        type: "emote",
+        message: "waves",
       });
     });
   });
@@ -452,7 +452,7 @@ describe("startTui", () => {
     await done;
   });
 
-  test("dispatches yell, guild, party, raid commands", async () => {
+  test("dispatches yell, guild, party, raid, emote commands", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
 
@@ -461,12 +461,14 @@ describe("startTui", () => {
     writeLine(input, "/g guild msg");
     writeLine(input, "/p party msg");
     writeLine(input, "/raid pull now");
+    writeLine(input, "/e waves hello");
     await flush();
 
     expect(handle.sendYell).toHaveBeenCalledWith("LOUD");
     expect(handle.sendGuild).toHaveBeenCalledWith("guild msg");
     expect(handle.sendParty).toHaveBeenCalledWith("party msg");
     expect(handle.sendRaid).toHaveBeenCalledWith("pull now");
+    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
 
     input.end();
     await done;
