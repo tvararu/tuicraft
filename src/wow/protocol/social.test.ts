@@ -6,6 +6,8 @@ import {
   FriendResult,
   buildAddFriend,
   buildDelFriend,
+  buildAddIgnore,
+  buildDelIgnore,
   parseContactList,
   parseFriendStatus,
 } from "wow/protocol/social";
@@ -118,6 +120,24 @@ describe("buildDelFriend", () => {
     const body = buildDelFriend(0n);
     const r = new PacketReader(body);
     expect(r.uint64LE()).toBe(0n);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildAddIgnore", () => {
+  test("writes name as CString with no note", () => {
+    const body = buildAddIgnore("Spammer");
+    const r = new PacketReader(body);
+    expect(r.cString()).toBe("Spammer");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildDelIgnore", () => {
+  test("writes guid as uint64LE", () => {
+    const body = buildDelIgnore(0x0000000100000042n);
+    const r = new PacketReader(body);
+    expect(r.uint64LE()).toBe(0x0000000100000042n);
     expect(r.remaining).toBe(0);
   });
 });

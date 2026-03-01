@@ -1,6 +1,6 @@
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
-import { FriendStatus } from "wow/protocol/social";
+import { FriendStatus, FriendResult } from "wow/protocol/social";
 import { stripColorCodes } from "lib/strip-colors";
 import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
@@ -392,11 +392,11 @@ export function formatIgnoreListJson(ignored: IgnoreEntry[]): string {
 
 function ignoreResultLabel(result: number): string {
   const labels: Record<number, string> = {
-    0x0b: "ignore list is full",
-    0x0c: "cannot ignore yourself",
-    0x0d: "player not found",
-    0x0e: "already ignoring",
-    0x11: "name is ambiguous",
+    [FriendResult.IGNORE_FULL]: "ignore list is full",
+    [FriendResult.IGNORE_SELF]: "cannot ignore yourself",
+    [FriendResult.IGNORE_NOT_FOUND]: "player not found",
+    [FriendResult.IGNORE_ALREADY]: "already ignoring",
+    [FriendResult.IGNORE_AMBIGUOUS]: "name is ambiguous",
   };
   return labels[result] ?? `error ${result}`;
 }

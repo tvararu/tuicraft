@@ -346,6 +346,13 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("slash /join maps to unimplemented", () => {
+    expect(parseIpcCommand("/join Trade")).toEqual({
+      type: "unimplemented",
+      feature: "Channel join/leave",
+    });
+  });
+
   test("unknown slash command maps to say with full input", () => {
     expect(parseIpcCommand("/dance hello")).toEqual({
       type: "say",
@@ -2237,6 +2244,23 @@ describe("IPC round-trip", () => {
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines[0]).toContain("Arthas");
+  });
+
+  test("onIgnoreEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerIgnoreEvent({
+      type: "ignore-added",
+      entry: { guid: 1n, name: "Spammer" },
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines[0]).toContain("Spammer");
+    expect(lines[0]).toContain("added to ignore list");
+  });
+
+  test("IGNORED round-trip returns empty list", async () => {
+    startTestServer();
+    const lines = await sendToSocket("IGNORED", sockPath);
+    expect(lines).toEqual(["[ignore] Ignore list is empty"]);
   });
 
   test("onEntityEvent wiring pushes to ring buffer", async () => {
