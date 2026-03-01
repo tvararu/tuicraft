@@ -571,6 +571,24 @@ function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
   });
 }
 
+const CHAT_RESTRICTION_MESSAGES: Record<number, string> = {
+  0: "Chat is restricted",
+  1: "Chat is throttled",
+  2: "You have been squelched",
+  3: "Yell is restricted",
+};
+
+function handleChatRestricted(conn: WorldConn, r: PacketReader): void {
+  const restriction = r.uint8();
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message:
+      CHAT_RESTRICTION_MESSAGES[restriction] ??
+      `Chat restriction ${restriction}`,
+  });
+}
+
 function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
   const { message } = parseServerBroadcast(r);
   conn.onMessage?.({
@@ -1058,6 +1076,9 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_MOTD, (r) => handleMotd(conn, r));
     conn.dispatch.on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
       handlePlayerNotFound(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CHAT_RESTRICTED, (r) =>
+      handleChatRestricted(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
       handleChannelNotify(conn, r),
