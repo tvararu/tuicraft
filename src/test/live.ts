@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
+import { authHandshake } from "wow/auth";
 import {
-  authHandshake,
   worldSession,
   type ChatMessage,
   type GroupEvent,

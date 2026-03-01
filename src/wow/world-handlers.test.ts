@@ -7,7 +7,7 @@ import {
   type WorldHandle,
   type FriendEvent,
 } from "wow/client";
-import type { AuthResult } from "wow/client";
+import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
 import {

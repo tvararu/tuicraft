@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test";
-import { authHandshake, worldSession } from "wow/client";
-import type { AuthResult } from "wow/client";
+import { authHandshake } from "wow/auth";
+import type { AuthResult } from "wow/auth";
+import { worldSession } from "wow/client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
 import { GameOpcode } from "wow/protocol/opcodes";
