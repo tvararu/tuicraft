@@ -18,6 +18,7 @@
     "src/wow/client.test.ts",
     "src/wow/client.ts",
     "src/wow/protocol/chat.test.ts",
+    "src/wow/protocol/chat.ts",
     "src/wow/protocol/opcodes.ts"
   ],
   "sessions": [
@@ -27,13 +28,20 @@
       "context": "/66/fe8c3516a8/0/context.md",
       "content_hash": "/66/fe8c3516a8/0/content_hash.txt",
       "prompt": "/66/fe8c3516a8/0/prompt.txt"
+    },
+    {
+      "metadata": "/66/fe8c3516a8/1/metadata.json",
+      "transcript": "/66/fe8c3516a8/1/full.jsonl",
+      "context": "/66/fe8c3516a8/1/context.md",
+      "content_hash": "/66/fe8c3516a8/1/content_hash.txt",
+      "prompt": "/66/fe8c3516a8/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1028,
-    "cache_creation_tokens": 425962,
-    "cache_read_tokens": 8971409,
-    "output_tokens": 25557,
-    "api_call_count": 88
+    "input_tokens": 1848,
+    "cache_creation_tokens": 577641,
+    "cache_read_tokens": 23556347,
+    "output_tokens": 56212,
+    "api_call_count": 203
   }
 }
