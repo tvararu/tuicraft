@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "ee2467ef554c",
+  "strategy": "manual-commit",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/protocol/social.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ee/2467ef554c/0/metadata.json",
+      "transcript": "/ee/2467ef554c/0/full.jsonl",
+      "context": "/ee/2467ef554c/0/context.md",
+      "content_hash": "/ee/2467ef554c/0/content_hash.txt",
+      "prompt": "/ee/2467ef554c/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 134,
+    "cache_creation_tokens": 685547,
+    "cache_read_tokens": 9482483,
+    "output_tokens": 53844,
+    "api_call_count": 115
+  }
+}
