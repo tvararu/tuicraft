@@ -396,6 +396,38 @@ describe("parseServerBroadcast", () => {
     expect(result.message).toBe("Server restart cancelled");
   });
 
+  test("parses battleground shutdown", () => {
+    const w = new PacketWriter();
+    w.uint32LE(6);
+    w.cString("10:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Battleground shutdown in 10:00");
+  });
+
+  test("parses battleground restart", () => {
+    const w = new PacketWriter();
+    w.uint32LE(7);
+    w.cString("03:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Battleground restart in 03:00");
+  });
+
+  test("parses instance shutdown", () => {
+    const w = new PacketWriter();
+    w.uint32LE(8);
+    w.cString("02:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Instance shutdown in 02:00");
+  });
+
+  test("parses instance restart", () => {
+    const w = new PacketWriter();
+    w.uint32LE(9);
+    w.cString("01:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Instance restart in 01:00");
+  });
+
   test("handles unknown message ID", () => {
     const w = new PacketWriter();
     w.uint32LE(99);
