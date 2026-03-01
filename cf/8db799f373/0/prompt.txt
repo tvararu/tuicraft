@@ -1798,3 +1798,245 @@ When done, briefly summarize what was fixed (or confirm the code was already cle
 ## Additional Focus
 
 Review the diff on feat/server-broadcasts vs main. Can anything be simplified, removed, or made more concise without losing functionality?
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the entire conversation:
+
+1. The conversation started with the user invoking `/superpowers:brainstorming` to design server broadcast messages for handling SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION opcodes.
+
+2. I explored the codebase thoroughly using agents, understanding:
+   - The stubs.ts file where both opcodes were listed as unimplemented
+   - The existing chat message pipeline (ChatMessage type, parsers, handlers, formatters)
+   - The packet formats from reference codebases (wow_messages, azerothcore)
+   - SMSG_CHAT_SERVER_MESSAGE: int32 messageId + null-terminated string
+   - SMSG_NOTIFICATION: just a null-terminated string
+
+3. I proposed 3 approaches (A: reuse SYSTEM type, B: origin field with distinct labels, C: separate event path). Recommended Approach B.
+
+4. The user approved: "Design looks good. Go with Approach B — distinct [server] label. Use [server] for both broadcast and notification in TUI. JSON types SERVER_BROADCAST and NOTIFICATION are good."
+
+5. The user then asked for `/superpowers:write-plan`. I wrote the design doc and implementation plan.
+
+6. Error: First commit was blocked because I was on main branch. Fixed by creating `feat/server-broadcast-messages` branch.
+
+7. The user then said: "Execute the plan yourself in this session. Branch (feat/server-broadcasts), implement all tasks sequentially, commit as you go, push, open PR."
+
+8. I used `/superpowers:executing-plans` and implemented all 5 tasks:
+   - Task 1: Added `origin` to ChatMessage, wrote parseServerBroadcast and parseNotification
+   - Task 2: Registered handlers in client.ts, wrote integration tests
+   - Task 3: Added [server] formatting in tui.ts
+   - Task 4: Removed stubs
+   - Task 5: Ran live tests and CI
+
+9. Key errors during implementation:
+   - Branch name: Had to create `feat/server-broadcasts` (user's requested name) from the `feat/server-broadcast-messages` branch
+   - Stub test timeout: The existing "stubbed opcode notifies via onMessage" test used SMSG_CHAT_SERVER_MESSAGE which was now handled, so it hung. Fixed by changing it to use SMSG_CHAT_PLAYER_AMBIGUOUS.
+   - `openclaw` command not found when trying to send notification
+
+10. The user requested `/review` - I ran a code review which found:
+    - Important: Missing WotLK message IDs 6-9
+    - Suggestion 1: Dead `string` branch in SERVER_MESSAGES type
+    - Suggestion 2: Thin parseNotification test coverage
+    - Suggestion 3: Truthy origin check in formatMessage
+
+11. User said: "Fix all three suggestions from the review: 1) Simplify SERVER_MESSAGES type to only functions, 2) Add empty-string parseNotification test, 3) Use explicit origin equality check in formatMessage. Also add message IDs 6-9. Commit as a single fix commit."
+
+12. I fixed all four items in commit d64bec3, pushed.
+
+13. User requested `/security-review` - no vulnerabilities found.
+
+14. User requested `/simplify` - three review agents were launched in parallel:
+    - Code Reuse: Found handleServerBroadcast/handleNotification could be unified; parseNotification is trivially simple
+    - Code Quality: Found copy-paste handlers, inconsistent origin checking, stringly-typed origin values
+    - Efficiency: No issues found
+
+15. The simplify review results just came back and I haven't acted on them yet. The user hasn't given explicit instructions about what to do with the simplify findings.
+
+Current state:
+- Branch: feat/server-broadcasts
+- PR: #65 (https://github.com/tvararu/tuicraft/pull/65)
+- All CI passes (870 tests, typecheck, format)
+- Latest commit: d64bec3 (fix: Address review feedback on server broadcasts)
+- The /simplify review agents just returned their findings
+- I was about to summarize the simplify findings for the user
+
+Summary:
+1. Primary Request and Intent:
+   The user requested implementation of server broadcast messages for a WoW 3.3.5a TUI chat client (tuicraft). Specifically:
+   - Handle SMSG_CHAT_SERVER_MESSAGE (0x291) and SMSG_NOTIFICATION (0x1CB) opcodes, previously stubbed as unimplemented
+   - Display messages in TUI with `[server]` prefix (distinct from `[system]`)
+   - Emit typed JSON events in daemon mode (SERVER_BROADCAST / NOTIFICATION types)
+   - Route through existing ChatMessage pipeline with a new `origin` field
+   - Remove both opcodes from stubs.ts
+   - Full TDD, commit as you go, push to `feat/server-broadcasts`, open PR
+   - After implementation: run code review, fix review feedback, run security review, run simplify review
+
+2. Key Technical Concepts:
+   - WoW 3.3.5a binary protocol packet parsing (PacketReader/PacketWriter)
+   - SMSG_CHAT_SERVER_MESSAGE format: int32 messageId + null-terminated string (messageIds 1-9 for shutdown/restart/string/cancelled/battleground/instance variants)
+   - SMSG_NOTIFICATION format: bare null-terminated string
+   - ChatMessage pipeline: packet → parser → handler → onMessage callback → ring buffer + session log → TUI display / daemon JSON
+   - Origin field discrimination: `origin?: "server" | "notification"` on ChatMessage type
+   - OpcodeDispatch handler registration pattern
+   - Bun test framework, mise task runner
+   - Conventional Commits
+
+3. Files and Code Sections:
+
+   - `src/wow/protocol/chat.ts` (modified)
+     - Added SERVER_MESSAGES lookup table and two parse functions
+     - Key addition at end of file:
+     ```typescript
+     const SERVER_MESSAGES: Record<number, (param: string) => string> = {
+       1: (p) => `Server shutdown in ${p}`,
+       2: (p) => `Server restart in ${p}`,
+       3: (p) => p,
+       4: () => "Server shutdown cancelled",
+       5: () => "Server restart cancelled",
+       6: (p) => `Battleground shutdown in ${p}`,
+       7: (p) => `Battleground restart in ${p}`,
+       8: (p) => `Instance shutdown in ${p}`,
+       9: (p) => `Instance restart in ${p}`,
+     };
+
+     export function parseServerBroadcast(r: PacketReader): { message: string } {
+       const messageId = r.uint32LE();
+       const param = r.cString();
+       const fmt = SERVER_MESSAGES[messageId];
+       const message = fmt ? fmt(param) : `Server message ${messageId}: ${param}`;
+       return { message };
+     }
+
+     export function parseNotification(r: PacketReader): { message: string } {
+       return { message: r.cString() };
+     }
+     ```
+
+   - `src/wow/client.ts` (modified)
+     - Added `origin?: "server" | "notification"` to ChatMessage type (line 113)
+     - Added imports for parseServerBroadcast, parseNotification
+     - Added two handler functions after handlePlayerNotFound (lines 571-589):
+     ```typescript
+     function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
+       const { message } = parseServerBroadcast(r);
+       conn.onMessage?.({
+         type: ChatType.SYSTEM,
+         sender: "",
+         message,
+         origin: "server",
+       });
+     }
+
+     function handleNotification(conn: WorldConn, r: PacketReader): void {
+       const { message } = parseNotification(r);
+       conn.onMessage?.({
+         type: ChatType.SYSTEM,
+         sender: "",
+         message,
+         origin: "notification",
+       });
+     }
+     ```
+     - Registered both with dispatch (lines 1062-1070):
+     ```typescript
+     conn.dispatch.on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
+       handleServerBroadcast(conn, r),
+     );
+     conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
+       handleNotification(conn, r),
+     );
+     ```
+
+   - `src/ui/tui.ts` (modified)
+     - Added `[server]` label branch in formatMessage (lines 190-195):
+     ```typescript
+     if (
+       msg.type === ChatType.SYSTEM &&
+       (msg.origin === "server" || msg.origin === "notification")
+     ) {
+       return `[server] ${message}`;
+     }
+     ```
+     - Updated formatMessageObj to use origin-based JSON types (lines 221-226):
+     ```typescript
+     const type =
+       msg.origin === "server"
+         ? "SERVER_BROADCAST"
+         : msg.origin === "notification"
+           ? "NOTIFICATION"
+           : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
+     ```
+
+   - `src/wow/protocol/stubs.ts` (modified)
+     - Removed SMSG_CHAT_SERVER_MESSAGE entry (was at lines 189-194)
+     - Removed SMSG_NOTIFICATION entry (was at lines 302-307)
+
+   - `src/wow/protocol/chat.test.ts` (modified)
+     - Added 7 tests: parseServerBroadcast (6 tests covering all messageIds + unknown) and parseNotification (2 tests including empty string)
+
+   - `src/wow/client.test.ts` (modified)
+     - Added 2 integration tests for SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION delivery
+     - Updated existing stub test to use SMSG_CHAT_PLAYER_AMBIGUOUS instead of SMSG_CHAT_SERVER_MESSAGE
+
+   - `src/ui/tui.test.ts` (modified)
+     - Added 4 tests: formatMessage with server/notification origin, formatMessageObj with SERVER_BROADCAST/NOTIFICATION JSON types
+
+   - `docs/plans/2026-03-01-server-broadcast-design.md` (created) - Design document
+   - `docs/plans/2026-03-01-server-broadcast-plan.md` (created) - Implementation plan
+
+4. Errors and fixes:
+   - **Commit to main blocked**: Hook prevented committing to main branch. Fixed by creating feature branch `feat/server-broadcast-messages`, then later `feat/server-broadcasts` (user's requested name).
+   - **Stub test timeout**: After registering handlers for SMSG_CHAT_SERVER_MESSAGE, the existing test "stubbed opcode notifies via onMessage" hung because it injected that opcode expecting a stub response. Fixed by changing the test to use `SMSG_CHAT_PLAYER_AMBIGUOUS` instead, which is still stubbed.
+   - **AskUserQuestion tool failures**: The tool errored multiple times during brainstorming. Worked around by presenting the design directly with inline recommendation.
+   - **Prettier formatting failure**: After adding message IDs 6-9, formatting check failed. Fixed by running `mise format:fix`.
+   - **`openclaw` command not found**: The notification command `openclaw system event --text "Done: server broadcasts PR" --mode now` failed because the binary isn't on PATH. Informed user to run manually.
+
+5. Problem Solving:
+   - Designed approach to reuse existing ChatMessage pipeline while adding distinct display labels via an `origin` field
+   - Chose to route through existing `onMessage` callback (like handleMotd/handlePlayerNotFound) rather than adding new WorldHandle methods
+   - Mapped WoW ServerMessageType enum (1-9) to human-readable strings with a fallback for unknown IDs
+   - Code review identified missing WotLK message IDs 6-9 (battleground/instance shutdown/restart) — added them
+   - Code review identified dead `string` type branch, thin test coverage, truthy origin check — all fixed
+   - Security review found no vulnerabilities (bounds-safe PacketReader, no injection surfaces, no auth impact)
+   - Simplify review found potential to unify duplicate handlers and extract shared predicates (findings received but not yet acted on)
+
+6. All user messages:
+   - `/superpowers:brainstorming` with args about implementing server broadcast messages
+   - "Design looks good. Go with Approach B — distinct [server] label. Use [server] for both broadcast and notification in TUI (they are both server-originated). JSON types SERVER_BROADCAST and NOTIFICATION are good for daemon consumers. Now /superpowers:write-plan"
+   - "Execute the plan yourself in this session. Branch (feat/server-broadcasts), implement all tasks sequentially, commit as you go, push, open PR. When completely finished, run: openclaw system event --text 'Done: server broadcasts PR' --mode now"
+   - `/review` with args: "Review the changes on branch feat/server-broadcasts against main. Be thorough — check for bugs, edge cases, missing tests, naming consistency, and protocol correctness."
+   - "Fix all three suggestions from the review: 1) Simplify SERVER_MESSAGES type to only functions, 2) Add empty-string parseNotification test, 3) Use explicit origin equality check in formatMessage. Also add message IDs 6-9 (battleground/instance shutdown/restart). Commit as a single fix commit."
+   - `/security-review` with args: "Review the changes on feat/server-broadcasts for security issues — buffer overflows, injection, unsafe parsing, etc."
+   - `/simplify` with args: "Review the diff on feat/server-broadcasts vs main. Can anything be simplified, removed, or made more concise without losing functionality?"
+
+7. Pending Tasks:
+   - The `/simplify` review agents have returned findings but the user hasn't seen the results yet or given instructions on what to do with them. The three agents found:
+     - **Code Reuse**: `handleServerBroadcast`/`handleNotification` could be unified via a `deliverSystemMessage` helper; `parseNotification` is a trivially thin wrapper
+     - **Code Quality**: Copy-paste handlers, origin checking inconsistency between formatMessage and formatMessageObj, stringly-typed origin values could use a const enum
+     - **Efficiency**: No issues found
+   - The user has not yet been presented with these simplify findings.
+
+8. Current Work:
+   The `/simplify` skill was invoked and three parallel review agents (Code Reuse, Code Quality, Efficiency) completed their analysis. The agents' results have been received. I was about to aggregate the findings, determine which are actionable, and present a summary to the user. The efficiency agent found no issues. The reuse and quality agents found overlapping concerns:
+   - `handleServerBroadcast`/`handleNotification` are near-identical and could be unified
+   - `parseNotification` wraps a single `r.cString()` with no real logic
+   - Origin checking is done differently in `formatMessage` vs `formatMessageObj`
+   - Origin values are stringly-typed without named constants
+   
+   Per the simplify skill instructions: "Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on."
+
+9. Optional Next Step:
+   Per the `/simplify` skill workflow, I should aggregate the three agents' findings, decide which to fix vs skip, apply fixes, and summarize what was changed. The skill says: "Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on. When done, briefly summarize what was fixed (or confirm the code was already clean)."
+
+   The key question is whether to act on the simplify findings. The strongest candidates are:
+   1. Unifying the two near-identical handlers (reuse + quality agents both flagged this at 82-85 confidence)
+   2. The other findings (parseNotification wrapper, stringly-typed origin, shared predicate) are lower priority and arguably over-engineering for this small feature
+
+   However, CLAUDE.md says "Avoid over-engineering. Only make changes that are directly requested or clearly necessary." and "Don't create helpers, utilities, or abstractions for one-time operations." The handlers are only used once each, and the existing codebase (handleMotd, handlePlayerNotFound) follows the same pattern of separate small handler functions. Unifying them would be premature abstraction.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/04fd0b5b-eace-4940-bfa9-edd8491586ad.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
