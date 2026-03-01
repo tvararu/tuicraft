@@ -786,6 +786,44 @@ describe("world error paths", () => {
     }
   });
 
+  test("sendDnd sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendDnd("busy right now");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.DND);
+      expect(msg.message).toBe("busy right now");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendAfk sends message and receives echo", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+      handle.sendAfk("grabbing coffee");
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.AFK);
+      expect(msg.message).toBe("grabbing coffee");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("sendChannel sends message and receives echo", async () => {
     const ws = await startMockWorldServer();
     try {
