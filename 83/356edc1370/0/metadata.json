@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "83356edc1370",
+  "session_id": "e2ba95cc-715c-4a58-82d7-afe063fb0bcd",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-28T23:55:13.994696836Z",
+  "branch": "feat/text-emote",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/help.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "75df2cc788e4",
+  "token_usage": {
+    "input_tokens": 100,
+    "cache_creation_tokens": 252375,
+    "cache_read_tokens": 7851972,
+    "output_tokens": 24054,
+    "api_call_count": 88
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-28T23:55:13.653712169Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 1,
+    "human_removed": 0,
+    "total_committed": 0,
+    "agent_percentage": 0
+  }
+}

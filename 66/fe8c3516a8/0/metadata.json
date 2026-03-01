@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "66fe8c3516a8",
+  "session_id": "110a2f0d-2088-4b22-968e-90fe0b633df2",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T00:54:56.69589286Z",
+  "branch": "feat/roll-command",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts",
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/ui/tui.test.ts",
+    "src/ui/tui.ts",
+    "src/wow/client.test.ts",
+    "src/wow/client.ts",
+    "src/wow/protocol/chat.test.ts",
+    "src/wow/protocol/opcodes.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "55c53a023978",
+  "token_usage": {
+    "input_tokens": 1028,
+    "cache_creation_tokens": 425962,
+    "cache_read_tokens": 8971409,
+    "output_tokens": 25557,
+    "api_call_count": 88
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T00:54:56.366051489Z",
+    "agent_lines": 26,
+    "human_added": 345,
+    "human_modified": 12,
+    "human_removed": 0,
+    "total_committed": 383,
+    "agent_percentage": 6.7885117493472595
+  }
+}

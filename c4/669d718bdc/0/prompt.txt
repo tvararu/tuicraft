@@ -1,0 +1,1074 @@
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+Add text emote support: /e and /emote slash commands. This sends a chat message with CHAT_MSG_EMOTE type. Also handle receiving emotes from other players. Look at how say/yell work and follow the same pattern. This is tiny — branch, implement with full test coverage, and open a PR. Use feat: prefix for commits.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+---
+
+Yes, proceed. Branch, implement, test, PR. Don't ask more questions.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/verification-before-completion
+
+# Verification Before Completion
+
+## Overview
+
+Claiming work is complete without verification is dishonesty, not efficiency.
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## Why This Matters
+
+From 24 failure memories:
+- your human partner said "I don't believe you" - trust broken
+- Undefined functions shipped - would crash
+- Missing requirements shipped - incomplete features
+- Time wasted on false completion → redirect → rework
+- Violates: "Honesty is a core value. If you lie, you'll be replaced."
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+## The Bottom Line
+
+**No shortcuts for verification.**
+
+Run the command. Read the output. THEN claim the result.
+
+This is non-negotiable.
+
+---
+
+You are a senior security engineer conducting a focused security review of the changes on this branch.
+
+GIT STATUS:
+
+```
+On branch feat/text-emote
+Your branch is up to date with 'origin/feat/text-emote'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/plans/2026-02-19-reconnect-auth-design.md
+	docs/plans/2026-02-19-reconnect-auth-plan.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+FILES MODIFIED:
+
+```
+.claude/skills/tuicraft/SKILL.md
+README.md
+docs/manual.md
+src/cli/help.ts
+src/daemon/commands.test.ts
+src/daemon/commands.ts
+src/daemon/start.test.ts
+src/test/mock-handle.ts
+src/ui/tui.test.ts
+src/ui/tui.ts
+src/wow/client.test.ts
+src/wow/client.ts
+```
+
+COMMITS:
+
+```
+commit 751b13b2e6fbec729fa48a92886c5ec0a0bef4a0
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sat Feb 28 23:49:02 2026 +0000
+
+    feat: Add text emote support
+    
+    Wire /e and /emote slash commands through the chat pipeline using
+    the same pattern as say/yell. Handles both sending and receiving
+    emotes via CHAT_MSG_EMOTE (0x0a).
+    
+    Entire-Checkpoint: 7d877df11c0e
+```
+
+DIFF CONTENT:
+
+```
+diff --git a/.claude/skills/tuicraft/SKILL.md b/.claude/skills/tuicraft/SKILL.md
+index 66f01d5..5336154 100644
+--- a/.claude/skills/tuicraft/SKILL.md
++++ b/.claude/skills/tuicraft/SKILL.md
+@@ -24,6 +24,7 @@ Returns CONNECTED or an error. Check this before other commands.
+ Slash commands work too:
+ 
+     tuicraft send "/raid message"         # raid chat
++    tuicraft send "/e waves hello"        # text emote
+     tuicraft send "/1 message"            # channel 1
+     tuicraft send "/2 message"            # channel 2
+ 
+diff --git a/README.md b/README.md
+index 4467f73..705dcdb 100644
+--- a/README.md
++++ b/README.md
+@@ -140,7 +140,7 @@ that the official game client does.
+ | MOTD                                    | ✅     |
+ | Server broadcast messages               | ❌     |
+ | Chat restricted / wrong faction notices | ❌     |
+-| Text emotes (`/e`, `/emote`)            | ❌     |
++| Text emotes (`/e`, `/emote`)            | ✅     |
+ | DND / AFK status                        | ❌     |
+ 
+ ### 👥 Social
+diff --git a/docs/manual.md b/docs/manual.md
+index d63b92e..02a2c4b 100644
+--- a/docs/manual.md
++++ b/docs/manual.md
+@@ -121,6 +121,7 @@ When running in TUI mode, the following slash commands are available:
+ | `/g` _msg_                   | Guild chat                  |
+ | `/p` _msg_                   | Party chat                  |
+ | `/raid` _msg_                | Raid chat                   |
++| `/e` _msg_                   | Text emote                  |
+ | `/1` _msg_                   | Channel 1 (usually General) |
+ | `/2` _msg_                   | Channel 2 (usually Trade)   |
+ | `/who` _query_               | Who search                  |
+diff --git a/src/cli/help.ts b/src/cli/help.ts
+index 90da19a..ac249db 100644
+--- a/src/cli/help.ts
++++ b/src/cli/help.ts
+@@ -36,7 +36,7 @@ SETUP FLAGS
+   --timeout_minutes N  Daemon idle timeout (default: 30)
+ 
+ INTERACTIVE COMMANDS (TUI mode)
+-  /s, /y, /w, /g, /p, /raid, /1, /2  Chat commands
++  /s, /y, /w, /g, /p, /raid, /e, /1   Chat commands
+   /r              Reply to last whisper
+   /who [filter]   Who search
+   /invite <name>  Invite player to group
+diff --git a/src/daemon/commands.test.ts b/src/daemon/commands.test.ts
+index 663e440..67336f2 100644
+--- a/src/daemon/commands.test.ts
++++ b/src/daemon/commands.test.ts
+@@ -74,6 +74,13 @@ describe("parseIpcCommand", () => {
+     });
+   });
+ 
++  test("EMOTE", () => {
++    expect(parseIpcCommand("EMOTE waves hello")).toEqual({
++      type: "emote",
++      message: "waves hello",
++    });
++  });
++
+   test("WHISPER", () => {
+     expect(parseIpcCommand("WHISPER Xiara follow me")).toEqual({
+       type: "whisper",
+@@ -202,6 +209,13 @@ describe("parseIpcCommand", () => {
+     });
+   });
+ 
++  test("slash /emote maps to emote", () => {
++    expect(parseIpcCommand("/emote waves")).toEqual({
++      type: "emote",
++      message: "waves",
++    });
++  });
++
+   test("slash /who maps to who with filter", () => {
+     expect(parseIpcCommand("/who mage")).toEqual({
+       type: "who",
+@@ -280,7 +294,6 @@ describe("parseIpcCommand", () => {
+       ["ROLL", "Random roll"],
+       ["DND", "Player status"],
+       ["AFK", "Player status"],
+-      ["EMOTE waves", "Text emotes"],
+     ] as const;
+ 
+     for (const [input, feature] of cases) {
+@@ -467,6 +480,24 @@ describe("dispatchCommand", () => {
+     expect(socket.written()).toBe("OK\n\n");
+   });
+ 
++  test("emote calls sendEmote and writes OK", async () => {
++    const handle = createMockHandle();
++    const events = new RingBuffer<EventEntry>(10);
++    const socket = createMockSocket();
++    const cleanup = jest.fn();
++
++    await dispatchCommand(
++      { type: "emote", message: "waves hello" },
++      handle,
++      events,
++      socket,
++      cleanup,
++    );
++
++    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
++    expect(socket.written()).toBe("OK\n\n");
++  });
++
+   test("whisper calls sendWhisper and writes OK", async () => {
+     const handle = createMockHandle();
+     const events = new RingBuffer<EventEntry>(10);
+@@ -1661,6 +1692,13 @@ describe("IPC round-trip", () => {
+     expect(handle.sendSay).toHaveBeenCalledWith("hello world");
+   });
+ 
++  test("EMOTE returns OK and calls handle", async () => {
++    startTestServer();
++    const lines = await sendToSocket("EMOTE waves hello", sockPath);
++    expect(lines).toEqual(["OK"]);
++    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
++  });
++
+   test("WHISPER returns OK", async () => {
+     startTestServer();
+     const lines = await sendToSocket("WHISPER Xiara hey", sockPath);
+diff --git a/src/daemon/commands.ts b/src/daemon/commands.ts
+index 264e6b1..c49c3f2 100644
+--- a/src/daemon/commands.ts
++++ b/src/daemon/commands.ts
+@@ -37,6 +37,7 @@ export type IpcCommand =
+   | { type: "yell"; message: string }
+   | { type: "guild"; message: string }
+   | { type: "party"; message: string }
++  | { type: "emote"; message: string }
+   | { type: "whisper"; target: string; message: string }
+   | { type: "read" }
+   | { type: "read_json" }
+@@ -68,6 +69,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
+       case "yell":
+       case "guild":
+       case "party":
++      case "emote":
+         return parsed;
+       case "whisper":
+         return parsed;
+@@ -104,8 +106,14 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
+     case "YELL":
+     case "GUILD":
+     case "PARTY":
++    case "EMOTE":
+       return {
+-        type: verb.toLowerCase() as "say" | "yell" | "guild" | "party",
++        type: verb.toLowerCase() as
++          | "say"
++          | "yell"
++          | "guild"
++          | "party"
++          | "emote",
+         message: rest,
+       };
+     case "WHISPER": {
+@@ -180,8 +188,6 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
+     case "DND":
+     case "AFK":
+       return { type: "unimplemented", feature: "Player status" };
+-    case "EMOTE":
+-      return { type: "unimplemented", feature: "Text emotes" };
+     default:
+       return line ? { type: "chat", message: line } : undefined;
+   }
+@@ -246,6 +252,10 @@ export async function dispatchCommand(
+       handle.sendParty(cmd.message);
+       writeLines(socket, ["OK"]);
+       return false;
++    case "emote":
++      handle.sendEmote(cmd.message);
++      writeLines(socket, ["OK"]);
++      return false;
+     case "whisper":
+       handle.sendWhisper(cmd.target, cmd.message);
+       writeLines(socket, ["OK"]);
+diff --git a/src/daemon/start.test.ts b/src/daemon/start.test.ts
+index 8c7d50c..21b51bf 100644
+--- a/src/daemon/start.test.ts
++++ b/src/daemon/start.test.ts
+@@ -50,6 +50,7 @@ function makeMockClient(): {
+         sendGuild: jest.fn(),
+         sendParty: jest.fn(),
+         sendRaid: jest.fn(),
++        sendEmote: jest.fn(),
+         sendWhisper: jest.fn(),
+         sendChannel: jest.fn(),
+         getChannel: jest.fn(),
+diff --git a/src/test/mock-handle.ts b/src/test/mock-handle.ts
+index 5b1da9e..a74be9e 100644
+--- a/src/test/mock-handle.ts
++++ b/src/test/mock-handle.ts
+@@ -37,6 +37,7 @@ export function createMockHandle(): WorldHandle & {
+     sendGuild: jest.fn(),
+     sendParty: jest.fn(),
+     sendRaid: jest.fn(),
++    sendEmote: jest.fn(),
+     sendChannel: jest.fn(),
+     getChannel: jest.fn(),
+     who: jest.fn(async () => []),
+diff --git a/src/ui/tui.test.ts b/src/ui/tui.test.ts
+index dba55be..ce1e4d2 100644
+--- a/src/ui/tui.test.ts
++++ b/src/ui/tui.test.ts
+@@ -291,16 +291,16 @@ describe("parseCommand", () => {
+         feature: "Player status",
+       });
+     });
+-    test("/e returns unimplemented", () => {
++    test("/e sends emote", () => {
+       expect(parseCommand("/e waves")).toEqual({
+-        type: "unimplemented",
+-        feature: "Text emotes",
++        type: "emote",
++        message: "waves",
+       });
+     });
+-    test("/emote returns unimplemented", () => {
++    test("/emote sends emote", () => {
+       expect(parseCommand("/emote waves")).toEqual({
+-        type: "unimplemented",
+-        feature: "Text emotes",
++        type: "emote",
++        message: "waves",
+       });
+     });
+   });
+@@ -452,7 +452,7 @@ describe("startTui", () => {
+     await done;
+   });
+ 
+-  test("dispatches yell, guild, party, raid commands", async () => {
++  test("dispatches yell, guild, party, raid, emote commands", async () => {
+     const handle = createMockHandle();
+     const input = new PassThrough();
+ 
+@@ -461,12 +461,14 @@ describe("startTui", () => {
+     writeLine(input, "/g guild msg");
+     writeLine(input, "/p party msg");
+     writeLine(input, "/raid pull now");
++    writeLine(input, "/e waves hello");
+     await flush();
+ 
+     expect(handle.sendYell).toHaveBeenCalledWith("LOUD");
+     expect(handle.sendGuild).toHaveBeenCalledWith("guild msg");
+     expect(handle.sendParty).toHaveBeenCalledWith("party msg");
+     expect(handle.sendRaid).toHaveBeenCalledWith("pull now");
++    expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
+ 
+     input.end();
+     await done;
+diff --git a/src/ui/tui.ts b/src/ui/tui.ts
+index c85b02f..97934c7 100644
+--- a/src/ui/tui.ts
++++ b/src/ui/tui.ts
+@@ -21,6 +21,7 @@ export type Command =
+   | { type: "guild"; message: string }
+   | { type: "party"; message: string }
+   | { type: "raid"; message: string }
++  | { type: "emote"; message: string }
+   | { type: "whisper"; target: string; message: string }
+   | { type: "reply"; message: string }
+   | { type: "channel"; target: string; message: string }
+@@ -133,7 +134,7 @@ export function parseCommand(input: string): Command {
+       return { type: "unimplemented", feature: "Player status" };
+     case "/e":
+     case "/emote":
+-      return { type: "unimplemented", feature: "Text emotes" };
++      return { type: "emote", message: rest };
+     default: {
+       const channelMatch = cmd.match(/^\/(\d+)$/);
+       if (channelMatch) {
+@@ -520,6 +521,9 @@ export async function executeCommand(
+     case "raid":
+       state.handle.sendRaid(cmd.message);
+       break;
++    case "emote":
++      state.handle.sendEmote(cmd.message);
++      break;
+     case "whisper":
+       state.handle.sendWhisper(cmd.target, cmd.message);
+       state.lastWhisperFrom = cmd.target;
+diff --git a/src/wow/client.test.ts b/src/wow/client.test.ts
+index 93181ec..e529890 100644
+--- a/src/wow/client.test.ts
++++ b/src/wow/client.test.ts
+@@ -767,6 +767,25 @@ describe("world error paths", () => {
+     }
+   });
+ 
++  test("sendEmote sends message and receives echo", async () => {
++    const ws = await startMockWorldServer();
++    try {
++      const handle = await worldSession(
++        { ...base, host: "127.0.0.1", port: ws.port },
++        fakeAuth(ws.port),
++      );
++      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++      handle.sendEmote("test emote");
++      const msg = await received;
++      expect(msg.type).toBe(ChatType.EMOTE);
++      expect(msg.message).toBe("test emote");
++      handle.close();
++      await handle.closed;
++    } finally {
++      ws.stop();
++    }
++  });
++
+   test("sendChannel sends message and receives echo", async () => {
+     const ws = await startMockWorldServer();
+     try {
+@@ -1150,6 +1169,26 @@ describe("world error paths", () => {
+     }
+   });
+ 
++  test("sendInCurrentMode dispatches emote", async () => {
++    const ws = await startMockWorldServer();
++    try {
++      const handle = await worldSession(
++        { ...base, host: "127.0.0.1", port: ws.port },
++        fakeAuth(ws.port),
++      );
++      handle.setLastChatMode({ type: "emote" });
++      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++      handle.sendInCurrentMode("emote test");
++      const msg = await received;
++      expect(msg.type).toBe(ChatType.EMOTE);
++      expect(msg.message).toBe("emote test");
++      handle.close();
++      await handle.closed;
++    } finally {
++      ws.stop();
++    }
++  });
++
+   test("sendInCurrentMode dispatches channel", async () => {
+     const ws = await startMockWorldServer();
+     try {
+diff --git a/src/wow/client.ts b/src/wow/client.ts
+index 4edec05..b17a443 100644
+--- a/src/wow/client.ts
++++ b/src/wow/client.ts
+@@ -151,6 +151,7 @@ export type ChatMode =
+   | { type: "guild" }
+   | { type: "party" }
+   | { type: "raid" }
++  | { type: "emote" }
+   | { type: "whisper"; target: string }
+   | { type: "channel"; channel: string };
+ 
+@@ -164,6 +165,7 @@ export type WorldHandle = {
+   sendGuild(message: string): void;
+   sendParty(message: string): void;
+   sendRaid(message: string): void;
++  sendEmote(message: string): void;
+   sendChannel(channel: string, message: string): void;
+   getChannel(index: number): string | undefined;
+   who(opts?: {
+@@ -1144,6 +1146,14 @@ export function worldSession(
+             buildChatMessage(ChatType.RAID, lang, message),
+           );
+         },
++        sendEmote(message) {
++          conn.lastChatMode = { type: "emote" };
++          sendPacket(
++            conn,
++            GameOpcode.CMSG_MESSAGE_CHAT,
++            buildChatMessage(ChatType.EMOTE, lang, message),
++          );
++        },
+         sendChannel(channel, message) {
+           conn.lastChatMode = { type: "channel", channel };
+           sendPacket(
+@@ -1184,6 +1194,9 @@ export function worldSession(
+             case "raid":
+               handle.sendRaid(message);
+               break;
++            case "emote":
++              handle.sendEmote(message);
++              break;
+             case "whisper":
+               handle.sendWhisper(mode.target, message);
+               break;
+```
+
+Review the complete diff above. This contains all code changes in the PR.
+
+
+OBJECTIVE:
+Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential. This is not a general code review - focus ONLY on security implications newly added by this PR. Do not comment on existing security concerns.
+
+CRITICAL INSTRUCTIONS:
+1. MINIMIZE FALSE POSITIVES: Only flag issues where you're >80% confident of actual exploitability
+2. AVOID NOISE: Skip theoretical issues, style concerns, or low-impact findings
+3. FOCUS ON IMPACT: Prioritize vulnerabilities that could lead to unauthorized access, data breaches, or system compromise
+4. EXCLUSIONS: Do NOT report the following issue types:
+   - Denial of Service (DOS) vulnerabilities, even if they allow service disruption
+   - Secrets or sensitive data stored on disk (these are handled by other processes)
+   - Rate limiting or resource exhaustion issues
+
+SECURITY CATEGORIES TO EXAMINE:
+
+**Input Validation Vulnerabilities:**
+- SQL injection via unsanitized user input
+- Command injection in system calls or subprocesses
+- XXE injection in XML parsing
+- Template injection in templating engines
+- NoSQL injection in database queries
+- Path traversal in file operations
+
+**Authentication & Authorization Issues:**
+- Authentication bypass logic
+- Privilege escalation paths
+- Session management flaws
+- JWT token vulnerabilities
+- Authorization logic bypasses
+
+**Crypto & Secrets Management:**
+- Hardcoded API keys, passwords, or tokens
+- Weak cryptographic algorithms or implementations
+- Improper key storage or management
+- Cryptographic randomness issues
+- Certificate validation bypasses
+
+**Injection & Code Execution:**
+- Remote code execution via deseralization
+- Pickle injection in Python
+- YAML deserialization vulnerabilities
+- Eval injection in dynamic code execution
+- XSS vulnerabilities in web applications (reflected, stored, DOM-based)
+
+**Data Exposure:**
+- Sensitive data logging or storage
+- PII handling violations
+- API endpoint data leakage
+- Debug information exposure
+
+Additional notes:
+- Even if something is only exploitable from the local network, it can still be a HIGH severity issue
+
+ANALYSIS METHODOLOGY:
+
+Phase 1 - Repository Context Research (Use file search tools):
+- Identify existing security frameworks and libraries in use
+- Look for established secure coding patterns in the codebase
+- Examine existing sanitization and validation patterns
+- Understand the project's security model and threat model
+
+Phase 2 - Comparative Analysis:
+- Compare new code changes against existing security patterns
+- Identify deviations from established secure practices
+- Look for inconsistent security implementations
+- Flag code that introduces new attack surfaces
+
+Phase 3 - Vulnerability Assessment:
+- Examine each modified file for security implications
+- Trace data flow from user inputs to sensitive operations
+- Look for privilege boundaries being crossed unsafely
+- Identify injection points and unsafe deserialization
+
+REQUIRED OUTPUT FORMAT:
+
+You MUST output your findings in markdown. The markdown output should contain the file, line number, severity, category (e.g. `sql_injection` or `xss`), description, exploit scenario, and fix recommendation.
+
+For example:
+
+# Vuln 1: XSS: `foo.py:42`
+
+* Severity: High
+* Description: User input from `username` parameter is directly interpolated into HTML without escaping, allowing reflected XSS attacks
+* Exploit Scenario: Attacker crafts URL like /bar?q=<script>alert(document.cookie)</script> to execute JavaScript in victim's browser, enabling session hijacking or data theft
+* Recommendation: Use Flask's escape() function or Jinja2 templates with auto-escaping enabled for all user inputs rendered in HTML
+
+SEVERITY GUIDELINES:
+- **HIGH**: Directly exploitable vulnerabilities leading to RCE, data breach, or authentication bypass
+- **MEDIUM**: Vulnerabilities requiring specific conditions but with significant impact
+- **LOW**: Defense-in-depth issues or lower-impact vulnerabilities
+
+CONFIDENCE SCORING:
+- 0.9-1.0: Certain exploit path identified, tested if possible
+- 0.8-0.9: Clear vulnerability pattern with known exploitation methods
+- 0.7-0.8: Suspicious pattern requiring specific conditions to exploit
+- Below 0.7: Don't report (too speculative)
+
+FINAL REMINDER:
+Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues than flood the report with false positives. Each finding should be something a security engineer would confidently raise in a PR review.
+
+FALSE POSITIVE FILTERING:
+
+> You do not need to run commands to reproduce the vulnerability, just read the code to determine if it is a real vulnerability. Do not use the bash tool or write to any files.
+>
+> HARD EXCLUSIONS - Automatically exclude findings matching these patterns:
+> 1. Denial of Service (DOS) vulnerabilities or resource exhaustion attacks.
+> 2. Secrets or credentials stored on disk if they are otherwise secured.
+> 3. Rate limiting concerns or service overload scenarios.
+> 4. Memory consumption or CPU exhaustion issues.
+> 5. Lack of input validation on non-security-critical fields without proven security impact.
+> 6. Input sanitization concerns for GitHub Action workflows unless they are clearly triggerable via untrusted input.
+> 7. A lack of hardening measures. Code is not expected to implement all security best practices, only flag concrete vulnerabilities.
+> 8. Race conditions or timing attacks that are theoretical rather than practical issues. Only report a race condition if it is concretely problematic.
+> 9. Vulnerabilities related to outdated third-party libraries. These are managed separately and should not be reported here.
+> 10. Memory safety issues such as buffer overflows or use-after-free-vulnerabilities are impossible in rust. Do not report memory safety issues in rust or any other memory safe languages.
+> 11. Files that are only unit tests or only used as part of running tests.
+> 12. Log spoofing concerns. Outputting un-sanitized user input to logs is not a vulnerability.
+> 13. SSRF vulnerabilities that only control the path. SSRF is only a concern if it can control the host or protocol.
+> 14. Including user-controlled content in AI system prompts is not a vulnerability.
+> 15. Regex injection. Injecting untrusted content into a regex is not a vulnerability.
+> 16. Regex DOS concerns.
+> 16. Insecure documentation. Do not report any findings in documentation files such as markdown files.
+> 17. A lack of audit logs is not a vulnerability.
+>
+> PRECEDENTS -
+> 1. Logging high value secrets in plaintext is a vulnerability. Logging URLs is assumed to be safe.
+> 2. UUIDs can be assumed to be unguessable and do not need to be validated.
+> 3. Environment variables and CLI flags are trusted values. Attackers are generally not able to modify them in a secure environment. Any attack that relies on controlling an environment variable is invalid.
+> 4. Resource management issues such as memory or file descriptor leaks are not valid.
+> 5. Subtle or low impact web vulnerabilities such as tabnabbing, XS-Leaks, prototype pollution, and open redirects should not be reported unless they are extremely high confidence.
+> 6. React and Angular are generally secure against XSS. These frameworks do not need to sanitize or escape user input unless it is using dangerouslySetInnerHTML, bypassSecurityTrustHtml, or similar methods. Do not report XSS vulnerabilities in React or Angular components or tsx files unless they are using unsafe methods.
+> 7. Most vulnerabilities in github action workflows are not exploitable in practice. Before validating a github action workflow vulnerability ensure it is concrete and has a very specific attack path.
+> 8. A lack of permission checking or authentication in client-side JS/TS code is not a vulnerability. Client-side code is not trusted and does not need to implement these checks, they are handled on the server-side. The same applies to all flows that send untrusted data to the backend, the backend is responsible for validating and sanitizing all inputs.
+> 9. Only include MEDIUM findings if they are obvious and concrete issues.
+> 10. Most vulnerabilities in ipython notebooks (*.ipynb files) are not exploitable in practice. Before validating a notebook vulnerability ensure it is concrete and has a very specific attack path where untrusted input can trigger the vulnerability.
+> 11. Logging non-PII data is not a vulnerability even if the data may be sensitive. Only report logging vulnerabilities if they expose sensitive information such as secrets, passwords, or personally identifiable information (PII).
+> 12. Command injection vulnerabilities in shell scripts are generally not exploitable in practice since shell scripts generally do not run with untrusted user input. Only report command injection vulnerabilities in shell scripts if they are concrete and have a very specific attack path for untrusted input.
+>
+> SIGNAL QUALITY CRITERIA - For remaining findings, assess:
+> 1. Is there a concrete, exploitable vulnerability with a clear attack path?
+> 2. Does this represent a real security risk vs theoretical best practice?
+> 3. Are there specific code locations and reproduction steps?
+> 4. Would this finding be actionable for a security team?
+>
+> For each finding, assign a confidence score from 1-10:
+> - 1-3: Low confidence, likely false positive or noise
+> - 4-6: Medium confidence, needs investigation
+> - 7-10: High confidence, likely true vulnerability
+
+START ANALYSIS:
+
+Begin your analysis now. Do this in 3 steps:
+
+1. Use a sub-task to identify vulnerabilities. Use the repository exploration tools to understand the codebase context, then analyze the PR changes for security implications. In the prompt for this sub-task, include all of the above.
+2. Then for each vulnerability identified by the above sub-task, create a new sub-task to filter out false-positives. Launch these sub-tasks as parallel sub-tasks. In the prompt for these sub-tasks, include everything in the "FALSE POSITIVE FILTERING" instructions.
+3. Filter out any vulnerabilities where the sub-task reported a confidence less than 8.
+
+Your final reply must contain the markdown report and nothing else.
+
+---
+
+You are an expert code reviewer. Follow these steps:
+
+      1. If no PR number is provided in the args, run `gh pr list` to show open PRs
+      2. If a PR number is provided, run `gh pr view <number>` to get PR details
+      3. Run `gh pr diff <number>` to get the diff
+      4. Analyze the changes and provide a thorough code review that includes:
+         - Overview of what the PR does
+         - Analysis of code quality and style
+         - Specific suggestions for improvements
+         - Any potential issues or risks
+
+      Keep your review concise but thorough. Focus on:
+      - Code correctness
+      - Following project conventions
+      - Performance implications
+      - Test coverage
+      - Security considerations
+
+      Format your review with clear sections and bullet points.
+
+      PR number:
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/requesting-code-review
+
+# Requesting Code Review
+
+Dispatch superpowers:code-reviewer subagent to catch issues before they cascade.
+
+**Core principle:** Review early, review often.
+
+## When to Request Review
+
+**Mandatory:**
+- After each task in subagent-driven development
+- After completing major feature
+- Before merge to main
+
+**Optional but valuable:**
+- When stuck (fresh perspective)
+- Before refactoring (baseline check)
+- After fixing complex bug
+
+## How to Request
+
+**1. Get git SHAs:**
+```bash
+BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+HEAD_SHA=$(git rev-parse HEAD)
+```
+
+**2. Dispatch code-reviewer subagent:**
+
+Use Task tool with superpowers:code-reviewer type, fill template at `code-reviewer.md`
+
+**Placeholders:**
+- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{PLAN_OR_REQUIREMENTS}` - What it should do
+- `{BASE_SHA}` - Starting commit
+- `{HEAD_SHA}` - Ending commit
+- `{DESCRIPTION}` - Brief summary
+
+**3. Act on feedback:**
+- Fix Critical issues immediately
+- Fix Important issues before proceeding
+- Note Minor issues for later
+- Push back if reviewer is wrong (with reasoning)
+
+## Example
+
+```
+[Just completed Task 2: Add verification function]
+
+You: Let me request code review before proceeding.
+
+BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print }')
+HEAD_SHA=$(git rev-parse HEAD)
+
+[Dispatch superpowers:code-reviewer subagent]
+  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
+  PLAN_OR_REQUIREMENTS: Task 2 from docs/plans/deployment-plan.md
+  BASE_SHA: a7981ec
+  HEAD_SHA: 3df7661
+  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
+
+[Subagent returns]:
+  Strengths: Clean architecture, real tests
+  Issues:
+    Important: Missing progress indicators
+    Minor: Magic number (100) for reporting interval
+  Assessment: Ready to proceed
+
+You: [Fix progress indicators]
+[Continue to Task 3]
+```
+
+## Integration with Workflows
+
+**Subagent-Driven Development:**
+- Review after EACH task
+- Catch issues before they compound
+- Fix before moving to next task
+
+**Executing Plans:**
+- Review after each batch (3 tasks)
+- Get feedback, apply, continue
+
+**Ad-Hoc Development:**
+- Review before merge
+- Review when stuck
+
+## Red Flags
+
+**Never:**
+- Skip review because "it's simple"
+- Ignore Critical issues
+- Proceed with unfixed Important issues
+- Argue with valid technical feedback
+
+**If reviewer wrong:**
+- Push back with technical reasoning
+- Show code/tests that prove it works
+- Request clarification
+
+See template at: requesting-code-review/code-reviewer.md

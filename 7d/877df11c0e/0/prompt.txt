@@ -1,0 +1,335 @@
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+Add text emote support: /e and /emote slash commands. This sends a chat message with CHAT_MSG_EMOTE type. Also handle receiving emotes from other players. Look at how say/yell work and follow the same pattern. This is tiny — branch, implement with full test coverage, and open a PR. Use feat: prefix for commits.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+---
+
+Yes, proceed. Branch, implement, test, PR. Don't ask more questions.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/verification-before-completion
+
+# Verification Before Completion
+
+## Overview
+
+Claiming work is complete without verification is dishonesty, not efficiency.
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## Why This Matters
+
+From 24 failure memories:
+- your human partner said "I don't believe you" - trust broken
+- Undefined functions shipped - would crash
+- Missing requirements shipped - incomplete features
+- Time wasted on false completion → redirect → rework
+- Violates: "Honesty is a core value. If you lie, you'll be replaced."
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+## The Bottom Line
+
+**No shortcuts for verification.**
+
+Run the command. Read the output. THEN claim the result.
+
+This is non-negotiable.
