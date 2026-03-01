@@ -187,6 +187,9 @@ export function formatMessage(msg: ChatMessage): string {
   if (msg.type === ChatType.WHISPER_INFORM) {
     return `[whisper to ${msg.sender}] ${message}`;
   }
+  if (msg.type === ChatType.SYSTEM && msg.origin) {
+    return `[server] ${message}`;
+  }
   if (msg.type === ChatType.SYSTEM) {
     return `[system] ${message}`;
   }
@@ -218,7 +221,12 @@ const JSON_TYPE_LABELS: Record<number, string> = {
 };
 
 export function formatMessageObj(msg: ChatMessage): LogEntry {
-  const type = JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
+  const type =
+    msg.origin === "server"
+      ? "SERVER_BROADCAST"
+      : msg.origin === "notification"
+        ? "NOTIFICATION"
+        : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
   const obj: LogEntry = {
     type,
     sender: msg.sender,
