@@ -1026,6 +1026,61 @@ describe("world error paths", () => {
     }
   });
 
+  test("SMSG_CHAT_SERVER_MESSAGE delivers as server-origin system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint32LE(1);
+      w.cString("15:00");
+      ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.sender).toBe("");
+      expect(msg.message).toBe("Server shutdown in 15:00");
+      expect(msg.origin).toBe("server");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("SMSG_NOTIFICATION delivers as notification-origin system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.cString("Server autobroadcast message");
+      ws.inject(GameOpcode.SMSG_NOTIFICATION, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.sender).toBe("");
+      expect(msg.message).toBe("Server autobroadcast message");
+      expect(msg.origin).toBe("notification");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("channel left removes from channel list", async () => {
     const ws = await startMockWorldServer();
     try {
@@ -1449,10 +1504,10 @@ describe("world error paths", () => {
         });
       });
 
-      ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, new Uint8Array(0));
+      ws.inject(GameOpcode.SMSG_CHAT_PLAYER_AMBIGUOUS, new Uint8Array(0));
       const msg = await received;
       expect(msg.type).toBe(ChatType.SYSTEM);
-      expect(msg.message).toContain("Server broadcast message");
+      expect(msg.message).toContain("Ambiguous player name");
 
       handle.close();
       await handle.closed;

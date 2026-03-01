@@ -19,6 +19,8 @@ import {
   parseWhoResponse,
   buildRandomRoll,
   parseRandomRoll,
+  parseServerBroadcast,
+  parseNotification,
   type ChatMessage as RawChatMessage,
   type WhoResult,
 } from "wow/protocol/chat";
@@ -569,6 +571,26 @@ function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
   });
 }
 
+function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
+  const { message } = parseServerBroadcast(r);
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message,
+    origin: "server",
+  });
+}
+
+function handleNotification(conn: WorldConn, r: PacketReader): void {
+  const { message } = parseNotification(r);
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message,
+    origin: "notification",
+  });
+}
+
 function handlePartyCommandResult(conn: WorldConn, r: PacketReader): void {
   const result = parsePartyCommandResult(r);
   conn.onGroupEvent?.({
@@ -1039,6 +1061,12 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
       handleChannelNotify(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
+      handleServerBroadcast(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
+      handleNotification(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
       handlePartyCommandResult(conn, r),
