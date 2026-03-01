@@ -140,8 +140,8 @@ that the official game client does.
 | Party, raid                             | ✅     |
 | Channels (`/1`, `/2`, …)                | ✅     |
 | MOTD                                    | ✅     |
-| Server broadcast messages               | ❌     |
-| Chat restricted / wrong faction notices | ❌     |
+| Server broadcast messages               | ✅     |
+| Chat restricted / wrong faction notices | ✅     |
 | Text emotes (`/e`, `/emote`)            | ✅     |
 | DND / AFK status                        | ✅     |
 
