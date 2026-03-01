@@ -1,7 +1,9 @@
 {
   "cli_version": "0.4.8",
   "checkpoint_id": "48e1bff45d21",
+  "session_id": "b40cbf28-e020-4c24-b9fe-ef3b6f34614d",
   "strategy": "manual-commit",
+  "created_at": "2026-03-01T23:27:36.653187549Z",
   "branch": "feat/ignore-list",
   "checkpoints_count": 0,
   "files_touched": [
@@ -27,27 +29,22 @@
     "src/wow/protocol/social.ts",
     "src/wow/world-handlers.ts"
   ],
-  "sessions": [
-    {
-      "metadata": "/48/e1bff45d21/0/metadata.json",
-      "transcript": "/48/e1bff45d21/0/full.jsonl",
-      "context": "/48/e1bff45d21/0/context.md",
-      "content_hash": "/48/e1bff45d21/0/content_hash.txt",
-      "prompt": "/48/e1bff45d21/0/prompt.txt"
-    },
-    {
-      "metadata": "/48/e1bff45d21/1/metadata.json",
-      "transcript": "/48/e1bff45d21/1/full.jsonl",
-      "context": "/48/e1bff45d21/1/context.md",
-      "content_hash": "/48/e1bff45d21/1/content_hash.txt",
-      "prompt": "/48/e1bff45d21/1/prompt.txt"
-    }
-  ],
+  "agent": "Claude Code",
+  "turn_id": "23d5cdf7e12a",
   "token_usage": {
-    "input_tokens": 127,
-    "cache_creation_tokens": 217566,
-    "cache_read_tokens": 12404806,
-    "output_tokens": 42714,
-    "api_call_count": 119
+    "input_tokens": 68,
+    "cache_creation_tokens": 131020,
+    "cache_read_tokens": 7926690,
+    "output_tokens": 20681,
+    "api_call_count": 65
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T23:27:36.402752213Z",
+    "agent_lines": 1103,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1103,
+    "agent_percentage": 100
   }
 }
