@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "fffd8604ca1c",
+  "strategy": "manual-commit",
+  "branch": "feat/chat-notices",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/client.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ff/fd8604ca1c/0/metadata.json",
+      "transcript": "/ff/fd8604ca1c/0/full.jsonl",
+      "context": "/ff/fd8604ca1c/0/context.md",
+      "content_hash": "/ff/fd8604ca1c/0/content_hash.txt",
+      "prompt": "/ff/fd8604ca1c/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 56,
+    "cache_creation_tokens": 105874,
+    "cache_read_tokens": 2349914,
+    "output_tokens": 13611,
+    "api_call_count": 46
+  }
+}
