@@ -209,6 +209,14 @@ describe("parseCommand", () => {
     expect(parseCommand("/friend")).toEqual({ type: "friends" });
   });
 
+  test("/friend add without target returns friends", () => {
+    expect(parseCommand("/friend add")).toEqual({ type: "friends" });
+  });
+
+  test("/friend remove without target returns friends", () => {
+    expect(parseCommand("/friend remove")).toEqual({ type: "friends" });
+  });
+
   describe("unimplemented commands", () => {
     test("/ignore returns unimplemented", () => {
       expect(parseCommand("/ignore Foo")).toEqual({

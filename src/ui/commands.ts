@@ -133,12 +133,10 @@ export function parseCommand(input: string): Command {
     case "/e":
     case "/emote":
       return { type: "emote", message: rest };
-    default: {
-      const channelMatch = cmd.match(/^\/(\d+)$/);
-      if (channelMatch) {
-        return { type: "channel", target: channelMatch[1]!, message: rest };
-      }
-      return { type: "say", message: input };
-    }
   }
+
+  const channelMatch = cmd.match(/^\/(\d+)$/);
+  return channelMatch
+    ? { type: "channel", target: channelMatch[1]!, message: rest }
+    : { type: "say", message: input };
 }
