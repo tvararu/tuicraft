@@ -69,6 +69,9 @@ Add `--json` for structured output. Each JSON line:
 | FRIEND_ADDED     | Friend added to list                             |
 | FRIEND_REMOVED   | Friend removed from list                         |
 | FRIEND_ERROR     | Friend operation error                           |
+| IGNORE_ADDED     | Player added to ignore list                      |
+| IGNORE_REMOVED   | Player removed from ignore list                  |
+| IGNORE_ERROR     | Ignore operation error                           |
 
 The `channel` field appears on CHANNEL events only.
 
@@ -100,6 +103,21 @@ IPC verbs:
     echo "FRIENDS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "ADD_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "DEL_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
+## Ignore List
+
+    tuicraft send "/ignore PlayerName"    # add to ignore list
+    tuicraft send "/unignore PlayerName"  # remove from ignore list
+    tuicraft send "/ignorelist"           # show ignore list
+
+Messages from ignored players are filtered from chat display and daemon read output.
+
+IPC verbs:
+
+    echo "IGNORED" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "IGNORED_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "ADD_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "DEL_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 ## Entity Queries
 

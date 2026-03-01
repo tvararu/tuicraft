@@ -10,6 +10,7 @@ import {
   formatGroupEvent,
   formatEntityEvent,
   formatFriendList,
+  formatIgnoreList,
 } from "ui/format";
 
 export type TuiState = {
@@ -125,6 +126,17 @@ export async function executeCommand(
       break;
     case "remove-friend":
       state.handle.removeFriend(cmd.target);
+      break;
+    case "ignored": {
+      const ignored = state.handle.getIgnored();
+      state.write(formatIgnoreList(ignored) + "\n");
+      break;
+    }
+    case "add-ignore":
+      state.handle.addIgnore(cmd.target);
+      break;
+    case "remove-ignore":
+      state.handle.removeIgnore(cmd.target);
       break;
     case "roll":
       state.handle.sendRoll(cmd.min, cmd.max);

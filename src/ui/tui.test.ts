@@ -496,10 +496,12 @@ describe("startTui", () => {
       input,
       write: (s) => void output.push(s),
     });
-    writeLine(input, "/ignore");
+    writeLine(input, "/join Trade");
     await flush();
 
-    expect(output.join("")).toContain("Ignore list is not yet implemented");
+    expect(output.join("")).toContain(
+      "Channel join/leave is not yet implemented",
+    );
 
     input.end();
     await done;
@@ -755,6 +757,76 @@ describe("friend TUI commands", () => {
     await flush();
 
     expect(handle.removeFriend).toHaveBeenCalledWith("Arthas");
+
+    input.end();
+    await done;
+  });
+});
+
+describe("ignore TUI commands", () => {
+  test("/ignore bare calls getIgnored and writes output", async () => {
+    const handle = createMockHandle();
+    (handle.getIgnored as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/ignore");
+    await flush();
+
+    expect(handle.getIgnored).toHaveBeenCalled();
+    expect(output.join("")).toContain("Ignore list is empty");
+
+    input.end();
+    await done;
+  });
+
+  test("/ignorelist calls getIgnored and writes output", async () => {
+    const handle = createMockHandle();
+    (handle.getIgnored as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/ignorelist");
+    await flush();
+
+    expect(handle.getIgnored).toHaveBeenCalled();
+    expect(output.join("")).toContain("Ignore list is empty");
+
+    input.end();
+    await done;
+  });
+
+  test("/ignore name calls addIgnore", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/ignore Spammer");
+    await flush();
+
+    expect(handle.addIgnore).toHaveBeenCalledWith("Spammer");
+
+    input.end();
+    await done;
+  });
+
+  test("/unignore name calls removeIgnore", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/unignore Spammer");
+    await flush();
+
+    expect(handle.removeIgnore).toHaveBeenCalledWith("Spammer");
 
     input.end();
     await done;

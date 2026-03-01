@@ -217,13 +217,36 @@ describe("parseCommand", () => {
     expect(parseCommand("/friend remove")).toEqual({ type: "friends" });
   });
 
-  describe("unimplemented commands", () => {
-    test("/ignore returns unimplemented", () => {
-      expect(parseCommand("/ignore Foo")).toEqual({
-        type: "unimplemented",
-        feature: "Ignore list",
-      });
+  test("/ignore with name returns add-ignore", () => {
+    expect(parseCommand("/ignore Foo")).toEqual({
+      type: "add-ignore",
+      target: "Foo",
     });
+  });
+
+  test("/ignore bare returns ignored list", () => {
+    expect(parseCommand("/ignore")).toEqual({ type: "ignored" });
+  });
+
+  test("/unignore with name returns remove-ignore", () => {
+    expect(parseCommand("/unignore Foo")).toEqual({
+      type: "remove-ignore",
+      target: "Foo",
+    });
+  });
+
+  test("/unignore bare falls back to say", () => {
+    expect(parseCommand("/unignore")).toEqual({
+      type: "say",
+      message: "/unignore",
+    });
+  });
+
+  test("/ignorelist returns ignored list", () => {
+    expect(parseCommand("/ignorelist")).toEqual({ type: "ignored" });
+  });
+
+  describe("unimplemented commands", () => {
     test("/join returns unimplemented", () => {
       expect(parseCommand("/join Trade")).toEqual({
         type: "unimplemented",

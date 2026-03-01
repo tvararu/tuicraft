@@ -5,6 +5,7 @@ import { stripColorCodes } from "lib/strip-colors";
 import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
+import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { LogEntry } from "lib/session-log";
 
 const CHAT_TYPE_LABELS: Record<number, string> = {
@@ -365,6 +366,69 @@ export function formatFriendEventObj(
         message: friendResultLabel(event.result),
       };
     case "friend-list":
+      return undefined;
+  }
+}
+
+export function formatIgnoreList(ignored: IgnoreEntry[]): string {
+  if (ignored.length === 0) return "[ignore] Ignore list is empty";
+  const lines = ignored.map((e) => {
+    const name = e.name || `guid:${Number(e.guid & 0xffffffffn)}`;
+    return `  ${name}`;
+  });
+  return `[ignore] ${ignored.length} ignored\n${lines.join("\n")}`;
+}
+
+export function formatIgnoreListJson(ignored: IgnoreEntry[]): string {
+  return JSON.stringify({
+    type: "IGNORED",
+    count: ignored.length,
+    ignored: ignored.map((e) => ({
+      guid: `0x${e.guid.toString(16)}`,
+      name: e.name,
+    })),
+  });
+}
+
+function ignoreResultLabel(result: number): string {
+  const labels: Record<number, string> = {
+    0x0b: "ignore list is full",
+    0x0c: "cannot ignore yourself",
+    0x0d: "player not found",
+    0x0e: "already ignoring",
+    0x11: "name is ambiguous",
+  };
+  return labels[result] ?? `error ${result}`;
+}
+
+export function formatIgnoreEvent(event: IgnoreEvent): string | undefined {
+  switch (event.type) {
+    case "ignore-added":
+      return `[ignore] ${event.entry.name || "Unknown"} added to ignore list`;
+    case "ignore-removed":
+      return `[ignore] ${event.name || "Unknown"} removed from ignore list`;
+    case "ignore-error":
+      return `[ignore] Error: ${ignoreResultLabel(event.result)}`;
+    case "ignore-list":
+      return undefined;
+  }
+}
+
+export function formatIgnoreEventObj(
+  event: IgnoreEvent,
+): Record<string, unknown> | undefined {
+  switch (event.type) {
+    case "ignore-added":
+      return { type: "IGNORE_ADDED", name: event.entry.name };
+    case "ignore-removed":
+      return { type: "IGNORE_REMOVED", name: event.name };
+    case "ignore-error":
+      return {
+        type: "IGNORE_ERROR",
+        result: event.result,
+        message: ignoreResultLabel(event.result),
+      };
+    case "ignore-list":
       return undefined;
   }
 }

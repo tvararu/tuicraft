@@ -34,7 +34,17 @@ import {
   type FriendEntry,
   type FriendEvent,
 } from "wow/friend-store";
-import { buildAddFriend, buildDelFriend } from "wow/protocol/social";
+import {
+  IgnoreStore,
+  type IgnoreEntry,
+  type IgnoreEvent,
+} from "wow/ignore-store";
+import {
+  buildAddFriend,
+  buildDelFriend,
+  buildAddIgnore,
+  buildDelIgnore,
+} from "wow/protocol/social";
 import {
   sendPacket,
   handleTimeSync,
@@ -123,6 +133,7 @@ export type GroupEvent =
 export type { WhoResult };
 export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
+export type { IgnoreEntry, IgnoreEvent };
 
 export type ChatMode =
   | { type: "say" }
@@ -172,6 +183,10 @@ export type WorldHandle = {
   removeFriend(name: string): void;
   sendRoll(min: number, max: number): void;
   onFriendEvent(cb: (event: FriendEvent) => void): void;
+  getIgnored(): IgnoreEntry[];
+  addIgnore(name: string): void;
+  removeIgnore(name: string): void;
+  onIgnoreEvent(cb: (event: IgnoreEvent) => void): void;
 };
 
 export type WorldConn = {
@@ -199,6 +214,8 @@ export type WorldConn = {
   pendingNameQueries: Set<string>;
   friendStore: FriendStore;
   onFriendEvent?: (event: FriendEvent) => void;
+  ignoreStore: IgnoreStore;
+  onIgnoreEvent?: (event: IgnoreEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -320,9 +337,11 @@ export function worldSession(
       gameObjectNameCache: new Map(),
       pendingNameQueries: new Set(),
       friendStore: new FriendStore(),
+      ignoreStore: new IgnoreStore(),
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
+    conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
 
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -437,6 +456,7 @@ export function worldSession(
           clearInterval(pingInterval);
           conn.onEntityEvent = undefined;
           conn.onFriendEvent = undefined;
+          conn.onIgnoreEvent = undefined;
           conn.socket.end();
         },
         onMessage(cb) {
@@ -649,6 +669,31 @@ export function worldSession(
         },
         onFriendEvent(cb) {
           conn.onFriendEvent = cb;
+        },
+        getIgnored() {
+          return conn.ignoreStore.all();
+        },
+        addIgnore(name) {
+          sendPacket(conn, GameOpcode.CMSG_ADD_IGNORE, buildAddIgnore(name));
+        },
+        removeIgnore(name) {
+          const entry = conn.ignoreStore.findByName(name);
+          if (!entry) {
+            conn.onMessage?.({
+              type: ChatType.SYSTEM,
+              sender: "",
+              message: `"${name}" is not on your ignore list.`,
+            });
+            return;
+          }
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_DEL_IGNORE,
+            buildDelIgnore(entry.guid),
+          );
+        },
+        onIgnoreEvent(cb) {
+          conn.onIgnoreEvent = cb;
         },
       };
       resolve(handle);

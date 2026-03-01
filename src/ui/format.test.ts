@@ -11,11 +11,16 @@ import {
   formatFriendListJson,
   formatFriendEvent,
   formatFriendEventObj,
+  formatIgnoreList,
+  formatIgnoreListJson,
+  formatIgnoreEvent,
+  formatIgnoreEventObj,
 } from "ui/format";
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { FriendStatus } from "wow/protocol/social";
 import type { FriendEntry } from "wow/friend-store";
+import type { IgnoreEntry } from "wow/ignore-store";
 
 describe("formatMessage", () => {
   test("whisper from", () => {
@@ -965,6 +970,158 @@ describe("formatFriendEventObj", () => {
 
   test("friend-list returns undefined", () => {
     const result = formatFriendEventObj({ type: "friend-list", friends: [] });
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("formatIgnoreList", () => {
+  test("empty list returns empty message", () => {
+    expect(formatIgnoreList([])).toBe("[ignore] Ignore list is empty");
+  });
+
+  test("shows ignored players", () => {
+    const ignored: IgnoreEntry[] = [
+      { guid: 1n, name: "Spammer" },
+      { guid: 2n, name: "Annoying" },
+    ];
+    const result = formatIgnoreList(ignored);
+    expect(result).toContain("2 ignored");
+    expect(result).toContain("Spammer");
+    expect(result).toContain("Annoying");
+  });
+
+  test("falls back to guid when name is empty", () => {
+    const ignored: IgnoreEntry[] = [{ guid: 42n, name: "" }];
+    const result = formatIgnoreList(ignored);
+    expect(result).toContain("guid:42");
+  });
+});
+
+describe("formatIgnoreListJson", () => {
+  test("serializes ignored players", () => {
+    const ignored: IgnoreEntry[] = [
+      { guid: 1n, name: "Spammer" },
+      { guid: 2n, name: "Annoying" },
+    ];
+    const result = JSON.parse(formatIgnoreListJson(ignored));
+    expect(result.type).toBe("IGNORED");
+    expect(result.count).toBe(2);
+    expect(result.ignored[0].name).toBe("Spammer");
+    expect(result.ignored[1].name).toBe("Annoying");
+  });
+});
+
+describe("formatIgnoreEvent", () => {
+  test("ignore-added", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-added",
+      entry: { guid: 1n, name: "Spammer" },
+    });
+    expect(result).toBe("[ignore] Spammer added to ignore list");
+  });
+
+  test("ignore-removed", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-removed",
+      guid: 1n,
+      name: "Spammer",
+    });
+    expect(result).toBe("[ignore] Spammer removed from ignore list");
+  });
+
+  test("ignore-error", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0x0d,
+      name: "Nobody",
+    });
+    expect(result).toBe("[ignore] Error: player not found");
+  });
+
+  test("ignore-error with unknown code", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0xff,
+      name: "Nobody",
+    });
+    expect(result).toBe("[ignore] Error: error 255");
+  });
+
+  test("ignore-list returns undefined", () => {
+    const result = formatIgnoreEvent({ type: "ignore-list", entries: [] });
+    expect(result).toBeUndefined();
+  });
+
+  test("ignore-error ignore list full", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0x0b,
+      name: "Someone",
+    });
+    expect(result).toBe("[ignore] Error: ignore list is full");
+  });
+
+  test("ignore-error cannot ignore yourself", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0x0c,
+      name: "Self",
+    });
+    expect(result).toBe("[ignore] Error: cannot ignore yourself");
+  });
+
+  test("ignore-error already ignoring", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0x0e,
+      name: "Dup",
+    });
+    expect(result).toBe("[ignore] Error: already ignoring");
+  });
+
+  test("ignore-error ambiguous name", () => {
+    const result = formatIgnoreEvent({
+      type: "ignore-error",
+      result: 0x11,
+      name: "Amb",
+    });
+    expect(result).toBe("[ignore] Error: name is ambiguous");
+  });
+});
+
+describe("formatIgnoreEventObj", () => {
+  test("ignore-added", () => {
+    const result = formatIgnoreEventObj({
+      type: "ignore-added",
+      entry: { guid: 1n, name: "Spammer" },
+    });
+    expect(result).toEqual({ type: "IGNORE_ADDED", name: "Spammer" });
+  });
+
+  test("ignore-removed", () => {
+    const result = formatIgnoreEventObj({
+      type: "ignore-removed",
+      guid: 1n,
+      name: "Spammer",
+    });
+    expect(result).toEqual({ type: "IGNORE_REMOVED", name: "Spammer" });
+  });
+
+  test("ignore-error", () => {
+    const result = formatIgnoreEventObj({
+      type: "ignore-error",
+      result: 0x0e,
+      name: "Dup",
+    });
+    expect(result).toEqual({
+      type: "IGNORE_ERROR",
+      result: 0x0e,
+      message: "already ignoring",
+    });
+  });
+
+  test("ignore-list returns undefined", () => {
+    const result = formatIgnoreEventObj({ type: "ignore-list", entries: [] });
     expect(result).toBeUndefined();
   });
 });

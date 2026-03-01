@@ -22,6 +22,9 @@ invitations, live group roster with member stats
 👫 **Friends List** - View online/offline friends, add/remove friends, real-time
 online status notifications
 
+🚫 **Ignore List** - Server-side ignore list, messages from ignored players
+filtered from chat
+
 🔍 **Who Search** - Query online players with filters, human and JSON output
 
 🖥️ **Interactive TUI** - Full terminal UI with slash commands and channel
@@ -153,7 +156,7 @@ that the official game client does.
 | Party invite / kick / leave / leader | ✅     |
 | Group roster + member stats          | ✅     |
 | Friends list                         | ✅     |
-| Ignore list                          | ❌     |
+| Ignore list                          | ✅     |
 | Channel join / leave                 | ❌     |
 | Duel accept / decline                | ❌     |
 
