@@ -584,16 +584,7 @@ describe("world error paths", () => {
         { ...base, host: "127.0.0.1", port: ws.port, pingIntervalMs: 1 },
         fakeAuth(ws.port),
       );
-      const deadline = Date.now() + 2000;
-      while (
-        !ws.captured.some((p) => p.opcode === GameOpcode.CMSG_PING) &&
-        Date.now() < deadline
-      ) {
-        await Bun.sleep(1);
-      }
-      expect(ws.captured.some((p) => p.opcode === GameOpcode.CMSG_PING)).toBe(
-        true,
-      );
+      await ws.waitForCapture((p) => p.opcode === GameOpcode.CMSG_PING);
       handle.close();
       await handle.closed;
     } finally {

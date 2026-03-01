@@ -223,6 +223,8 @@ function handleWho(socket: Socket<ConnState>): void {
   send(socket, GameOpcode.SMSG_WHO, w.finish());
 }
 
+type CaptureListener = (packet: CapturedPacket) => void;
+
 function handlePacket(
   socket: Socket<ConnState>,
   opcode: number,
@@ -230,8 +232,11 @@ function handlePacket(
   authStatus: number,
   sendTimeSync: boolean,
   captured: CapturedPacket[],
+  captureListeners: CaptureListener[],
 ): void {
-  captured.push({ opcode, body: new Uint8Array(body) });
+  const packet: CapturedPacket = { opcode, body: new Uint8Array(body) };
+  captured.push(packet);
+  for (const listener of captureListeners) listener(packet);
   if (opcode === GameOpcode.CMSG_AUTH_SESSION)
     handleAuthSession(socket, authStatus);
   else if (opcode === GameOpcode.CMSG_CHAR_ENUM) handleCharEnum(socket);
@@ -249,6 +254,7 @@ function drainPackets(
   authStatus: number,
   sendTimeSync: boolean,
   captured: CapturedPacket[],
+  captureListeners: CaptureListener[],
 ): void {
   while (true) {
     if (!socket.data.pendingHeader) {
@@ -270,7 +276,15 @@ function drainPackets(
     socket.data.buf = socket.data.buf.slice(bodySize);
     socket.data.pendingHeader = undefined;
 
-    handlePacket(socket, opcode, body, authStatus, sendTimeSync, captured);
+    handlePacket(
+      socket,
+      opcode,
+      body,
+      authStatus,
+      sendTimeSync,
+      captured,
+      captureListeners,
+    );
   }
 }
 
@@ -300,11 +314,15 @@ export function startMockWorldServer(opts?: {
   stop(): void;
   inject(opcode: number, body: Uint8Array): void;
   captured: CapturedPacket[];
+  waitForCapture(
+    predicate: (p: CapturedPacket) => boolean,
+  ): Promise<CapturedPacket>;
 }> {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
   let activeSocket: Socket<ConnState> | undefined;
   const captured: CapturedPacket[] = [];
+  const captureListeners: CaptureListener[] = [];
 
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
@@ -318,7 +336,13 @@ export function startMockWorldServer(opts?: {
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
-          drainPackets(socket, authStatus, sendTimeSync, captured);
+          drainPackets(
+            socket,
+            authStatus,
+            sendTimeSync,
+            captured,
+            captureListeners,
+          );
         },
         close() {
           activeSocket = undefined;
@@ -338,6 +362,15 @@ export function startMockWorldServer(opts?: {
         );
       },
       captured,
+      waitForCapture(predicate: (p: CapturedPacket) => boolean) {
+        const existing = captured.find(predicate);
+        if (existing) return Promise.resolve(existing);
+        return new Promise<CapturedPacket>((resolve) => {
+          captureListeners.push((packet) => {
+            if (predicate(packet)) resolve(packet);
+          });
+        });
+      },
     });
   });
 }
