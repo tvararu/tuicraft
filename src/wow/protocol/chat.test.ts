@@ -412,4 +412,11 @@ describe("parseNotification", () => {
     const result = parseNotification(new PacketReader(w.finish()));
     expect(result.message).toBe("Welcome to our server!");
   });
+
+  test("parses empty notification", () => {
+    const w = new PacketWriter();
+    w.cString("");
+    const result = parseNotification(new PacketReader(w.finish()));
+    expect(result.message).toBe("");
+  });
 });

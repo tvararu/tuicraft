@@ -187,7 +187,10 @@ export function formatMessage(msg: ChatMessage): string {
   if (msg.type === ChatType.WHISPER_INFORM) {
     return `[whisper to ${msg.sender}] ${message}`;
   }
-  if (msg.type === ChatType.SYSTEM && msg.origin) {
+  if (
+    msg.type === ChatType.SYSTEM &&
+    (msg.origin === "server" || msg.origin === "notification")
+  ) {
     return `[server] ${message}`;
   }
   if (msg.type === ChatType.SYSTEM) {
