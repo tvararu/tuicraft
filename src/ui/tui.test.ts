@@ -279,16 +279,28 @@ describe("parseCommand", () => {
         feature: "Random roll",
       });
     });
-    test("/dnd returns unimplemented", () => {
-      expect(parseCommand("/dnd")).toEqual({
-        type: "unimplemented",
-        feature: "Player status",
+    test("/dnd sends dnd with message", () => {
+      expect(parseCommand("/dnd busy right now")).toEqual({
+        type: "dnd",
+        message: "busy right now",
       });
     });
-    test("/afk returns unimplemented", () => {
+    test("/dnd sends dnd with empty message", () => {
+      expect(parseCommand("/dnd")).toEqual({
+        type: "dnd",
+        message: "",
+      });
+    });
+    test("/afk sends afk with message", () => {
+      expect(parseCommand("/afk grabbing coffee")).toEqual({
+        type: "afk",
+        message: "grabbing coffee",
+      });
+    });
+    test("/afk sends afk with empty message", () => {
       expect(parseCommand("/afk")).toEqual({
-        type: "unimplemented",
-        feature: "Player status",
+        type: "afk",
+        message: "",
       });
     });
     test("/e sends emote", () => {
@@ -452,7 +464,7 @@ describe("startTui", () => {
     await done;
   });
 
-  test("dispatches yell, guild, party, raid, emote commands", async () => {
+  test("dispatches yell, guild, party, raid, emote, dnd, afk commands", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
 
@@ -462,6 +474,8 @@ describe("startTui", () => {
     writeLine(input, "/p party msg");
     writeLine(input, "/raid pull now");
     writeLine(input, "/e waves hello");
+    writeLine(input, "/dnd busy");
+    writeLine(input, "/afk coffee break");
     await flush();
 
     expect(handle.sendYell).toHaveBeenCalledWith("LOUD");
@@ -469,6 +483,8 @@ describe("startTui", () => {
     expect(handle.sendParty).toHaveBeenCalledWith("party msg");
     expect(handle.sendRaid).toHaveBeenCalledWith("pull now");
     expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
+    expect(handle.sendDnd).toHaveBeenCalledWith("busy");
+    expect(handle.sendAfk).toHaveBeenCalledWith("coffee break");
 
     input.end();
     await done;

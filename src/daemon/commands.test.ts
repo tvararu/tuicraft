@@ -81,6 +81,34 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("DND", () => {
+    expect(parseIpcCommand("DND busy right now")).toEqual({
+      type: "dnd",
+      message: "busy right now",
+    });
+  });
+
+  test("DND without message", () => {
+    expect(parseIpcCommand("DND")).toEqual({
+      type: "dnd",
+      message: "",
+    });
+  });
+
+  test("AFK", () => {
+    expect(parseIpcCommand("AFK grabbing coffee")).toEqual({
+      type: "afk",
+      message: "grabbing coffee",
+    });
+  });
+
+  test("AFK without message", () => {
+    expect(parseIpcCommand("AFK")).toEqual({
+      type: "afk",
+      message: "",
+    });
+  });
+
   test("WHISPER", () => {
     expect(parseIpcCommand("WHISPER Xiara follow me")).toEqual({
       type: "whisper",
@@ -216,6 +244,20 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("slash /dnd maps to dnd", () => {
+    expect(parseIpcCommand("/dnd busy")).toEqual({
+      type: "dnd",
+      message: "busy",
+    });
+  });
+
+  test("slash /afk maps to afk", () => {
+    expect(parseIpcCommand("/afk brb")).toEqual({
+      type: "afk",
+      message: "brb",
+    });
+  });
+
   test("slash /who maps to who with filter", () => {
     expect(parseIpcCommand("/who mage")).toEqual({
       type: "who",
@@ -292,8 +334,6 @@ describe("parseIpcCommand", () => {
       ["GPROMOTE Foo", "Guild management"],
       ["MAIL", "Mail"],
       ["ROLL", "Random roll"],
-      ["DND", "Player status"],
-      ["AFK", "Player status"],
     ] as const;
 
     for (const [input, feature] of cases) {
@@ -495,6 +535,42 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("dnd calls sendDnd and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "dnd", message: "busy" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.sendDnd).toHaveBeenCalledWith("busy");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("afk calls sendAfk and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "afk", message: "grabbing coffee" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.sendAfk).toHaveBeenCalledWith("grabbing coffee");
     expect(socket.written()).toBe("OK\n\n");
   });
 
@@ -1697,6 +1773,20 @@ describe("IPC round-trip", () => {
     const lines = await sendToSocket("EMOTE waves hello", sockPath);
     expect(lines).toEqual(["OK"]);
     expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
+  });
+
+  test("DND returns OK and calls handle", async () => {
+    startTestServer();
+    const lines = await sendToSocket("DND busy right now", sockPath);
+    expect(lines).toEqual(["OK"]);
+    expect(handle.sendDnd).toHaveBeenCalledWith("busy right now");
+  });
+
+  test("AFK returns OK and calls handle", async () => {
+    startTestServer();
+    const lines = await sendToSocket("AFK grabbing coffee", sockPath);
+    expect(lines).toEqual(["OK"]);
+    expect(handle.sendAfk).toHaveBeenCalledWith("grabbing coffee");
   });
 
   test("WHISPER returns OK", async () => {

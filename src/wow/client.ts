@@ -166,6 +166,8 @@ export type WorldHandle = {
   sendParty(message: string): void;
   sendRaid(message: string): void;
   sendEmote(message: string): void;
+  sendDnd(message: string): void;
+  sendAfk(message: string): void;
   sendChannel(channel: string, message: string): void;
   getChannel(index: number): string | undefined;
   who(opts?: {
@@ -1152,6 +1154,20 @@ export function worldSession(
             conn,
             GameOpcode.CMSG_MESSAGE_CHAT,
             buildChatMessage(ChatType.EMOTE, lang, message),
+          );
+        },
+        sendDnd(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.DND, lang, message),
+          );
+        },
+        sendAfk(message) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MESSAGE_CHAT,
+            buildChatMessage(ChatType.AFK, lang, message),
           );
         },
         sendChannel(channel, message) {

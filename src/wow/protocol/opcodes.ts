@@ -653,6 +653,8 @@ export const ChatType = {
   WHISPER_INFORM: 0x09,
   EMOTE: 0x0a,
   CHANNEL: 0x11,
+  AFK: 0x17,
+  DND: 0x18,
   RAID_LEADER: 0x27,
   RAID_WARNING: 0x28,
   BATTLEGROUND: 0x2c,

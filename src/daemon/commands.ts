@@ -38,6 +38,8 @@ export type IpcCommand =
   | { type: "guild"; message: string }
   | { type: "party"; message: string }
   | { type: "emote"; message: string }
+  | { type: "dnd"; message: string }
+  | { type: "afk"; message: string }
   | { type: "whisper"; target: string; message: string }
   | { type: "read" }
   | { type: "read_json" }
@@ -70,6 +72,8 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "guild":
       case "party":
       case "emote":
+      case "dnd":
+      case "afk":
         return parsed;
       case "whisper":
         return parsed;
@@ -107,13 +111,17 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "GUILD":
     case "PARTY":
     case "EMOTE":
+    case "DND":
+    case "AFK":
       return {
         type: verb.toLowerCase() as
           | "say"
           | "yell"
           | "guild"
           | "party"
-          | "emote",
+          | "emote"
+          | "dnd"
+          | "afk",
         message: rest,
       };
     case "WHISPER": {
@@ -185,9 +193,6 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "unimplemented", feature: "Mail" };
     case "ROLL":
       return { type: "unimplemented", feature: "Random roll" };
-    case "DND":
-    case "AFK":
-      return { type: "unimplemented", feature: "Player status" };
     default:
       return line ? { type: "chat", message: line } : undefined;
   }
@@ -254,6 +259,14 @@ export async function dispatchCommand(
       return false;
     case "emote":
       handle.sendEmote(cmd.message);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "dnd":
+      handle.sendDnd(cmd.message);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "afk":
+      handle.sendAfk(cmd.message);
       writeLines(socket, ["OK"]);
       return false;
     case "whisper":
