@@ -181,3 +181,26 @@ export function parseWhoResponse(r: PacketReader): WhoResult[] {
   }
   return results;
 }
+
+const SERVER_MESSAGES: Record<number, string | ((param: string) => string)> = {
+  1: (p) => `Server shutdown in ${p}`,
+  2: (p) => `Server restart in ${p}`,
+  3: (p) => p,
+  4: () => "Server shutdown cancelled",
+  5: () => "Server restart cancelled",
+};
+
+export function parseServerBroadcast(r: PacketReader): { message: string } {
+  const messageId = r.uint32LE();
+  const param = r.cString();
+  const fmt = SERVER_MESSAGES[messageId];
+  const message =
+    typeof fmt === "function"
+      ? fmt(param)
+      : `Server message ${messageId}: ${param}`;
+  return { message };
+}
+
+export function parseNotification(r: PacketReader): { message: string } {
+  return { message: r.cString() };
+}
