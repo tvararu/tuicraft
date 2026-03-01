@@ -1,5 +1,6 @@
 import { readConfig } from "lib/config";
-import { authHandshake, authWithRetry, worldSession } from "wow/client";
+import { authHandshake, authWithRetry } from "wow/auth";
+import { worldSession } from "wow/client";
 import type { WorldHandle } from "wow/client";
 import { RingBuffer } from "lib/ring-buffer";
 import { socketPath, pidPath, runtimeDir, logPath } from "lib/paths";

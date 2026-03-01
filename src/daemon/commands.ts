@@ -1,4 +1,5 @@
 import { RingBuffer } from "lib/ring-buffer";
+import { parseCommand } from "ui/commands";
 import {
   formatMessage,
   formatMessageObj,
@@ -11,8 +12,7 @@ import {
   formatFriendListJson,
   formatFriendEvent,
   formatFriendEventObj,
-  parseCommand,
-} from "ui/tui";
+} from "ui/format";
 import type { FriendEvent } from "wow/friend-store";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";

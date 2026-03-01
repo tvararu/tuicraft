@@ -18,7 +18,8 @@ async function waitForEvents(
 async function main() {
   switch (action.mode) {
     case "interactive": {
-      const { authWithRetry, worldSession } = await import("wow/client");
+      const { authWithRetry } = await import("wow/auth");
+      const { worldSession } = await import("wow/client");
       const { readConfig } = await import("lib/config");
       const { configPath } = await import("lib/paths");
 
