@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "d180db744d2e",
+  "session_id": "e925dae2-8bd9-41c2-be31-5c746457c315",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T23:05:14.398931622Z",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-01-ignore-list-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "2856abe056d4",
+  "token_usage": {
+    "input_tokens": 21,
+    "cache_creation_tokens": 48607,
+    "cache_read_tokens": 594201,
+    "output_tokens": 6391,
+    "api_call_count": 18
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T23:05:14.362286241Z",
+    "agent_lines": 94,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 94,
+    "agent_percentage": 100
+  }
+}
