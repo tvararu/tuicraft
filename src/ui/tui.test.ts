@@ -4,6 +4,7 @@ import {
   parseCommand,
   formatMessage,
   formatMessageJson,
+  formatMessageObj,
   formatGroupEvent,
   formatEntityEvent,
   formatEntityEventObj,
@@ -390,6 +391,26 @@ describe("formatMessage", () => {
     };
     expect(formatMessage(msg)).toBe("[roll] Xiara rolled 42 (1-100)");
   });
+
+  test("server broadcast origin shows [server] label", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "Server shutdown in 15:00",
+      origin: "server" as const,
+    };
+    expect(formatMessage(msg)).toBe("[server] Server shutdown in 15:00");
+  });
+
+  test("notification origin shows [server] label", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "Autobroadcast text",
+      origin: "notification" as const,
+    };
+    expect(formatMessage(msg)).toBe("[server] Autobroadcast text");
+  });
 });
 
 describe("formatMessageJson", () => {
@@ -467,6 +488,34 @@ describe("formatMessageJson", () => {
       type: "ROLL",
       sender: "Xiara",
       message: "rolled 42 (1-100)",
+    });
+  });
+
+  test("server broadcast origin uses SERVER_BROADCAST JSON type", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "Shutdown in 5:00",
+      origin: "server" as const,
+    };
+    expect(formatMessageObj(msg)).toEqual({
+      type: "SERVER_BROADCAST",
+      sender: "",
+      message: "Shutdown in 5:00",
+    });
+  });
+
+  test("notification origin uses NOTIFICATION JSON type", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "Auto message",
+      origin: "notification" as const,
+    };
+    expect(formatMessageObj(msg)).toEqual({
+      type: "NOTIFICATION",
+      sender: "",
+      message: "Auto message",
     });
   });
 });
