@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "66fe8c3516a8",
+  "strategy": "manual-commit",
+  "branch": "feat/roll-command",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts",
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/ui/tui.test.ts",
+    "src/ui/tui.ts",
+    "src/wow/client.test.ts",
+    "src/wow/client.ts",
+    "src/wow/protocol/chat.test.ts",
+    "src/wow/protocol/opcodes.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/66/fe8c3516a8/0/metadata.json",
+      "transcript": "/66/fe8c3516a8/0/full.jsonl",
+      "context": "/66/fe8c3516a8/0/context.md",
+      "content_hash": "/66/fe8c3516a8/0/content_hash.txt",
+      "prompt": "/66/fe8c3516a8/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1028,
+    "cache_creation_tokens": 425962,
+    "cache_read_tokens": 8971409,
+    "output_tokens": 25557,
+    "api_call_count": 88
+  }
+}
