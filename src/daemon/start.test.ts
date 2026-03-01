@@ -51,6 +51,8 @@ function makeMockClient(): {
         sendParty: jest.fn(),
         sendRaid: jest.fn(),
         sendEmote: jest.fn(),
+        sendDnd: jest.fn(),
+        sendAfk: jest.fn(),
         sendWhisper: jest.fn(),
         sendChannel: jest.fn(),
         getChannel: jest.fn(),

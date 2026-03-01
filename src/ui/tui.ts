@@ -22,6 +22,8 @@ export type Command =
   | { type: "party"; message: string }
   | { type: "raid"; message: string }
   | { type: "emote"; message: string }
+  | { type: "dnd"; message: string }
+  | { type: "afk"; message: string }
   | { type: "whisper"; target: string; message: string }
   | { type: "reply"; message: string }
   | { type: "channel"; target: string; message: string }
@@ -130,8 +132,9 @@ export function parseCommand(input: string): Command {
     case "/roll":
       return { type: "unimplemented", feature: "Random roll" };
     case "/dnd":
+      return { type: "dnd", message: rest };
     case "/afk":
-      return { type: "unimplemented", feature: "Player status" };
+      return { type: "afk", message: rest };
     case "/e":
     case "/emote":
       return { type: "emote", message: rest };
@@ -523,6 +526,12 @@ export async function executeCommand(
       break;
     case "emote":
       state.handle.sendEmote(cmd.message);
+      break;
+    case "dnd":
+      state.handle.sendDnd(cmd.message);
+      break;
+    case "afk":
+      state.handle.sendAfk(cmd.message);
       break;
     case "whisper":
       state.handle.sendWhisper(cmd.target, cmd.message);

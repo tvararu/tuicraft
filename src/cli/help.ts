@@ -37,6 +37,8 @@ SETUP FLAGS
 
 INTERACTIVE COMMANDS (TUI mode)
   /s, /y, /w, /g, /p, /raid, /e, /1, /2  Chat commands
+  /dnd [message]  Toggle Do Not Disturb status
+  /afk [message]  Toggle Away From Keyboard status
   /r              Reply to last whisper
   /who [filter]   Who search
   /invite <name>  Invite player to group

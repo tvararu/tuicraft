@@ -141,7 +141,7 @@ that the official game client does.
 | Server broadcast messages               | ❌     |
 | Chat restricted / wrong faction notices | ❌     |
 | Text emotes (`/e`, `/emote`)            | ✅     |
-| DND / AFK status                        | ❌     |
+| DND / AFK status                        | ✅     |
 
 ### 👥 Social
 

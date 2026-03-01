@@ -159,6 +159,22 @@ describe("buildChatMessage", () => {
     expect(r.uint32LE()).toBe(Language.COMMON);
     expect(r.cString()).toBe("hello guild");
   });
+
+  test("builds a DND message", () => {
+    const body = buildChatMessage(ChatType.DND, Language.COMMON, "busy");
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(ChatType.DND);
+    expect(r.uint32LE()).toBe(Language.COMMON);
+    expect(r.cString()).toBe("busy");
+  });
+
+  test("builds an AFK message", () => {
+    const body = buildChatMessage(ChatType.AFK, Language.COMMON, "brb");
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(ChatType.AFK);
+    expect(r.uint32LE()).toBe(Language.COMMON);
+    expect(r.cString()).toBe("brb");
+  });
 });
 
 describe("buildNameQuery / parseNameQueryResponse", () => {

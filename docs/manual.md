@@ -122,6 +122,8 @@ When running in TUI mode, the following slash commands are available:
 | `/p` _msg_                   | Party chat                  |
 | `/raid` _msg_                | Raid chat                   |
 | `/e` _msg_                   | Text emote                  |
+| `/dnd` [_msg_]               | Toggle Do Not Disturb       |
+| `/afk` [_msg_]               | Toggle Away From Keyboard   |
 | `/1` _msg_                   | Channel 1 (usually General) |
 | `/2` _msg_                   | Channel 2 (usually Trade)   |
 | `/who` _query_               | Who search                  |

@@ -25,6 +25,8 @@ Slash commands work too:
 
     tuicraft send "/raid message"         # raid chat
     tuicraft send "/e waves hello"        # text emote
+    tuicraft send "/dnd busy right now"   # toggle DND status
+    tuicraft send "/afk grabbing coffee"  # toggle AFK status
     tuicraft send "/1 message"            # channel 1
     tuicraft send "/2 message"            # channel 2
 
