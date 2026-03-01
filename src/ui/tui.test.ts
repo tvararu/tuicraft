@@ -273,10 +273,25 @@ describe("parseCommand", () => {
         feature: "Mail",
       });
     });
-    test("/roll returns unimplemented", () => {
+    test("/roll defaults to 1-100", () => {
       expect(parseCommand("/roll")).toEqual({
-        type: "unimplemented",
-        feature: "Random roll",
+        type: "roll",
+        min: 1,
+        max: 100,
+      });
+    });
+    test("/roll N sets 1-N", () => {
+      expect(parseCommand("/roll 50")).toEqual({
+        type: "roll",
+        min: 1,
+        max: 50,
+      });
+    });
+    test("/roll N M sets N-M", () => {
+      expect(parseCommand("/roll 10 20")).toEqual({
+        type: "roll",
+        min: 10,
+        max: 20,
       });
     });
     test("/dnd sends dnd with message", () => {
@@ -366,6 +381,15 @@ describe("formatMessage", () => {
     };
     expect(formatMessage(msg)).toBe("[say] Alice: [Cool Sword] equipped");
   });
+
+  test("roll message", () => {
+    const msg = {
+      type: ChatType.ROLL,
+      sender: "Xiara",
+      message: "rolled 42 (1-100)",
+    };
+    expect(formatMessage(msg)).toBe("[roll] Xiara rolled 42 (1-100)");
+  });
 });
 
 describe("formatMessageJson", () => {
@@ -432,6 +456,19 @@ describe("formatMessageJson", () => {
       message: "wat",
     });
   });
+
+  test("json roll message", () => {
+    const msg = {
+      type: ChatType.ROLL,
+      sender: "Xiara",
+      message: "rolled 42 (1-100)",
+    };
+    expect(JSON.parse(formatMessageJson(msg))).toEqual({
+      type: "ROLL",
+      sender: "Xiara",
+      message: "rolled 42 (1-100)",
+    });
+  });
 });
 
 describe("startTui", () => {
@@ -485,6 +522,24 @@ describe("startTui", () => {
     expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
     expect(handle.sendDnd).toHaveBeenCalledWith("busy");
     expect(handle.sendAfk).toHaveBeenCalledWith("coffee break");
+
+    input.end();
+    await done;
+  });
+
+  test("dispatches roll command", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/roll");
+    writeLine(input, "/roll 50");
+    writeLine(input, "/roll 10 20");
+    await flush();
+
+    expect(handle.sendRoll).toHaveBeenCalledWith(1, 100);
+    expect(handle.sendRoll).toHaveBeenCalledWith(1, 50);
+    expect(handle.sendRoll).toHaveBeenCalledWith(10, 20);
 
     input.end();
     await done;

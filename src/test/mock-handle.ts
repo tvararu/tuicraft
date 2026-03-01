@@ -65,6 +65,7 @@ export function createMockHandle(): WorldHandle & {
     getFriends: jest.fn((): FriendEntry[] => []),
     addFriend: jest.fn(),
     removeFriend: jest.fn(),
+    sendRoll: jest.fn(),
     onFriendEvent(cb) {
       friendEventCb = cb;
     },

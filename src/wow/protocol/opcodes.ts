@@ -660,6 +660,7 @@ export const ChatType = {
   BATTLEGROUND: 0x2c,
   BATTLEGROUND_LEADER: 0x2d,
   PARTY_LEADER: 0x33,
+  ROLL: 0x100,
 } as const;
 
 export const PartyResult = {

@@ -61,6 +61,7 @@ export type IpcCommand =
   | { type: "friends_json" }
   | { type: "add_friend"; target: string }
   | { type: "del_friend"; target: string }
+  | { type: "roll"; min: number; max: number }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -94,6 +95,8 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return { type: "add_friend", target: parsed.target };
       case "remove-friend":
         return { type: "del_friend", target: parsed.target };
+      case "roll":
+        return parsed;
       case "unimplemented":
         return parsed;
       default:
@@ -191,8 +194,18 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "unimplemented", feature: "Guild management" };
     case "MAIL":
       return { type: "unimplemented", feature: "Mail" };
-    case "ROLL":
-      return { type: "unimplemented", feature: "Random roll" };
+    case "ROLL": {
+      const parts = rest.split(" ").filter(Boolean);
+      if (parts.length >= 2)
+        return {
+          type: "roll",
+          min: parseInt(parts[0]!, 10),
+          max: parseInt(parts[1]!, 10),
+        };
+      if (parts.length === 1)
+        return { type: "roll", min: 1, max: parseInt(parts[0]!, 10) };
+      return { type: "roll", min: 1, max: 100 };
+    }
     default:
       return line ? { type: "chat", message: line } : undefined;
   }
@@ -271,6 +284,10 @@ export async function dispatchCommand(
       return false;
     case "whisper":
       handle.sendWhisper(cmd.target, cmd.message);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "roll":
+      handle.sendRoll(cmd.min, cmd.max);
       writeLines(socket, ["OK"]);
       return false;
     case "read":

@@ -109,6 +109,38 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("ROLL defaults to 1-100", () => {
+    expect(parseIpcCommand("ROLL")).toEqual({
+      type: "roll",
+      min: 1,
+      max: 100,
+    });
+  });
+
+  test("ROLL with max", () => {
+    expect(parseIpcCommand("ROLL 50")).toEqual({
+      type: "roll",
+      min: 1,
+      max: 50,
+    });
+  });
+
+  test("ROLL with min and max", () => {
+    expect(parseIpcCommand("ROLL 10 20")).toEqual({
+      type: "roll",
+      min: 10,
+      max: 20,
+    });
+  });
+
+  test("/roll via slash style", () => {
+    expect(parseIpcCommand("/roll 50")).toEqual({
+      type: "roll",
+      min: 1,
+      max: 50,
+    });
+  });
+
   test("WHISPER", () => {
     expect(parseIpcCommand("WHISPER Xiara follow me")).toEqual({
       type: "whisper",
@@ -333,7 +365,6 @@ describe("parseIpcCommand", () => {
       ["GLEAVE", "Guild management"],
       ["GPROMOTE Foo", "Guild management"],
       ["MAIL", "Mail"],
-      ["ROLL", "Random roll"],
     ] as const;
 
     for (const [input, feature] of cases) {
@@ -571,6 +602,24 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.sendAfk).toHaveBeenCalledWith("grabbing coffee");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("roll calls sendRoll and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "roll", min: 1, max: 100 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.sendRoll).toHaveBeenCalledWith(1, 100);
     expect(socket.written()).toBe("OK\n\n");
   });
 
@@ -1794,6 +1843,13 @@ describe("IPC round-trip", () => {
     const lines = await sendToSocket("WHISPER Xiara hey", sockPath);
     expect(lines).toEqual(["OK"]);
     expect(handle.sendWhisper).toHaveBeenCalledWith("Xiara", "hey");
+  });
+
+  test("ROLL returns OK and calls sendRoll", async () => {
+    startTestServer();
+    const lines = await sendToSocket("ROLL 10 20", sockPath);
+    expect(lines).toEqual(["OK"]);
+    expect(handle.sendRoll).toHaveBeenCalledWith(10, 20);
   });
 
   test("READ returns buffered events", async () => {

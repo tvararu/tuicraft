@@ -73,6 +73,7 @@ function makeMockClient(): {
         getFriends: jest.fn(() => []),
         addFriend: jest.fn(),
         removeFriend: jest.fn(),
+        sendRoll: jest.fn(),
         onFriendEvent: jest.fn(),
       }),
     ),
