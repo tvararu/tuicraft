@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.4.1](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.0...tuicraft-v0.4.1) (2026-03-01)
+
+
+### Features
+
+* Add /dnd and /afk status commands ([672b3b3](https://github.com/tvararu/tuicraft/commit/672b3b33592049e775903fb2b602c59226bcee0e))
+* Add /roll command ([5339fa7](https://github.com/tvararu/tuicraft/commit/5339fa7b0f78f00fd721f5e060186a4fcf626974))
+* Add friend list commands and event pipeline ([5b4a5bd](https://github.com/tvararu/tuicraft/commit/5b4a5bd37361c069ce1a5970ae427fcbcc7a28ed))
+* Add FriendStore for friend list state ([6f2cb00](https://github.com/tvararu/tuicraft/commit/6f2cb007aaf4158f49e407a8b5c66a60bc333622))
+* Add social protocol module ([f9260da](https://github.com/tvararu/tuicraft/commit/f9260da1e27ed56361d52d850d9354684ad58c94))
+* Add text emote support ([a9c2234](https://github.com/tvararu/tuicraft/commit/a9c22341c345b426ab744f22c82aa2af279d85f3))
+* Wire friend list handlers in client ([024bfda](https://github.com/tvararu/tuicraft/commit/024bfdadfec75447399d3ba3ceec56f8ba58402f))
+
+
+### Bug Fixes
+
+* Address review findings for friend list ([507fd73](https://github.com/tvararu/tuicraft/commit/507fd73a1abe7ca9694aa8f62b61e7bc2e15aced))
+* Restore /2 in help text dropped during emote addition ([398f0be](https://github.com/tvararu/tuicraft/commit/398f0be82db28424dd596bad4c67ca526ca85a0a))
+
+
+### Documentation
+
+* Add friend list design and implementation plan ([b2c98ce](https://github.com/tvararu/tuicraft/commit/b2c98cebd40b6a63fd746ddc780b85c8a14e19d5))
+* Add friend list to all documentation ([25f1e51](https://github.com/tvararu/tuicraft/commit/25f1e514073cef803692dad61f1edbfddc06941a))
+* Add screenshot ([e10fa0d](https://github.com/tvararu/tuicraft/commit/e10fa0da4d3fde3e04b834f78b88b70bf9353623))
+* Update workflow ([1023656](https://github.com/tvararu/tuicraft/commit/10236569abeeae2946516e7a757e067289487089))
+
+
+### Maintenance
+
+* Add friend list integration tests ([9a8928a](https://github.com/tvararu/tuicraft/commit/9a8928a1d345499a72e580a81519cd01b1452f60))
+* Bump coverage to 100% functions and lines ([c8b5409](https://github.com/tvararu/tuicraft/commit/c8b54093bf60081d63af829bca14faaa1ecf8c14))
+* Cover sendDnd and sendAfk in client integration tests ([f226e9b](https://github.com/tvararu/tuicraft/commit/f226e9b0a23c2906419e6322139070159f1c31c9))
+* Remove bugs.md ([93e0ff9](https://github.com/tvararu/tuicraft/commit/93e0ff9256eadd0d9198565d1d94a7588cbac379))
+
 ## [0.4.0](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.10...tuicraft-v0.4.0) (2026-02-26)
 
 
