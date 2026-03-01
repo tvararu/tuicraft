@@ -7,6 +7,8 @@ is designed to be both human and LLM friendly.
 curl -fsSL tuicraft.vararu.org/install.sh | sh
 ```
 
+![Terminal showing tuicraft running](docs/screenshot.png)
+
 ## Features
 
 🔐 **Authentication** - Secure login, realm selection, and character select
