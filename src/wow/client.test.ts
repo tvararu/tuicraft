@@ -1107,6 +1107,32 @@ describe("world error paths", () => {
     }
   });
 
+  test("SMSG_CHAT_WRONG_FACTION delivers system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      ws.inject(GameOpcode.SMSG_CHAT_WRONG_FACTION, new Uint8Array(0));
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.sender).toBe("");
+      expect(msg.message).toBe(
+        "You cannot speak to members of the opposing faction",
+      );
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("channel left removes from channel list", async () => {
     const ws = await startMockWorldServer();
     try {

@@ -589,6 +589,14 @@ function handleChatRestricted(conn: WorldConn, r: PacketReader): void {
   });
 }
 
+function handleChatWrongFaction(conn: WorldConn): void {
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message: "You cannot speak to members of the opposing faction",
+  });
+}
+
 function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
   const { message } = parseServerBroadcast(r);
   conn.onMessage?.({
@@ -1079,6 +1087,9 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_CHAT_RESTRICTED, (r) =>
       handleChatRestricted(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CHAT_WRONG_FACTION, () =>
+      handleChatWrongFaction(conn),
     );
     conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
       handleChannelNotify(conn, r),
