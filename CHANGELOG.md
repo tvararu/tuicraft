@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.4.1](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.0...tuicraft-v0.4.1) (2026-03-01)
+
+
+### Features
+
+* Add /dnd and /afk status commands ([672b3b3](https://github.com/tvararu/tuicraft/commit/672b3b33592049e775903fb2b602c59226bcee0e))
+* Add /roll command ([5339fa7](https://github.com/tvararu/tuicraft/commit/5339fa7b0f78f00fd721f5e060186a4fcf626974))
+* Add friend list commands and event pipeline ([5b4a5bd](https://github.com/tvararu/tuicraft/commit/5b4a5bd37361c069ce1a5970ae427fcbcc7a28ed))
+* Add FriendStore for friend list state ([6f2cb00](https://github.com/tvararu/tuicraft/commit/6f2cb007aaf4158f49e407a8b5c66a60bc333622))
+* Add server broadcast and notification parsers ([4e1650a](https://github.com/tvararu/tuicraft/commit/4e1650a05dcb05f8ad717b6f6966e1dea4098023))
+* Add social protocol module ([f9260da](https://github.com/tvararu/tuicraft/commit/f9260da1e27ed56361d52d850d9354684ad58c94))
+* Add text emote support ([a9c2234](https://github.com/tvararu/tuicraft/commit/a9c22341c345b426ab744f22c82aa2af279d85f3))
+* Display server broadcasts with [server] label ([81adc6d](https://github.com/tvararu/tuicraft/commit/81adc6d33df1df5ed462c1a87fc8f86dfe374e3a))
+* Handle server broadcast and notification packets ([f6be290](https://github.com/tvararu/tuicraft/commit/f6be29078f489b2f66449ac2bb5eb6fa0759397f))
+* Handle SMSG_CHAT_RESTRICTED opcode ([3705a2d](https://github.com/tvararu/tuicraft/commit/3705a2d0fc7103515c49e0e7bfa6248c24e04bbf))
+* Handle SMSG_CHAT_WRONG_FACTION opcode ([aed37a4](https://github.com/tvararu/tuicraft/commit/aed37a4fa7b1688d256796abd92fe210eabf5f55))
+* Wire friend list handlers in client ([024bfda](https://github.com/tvararu/tuicraft/commit/024bfdadfec75447399d3ba3ceec56f8ba58402f))
+
+
+### Bug Fixes
+
+* Address review feedback on server broadcasts ([42b7e85](https://github.com/tvararu/tuicraft/commit/42b7e85e11f273a003f0069049854e432b5fd459))
+* Address review findings for friend list ([507fd73](https://github.com/tvararu/tuicraft/commit/507fd73a1abe7ca9694aa8f62b61e7bc2e15aced))
+* Restore /2 in help text dropped during emote addition ([398f0be](https://github.com/tvararu/tuicraft/commit/398f0be82db28424dd596bad4c67ca526ca85a0a))
+
+
+### Documentation
+
+* Add file split implementation plan ([500cf6c](https://github.com/tvararu/tuicraft/commit/500cf6cdd1fa33085177da990b20385fe749acb8))
+* Add file split refactoring design ([5ec3b98](https://github.com/tvararu/tuicraft/commit/5ec3b9827be4813a69498425bf7c51bde72537d8))
+* Add friend list design and implementation plan ([b2c98ce](https://github.com/tvararu/tuicraft/commit/b2c98cebd40b6a63fd746ddc780b85c8a14e19d5))
+* Add friend list to all documentation ([25f1e51](https://github.com/tvararu/tuicraft/commit/25f1e514073cef803692dad61f1edbfddc06941a))
+* Add screenshot ([e10fa0d](https://github.com/tvararu/tuicraft/commit/e10fa0da4d3fde3e04b834f78b88b70bf9353623))
+* Add server broadcast implementation plan ([e919c5a](https://github.com/tvararu/tuicraft/commit/e919c5ae142dc974e727eec8164ff54339cc5677))
+* Add server broadcast messages design ([a19f5a5](https://github.com/tvararu/tuicraft/commit/a19f5a55995e643623d064b2cc4e6ab3f765808e))
+* Update workflow ([1023656](https://github.com/tvararu/tuicraft/commit/10236569abeeae2946516e7a757e067289487089))
+
+
+### Maintenance
+
+* Add friend list integration tests ([9a8928a](https://github.com/tvararu/tuicraft/commit/9a8928a1d345499a72e580a81519cd01b1452f60))
+* Add whisper-without-message branch test ([d51b25e](https://github.com/tvararu/tuicraft/commit/d51b25ea1d1a72486d464e782836a9c34829439b))
+* Bump coverage to 100% functions and lines ([c8b5409](https://github.com/tvararu/tuicraft/commit/c8b54093bf60081d63af829bca14faaa1ecf8c14))
+* Cover all SERVER_MESSAGES formatters ([deb9598](https://github.com/tvararu/tuicraft/commit/deb95988934d5a3637916a8674cef392ad6c283f))
+* Cover sendDnd and sendAfk in client integration tests ([f226e9b](https://github.com/tvararu/tuicraft/commit/f226e9b0a23c2906419e6322139070159f1c31c9))
+* Extract auth handshake to wow/auth.ts ([84f713d](https://github.com/tvararu/tuicraft/commit/84f713d1a357779366008a8df04461126ce27903))
+* Extract command parsing to ui/commands.ts ([b39876c](https://github.com/tvararu/tuicraft/commit/b39876cacdf84becf73975f04d1b0f191235aac0))
+* Extract formatters to ui/format.ts ([3e513ed](https://github.com/tvararu/tuicraft/commit/3e513ed3ad77cc33ebb5b1f1206d64ed46c227c4))
+* Extract world packet handlers ([f850f6e](https://github.com/tvararu/tuicraft/commit/f850f6e1614528c1ef1d6d0220593cdd884e2673))
+* Point external imports at new modules ([2e76cdc](https://github.com/tvararu/tuicraft/commit/2e76cdc2b71ac1c33303463ef9281d1cea92f21a))
+* Reach 100% coverage on commands.ts ([9a6e4b2](https://github.com/tvararu/tuicraft/commit/9a6e4b234e4e92e52ac2ccb5f7f6914bac7e61b6))
+* Remove bugs.md ([93e0ff9](https://github.com/tvararu/tuicraft/commit/93e0ff9256eadd0d9198565d1d94a7588cbac379))
+* Remove server broadcast and notification stubs ([9681542](https://github.com/tvararu/tuicraft/commit/9681542985dce0d24912c458f0841213c761437b))
+* Split client.test.ts into auth, handler, and session tests ([7a3276d](https://github.com/tvararu/tuicraft/commit/7a3276d00abe1e879b25c23ab0a9ab743db2e855))
+* Split tui.test.ts into commands, format, and runtime tests ([abe4a0b](https://github.com/tvararu/tuicraft/commit/abe4a0bbf28ce30b93bd8989df41a6ad8e2a63aa))
+* Unstub chat notices, update README ([811274a](https://github.com/tvararu/tuicraft/commit/811274ad8a388c0c106d0d9301f962c2d0a66dd0))
+* Update remaining imports, remove re-exports ([c650bb6](https://github.com/tvararu/tuicraft/commit/c650bb6f6bcba7dbbd81718dcb65c56887d69dd0))
+* Use promise-based waitForCapture for ping test ([2d3dd68](https://github.com/tvararu/tuicraft/commit/2d3dd68456e1cd32c2e64a18bd0875e1231994e1))
+* Wait for CMSG_PING via captured packets instead of sleep ([dc9ecfd](https://github.com/tvararu/tuicraft/commit/dc9ecfd9d8f320cb8fcd35ac1b9f32f72fc5a26b))
+
 ## [0.4.0](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.3.10...tuicraft-v0.4.0) (2026-02-26)
 
 
