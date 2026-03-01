@@ -11,10 +11,12 @@ export type IgnoreEvent =
 
 export class IgnoreStore {
   private ignored: Map<bigint, IgnoreEntry>;
+  private guidLows: Set<number>;
   private listener?: (event: IgnoreEvent) => void;
 
   constructor() {
     this.ignored = new Map();
+    this.guidLows = new Set();
   }
 
   onEvent(cb: (event: IgnoreEvent) => void): void {
@@ -23,8 +25,10 @@ export class IgnoreStore {
 
   set(entries: IgnoreEntry[]): void {
     this.ignored.clear();
+    this.guidLows.clear();
     for (const entry of entries) {
       this.ignored.set(entry.guid, { ...entry });
+      this.guidLows.add(Number(entry.guid & 0xffffffffn));
     }
     this.listener?.({
       type: "ignore-list",
@@ -35,6 +39,7 @@ export class IgnoreStore {
   add(entry: IgnoreEntry): void {
     const copy = { ...entry };
     this.ignored.set(copy.guid, copy);
+    this.guidLows.add(Number(copy.guid & 0xffffffffn));
     this.listener?.({ type: "ignore-added", entry: copy });
   }
 
@@ -42,6 +47,7 @@ export class IgnoreStore {
     const entry = this.ignored.get(guid);
     if (!entry) return;
     this.ignored.delete(guid);
+    this.guidLows.delete(Number(guid & 0xffffffffn));
     this.listener?.({ type: "ignore-removed", guid, name: entry.name });
   }
 
@@ -60,10 +66,7 @@ export class IgnoreStore {
   }
 
   has(guidLow: number): boolean {
-    for (const guid of this.ignored.keys()) {
-      if (Number(guid & 0xffffffffn) === guidLow) return true;
-    }
-    return false;
+    return this.guidLows.has(guidLow);
   }
 
   all(): IgnoreEntry[] {

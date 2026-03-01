@@ -44,6 +44,17 @@ import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
 import type { WorldConn } from "wow/client";
 
+function ensureNameQuery(conn: WorldConn, guid: bigint): void {
+  const guidLow = Number(guid & 0xffffffffn);
+  if (conn.pendingNameQueries.has(`player:${guidLow}`)) return;
+  conn.pendingNameQueries.add(`player:${guidLow}`);
+  sendPacket(
+    conn,
+    GameOpcode.CMSG_NAME_QUERY,
+    buildNameQuery(guidLow, Number((guid >> 32n) & 0xffffffffn)),
+  );
+}
+
 export function sendPacket(
   conn: WorldConn,
   opcode: number,
@@ -538,14 +549,7 @@ export function handleContactList(conn: WorldConn, r: PacketReader): void {
       level: contact.level ?? 0,
       playerClass: contact.playerClass ?? 0,
     });
-    if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
-      conn.pendingNameQueries.add(`player:${guidLow}`);
-      sendPacket(
-        conn,
-        GameOpcode.CMSG_NAME_QUERY,
-        buildNameQuery(guidLow, Number((contact.guid >> 32n) & 0xffffffffn)),
-      );
-    }
+    if (!name) ensureNameQuery(conn, contact.guid);
   }
   conn.friendStore.set(friends);
 
@@ -555,14 +559,7 @@ export function handleContactList(conn: WorldConn, r: PacketReader): void {
     const guidLow = Number(contact.guid & 0xffffffffn);
     const name = conn.nameCache.get(guidLow) ?? "";
     ignored.push({ guid: contact.guid, name });
-    if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
-      conn.pendingNameQueries.add(`player:${guidLow}`);
-      sendPacket(
-        conn,
-        GameOpcode.CMSG_NAME_QUERY,
-        buildNameQuery(guidLow, Number((contact.guid >> 32n) & 0xffffffffn)),
-      );
-    }
+    if (!name) ensureNameQuery(conn, contact.guid);
   }
   conn.ignoreStore.set(ignored);
 }
@@ -584,14 +581,7 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
         level: packet.level ?? 0,
         playerClass: packet.playerClass ?? 0,
       });
-      if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
-        conn.pendingNameQueries.add(`player:${guidLow}`);
-        sendPacket(
-          conn,
-          GameOpcode.CMSG_NAME_QUERY,
-          buildNameQuery(guidLow, Number((packet.guid >> 32n) & 0xffffffffn)),
-        );
-      }
+      if (!name) ensureNameQuery(conn, packet.guid);
       break;
     }
     case FriendResult.ONLINE:
@@ -611,14 +601,7 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
     case FriendResult.IGNORE_ADDED: {
       const name = conn.nameCache.get(guidLow) ?? "";
       conn.ignoreStore.add({ guid: packet.guid, name });
-      if (!name && !conn.pendingNameQueries.has(`player:${guidLow}`)) {
-        conn.pendingNameQueries.add(`player:${guidLow}`);
-        sendPacket(
-          conn,
-          GameOpcode.CMSG_NAME_QUERY,
-          buildNameQuery(guidLow, Number((packet.guid >> 32n) & 0xffffffffn)),
-        );
-      }
+      if (!name) ensureNameQuery(conn, packet.guid);
       break;
     }
     case FriendResult.IGNORE_REMOVED:
