@@ -3,7 +3,7 @@
   "checkpoint_id": "00f2e1f2a4cc",
   "strategy": "manual-commit",
   "branch": "feat/dnd-afk-commands",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
     ".claude/skills/tuicraft/SKILL.md",
     "README.md",
@@ -26,13 +26,20 @@
       "context": "/00/f2e1f2a4cc/0/context.md",
       "content_hash": "/00/f2e1f2a4cc/0/content_hash.txt",
       "prompt": "/00/f2e1f2a4cc/0/prompt.txt"
+    },
+    {
+      "metadata": "/00/f2e1f2a4cc/1/metadata.json",
+      "transcript": "/00/f2e1f2a4cc/1/full.jsonl",
+      "context": "/00/f2e1f2a4cc/1/context.md",
+      "content_hash": "/00/f2e1f2a4cc/1/content_hash.txt",
+      "prompt": "/00/f2e1f2a4cc/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 70,
-    "cache_creation_tokens": 130893,
-    "cache_read_tokens": 6080026,
-    "output_tokens": 20145,
-    "api_call_count": 65
+    "input_tokens": 172,
+    "cache_creation_tokens": 383617,
+    "cache_read_tokens": 14204493,
+    "output_tokens": 44321,
+    "api_call_count": 155
   }
 }
