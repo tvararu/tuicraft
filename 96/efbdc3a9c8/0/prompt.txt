@@ -1,0 +1,1800 @@
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+
+ARGUMENTS: Implement server broadcast messages. Handle SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION opcodes - these are currently in stubs.ts as unimplemented. Display them in the TUI and emit them as events in daemon mode. This is a small receive-only feature: parse the incoming packets, display the message to the user with appropriate formatting (e.g. [Server] prefix), and remove them from stubs. No new slash commands needed.
+
+---
+
+Design looks good. Go with Approach B — distinct [server] label. Use [server] for both broadcast and notification in TUI (they are both server-originated). JSON types SERVER_BROADCAST and NOTIFICATION are good for daemon consumers. Now /superpowers:write-plan
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+**Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+
+---
+
+Execute the plan yourself in this session. Branch (feat/server-broadcasts), implement all tasks sequentially, commit as you go, push, open PR. When completely finished, run: openclaw system event --text "Done: server broadcasts PR" --mode now
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/executing-plans
+
+# Executing Plans
+
+## Overview
+
+Load plan, review critically, execute tasks in batches, report for review between batches.
+
+**Core principle:** Batch execution with checkpoints for architect review.
+
+**Announce at start:** "I'm using the executing-plans skill to implement this plan."
+
+## The Process
+
+### Step 1: Load and Review Plan
+1. Read plan file
+2. Review critically - identify any questions or concerns about the plan
+3. If concerns: Raise them with your human partner before starting
+4. If no concerns: Create TodoWrite and proceed
+
+### Step 2: Execute Batch
+**Default: First 3 tasks**
+
+For each task:
+1. Mark as in_progress
+2. Follow each step exactly (plan has bite-sized steps)
+3. Run verifications as specified
+4. Mark as completed
+
+### Step 3: Report
+When batch complete:
+- Show what was implemented
+- Show verification output
+- Say: "Ready for feedback."
+
+### Step 4: Continue
+Based on feedback:
+- Apply changes if needed
+- Execute next batch
+- Repeat until complete
+
+### Step 5: Complete Development
+
+After all tasks complete and verified:
+- Announce: "I'm using the finishing-a-development-branch skill to complete this work."
+- **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch
+- Follow that skill to verify tests, present options, execute choice
+
+## When to Stop and Ask for Help
+
+**STOP executing immediately when:**
+- Hit a blocker mid-batch (missing dependency, test fails, instruction unclear)
+- Plan has critical gaps preventing starting
+- You don't understand an instruction
+- Verification fails repeatedly
+
+**Ask for clarification rather than guessing.**
+
+## When to Revisit Earlier Steps
+
+**Return to Review (Step 1) when:**
+- Partner updates the plan based on your feedback
+- Fundamental approach needs rethinking
+
+**Don't force through blockers** - stop and ask.
+
+## Remember
+- Review plan critically first
+- Follow plan steps exactly
+- Don't skip verifications
+- Reference skills when plan says to
+- Between batches: just report and wait
+- Stop when blocked, don't guess
+- Never start implementation on main/master branch without explicit user consent
+
+## Integration
+
+**Required workflow skills:**
+- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+
+---
+
+You are an expert code reviewer. Follow these steps:
+
+      1. If no PR number is provided in the args, run `gh pr list` to show open PRs
+      2. If a PR number is provided, run `gh pr view <number>` to get PR details
+      3. Run `gh pr diff <number>` to get the diff
+      4. Analyze the changes and provide a thorough code review that includes:
+         - Overview of what the PR does
+         - Analysis of code quality and style
+         - Specific suggestions for improvements
+         - Any potential issues or risks
+
+      Keep your review concise but thorough. Focus on:
+      - Code correctness
+      - Following project conventions
+      - Performance implications
+      - Test coverage
+      - Security considerations
+
+      Format your review with clear sections and bullet points.
+
+      PR number: Review the changes on branch feat/server-broadcasts against main. Be thorough — check for bugs, edge cases, missing tests, naming consistency, and protocol correctness.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/requesting-code-review
+
+# Requesting Code Review
+
+Dispatch superpowers:code-reviewer subagent to catch issues before they cascade.
+
+**Core principle:** Review early, review often.
+
+## When to Request Review
+
+**Mandatory:**
+- After each task in subagent-driven development
+- After completing major feature
+- Before merge to main
+
+**Optional but valuable:**
+- When stuck (fresh perspective)
+- Before refactoring (baseline check)
+- After fixing complex bug
+
+## How to Request
+
+**1. Get git SHAs:**
+```bash
+BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+HEAD_SHA=$(git rev-parse HEAD)
+```
+
+**2. Dispatch code-reviewer subagent:**
+
+Use Task tool with superpowers:code-reviewer type, fill template at `code-reviewer.md`
+
+**Placeholders:**
+- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{PLAN_OR_REQUIREMENTS}` - What it should do
+- `{BASE_SHA}` - Starting commit
+- `{HEAD_SHA}` - Ending commit
+- `{DESCRIPTION}` - Brief summary
+
+**3. Act on feedback:**
+- Fix Critical issues immediately
+- Fix Important issues before proceeding
+- Note Minor issues for later
+- Push back if reviewer is wrong (with reasoning)
+
+## Example
+
+```
+[Just completed Task 2: Add verification function]
+
+You: Let me request code review before proceeding.
+
+BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print }')
+HEAD_SHA=$(git rev-parse HEAD)
+
+[Dispatch superpowers:code-reviewer subagent]
+  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
+  PLAN_OR_REQUIREMENTS: Task 2 from docs/plans/deployment-plan.md
+  BASE_SHA: a7981ec
+  HEAD_SHA: 3df7661
+  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
+
+[Subagent returns]:
+  Strengths: Clean architecture, real tests
+  Issues:
+    Important: Missing progress indicators
+    Minor: Magic number (100) for reporting interval
+  Assessment: Ready to proceed
+
+You: [Fix progress indicators]
+[Continue to Task 3]
+```
+
+## Integration with Workflows
+
+**Subagent-Driven Development:**
+- Review after EACH task
+- Catch issues before they compound
+- Fix before moving to next task
+
+**Executing Plans:**
+- Review after each batch (3 tasks)
+- Get feedback, apply, continue
+
+**Ad-Hoc Development:**
+- Review before merge
+- Review when stuck
+
+## Red Flags
+
+**Never:**
+- Skip review because "it's simple"
+- Ignore Critical issues
+- Proceed with unfixed Important issues
+- Argue with valid technical feedback
+
+**If reviewer wrong:**
+- Push back with technical reasoning
+- Show code/tests that prove it works
+- Request clarification
+
+See template at: requesting-code-review/code-reviewer.md
+
+---
+
+Fix all three suggestions from the review: 1) Simplify SERVER_MESSAGES type to only functions, 2) Add empty-string parseNotification test, 3) Use explicit origin equality check in formatMessage. Also add message IDs 6-9 (battleground/instance shutdown/restart). Commit as a single fix commit.
+
+---
+
+You are a senior security engineer conducting a focused security review of the changes on this branch.
+
+GIT STATUS:
+
+```
+On branch feat/server-broadcasts
+Your branch is up to date with 'origin/feat/server-broadcasts'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/plans/2026-02-19-reconnect-auth-design.md
+	docs/plans/2026-02-19-reconnect-auth-plan.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+FILES MODIFIED:
+
+```
+docs/plans/2026-03-01-server-broadcast-design.md
+docs/plans/2026-03-01-server-broadcast-plan.md
+src/ui/tui.test.ts
+src/ui/tui.ts
+src/wow/client.test.ts
+src/wow/client.ts
+src/wow/protocol/chat.test.ts
+src/wow/protocol/chat.ts
+src/wow/protocol/stubs.ts
+```
+
+COMMITS:
+
+```
+commit d64bec323dcd40555d28796957f68454c5abdded
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:51:37 2026 +0000
+
+    fix: Address review feedback on server broadcasts
+    
+    Simplify SERVER_MESSAGES type to functions-only (removes dead
+    string branch), add WotLK message IDs 6-9 for battleground and
+    instance shutdown/restart, use explicit origin equality check in
+    formatMessage, and add empty-notification edge case test.
+    
+    Entire-Checkpoint: 0c5a07a9be63
+
+commit e87a5e6f32837e096721cbb873b2b001077b0f08
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:45:17 2026 +0000
+
+    chore: Remove server broadcast and notification stubs
+    
+    Both opcodes are now handled — no longer need placeholder
+    stub entries.
+    
+    Entire-Checkpoint: 4ad7889bd621
+
+commit 28a9928181d9ad1b0aea2d2aa3f2a405b80c3a00
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:44:51 2026 +0000
+
+    feat: Display server broadcasts with [server] label
+    
+    Server broadcast and notification messages now render as
+    [server] instead of [system] in TUI mode, and use distinct
+    SERVER_BROADCAST / NOTIFICATION JSON types for daemon consumers.
+    
+    Entire-Checkpoint: c5a0f56e7290
+
+commit 89f886ac08ae40335ec9479d13b1de55a4a0d357
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:43:27 2026 +0000
+
+    feat: Handle server broadcast and notification packets
+    
+    Register SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION with the
+    opcode dispatcher. Both deliver ChatMessage events with the new
+    origin field so display formatting can distinguish them.
+    
+    Entire-Checkpoint: 10e23391c288
+
+commit c56ef6ef237f00e7b9c3af4ff1fd1c17bc5ec263
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:42:04 2026 +0000
+
+    feat: Add server broadcast and notification parsers
+    
+    SMSG_CHAT_SERVER_MESSAGE carries a message ID (shutdown/restart/
+    string/cancelled) plus a string parameter. SMSG_NOTIFICATION is
+    a bare null-terminated string. Both now parse into a message
+    string ready for display.
+    
+    Entire-Checkpoint: a1b8b678970d
+
+commit 39c8917445aa842fc9a7cab1bd8f65898c1d5ac1
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:40:34 2026 +0000
+
+    docs: Add server broadcast implementation plan
+    
+    Five tasks covering TDD implementation: parse functions, handler
+    registration, TUI formatting, stub removal, and live validation.
+    
+    Entire-Checkpoint: 53b4690472b9
+
+commit 33bb4945c0d05c9a9810dbec56c1b51824041e94
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Sun Mar 1 10:38:31 2026 +0000
+
+    docs: Add server broadcast messages design
+    
+    Covers SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION handling via
+    the existing ChatMessage pipeline with a new origin field for
+    distinct [server] display formatting.
+    
+    Entire-Checkpoint: 7138e9011acb
+```
+
+DIFF CONTENT:
+
+```
+diff --git a/docs/plans/2026-03-01-server-broadcast-design.md b/docs/plans/2026-03-01-server-broadcast-design.md
+new file mode 100644
+index 0000000..3263855
+--- /dev/null
++++ b/docs/plans/2026-03-01-server-broadcast-design.md
+@@ -0,0 +1,62 @@
++# Server Broadcast Messages Design
++
++## Problem
++
++SMSG_CHAT_SERVER_MESSAGE (0x291) and SMSG_NOTIFICATION (0x1CB) are stubbed
++out. When the server sends shutdown warnings, restart notices, or admin
++broadcasts, users see a generic "unhandled opcode" stub instead of the
++actual message.
++
++## Approach
++
++Route both opcodes through the existing ChatMessage pipeline with an
++`origin` field that controls display formatting and JSON event type. This
++reuses all existing infrastructure (ring buffer, session log, daemon
++events, mock handles) while giving server broadcasts a distinct `[server]`
++label in the TUI and separate JSON types for daemon consumers.
++
++## Packet Formats
++
++**SMSG_CHAT_SERVER_MESSAGE** (0x291):
++
++- `int32 messageId` — server message type enum
++- null-terminated string — parameter (time remaining, custom text, etc.)
++
++Message ID mapping:
++
++| ID | Meaning | Display |
++|----|---------|---------|
++| 1 | SERVER_MSG_SHUTDOWN_TIME | Server shutdown in {param} |
++| 2 | SERVER_MSG_RESTART_TIME | Server restart in {param} |
++| 3 | SERVER_MSG_STRING | {param} |
++| 4 | SERVER_MSG_SHUTDOWN_CANCELLED | Server shutdown cancelled |
++| 5 | SERVER_MSG_RESTART_CANCELLED | Server restart cancelled |
++
++**SMSG_NOTIFICATION** (0x1CB):
++
++- null-terminated string — the entire message
++
++## ChatMessage Changes
++
++Add optional `origin?: "server" | "notification"` to the ChatMessage type.
++Both opcodes emit messages with `type: SYSTEM`, empty sender, and the
++appropriate origin value. Existing messages have no origin and are
++unaffected.
++
++## Display Formatting
++
++TUI: messages with `origin === "server"` or `origin === "notification"`
++display as `[server] message`. Existing system messages remain `[system]`.
++
++JSON: `origin === "server"` maps to `type: "SERVER_BROADCAST"`,
++`origin === "notification"` maps to `type: "NOTIFICATION"`. This lets
++daemon consumers filter server broadcasts from regular system chatter.
++
++## What Changes
++
++1. `src/wow/protocol/chat.ts` — add `origin` to ChatMessage, add two
++   parse functions
++2. `src/wow/client.ts` — register dispatch handlers
++3. `src/ui/tui.ts` — add `[server]` formatting branch
++4. `src/wow/protocol/stubs.ts` — remove both entries
++5. Tests for parsers and integration
+diff --git a/docs/plans/2026-03-01-server-broadcast-plan.md b/docs/plans/2026-03-01-server-broadcast-plan.md
+new file mode 100644
+index 0000000..3405e3a
+--- /dev/null
++++ b/docs/plans/2026-03-01-server-broadcast-plan.md
+@@ -0,0 +1,464 @@
++# Server Broadcast Messages Implementation Plan
++
++> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
++
++**Goal:** Handle SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION opcodes so server broadcasts display in TUI as `[server]` and emit typed JSON events in daemon mode.
++
++**Architecture:** Route both opcodes through the existing ChatMessage pipeline by adding an optional `origin` field. Parse packets in `chat.ts`, register handlers in `client.ts`, format with distinct `[server]` label in `tui.ts`, remove from stubs. TDD throughout.
++
++**Tech Stack:** TypeScript, Bun test, PacketReader/PacketWriter
++
++---
++
++### Task 1: Add `origin` to ChatMessage and parse functions
++
++**Files:**
++- Modify: `src/wow/protocol/chat.ts` (add `parseServerBroadcast`, `parseNotification`)
++- Modify: `src/wow/client.ts:108-113` (add `origin` to ChatMessage type)
++- Test: `src/wow/protocol/chat.test.ts`
++
++**Step 1: Write failing tests for `parseServerBroadcast`**
++
++Add to `src/wow/protocol/chat.test.ts`:
++
++```typescript
++import {
++  // ... existing imports ...,
++  parseServerBroadcast,
++  parseNotification,
++} from "wow/protocol/chat";
++
++describe("parseServerBroadcast", () => {
++  test("parses shutdown time message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(1);
++    w.cString("15:00");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server shutdown in 15:00");
++  });
++
++  test("parses restart time message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(2);
++    w.cString("05:00");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server restart in 05:00");
++  });
++
++  test("parses raw string message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(3);
++    w.cString("Custom admin broadcast");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Custom admin broadcast");
++  });
++
++  test("parses shutdown cancelled", () => {
++    const w = new PacketWriter();
++    w.uint32LE(4);
++    w.cString("");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server shutdown cancelled");
++  });
++
++  test("parses restart cancelled", () => {
++    const w = new PacketWriter();
++    w.uint32LE(5);
++    w.cString("");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server restart cancelled");
++  });
++});
++
++describe("parseNotification", () => {
++  test("parses notification string", () => {
++    const w = new PacketWriter();
++    w.cString("Welcome to our server!");
++    const result = parseNotification(new PacketReader(w.finish()));
++    expect(result.message).toBe("Welcome to our server!");
++  });
++});
++```
++
++**Step 2: Run tests to verify they fail**
++
++Run: `mise test src/wow/protocol/chat.test.ts`
++Expected: FAIL — `parseServerBroadcast` and `parseNotification` not exported
++
++**Step 3: Add `origin` to ChatMessage and implement parse functions**
++
++In `src/wow/client.ts:108-113`, add `origin` to the public ChatMessage type:
++
++```typescript
++export type ChatMessage = {
++  type: number;
++  sender: string;
++  message: string;
++  channel?: string;
++  origin?: "server" | "notification";
++};
++```
++
++In `src/wow/protocol/chat.ts`, add at the end of the file:
++
++```typescript
++const SERVER_MESSAGES: Record<number, string | ((param: string) => string)> = {
++  1: (p) => `Server shutdown in ${p}`,
++  2: (p) => `Server restart in ${p}`,
++  3: (p) => p,
++  4: () => "Server shutdown cancelled",
++  5: () => "Server restart cancelled",
++};
++
++export function parseServerBroadcast(r: PacketReader): { message: string } {
++  const messageId = r.uint32LE();
++  const param = r.cString();
++  const fmt = SERVER_MESSAGES[messageId];
++  const message = typeof fmt === "function" ? fmt(param) : `Server message ${messageId}: ${param}`;
++  return { message };
++}
++
++export function parseNotification(r: PacketReader): { message: string } {
++  return { message: r.cString() };
++}
++```
++
++**Step 4: Run tests to verify they pass**
++
++Run: `mise test src/wow/protocol/chat.test.ts`
++Expected: PASS
++
++**Step 5: Commit**
++
++```
++feat: Add server broadcast and notification parsers
++
++SMSG_CHAT_SERVER_MESSAGE carries a message ID (shutdown/restart/
++string/cancelled) plus a string parameter. SMSG_NOTIFICATION is
++a bare null-terminated string. Both now parse into a message
++string ready for display.
++```
++
++---
++
++### Task 2: Register handlers in `client.ts`
++
++**Files:**
++- Modify: `src/wow/client.ts` (add handler functions + dispatch registrations)
++- Test: `src/wow/client.test.ts`
++
++**Step 1: Write failing integration tests**
++
++Add to `src/wow/client.test.ts`:
++
++```typescript
++test("delivers SMSG_CHAT_SERVER_MESSAGE as server-origin system message", async () => {
++  const ws = startMockWorldServer();
++  try {
++    const handle = await worldSession(
++      { ...base, host: "127.0.0.1", port: ws.port },
++      fakeAuth(ws.port),
++    );
++
++    const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++
++    const w = new PacketWriter();
++    w.uint32LE(1);
++    w.cString("15:00");
++    ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, w.finish());
++
++    const msg = await received;
++    expect(msg.type).toBe(ChatType.SYSTEM);
++    expect(msg.sender).toBe("");
++    expect(msg.message).toBe("Server shutdown in 15:00");
++    expect(msg.origin).toBe("server");
++
++    handle.close();
++    await handle.closed;
++  } finally {
++    ws.stop();
++  }
++});
++
++test("delivers SMSG_NOTIFICATION as notification-origin system message", async () => {
++  const ws = startMockWorldServer();
++  try {
++    const handle = await worldSession(
++      { ...base, host: "127.0.0.1", port: ws.port },
++      fakeAuth(ws.port),
++    );
++
++    const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++
++    const w = new PacketWriter();
++    w.cString("Server autobroadcast message");
++    ws.inject(GameOpcode.SMSG_NOTIFICATION, w.finish());
++
++    const msg = await received;
++    expect(msg.type).toBe(ChatType.SYSTEM);
++    expect(msg.sender).toBe("");
++    expect(msg.message).toBe("Server autobroadcast message");
++    expect(msg.origin).toBe("notification");
++
++    handle.close();
++    await handle.closed;
++  } finally {
++    ws.stop();
++  }
++});
++```
++
++**Step 2: Run tests to verify they fail**
++
++Run: `mise test src/wow/client.test.ts`
++Expected: FAIL — messages not delivered (stubs swallow them)
++
++**Step 3: Add handlers and register with dispatch**
++
++In `src/wow/client.ts`, add imports:
++
++```typescript
++import {
++  // ... existing imports ...,
++  parseServerBroadcast,
++  parseNotification,
++} from "wow/protocol/chat";
++```
++
++Add handler functions (near `handleMotd`, around line 560):
++
++```typescript
++function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
++  const { message } = parseServerBroadcast(r);
++  conn.onMessage?.({
++    type: ChatType.SYSTEM,
++    sender: "",
++    message,
++    origin: "server",
++  });
++}
++
++function handleNotification(conn: WorldConn, r: PacketReader): void {
++  const { message } = parseNotification(r);
++  conn.onMessage?.({
++    type: ChatType.SYSTEM,
++    sender: "",
++    message,
++    origin: "notification",
++  });
++}
++```
++
++Register with dispatch (after the SMSG_CHANNEL_NOTIFY registration, around line 1041):
++
++```typescript
++conn.dispatch.on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
++  handleServerBroadcast(conn, r),
++);
++conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
++  handleNotification(conn, r),
++);
++```
++
++**Step 4: Run tests to verify they pass**
++
++Run: `mise test src/wow/client.test.ts`
++Expected: PASS
++
++**Step 5: Commit**
++
++```
++feat: Handle server broadcast and notification packets
++
++Register SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION with the
++opcode dispatcher. Both deliver ChatMessage events with the new
++origin field so display formatting can distinguish them.
++```
++
++---
++
++### Task 3: Format with `[server]` label in TUI and JSON
++
++**Files:**
++- Modify: `src/ui/tui.ts:180-229` (update `formatMessage` and `formatMessageObj`)
++- Test: `src/ui/tui.test.ts`
++
++**Step 1: Write failing tests for `[server]` formatting**
++
++Add to the `formatMessage` describe block in `src/ui/tui.test.ts`:
++
++```typescript
++test("server broadcast origin shows [server] label", () => {
++  const msg = {
++    type: ChatType.SYSTEM,
++    sender: "",
++    message: "Server shutdown in 15:00",
++    origin: "server" as const,
++  };
++  expect(formatMessage(msg)).toBe("[server] Server shutdown in 15:00");
++});
++
++test("notification origin shows [server] label", () => {
++  const msg = {
++    type: ChatType.SYSTEM,
++    sender: "",
++    message: "Autobroadcast text",
++    origin: "notification" as const,
++  };
++  expect(formatMessage(msg)).toBe("[server] Autobroadcast text");
++});
++```
++
++Add to the `formatMessageJson` tests (or create a new describe for `formatMessageObj`):
++
++```typescript
++test("server broadcast origin uses SERVER_BROADCAST JSON type", () => {
++  const msg = {
++    type: ChatType.SYSTEM,
++    sender: "",
++    message: "Shutdown in 5:00",
++    origin: "server" as const,
++  };
++  expect(formatMessageObj(msg)).toEqual({
++    type: "SERVER_BROADCAST",
++    sender: "",
++    message: "Shutdown in 5:00",
++  });
++});
++
++test("notification origin uses NOTIFICATION JSON type", () => {
++  const msg = {
++    type: ChatType.SYSTEM,
++    sender: "",
++    message: "Auto message",
++    origin: "notification" as const,
++  };
++  expect(formatMessageObj(msg)).toEqual({
++    type: "NOTIFICATION",
++    sender: "",
++    message: "Auto message",
++  });
++});
++```
++
++**Step 2: Run tests to verify they fail**
++
++Run: `mise test src/ui/tui.test.ts`
++Expected: FAIL — `formatMessage` returns `[system]` instead of `[server]`
++
++**Step 3: Update formatMessage and formatMessageObj**
++
++The `ChatMessage` type is imported from `wow/client` which now has `origin`. In `src/ui/tui.ts`:
++
++Update `formatMessage` — add an origin check before the existing `ChatType.SYSTEM` branch (around line 190):
++
++```typescript
++if (msg.type === ChatType.SYSTEM && msg.origin) {
++  return `[server] ${message}`;
++}
++if (msg.type === ChatType.SYSTEM) {
++  return `[system] ${message}`;
++}
++```
++
++Update `formatMessageObj` — add origin check before the default type lookup (around line 220):
++
++```typescript
++export function formatMessageObj(msg: ChatMessage): LogEntry {
++  const type =
++    msg.origin === "server"
++      ? "SERVER_BROADCAST"
++      : msg.origin === "notification"
++        ? "NOTIFICATION"
++        : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
++  const obj: LogEntry = {
++    type,
++    sender: msg.sender,
++    message: stripColorCodes(msg.message),
++  };
++  if (msg.channel) obj.channel = msg.channel;
++  return obj;
++}
++```
++
++**Step 4: Run tests to verify they pass**
++
++Run: `mise test src/ui/tui.test.ts`
++Expected: PASS
++
++**Step 5: Commit**
++
++```
++feat: Display server broadcasts with [server] label
++
++Server broadcast and notification messages now render as
++[server] instead of [system] in TUI mode, and use distinct
++SERVER_BROADCAST / NOTIFICATION JSON types for daemon consumers.
++```
++
++---
++
++### Task 4: Remove from stubs
++
++**Files:**
++- Modify: `src/wow/protocol/stubs.ts:189-194,302-307` (remove two entries)
++- Test: run full suite
++
++**Step 1: Remove SMSG_CHAT_SERVER_MESSAGE stub (lines 189-194)**
++
++Delete the object at lines 189-194:
++
++```typescript
++  {
++    opcode: GameOpcode.SMSG_CHAT_SERVER_MESSAGE,
++    area: "chat",
++    label: "Server broadcast message",
++    priority: "high",
++  },
++```
++
++**Step 2: Remove SMSG_NOTIFICATION stub (lines 302-307)**
++
++Delete the object at lines 302-307:
++
++```typescript
++  {
++    opcode: GameOpcode.SMSG_NOTIFICATION,
++    area: "system",
++    label: "Server notification",
++    priority: "medium",
++  },
++```
++
++**Step 3: Run the full test suite**
++
++Run: `mise test`
++Expected: all tests PASS
++
++**Step 4: Run typecheck**
++
++Run: `mise typecheck`
++Expected: no errors
++
++**Step 5: Commit**
++
++```
++chore: Remove server broadcast and notification stubs
++
++Both opcodes are now handled — no longer need placeholder
++stub entries.
++```
++
++---
++
++### Task 5: Run live server tests
++
++**Step 1: Run live tests to verify nothing broke**
++
++Run: `mise test:live`
++Expected: PASS (server broadcasts are rare events so won't trigger during test, but this confirms the new handlers don't break the world session)
++
++**Step 2: Run full CI check**
++
++Run: `mise ci`
++Expected: typecheck, test, format all pass
+diff --git a/src/ui/tui.test.ts b/src/ui/tui.test.ts
+index 6decc48..c54d7cb 100644
+--- a/src/ui/tui.test.ts
++++ b/src/ui/tui.test.ts
+@@ -4,6 +4,7 @@ import {
+   parseCommand,
+   formatMessage,
+   formatMessageJson,
++  formatMessageObj,
+   formatGroupEvent,
+   formatEntityEvent,
+   formatEntityEventObj,
+@@ -390,6 +391,26 @@ describe("formatMessage", () => {
+     };
+     expect(formatMessage(msg)).toBe("[roll] Xiara rolled 42 (1-100)");
+   });
++
++  test("server broadcast origin shows [server] label", () => {
++    const msg = {
++      type: ChatType.SYSTEM,
++      sender: "",
++      message: "Server shutdown in 15:00",
++      origin: "server" as const,
++    };
++    expect(formatMessage(msg)).toBe("[server] Server shutdown in 15:00");
++  });
++
++  test("notification origin shows [server] label", () => {
++    const msg = {
++      type: ChatType.SYSTEM,
++      sender: "",
++      message: "Autobroadcast text",
++      origin: "notification" as const,
++    };
++    expect(formatMessage(msg)).toBe("[server] Autobroadcast text");
++  });
+ });
+ 
+ describe("formatMessageJson", () => {
+@@ -469,6 +490,34 @@ describe("formatMessageJson", () => {
+       message: "rolled 42 (1-100)",
+     });
+   });
++
++  test("server broadcast origin uses SERVER_BROADCAST JSON type", () => {
++    const msg = {
++      type: ChatType.SYSTEM,
++      sender: "",
++      message: "Shutdown in 5:00",
++      origin: "server" as const,
++    };
++    expect(formatMessageObj(msg)).toEqual({
++      type: "SERVER_BROADCAST",
++      sender: "",
++      message: "Shutdown in 5:00",
++    });
++  });
++
++  test("notification origin uses NOTIFICATION JSON type", () => {
++    const msg = {
++      type: ChatType.SYSTEM,
++      sender: "",
++      message: "Auto message",
++      origin: "notification" as const,
++    };
++    expect(formatMessageObj(msg)).toEqual({
++      type: "NOTIFICATION",
++      sender: "",
++      message: "Auto message",
++    });
++  });
+ });
+ 
+ describe("startTui", () => {
+diff --git a/src/ui/tui.ts b/src/ui/tui.ts
+index 610c722..c50fa00 100644
+--- a/src/ui/tui.ts
++++ b/src/ui/tui.ts
+@@ -187,6 +187,12 @@ export function formatMessage(msg: ChatMessage): string {
+   if (msg.type === ChatType.WHISPER_INFORM) {
+     return `[whisper to ${msg.sender}] ${message}`;
+   }
++  if (
++    msg.type === ChatType.SYSTEM &&
++    (msg.origin === "server" || msg.origin === "notification")
++  ) {
++    return `[server] ${message}`;
++  }
+   if (msg.type === ChatType.SYSTEM) {
+     return `[system] ${message}`;
+   }
+@@ -218,7 +224,12 @@ const JSON_TYPE_LABELS: Record<number, string> = {
+ };
+ 
+ export function formatMessageObj(msg: ChatMessage): LogEntry {
+-  const type = JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
++  const type =
++    msg.origin === "server"
++      ? "SERVER_BROADCAST"
++      : msg.origin === "notification"
++        ? "NOTIFICATION"
++        : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
+   const obj: LogEntry = {
+     type,
+     sender: msg.sender,
+diff --git a/src/wow/client.test.ts b/src/wow/client.test.ts
+index 9a75a8b..d0066ea 100644
+--- a/src/wow/client.test.ts
++++ b/src/wow/client.test.ts
+@@ -1026,6 +1026,61 @@ describe("world error paths", () => {
+     }
+   });
+ 
++  test("SMSG_CHAT_SERVER_MESSAGE delivers as server-origin system message", async () => {
++    const ws = await startMockWorldServer();
++    try {
++      const handle = await worldSession(
++        { ...base, host: "127.0.0.1", port: ws.port },
++        fakeAuth(ws.port),
++      );
++
++      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++
++      const w = new PacketWriter();
++      w.uint32LE(1);
++      w.cString("15:00");
++      ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, w.finish());
++
++      const msg = await received;
++      expect(msg.type).toBe(ChatType.SYSTEM);
++      expect(msg.sender).toBe("");
++      expect(msg.message).toBe("Server shutdown in 15:00");
++      expect(msg.origin).toBe("server");
++
++      handle.close();
++      await handle.closed;
++    } finally {
++      ws.stop();
++    }
++  });
++
++  test("SMSG_NOTIFICATION delivers as notification-origin system message", async () => {
++    const ws = await startMockWorldServer();
++    try {
++      const handle = await worldSession(
++        { ...base, host: "127.0.0.1", port: ws.port },
++        fakeAuth(ws.port),
++      );
++
++      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
++
++      const w = new PacketWriter();
++      w.cString("Server autobroadcast message");
++      ws.inject(GameOpcode.SMSG_NOTIFICATION, w.finish());
++
++      const msg = await received;
++      expect(msg.type).toBe(ChatType.SYSTEM);
++      expect(msg.sender).toBe("");
++      expect(msg.message).toBe("Server autobroadcast message");
++      expect(msg.origin).toBe("notification");
++
++      handle.close();
++      await handle.closed;
++    } finally {
++      ws.stop();
++    }
++  });
++
+   test("channel left removes from channel list", async () => {
+     const ws = await startMockWorldServer();
+     try {
+@@ -1449,10 +1504,10 @@ describe("world error paths", () => {
+         });
+       });
+ 
+-      ws.inject(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, new Uint8Array(0));
++      ws.inject(GameOpcode.SMSG_CHAT_PLAYER_AMBIGUOUS, new Uint8Array(0));
+       const msg = await received;
+       expect(msg.type).toBe(ChatType.SYSTEM);
+-      expect(msg.message).toContain("Server broadcast message");
++      expect(msg.message).toContain("Ambiguous player name");
+ 
+       handle.close();
+       await handle.closed;
+diff --git a/src/wow/client.ts b/src/wow/client.ts
+index f079bfa..f902a06 100644
+--- a/src/wow/client.ts
++++ b/src/wow/client.ts
+@@ -19,6 +19,8 @@ import {
+   parseWhoResponse,
+   buildRandomRoll,
+   parseRandomRoll,
++  parseServerBroadcast,
++  parseNotification,
+   type ChatMessage as RawChatMessage,
+   type WhoResult,
+ } from "wow/protocol/chat";
+@@ -110,6 +112,7 @@ export type ChatMessage = {
+   sender: string;
+   message: string;
+   channel?: string;
++  origin?: "server" | "notification";
+ };
+ 
+ export type GroupEvent =
+@@ -568,6 +571,26 @@ function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
+   });
+ }
+ 
++function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
++  const { message } = parseServerBroadcast(r);
++  conn.onMessage?.({
++    type: ChatType.SYSTEM,
++    sender: "",
++    message,
++    origin: "server",
++  });
++}
++
++function handleNotification(conn: WorldConn, r: PacketReader): void {
++  const { message } = parseNotification(r);
++  conn.onMessage?.({
++    type: ChatType.SYSTEM,
++    sender: "",
++    message,
++    origin: "notification",
++  });
++}
++
+ function handlePartyCommandResult(conn: WorldConn, r: PacketReader): void {
+   const result = parsePartyCommandResult(r);
+   conn.onGroupEvent?.({
+@@ -1039,6 +1062,12 @@ export function worldSession(
+     conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
+       handleChannelNotify(conn, r),
+     );
++    conn.dispatch.on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
++      handleServerBroadcast(conn, r),
++    );
++    conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
++      handleNotification(conn, r),
++    );
+     conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
+       handlePartyCommandResult(conn, r),
+     );
+diff --git a/src/wow/protocol/chat.test.ts b/src/wow/protocol/chat.test.ts
+index 94cef8b..f59781b 100644
+--- a/src/wow/protocol/chat.test.ts
++++ b/src/wow/protocol/chat.test.ts
+@@ -11,6 +11,8 @@ import {
+   parseChannelNotify,
+   buildRandomRoll,
+   parseRandomRoll,
++  parseServerBroadcast,
++  parseNotification,
+ } from "wow/protocol/chat";
+ 
+ describe("parseChatMessage", () => {
+@@ -352,3 +354,69 @@ describe("parseRandomRoll", () => {
+     expect(result.guidHigh).toBe(0x00000001);
+   });
+ });
++
++describe("parseServerBroadcast", () => {
++  test("parses shutdown time message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(1);
++    w.cString("15:00");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server shutdown in 15:00");
++  });
++
++  test("parses restart time message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(2);
++    w.cString("05:00");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server restart in 05:00");
++  });
++
++  test("parses raw string message", () => {
++    const w = new PacketWriter();
++    w.uint32LE(3);
++    w.cString("Custom admin broadcast");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Custom admin broadcast");
++  });
++
++  test("parses shutdown cancelled", () => {
++    const w = new PacketWriter();
++    w.uint32LE(4);
++    w.cString("");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server shutdown cancelled");
++  });
++
++  test("parses restart cancelled", () => {
++    const w = new PacketWriter();
++    w.uint32LE(5);
++    w.cString("");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server restart cancelled");
++  });
++
++  test("handles unknown message ID", () => {
++    const w = new PacketWriter();
++    w.uint32LE(99);
++    w.cString("mystery");
++    const result = parseServerBroadcast(new PacketReader(w.finish()));
++    expect(result.message).toBe("Server message 99: mystery");
++  });
++});
++
++describe("parseNotification", () => {
++  test("parses notification string", () => {
++    const w = new PacketWriter();
++    w.cString("Welcome to our server!");
++    const result = parseNotification(new PacketReader(w.finish()));
++    expect(result.message).toBe("Welcome to our server!");
++  });
++
++  test("parses empty notification", () => {
++    const w = new PacketWriter();
++    w.cString("");
++    const result = parseNotification(new PacketReader(w.finish()));
++    expect(result.message).toBe("");
++  });
++});
+diff --git a/src/wow/protocol/chat.ts b/src/wow/protocol/chat.ts
+index c5c7089..dd74e9d 100644
+--- a/src/wow/protocol/chat.ts
++++ b/src/wow/protocol/chat.ts
+@@ -181,3 +181,27 @@ export function parseWhoResponse(r: PacketReader): WhoResult[] {
+   }
+   return results;
+ }
++
++const SERVER_MESSAGES: Record<number, (param: string) => string> = {
++  1: (p) => `Server shutdown in ${p}`,
++  2: (p) => `Server restart in ${p}`,
++  3: (p) => p,
++  4: () => "Server shutdown cancelled",
++  5: () => "Server restart cancelled",
++  6: (p) => `Battleground shutdown in ${p}`,
++  7: (p) => `Battleground restart in ${p}`,
++  8: (p) => `Instance shutdown in ${p}`,
++  9: (p) => `Instance restart in ${p}`,
++};
++
++export function parseServerBroadcast(r: PacketReader): { message: string } {
++  const messageId = r.uint32LE();
++  const param = r.cString();
++  const fmt = SERVER_MESSAGES[messageId];
++  const message = fmt ? fmt(param) : `Server message ${messageId}: ${param}`;
++  return { message };
++}
++
++export function parseNotification(r: PacketReader): { message: string } {
++  return { message: r.cString() };
++}
+diff --git a/src/wow/protocol/stubs.ts b/src/wow/protocol/stubs.ts
+index 7a679e4..ff1ffce 100644
+--- a/src/wow/protocol/stubs.ts
++++ b/src/wow/protocol/stubs.ts
+@@ -186,12 +186,6 @@ export const STUBS: StubEntry[] = [
+     priority: "low",
+   },
+ 
+-  {
+-    opcode: GameOpcode.SMSG_CHAT_SERVER_MESSAGE,
+-    area: "chat",
+-    label: "Server broadcast message",
+-    priority: "high",
+-  },
+   {
+     opcode: GameOpcode.SMSG_CHAT_PLAYER_AMBIGUOUS,
+     area: "chat",
+@@ -299,12 +293,6 @@ export const STUBS: StubEntry[] = [
+     priority: "medium",
+   },
+ 
+-  {
+-    opcode: GameOpcode.SMSG_NOTIFICATION,
+-    area: "system",
+-    label: "Server notification",
+-    priority: "medium",
+-  },
+   {
+     opcode: GameOpcode.SMSG_LEVELUP_INFO,
+     area: "system",
+```
+
+Review the complete diff above. This contains all code changes in the PR.
+
+
+OBJECTIVE:
+Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential. This is not a general code review - focus ONLY on security implications newly added by this PR. Do not comment on existing security concerns.
+
+CRITICAL INSTRUCTIONS:
+1. MINIMIZE FALSE POSITIVES: Only flag issues where you're >80% confident of actual exploitability
+2. AVOID NOISE: Skip theoretical issues, style concerns, or low-impact findings
+3. FOCUS ON IMPACT: Prioritize vulnerabilities that could lead to unauthorized access, data breaches, or system compromise
+4. EXCLUSIONS: Do NOT report the following issue types:
+   - Denial of Service (DOS) vulnerabilities, even if they allow service disruption
+   - Secrets or sensitive data stored on disk (these are handled by other processes)
+   - Rate limiting or resource exhaustion issues
+
+SECURITY CATEGORIES TO EXAMINE:
+
+**Input Validation Vulnerabilities:**
+- SQL injection via unsanitized user input
+- Command injection in system calls or subprocesses
+- XXE injection in XML parsing
+- Template injection in templating engines
+- NoSQL injection in database queries
+- Path traversal in file operations
+
+**Authentication & Authorization Issues:**
+- Authentication bypass logic
+- Privilege escalation paths
+- Session management flaws
+- JWT token vulnerabilities
+- Authorization logic bypasses
+
+**Crypto & Secrets Management:**
+- Hardcoded API keys, passwords, or tokens
+- Weak cryptographic algorithms or implementations
+- Improper key storage or management
+- Cryptographic randomness issues
+- Certificate validation bypasses
+
+**Injection & Code Execution:**
+- Remote code execution via deseralization
+- Pickle injection in Python
+- YAML deserialization vulnerabilities
+- Eval injection in dynamic code execution
+- XSS vulnerabilities in web applications (reflected, stored, DOM-based)
+
+**Data Exposure:**
+- Sensitive data logging or storage
+- PII handling violations
+- API endpoint data leakage
+- Debug information exposure
+
+Additional notes:
+- Even if something is only exploitable from the local network, it can still be a HIGH severity issue
+
+ANALYSIS METHODOLOGY:
+
+Phase 1 - Repository Context Research (Use file search tools):
+- Identify existing security frameworks and libraries in use
+- Look for established secure coding patterns in the codebase
+- Examine existing sanitization and validation patterns
+- Understand the project's security model and threat model
+
+Phase 2 - Comparative Analysis:
+- Compare new code changes against existing security patterns
+- Identify deviations from established secure practices
+- Look for inconsistent security implementations
+- Flag code that introduces new attack surfaces
+
+Phase 3 - Vulnerability Assessment:
+- Examine each modified file for security implications
+- Trace data flow from user inputs to sensitive operations
+- Look for privilege boundaries being crossed unsafely
+- Identify injection points and unsafe deserialization
+
+REQUIRED OUTPUT FORMAT:
+
+You MUST output your findings in markdown. The markdown output should contain the file, line number, severity, category (e.g. `sql_injection` or `xss`), description, exploit scenario, and fix recommendation.
+
+For example:
+
+# Vuln 1: XSS: `foo.py:42`
+
+* Severity: High
+* Description: User input from `username` parameter is directly interpolated into HTML without escaping, allowing reflected XSS attacks
+* Exploit Scenario: Attacker crafts URL like /bar?q=<script>alert(document.cookie)</script> to execute JavaScript in victim's browser, enabling session hijacking or data theft
+* Recommendation: Use Flask's escape() function or Jinja2 templates with auto-escaping enabled for all user inputs rendered in HTML
+
+SEVERITY GUIDELINES:
+- **HIGH**: Directly exploitable vulnerabilities leading to RCE, data breach, or authentication bypass
+- **MEDIUM**: Vulnerabilities requiring specific conditions but with significant impact
+- **LOW**: Defense-in-depth issues or lower-impact vulnerabilities
+
+CONFIDENCE SCORING:
+- 0.9-1.0: Certain exploit path identified, tested if possible
+- 0.8-0.9: Clear vulnerability pattern with known exploitation methods
+- 0.7-0.8: Suspicious pattern requiring specific conditions to exploit
+- Below 0.7: Don't report (too speculative)
+
+FINAL REMINDER:
+Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues than flood the report with false positives. Each finding should be something a security engineer would confidently raise in a PR review.
+
+FALSE POSITIVE FILTERING:
+
+> You do not need to run commands to reproduce the vulnerability, just read the code to determine if it is a real vulnerability. Do not use the bash tool or write to any files.
+>
+> HARD EXCLUSIONS - Automatically exclude findings matching these patterns:
+> 1. Denial of Service (DOS) vulnerabilities or resource exhaustion attacks.
+> 2. Secrets or credentials stored on disk if they are otherwise secured.
+> 3. Rate limiting concerns or service overload scenarios.
+> 4. Memory consumption or CPU exhaustion issues.
+> 5. Lack of input validation on non-security-critical fields without proven security impact.
+> 6. Input sanitization concerns for GitHub Action workflows unless they are clearly triggerable via untrusted input.
+> 7. A lack of hardening measures. Code is not expected to implement all security best practices, only flag concrete vulnerabilities.
+> 8. Race conditions or timing attacks that are theoretical rather than practical issues. Only report a race condition if it is concretely problematic.
+> 9. Vulnerabilities related to outdated third-party libraries. These are managed separately and should not be reported here.
+> 10. Memory safety issues such as buffer overflows or use-after-free-vulnerabilities are impossible in rust. Do not report memory safety issues in rust or any other memory safe languages.
+> 11. Files that are only unit tests or only used as part of running tests.
+> 12. Log spoofing concerns. Outputting un-sanitized user input to logs is not a vulnerability.
+> 13. SSRF vulnerabilities that only control the path. SSRF is only a concern if it can control the host or protocol.
+> 14. Including user-controlled content in AI system prompts is not a vulnerability.
+> 15. Regex injection. Injecting untrusted content into a regex is not a vulnerability.
+> 16. Regex DOS concerns.
+> 16. Insecure documentation. Do not report any findings in documentation files such as markdown files.
+> 17. A lack of audit logs is not a vulnerability.
+>
+> PRECEDENTS -
+> 1. Logging high value secrets in plaintext is a vulnerability. Logging URLs is assumed to be safe.
+> 2. UUIDs can be assumed to be unguessable and do not need to be validated.
+> 3. Environment variables and CLI flags are trusted values. Attackers are generally not able to modify them in a secure environment. Any attack that relies on controlling an environment variable is invalid.
+> 4. Resource management issues such as memory or file descriptor leaks are not valid.
+> 5. Subtle or low impact web vulnerabilities such as tabnabbing, XS-Leaks, prototype pollution, and open redirects should not be reported unless they are extremely high confidence.
+> 6. React and Angular are generally secure against XSS. These frameworks do not need to sanitize or escape user input unless it is using dangerouslySetInnerHTML, bypassSecurityTrustHtml, or similar methods. Do not report XSS vulnerabilities in React or Angular components or tsx files unless they are using unsafe methods.
+> 7. Most vulnerabilities in github action workflows are not exploitable in practice. Before validating a github action workflow vulnerability ensure it is concrete and has a very specific attack path.
+> 8. A lack of permission checking or authentication in client-side JS/TS code is not a vulnerability. Client-side code is not trusted and does not need to implement these checks, they are handled on the server-side. The same applies to all flows that send untrusted data to the backend, the backend is responsible for validating and sanitizing all inputs.
+> 9. Only include MEDIUM findings if they are obvious and concrete issues.
+> 10. Most vulnerabilities in ipython notebooks (*.ipynb files) are not exploitable in practice. Before validating a notebook vulnerability ensure it is concrete and has a very specific attack path where untrusted input can trigger the vulnerability.
+> 11. Logging non-PII data is not a vulnerability even if the data may be sensitive. Only report logging vulnerabilities if they expose sensitive information such as secrets, passwords, or personally identifiable information (PII).
+> 12. Command injection vulnerabilities in shell scripts are generally not exploitable in practice since shell scripts generally do not run with untrusted user input. Only report command injection vulnerabilities in shell scripts if they are concrete and have a very specific attack path for untrusted input.
+>
+> SIGNAL QUALITY CRITERIA - For remaining findings, assess:
+> 1. Is there a concrete, exploitable vulnerability with a clear attack path?
+> 2. Does this represent a real security risk vs theoretical best practice?
+> 3. Are there specific code locations and reproduction steps?
+> 4. Would this finding be actionable for a security team?
+>
+> For each finding, assign a confidence score from 1-10:
+> - 1-3: Low confidence, likely false positive or noise
+> - 4-6: Medium confidence, needs investigation
+> - 7-10: High confidence, likely true vulnerability
+
+START ANALYSIS:
+
+Begin your analysis now. Do this in 3 steps:
+
+1. Use a sub-task to identify vulnerabilities. Use the repository exploration tools to understand the codebase context, then analyze the PR changes for security implications. In the prompt for this sub-task, include all of the above.
+2. Then for each vulnerability identified by the above sub-task, create a new sub-task to filter out false-positives. Launch these sub-tasks as parallel sub-tasks. In the prompt for these sub-tasks, include everything in the "FALSE POSITIVE FILTERING" instructions.
+3. Filter out any vulnerabilities where the sub-task reported a confidence less than 8.
+
+Your final reply must contain the markdown report and nothing else.
+
+---
+
+# Simplify: Code Review and Cleanup
+
+Review all changed files for reuse, quality, and efficiency. Fix any issues found.
+
+## Phase 1: Identify Changes
+
+Run `git diff` (or `git diff HEAD` if there are staged changes) to see what changed. If there are no git changes, review the most recently modified files that the user mentioned or that you edited earlier in this conversation.
+
+## Phase 2: Launch Three Review Agents in Parallel
+
+Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent the full diff so it has the complete context.
+
+### Agent 1: Code Reuse Review
+
+For each change:
+
+1. **Search for existing utilities and helpers** that could replace newly written code. Use Grep to find similar patterns elsewhere in the codebase — common locations are utility directories, shared modules, and files adjacent to the changed ones.
+2. **Flag any new function that duplicates existing functionality.** Suggest the existing function to use instead.
+3. **Flag any inline logic that could use an existing utility** — hand-rolled string manipulation, manual path handling, custom environment checks, ad-hoc type guards, and similar patterns are common candidates.
+
+### Agent 2: Code Quality Review
+
+Review the same changes for hacky patterns:
+
+1. **Redundant state**: state that duplicates existing state, cached values that could be derived, observers/effects that could be direct calls
+2. **Parameter sprawl**: adding new parameters to a function instead of generalizing or restructuring existing ones
+3. **Copy-paste with slight variation**: near-duplicate code blocks that should be unified with a shared abstraction
+4. **Leaky abstractions**: exposing internal details that should be encapsulated, or breaking existing abstraction boundaries
+5. **Stringly-typed code**: using raw strings where constants, enums (string unions), or branded types already exist in the codebase
+
+### Agent 3: Efficiency Review
+
+Review the same changes for efficiency:
+
+1. **Unnecessary work**: redundant computations, repeated file reads, duplicate network/API calls, N+1 patterns
+2. **Missed concurrency**: independent operations run sequentially when they could run in parallel
+3. **Hot-path bloat**: new blocking work added to startup or per-request/per-render hot paths
+4. **Unnecessary existence checks**: pre-checking file/resource existence before operating (TOCTOU anti-pattern) — operate directly and handle the error
+5. **Memory**: unbounded data structures, missing cleanup, event listener leaks
+6. **Overly broad operations**: reading entire files when only a portion is needed, loading all items when filtering for one
+
+## Phase 3: Fix Issues
+
+Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.
+
+When done, briefly summarize what was fixed (or confirm the code was already clean).
+
+
+## Additional Focus
+
+Review the diff on feat/server-broadcasts vs main. Can anything be simplified, removed, or made more concise without losing functionality?
