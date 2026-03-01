@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "0ebcb36d7d2d",
+  "session_id": "8decfbe0-6288-4391-bcc1-0ac35eb7bc03",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T11:10:50.563117525Z",
+  "branch": "feat/server-broadcasts",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/protocol/chat.test.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "c38850366413",
+  "token_usage": {
+    "input_tokens": 6,
+    "cache_creation_tokens": 19475,
+    "cache_read_tokens": 118016,
+    "output_tokens": 4134,
+    "api_call_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T11:10:50.540522406Z",
+    "agent_lines": 32,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 32,
+    "agent_percentage": 100
+  }
+}
