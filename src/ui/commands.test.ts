@@ -25,6 +25,14 @@ describe("parseCommand", () => {
     });
   });
 
+  test("/w with target only sends whisper with empty message", () => {
+    expect(parseCommand("/w Arthas")).toEqual({
+      type: "whisper",
+      target: "Arthas",
+      message: "",
+    });
+  });
+
   test("/whisper sends whisper", () => {
     expect(parseCommand("/whisper Xiara hi")).toEqual({
       type: "whisper",
