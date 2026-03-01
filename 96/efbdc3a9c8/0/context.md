@@ -144,3 +144,15 @@ Run `git diff` (or `git diff HEAD` if there are staged changes) to see what chan
 
 Use the Agent tool to launch all three agents concurrently in a si...
 
+### Prompt 12
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the entire conversation:
+
+1. The conversation started with the user invoking `/superpowers:brainstorming` to design server broadcast messages for handling SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION opcodes.
+
+2. I explored the codebase thoroughly using agents, understanding:
+   - The stubs.ts file w...
+
