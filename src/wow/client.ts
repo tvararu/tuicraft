@@ -110,6 +110,7 @@ export type ChatMessage = {
   sender: string;
   message: string;
   channel?: string;
+  origin?: "server" | "notification";
 };
 
 export type GroupEvent =

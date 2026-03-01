@@ -11,6 +11,8 @@ import {
   parseChannelNotify,
   buildRandomRoll,
   parseRandomRoll,
+  parseServerBroadcast,
+  parseNotification,
 } from "wow/protocol/chat";
 
 describe("parseChatMessage", () => {
@@ -350,5 +352,64 @@ describe("parseRandomRoll", () => {
     expect(result.result).toBe(500);
     expect(result.guidLow).toBe(0xdeadbeef);
     expect(result.guidHigh).toBe(0x00000001);
+  });
+});
+
+describe("parseServerBroadcast", () => {
+  test("parses shutdown time message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.cString("15:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Server shutdown in 15:00");
+  });
+
+  test("parses restart time message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(2);
+    w.cString("05:00");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Server restart in 05:00");
+  });
+
+  test("parses raw string message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(3);
+    w.cString("Custom admin broadcast");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Custom admin broadcast");
+  });
+
+  test("parses shutdown cancelled", () => {
+    const w = new PacketWriter();
+    w.uint32LE(4);
+    w.cString("");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Server shutdown cancelled");
+  });
+
+  test("parses restart cancelled", () => {
+    const w = new PacketWriter();
+    w.uint32LE(5);
+    w.cString("");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Server restart cancelled");
+  });
+
+  test("handles unknown message ID", () => {
+    const w = new PacketWriter();
+    w.uint32LE(99);
+    w.cString("mystery");
+    const result = parseServerBroadcast(new PacketReader(w.finish()));
+    expect(result.message).toBe("Server message 99: mystery");
+  });
+});
+
+describe("parseNotification", () => {
+  test("parses notification string", () => {
+    const w = new PacketWriter();
+    w.cString("Welcome to our server!");
+    const result = parseNotification(new PacketReader(w.finish()));
+    expect(result.message).toBe("Welcome to our server!");
   });
 });
