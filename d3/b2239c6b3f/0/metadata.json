@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "d3b2239c6b3f",
+  "session_id": "e55f7f11-80db-4c9e-a08c-8e1be46b8e37",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T11:44:45.953276609Z",
+  "branch": "feat/chat-notices",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "src/wow/client.test.ts",
+    "src/wow/protocol/stubs.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "2099d00260fc",
+  "token_usage": {
+    "input_tokens": 659,
+    "cache_creation_tokens": 205621,
+    "cache_read_tokens": 4535804,
+    "output_tokens": 20786,
+    "api_call_count": 76
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T11:44:45.726823185Z",
+    "agent_lines": 2,
+    "human_added": 26,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 28,
+    "agent_percentage": 7.142857142857142
+  }
+}

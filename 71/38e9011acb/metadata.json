@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "7138e9011acb",
+  "strategy": "manual-commit",
+  "branch": "feat/server-broadcast-messages",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-01-server-broadcast-design.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/71/38e9011acb/0/metadata.json",
+      "transcript": "/71/38e9011acb/0/full.jsonl",
+      "context": "/71/38e9011acb/0/context.md",
+      "content_hash": "/71/38e9011acb/0/content_hash.txt",
+      "prompt": "/71/38e9011acb/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 27,
+    "cache_creation_tokens": 69719,
+    "cache_read_tokens": 740476,
+    "output_tokens": 7011,
+    "api_call_count": 22
+  }
+}

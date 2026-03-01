@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "acbfb06e2d4d",
+  "strategy": "manual-commit",
+  "branch": "feat/server-broadcasts",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/test/mock-world-server.ts",
+    "src/wow/client.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ac/bfb06e2d4d/0/metadata.json",
+      "transcript": "/ac/bfb06e2d4d/0/full.jsonl",
+      "context": "/ac/bfb06e2d4d/0/context.md",
+      "content_hash": "/ac/bfb06e2d4d/0/content_hash.txt",
+      "prompt": "/ac/bfb06e2d4d/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 30543,
+    "cache_read_tokens": 1514706,
+    "output_tokens": 6864,
+    "api_call_count": 39
+  }
+}

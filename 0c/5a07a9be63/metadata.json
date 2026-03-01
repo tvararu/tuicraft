@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "0c5a07a9be63",
+  "strategy": "manual-commit",
+  "branch": "feat/server-broadcasts",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/ui/tui.ts",
+    "src/wow/protocol/chat.test.ts",
+    "src/wow/protocol/chat.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0c/5a07a9be63/0/metadata.json",
+      "transcript": "/0c/5a07a9be63/0/full.jsonl",
+      "context": "/0c/5a07a9be63/0/context.md",
+      "content_hash": "/0c/5a07a9be63/0/content_hash.txt",
+      "prompt": "/0c/5a07a9be63/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 102,
+    "cache_creation_tokens": 303416,
+    "cache_read_tokens": 10008079,
+    "output_tokens": 23848,
+    "api_call_count": 93
+  }
+}

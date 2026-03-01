@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "acbfb06e2d4d",
+  "session_id": "2369a59a-7d24-4907-a684-b8508a562cc8",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T11:00:16.353245585Z",
+  "branch": "feat/server-broadcasts",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/test/mock-world-server.ts",
+    "src/wow/client.test.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "fc1e6281be13",
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 30543,
+    "cache_read_tokens": 1514706,
+    "output_tokens": 6864,
+    "api_call_count": 39
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T11:00:16.244953028Z",
+    "agent_lines": 0,
+    "human_added": 24,
+    "human_modified": 13,
+    "human_removed": 0,
+    "total_committed": 24,
+    "agent_percentage": 0
+  }
+}

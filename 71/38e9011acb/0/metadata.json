@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "7138e9011acb",
+  "session_id": "04fd0b5b-eace-4940-bfa9-edd8491586ad",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T10:38:40.299709794Z",
+  "branch": "feat/server-broadcast-messages",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-01-server-broadcast-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "df97271ca509",
+  "token_usage": {
+    "input_tokens": 27,
+    "cache_creation_tokens": 69719,
+    "cache_read_tokens": 740476,
+    "output_tokens": 7011,
+    "api_call_count": 22
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T10:38:40.254259919Z",
+    "agent_lines": 62,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 62,
+    "agent_percentage": 100
+  }
+}
