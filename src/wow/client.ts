@@ -17,6 +17,8 @@ import {
   parseChannelNotify,
   buildWhoRequest,
   parseWhoResponse,
+  buildRandomRoll,
+  parseRandomRoll,
   type ChatMessage as RawChatMessage,
   type WhoResult,
 } from "wow/protocol/chat";
@@ -191,6 +193,7 @@ export type WorldHandle = {
   getFriends(): FriendEntry[];
   addFriend(name: string): void;
   removeFriend(name: string): void;
+  sendRoll(min: number, max: number): void;
   onFriendEvent(cb: (event: FriendEvent) => void): void;
 };
 
@@ -456,9 +459,7 @@ function deliverMessage(
   });
 }
 
-function handleChatMessage(conn: WorldConn, r: PacketReader): void {
-  const raw = parseChatMessage(r);
-
+function resolveAndDeliver(conn: WorldConn, raw: RawChatMessage): void {
   if (raw.senderGuidLow === 0) {
     deliverMessage(conn, raw, "");
     return;
@@ -481,6 +482,21 @@ function handleChatMessage(conn: WorldConn, r: PacketReader): void {
       buildNameQuery(raw.senderGuidLow, raw.senderGuidHigh),
     );
   }
+}
+
+function handleChatMessage(conn: WorldConn, r: PacketReader): void {
+  resolveAndDeliver(conn, parseChatMessage(r));
+}
+
+function handleRandomRoll(conn: WorldConn, r: PacketReader): void {
+  const roll = parseRandomRoll(r);
+  resolveAndDeliver(conn, {
+    type: ChatType.ROLL,
+    language: 0,
+    senderGuidLow: roll.guidLow,
+    senderGuidHigh: roll.guidHigh,
+    message: `rolled ${roll.result} (${roll.min}-${roll.max})`,
+  });
 }
 
 function handleGmChatMessage(conn: WorldConn, r: PacketReader): void {
@@ -1066,6 +1082,9 @@ export function worldSession(
       handleGameObjectQueryResponse(conn, r),
     );
 
+    conn.dispatch.on(GameOpcode.MSG_RANDOM_ROLL, (r) =>
+      handleRandomRoll(conn, r),
+    );
     conn.dispatch.on(GameOpcode.SMSG_CONTACT_LIST, (r) =>
       handleContactList(conn, r),
     );
@@ -1296,6 +1315,13 @@ export function worldSession(
             conn,
             GameOpcode.CMSG_DEL_FRIEND,
             buildDelFriend(friend.guid),
+          );
+        },
+        sendRoll(min, max) {
+          sendPacket(
+            conn,
+            GameOpcode.MSG_RANDOM_ROLL,
+            buildRandomRoll(min, max),
           );
         },
         onFriendEvent(cb) {

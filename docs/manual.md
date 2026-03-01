@@ -133,6 +133,7 @@ When running in TUI mode, the following slash commands are available:
 | `/leader` _name_             | Transfer group leadership   |
 | `/accept`                    | Accept a group invitation   |
 | `/decline`                   | Decline a group invitation  |
+| `/roll` [_N_] [_M_]          | Roll random number (1-100)  |
 | `/friends`                   | Show your friends list      |
 | `/friend add` _name_         | Add a player to friends     |
 | `/friend remove` _name_      | Remove from friends         |

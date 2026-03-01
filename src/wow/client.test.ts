@@ -1510,6 +1510,94 @@ describe("world error paths", () => {
     }
   });
 
+  test("sendRoll sends MSG_RANDOM_ROLL with min and max", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      handle.sendRoll(1, 100);
+      await Bun.sleep(1);
+
+      const roll = ws.captured.find(
+        (p) => p.opcode === GameOpcode.MSG_RANDOM_ROLL,
+      );
+      expect(roll).toBeDefined();
+      const r = new PacketReader(roll!.body);
+      expect(r.uint32LE()).toBe(1);
+      expect(r.uint32LE()).toBe(100);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("MSG_RANDOM_ROLL delivers roll result as message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      await waitForEchoProbe(handle);
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint32LE(1);
+      w.uint32LE(100);
+      w.uint32LE(42);
+      w.uint32LE(0x42);
+      w.uint32LE(0x00);
+      ws.inject(GameOpcode.MSG_RANDOM_ROLL, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.ROLL);
+      expect(msg.sender).toBe(FIXTURE_CHARACTER);
+      expect(msg.message).toBe("rolled 42 (1-100)");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("MSG_RANDOM_ROLL resolves unknown roller via name query", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint32LE(5);
+      w.uint32LE(50);
+      w.uint32LE(25);
+      w.uint32LE(0x42);
+      w.uint32LE(0x00);
+      ws.inject(GameOpcode.MSG_RANDOM_ROLL, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.ROLL);
+      expect(msg.sender).toBe(FIXTURE_CHARACTER);
+      expect(msg.message).toBe("rolled 25 (5-50)");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   describe("entity handling", () => {
     function writePackedGuid(w: PacketWriter, guid: bigint) {
       const low = Number(guid & 0xffffffffn);

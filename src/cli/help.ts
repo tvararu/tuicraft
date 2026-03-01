@@ -47,6 +47,7 @@ INTERACTIVE COMMANDS (TUI mode)
   /leader <name>  Transfer group leadership
   /accept         Accept a group invitation
   /decline        Decline a group invitation
+  /roll [N] [M]   Roll random number (default 1-100)
   /friends        Show your friends list
   /friend add <n> Add a player to friends
   /friend remove  Remove a player from friends

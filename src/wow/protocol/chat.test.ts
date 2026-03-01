@@ -9,6 +9,8 @@ import {
   buildWhoRequest,
   parseWhoResponse,
   parseChannelNotify,
+  buildRandomRoll,
+  parseRandomRoll,
 } from "wow/protocol/chat";
 
 describe("parseChatMessage", () => {
@@ -298,5 +300,55 @@ describe("parseChannelNotify", () => {
 
     const result = parseChannelNotify(new PacketReader(w.finish()));
     expect(result).toEqual({ type: "other" });
+  });
+});
+
+describe("buildRandomRoll", () => {
+  test("builds a roll packet with min and max", () => {
+    const body = buildRandomRoll(1, 100);
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(1);
+    expect(r.uint32LE()).toBe(100);
+  });
+
+  test("builds a roll with custom range", () => {
+    const body = buildRandomRoll(50, 200);
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(50);
+    expect(r.uint32LE()).toBe(200);
+  });
+});
+
+describe("parseRandomRoll", () => {
+  test("parses a roll result", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint32LE(100);
+    w.uint32LE(42);
+    w.uint32LE(0x10);
+    w.uint32LE(0x00);
+
+    const result = parseRandomRoll(new PacketReader(w.finish()));
+    expect(result.min).toBe(1);
+    expect(result.max).toBe(100);
+    expect(result.result).toBe(42);
+    expect(result.guidLow).toBe(0x10);
+    expect(result.guidHigh).toBe(0x00);
+  });
+
+  test("parses a roll with large guid", () => {
+    const w = new PacketWriter();
+    w.uint32LE(0);
+    w.uint32LE(999);
+    w.uint32LE(500);
+    w.uint32LE(0xdeadbeef);
+    w.uint32LE(0x00000001);
+
+    const result = parseRandomRoll(new PacketReader(w.finish()));
+    expect(result.min).toBe(0);
+    expect(result.max).toBe(999);
+    expect(result.result).toBe(500);
+    expect(result.guidLow).toBe(0xdeadbeef);
+    expect(result.guidHigh).toBe(0x00000001);
   });
 });

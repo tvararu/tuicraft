@@ -207,7 +207,7 @@ that the official game client does.
 | --------------------- | ------ |
 | Battlegrounds         | ❌     |
 | Arena                 | ❌     |
-| Random roll (`/roll`) | ❌     |
+| Random roll (`/roll`) | ✅     |
 
 ### 📊 Progression
 

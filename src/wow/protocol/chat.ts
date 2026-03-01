@@ -140,6 +140,30 @@ export function parseChannelNotify(r: PacketReader): ChannelNotifyEvent {
   return { type: "other" };
 }
 
+export type RandomRoll = {
+  min: number;
+  max: number;
+  result: number;
+  guidLow: number;
+  guidHigh: number;
+};
+
+export function buildRandomRoll(min: number, max: number): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(min);
+  w.uint32LE(max);
+  return w.finish();
+}
+
+export function parseRandomRoll(r: PacketReader): RandomRoll {
+  const min = r.uint32LE();
+  const max = r.uint32LE();
+  const result = r.uint32LE();
+  const guidLow = r.uint32LE();
+  const guidHigh = r.uint32LE();
+  return { min, max, result, guidLow, guidHigh };
+}
+
 export function parseWhoResponse(r: PacketReader): WhoResult[] {
   const displayCount = r.uint32LE();
   r.uint32LE();

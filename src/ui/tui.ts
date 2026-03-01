@@ -39,6 +39,7 @@ export type Command =
   | { type: "friends" }
   | { type: "add-friend"; target: string }
   | { type: "remove-friend"; target: string }
+  | { type: "roll"; min: number; max: number }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -129,8 +130,18 @@ export function parseCommand(input: string): Command {
       return { type: "unimplemented", feature: "Guild management" };
     case "/mail":
       return { type: "unimplemented", feature: "Mail" };
-    case "/roll":
-      return { type: "unimplemented", feature: "Random roll" };
+    case "/roll": {
+      const parts = rest.split(" ").filter(Boolean);
+      if (parts.length >= 2)
+        return {
+          type: "roll",
+          min: parseInt(parts[0]!, 10),
+          max: parseInt(parts[1]!, 10),
+        };
+      if (parts.length === 1)
+        return { type: "roll", min: 1, max: parseInt(parts[0]!, 10) };
+      return { type: "roll", min: 1, max: 100 };
+    }
     case "/dnd":
       return { type: "dnd", message: rest };
     case "/afk":
@@ -163,6 +174,7 @@ const CHAT_TYPE_LABELS: Record<number, string> = {
   [ChatType.RAID_LEADER]: "raid leader",
   [ChatType.RAID_WARNING]: "raid warning",
   [ChatType.PARTY_LEADER]: "party leader",
+  [ChatType.ROLL]: "roll",
 };
 
 export function formatMessage(msg: ChatMessage): string {
@@ -177,6 +189,9 @@ export function formatMessage(msg: ChatMessage): string {
   }
   if (msg.type === ChatType.SYSTEM) {
     return `[system] ${message}`;
+  }
+  if (msg.type === ChatType.ROLL) {
+    return `[roll] ${msg.sender} ${message}`;
   }
   if (msg.type === ChatType.CHANNEL && msg.channel) {
     return `[${msg.channel}] ${msg.sender}: ${message}`;
@@ -199,6 +214,7 @@ const JSON_TYPE_LABELS: Record<number, string> = {
   [ChatType.RAID_LEADER]: "RAID_LEADER",
   [ChatType.RAID_WARNING]: "RAID_WARNING",
   [ChatType.PARTY_LEADER]: "PARTY_LEADER",
+  [ChatType.ROLL]: "ROLL",
 };
 
 export function formatMessageObj(msg: ChatMessage): LogEntry {
@@ -607,6 +623,9 @@ export async function executeCommand(
       break;
     case "remove-friend":
       state.handle.removeFriend(cmd.target);
+      break;
+    case "roll":
+      state.handle.sendRoll(cmd.min, cmd.max);
       break;
     case "unimplemented":
       state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
