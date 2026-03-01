@@ -3,7 +3,7 @@
   "checkpoint_id": "48e1bff45d21",
   "strategy": "manual-commit",
   "branch": "feat/ignore-list",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
     ".claude/skills/tuicraft/SKILL.md",
     "README.md",
@@ -41,13 +41,20 @@
       "context": "/48/e1bff45d21/1/context.md",
       "content_hash": "/48/e1bff45d21/1/content_hash.txt",
       "prompt": "/48/e1bff45d21/1/prompt.txt"
+    },
+    {
+      "metadata": "/48/e1bff45d21/2/metadata.json",
+      "transcript": "/48/e1bff45d21/2/full.jsonl",
+      "context": "/48/e1bff45d21/2/context.md",
+      "content_hash": "/48/e1bff45d21/2/content_hash.txt",
+      "prompt": "/48/e1bff45d21/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 127,
-    "cache_creation_tokens": 217566,
-    "cache_read_tokens": 12404806,
-    "output_tokens": 42714,
-    "api_call_count": 119
+    "input_tokens": 789,
+    "cache_creation_tokens": 423766,
+    "cache_read_tokens": 17206317,
+    "output_tokens": 63725,
+    "api_call_count": 198
   }
 }
