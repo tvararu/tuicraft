@@ -193,24 +193,11 @@ export const STUBS: StubEntry[] = [
     priority: "medium",
   },
   {
-    opcode: GameOpcode.SMSG_CHAT_RESTRICTED,
-    area: "chat",
-    label: "Chat restricted",
-    priority: "medium",
-  },
-  {
     opcode: GameOpcode.SMSG_CHAT_NOT_IN_PARTY,
     area: "chat",
     label: "Not in party",
     priority: "medium",
   },
-  {
-    opcode: GameOpcode.SMSG_CHAT_WRONG_FACTION,
-    area: "chat",
-    label: "Wrong faction",
-    priority: "medium",
-  },
-
   {
     opcode: GameOpcode.CMSG_SEND_MAIL,
     area: "mail",

@@ -1107,6 +1107,32 @@ describe("world error paths", () => {
     }
   });
 
+  test("SMSG_CHAT_RESTRICTED falls back for unknown restriction type", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+
+      const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
+
+      const w = new PacketWriter();
+      w.uint8(255);
+      ws.inject(GameOpcode.SMSG_CHAT_RESTRICTED, w.finish());
+
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.sender).toBe("");
+      expect(msg.message).toBe("Chat restriction 255");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("SMSG_CHAT_WRONG_FACTION delivers system message", async () => {
     const ws = await startMockWorldServer();
     try {
