@@ -3,9 +3,13 @@
   "checkpoint_id": "ee2467ef554c",
   "strategy": "manual-commit",
   "branch": "feat/ignore-list",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
-    "src/wow/protocol/social.test.ts"
+    "src/ui/format.ts",
+    "src/wow/ignore-store.ts",
+    "src/wow/protocol/social.test.ts",
+    "src/wow/world-handlers.test.ts",
+    "src/wow/world-handlers.ts"
   ],
   "sessions": [
     {
@@ -14,13 +18,20 @@
       "context": "/ee/2467ef554c/0/context.md",
       "content_hash": "/ee/2467ef554c/0/content_hash.txt",
       "prompt": "/ee/2467ef554c/0/prompt.txt"
+    },
+    {
+      "metadata": "/ee/2467ef554c/1/metadata.json",
+      "transcript": "/ee/2467ef554c/1/full.jsonl",
+      "context": "/ee/2467ef554c/1/context.md",
+      "content_hash": "/ee/2467ef554c/1/content_hash.txt",
+      "prompt": "/ee/2467ef554c/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 134,
-    "cache_creation_tokens": 685547,
-    "cache_read_tokens": 9482483,
-    "output_tokens": 53844,
-    "api_call_count": 115
+    "input_tokens": 225,
+    "cache_creation_tokens": 924478,
+    "cache_read_tokens": 16978419,
+    "output_tokens": 75923,
+    "api_call_count": 194
   }
 }
