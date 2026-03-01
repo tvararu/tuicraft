@@ -12,25 +12,6 @@ import {
   formatFriendList,
 } from "ui/format";
 
-export { parseCommand, type Command } from "ui/commands";
-
-export {
-  formatMessage,
-  formatMessageObj,
-  formatMessageJson,
-  formatError,
-  formatWhoResults,
-  formatWhoResultsJson,
-  formatPrompt,
-  formatGroupEvent,
-  formatEntityEvent,
-  formatEntityEventObj,
-  formatFriendList,
-  formatFriendListJson,
-  formatFriendEvent,
-  formatFriendEventObj,
-} from "ui/format";
-
 export type TuiState = {
   handle: WorldHandle;
   write: (s: string) => void;

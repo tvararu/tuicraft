@@ -80,8 +80,6 @@ export type ClientConfig = {
 };
 
 import type { AuthResult } from "wow/auth";
-export { authHandshake, authWithRetry, ReconnectRequiredError } from "wow/auth";
-export type { AuthResult } from "wow/auth";
 
 export type ChatMessage = {
   type: number;

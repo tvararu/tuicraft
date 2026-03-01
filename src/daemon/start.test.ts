@@ -1,7 +1,8 @@
 import { mock, jest, test, expect, describe, afterEach } from "bun:test";
 import { access, rm, mkdir, unlink } from "node:fs/promises";
 import { serializeConfig } from "lib/config";
-import type { AuthResult, WorldHandle } from "wow/client";
+import type { AuthResult } from "wow/auth";
+import type { WorldHandle } from "wow/client";
 import { sendToSocket } from "cli/ipc";
 
 const tmpDir = `./tmp/daemon-start-${Date.now()}`;
