@@ -187,12 +187,6 @@ export const STUBS: StubEntry[] = [
   },
 
   {
-    opcode: GameOpcode.SMSG_CHAT_SERVER_MESSAGE,
-    area: "chat",
-    label: "Server broadcast message",
-    priority: "high",
-  },
-  {
     opcode: GameOpcode.SMSG_CHAT_PLAYER_AMBIGUOUS,
     area: "chat",
     label: "Ambiguous player name",
@@ -299,12 +293,6 @@ export const STUBS: StubEntry[] = [
     priority: "medium",
   },
 
-  {
-    opcode: GameOpcode.SMSG_NOTIFICATION,
-    area: "system",
-    label: "Server notification",
-    priority: "medium",
-  },
   {
     opcode: GameOpcode.SMSG_LEVELUP_INFO,
     area: "system",
