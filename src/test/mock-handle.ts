@@ -7,18 +7,21 @@ import type {
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
+import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
   triggerGroupEvent(event: GroupEvent): void;
   triggerEntityEvent(event: EntityEvent): void;
   triggerFriendEvent(event: FriendEvent): void;
+  triggerIgnoreEvent(event: IgnoreEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
   let groupEventCb: ((event: GroupEvent) => void) | undefined;
   let entityEventCb: ((event: EntityEvent) => void) | undefined;
   let friendEventCb: ((event: FriendEvent) => void) | undefined;
+  let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -69,6 +72,12 @@ export function createMockHandle(): WorldHandle & {
     onFriendEvent(cb) {
       friendEventCb = cb;
     },
+    getIgnored: jest.fn((): IgnoreEntry[] => []),
+    addIgnore: jest.fn(),
+    removeIgnore: jest.fn(),
+    onIgnoreEvent(cb) {
+      ignoreEventCb = cb;
+    },
     triggerMessage(msg) {
       messageCb?.(msg);
     },
@@ -80,6 +89,9 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerFriendEvent(event) {
       friendEventCb?.(event);
+    },
+    triggerIgnoreEvent(event) {
+      ignoreEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();

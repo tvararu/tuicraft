@@ -51,6 +51,9 @@ INTERACTIVE COMMANDS (TUI mode)
   /friends        Show your friends list
   /friend add <n> Add a player to friends
   /friend remove  Remove a player from friends
+  /ignore <name>  Add a player to ignore list
+  /unignore <n>   Remove a player from ignore
+  /ignorelist     Show your ignore list
   /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 

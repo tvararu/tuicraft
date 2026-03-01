@@ -12,8 +12,13 @@ import {
   formatFriendListJson,
   formatFriendEvent,
   formatFriendEventObj,
+  formatIgnoreList,
+  formatIgnoreListJson,
+  formatIgnoreEvent,
+  formatIgnoreEventObj,
 } from "ui/format";
 import type { FriendEvent } from "wow/friend-store";
+import type { IgnoreEvent } from "wow/ignore-store";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -61,6 +66,10 @@ export type IpcCommand =
   | { type: "friends_json" }
   | { type: "add_friend"; target: string }
   | { type: "del_friend"; target: string }
+  | { type: "ignored" }
+  | { type: "ignored_json" }
+  | { type: "add_ignore"; target: string }
+  | { type: "del_ignore"; target: string }
   | { type: "roll"; min: number; max: number }
   | { type: "unimplemented"; feature: string };
 
@@ -95,6 +104,12 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return { type: "add_friend", target: parsed.target };
       case "remove-friend":
         return { type: "del_friend", target: parsed.target };
+      case "ignored":
+        return { type: "ignored" };
+      case "add-ignore":
+        return { type: "add_ignore", target: parsed.target };
+      case "remove-ignore":
+        return { type: "del_ignore", target: parsed.target };
       case "roll":
         return parsed;
       case "unimplemented":
@@ -183,8 +198,14 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return rest ? { type: "add_friend", target: rest } : undefined;
     case "DEL_FRIEND":
       return rest ? { type: "del_friend", target: rest } : undefined;
-    case "IGNORE":
-      return { type: "unimplemented", feature: "Ignore list" };
+    case "IGNORED":
+      return { type: "ignored" };
+    case "IGNORED_JSON":
+      return { type: "ignored_json" };
+    case "ADD_IGNORE":
+      return rest ? { type: "add_ignore", target: rest } : undefined;
+    case "DEL_IGNORE":
+      return rest ? { type: "del_ignore", target: rest } : undefined;
     case "JOIN":
       return { type: "unimplemented", feature: "Channel join/leave" };
     case "GINVITE":
@@ -388,6 +409,24 @@ export async function dispatchCommand(
       handle.removeFriend(cmd.target);
       writeLines(socket, ["OK"]);
       return false;
+    case "ignored": {
+      const ignored = handle.getIgnored();
+      writeLines(socket, formatIgnoreList(ignored).split("\n"));
+      return false;
+    }
+    case "ignored_json": {
+      const ignored = handle.getIgnored();
+      writeLines(socket, [formatIgnoreListJson(ignored)]);
+      return false;
+    }
+    case "add_ignore":
+      handle.addIgnore(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "del_ignore":
+      handle.removeIgnore(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
@@ -550,6 +589,19 @@ export function onFriendEvent(
 ): void {
   const text = formatFriendEvent(event);
   const obj = formatFriendEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+export function onIgnoreEvent(
+  event: IgnoreEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatIgnoreEvent(event);
+  const obj = formatIgnoreEventObj(event);
   if (obj) {
     events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});

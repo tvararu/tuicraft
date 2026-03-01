@@ -25,6 +25,13 @@ export const FriendResult = {
   ALREADY: 0x08,
   SELF: 0x09,
   ENEMY: 0x0a,
+  IGNORE_FULL: 0x0b,
+  IGNORE_SELF: 0x0c,
+  IGNORE_NOT_FOUND: 0x0d,
+  IGNORE_ALREADY: 0x0e,
+  IGNORE_ADDED: 0x0f,
+  IGNORE_REMOVED: 0x10,
+  IGNORE_AMBIGUOUS: 0x11,
 } as const;
 
 export function buildAddFriend(name: string, note: string): Uint8Array {
@@ -35,6 +42,18 @@ export function buildAddFriend(name: string, note: string): Uint8Array {
 }
 
 export function buildDelFriend(guid: bigint): Uint8Array {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  return w.finish();
+}
+
+export function buildAddIgnore(name: string): Uint8Array {
+  const w = new PacketWriter();
+  w.cString(name);
+  return w.finish();
+}
+
+export function buildDelIgnore(guid: bigint): Uint8Array {
   const w = new PacketWriter();
   w.uint64LE(guid);
   return w.finish();

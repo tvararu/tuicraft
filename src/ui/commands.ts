@@ -24,6 +24,9 @@ export type Command =
   | { type: "add-friend"; target: string }
   | { type: "remove-friend"; target: string }
   | { type: "roll"; min: number; max: number }
+  | { type: "ignored" }
+  | { type: "add-ignore"; target: string }
+  | { type: "remove-ignore"; target: string }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -104,7 +107,13 @@ export function parseCommand(input: string): Command {
       return { type: "friends" };
     }
     case "/ignore":
-      return { type: "unimplemented", feature: "Ignore list" };
+      return rest ? { type: "add-ignore", target: rest } : { type: "ignored" };
+    case "/unignore":
+      return rest
+        ? { type: "remove-ignore", target: rest }
+        : { type: "say", message: input };
+    case "/ignorelist":
+      return { type: "ignored" };
     case "/join":
       return { type: "unimplemented", feature: "Channel join/leave" };
     case "/ginvite":

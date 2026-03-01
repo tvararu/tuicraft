@@ -7,6 +7,7 @@ import {
   onGroupEvent,
   onEntityEvent,
   onFriendEvent,
+  onIgnoreEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -323,10 +324,25 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/friends")).toEqual({ type: "friends" });
   });
 
-  test("slash /ignore maps to unimplemented", () => {
+  test("slash /ignore maps to add_ignore", () => {
     expect(parseIpcCommand("/ignore someone")).toEqual({
-      type: "unimplemented",
-      feature: "Ignore list",
+      type: "add_ignore",
+      target: "someone",
+    });
+  });
+
+  test("slash /ignore bare maps to ignored", () => {
+    expect(parseIpcCommand("/ignore")).toEqual({ type: "ignored" });
+  });
+
+  test("slash /ignorelist maps to ignored", () => {
+    expect(parseIpcCommand("/ignorelist")).toEqual({ type: "ignored" });
+  });
+
+  test("slash /unignore maps to del_ignore", () => {
+    expect(parseIpcCommand("/unignore someone")).toEqual({
+      type: "del_ignore",
+      target: "someone",
     });
   });
 
@@ -358,7 +374,6 @@ describe("parseIpcCommand", () => {
 
   describe("unimplemented IPC commands", () => {
     const cases = [
-      ["IGNORE Foo", "Ignore list"],
       ["JOIN Trade", "Channel join/leave"],
       ["GINVITE Foo", "Guild management"],
       ["GKICK Foo", "Guild management"],
@@ -474,6 +489,36 @@ describe("parseIpcCommand", () => {
       type: "del_friend",
       target: "Arthas",
     });
+  });
+
+  test("IGNORED", () => {
+    expect(parseIpcCommand("IGNORED")).toEqual({ type: "ignored" });
+  });
+
+  test("IGNORED_JSON", () => {
+    expect(parseIpcCommand("IGNORED_JSON")).toEqual({ type: "ignored_json" });
+  });
+
+  test("ADD_IGNORE", () => {
+    expect(parseIpcCommand("ADD_IGNORE Spammer")).toEqual({
+      type: "add_ignore",
+      target: "Spammer",
+    });
+  });
+
+  test("ADD_IGNORE with no target returns undefined", () => {
+    expect(parseIpcCommand("ADD_IGNORE")).toBeUndefined();
+  });
+
+  test("DEL_IGNORE", () => {
+    expect(parseIpcCommand("DEL_IGNORE Spammer")).toEqual({
+      type: "del_ignore",
+      target: "Spammer",
+    });
+  });
+
+  test("DEL_IGNORE with no target returns undefined", () => {
+    expect(parseIpcCommand("DEL_IGNORE")).toBeUndefined();
   });
 });
 
@@ -1315,6 +1360,76 @@ describe("dispatchCommand", () => {
     expect(socket.written()).toBe("OK\n\n");
   });
 
+  test("ignored calls getIgnored and writes ignore list", async () => {
+    const handle = createMockHandle();
+    (handle.getIgnored as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand({ type: "ignored" }, handle, events, socket, cleanup);
+
+    expect(handle.getIgnored).toHaveBeenCalled();
+    expect(socket.written()).toContain("Ignore list is empty");
+  });
+
+  test("ignored_json calls getIgnored and writes JSON", async () => {
+    const handle = createMockHandle();
+    (handle.getIgnored as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "ignored_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.getIgnored).toHaveBeenCalled();
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("IGNORED");
+    expect(parsed.count).toBe(0);
+  });
+
+  test("add_ignore calls handle.addIgnore and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "add_ignore", target: "Spammer" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.addIgnore).toHaveBeenCalledWith("Spammer");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("del_ignore calls handle.removeIgnore and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "del_ignore", target: "Spammer" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.removeIgnore).toHaveBeenCalledWith("Spammer");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
   test("unimplemented writes UNIMPLEMENTED response", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
@@ -1773,6 +1888,93 @@ describe("onFriendEvent", () => {
 
     onFriendEvent(
       { type: "friend-offline", guid: 1n, name: "Gone" },
+      events,
+      log,
+    );
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
+});
+
+describe("onIgnoreEvent", () => {
+  test("pushes ignore-added event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onIgnoreEvent(
+      { type: "ignore-added", entry: { guid: 1n, name: "Spammer" } },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Spammer");
+    expect(drained[0]!.text).toContain("added to ignore list");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("IGNORE_ADDED");
+    expect(json.name).toBe("Spammer");
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  test("pushes ignore-removed event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onIgnoreEvent(
+      { type: "ignore-removed", guid: 1n, name: "Spammer" },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Spammer");
+    expect(drained[0]!.text).toContain("removed from ignore list");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("IGNORE_REMOVED");
+  });
+
+  test("skips ignore-list events", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onIgnoreEvent({ type: "ignore-list", entries: [] }, events, log);
+
+    expect(events.drain()).toHaveLength(0);
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  test("pushes ignore-error event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onIgnoreEvent(
+      { type: "ignore-error", result: 0x0d, name: "Nobody" },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("player not found");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("IGNORE_ERROR");
+    expect(json.result).toBe(0x0d);
+  });
+
+  test("swallows ignore event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log: SessionLog = { append } as unknown as SessionLog;
+
+    onIgnoreEvent(
+      { type: "ignore-removed", guid: 1n, name: "Gone" },
       events,
       log,
     );
