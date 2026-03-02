@@ -119,12 +119,8 @@ export function parseCommand(input: string): Command {
       return { type: "ignored" };
     case "/join": {
       if (!rest) return { type: "say", message: input };
-      const parts = rest.split(" ");
-      const channel = parts[0]!;
-      const password = parts[1];
-      return password
-        ? { type: "join-channel", channel, password }
-        : { type: "join-channel", channel };
+      const [channel, password] = rest.split(" ") as [string, string?];
+      return { type: "join-channel", channel, password };
     }
     case "/ginvite":
     case "/gkick":
