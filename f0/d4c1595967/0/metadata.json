@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f0d4c1595967",
+  "session_id": "d6179085-d193-4703-bdbc-6a0096d06b7a",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-02T03:01:54.277976891Z",
+  "branch": "feat/channel-join-leave",
+  "checkpoints_count": 0,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "754390fca6cb",
+  "checkpoint_transcript_start": 18,
+  "transcript_lines_at_start": 18,
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-02T03:01:54.239407478Z",
+    "agent_lines": 0,
+    "human_added": 9,
+    "human_modified": 1,
+    "human_removed": 0,
+    "total_committed": 9,
+    "agent_percentage": 0
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f0d4c1595967",
+  "strategy": "manual-commit",
+  "branch": "feat/channel-join-leave",
+  "checkpoints_count": 0,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f0/d4c1595967/0/metadata.json",
+      "transcript": "/f0/d4c1595967/0/full.jsonl",
+      "context": "/f0/d4c1595967/0/context.md",
+      "content_hash": "/f0/d4c1595967/0/content_hash.txt",
+      "prompt": "/f0/d4c1595967/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}
