@@ -41,12 +41,14 @@ import {
   type IgnoreEntry,
   type IgnoreEvent,
 } from "wow/ignore-store";
+import { GuildStore, type GuildRoster, type GuildEvent } from "wow/guild-store";
 import {
   buildAddFriend,
   buildDelFriend,
   buildAddIgnore,
   buildDelIgnore,
 } from "wow/protocol/social";
+import { buildGuildQuery } from "wow/protocol/guild";
 import {
   sendPacket,
   handleTimeSync,
@@ -76,6 +78,8 @@ import {
   handlePartyMemberStatsMsg,
   handleContactList,
   handleFriendStatus,
+  handleGuildRoster,
+  handleGuildQueryResponse,
 } from "wow/world-handlers";
 
 export type ClientConfig = {
@@ -136,6 +140,7 @@ export type { WhoResult };
 export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
 export type { IgnoreEntry, IgnoreEvent };
+export type { GuildRoster, GuildEvent };
 
 export type ChatMode =
   | { type: "say" }
@@ -191,6 +196,9 @@ export type WorldHandle = {
   addIgnore(name: string): void;
   removeIgnore(name: string): void;
   onIgnoreEvent(cb: (event: IgnoreEvent) => void): void;
+  requestGuildRoster(): void;
+  getGuildRoster(): GuildRoster | undefined;
+  onGuildEvent(cb: (event: GuildEvent) => void): void;
 };
 
 export type WorldConn = {
@@ -220,6 +228,9 @@ export type WorldConn = {
   onFriendEvent?: (event: FriendEvent) => void;
   ignoreStore: IgnoreStore;
   onIgnoreEvent?: (event: IgnoreEvent) => void;
+  guildStore: GuildStore;
+  guildId: number;
+  onGuildEvent?: (event: GuildEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -297,6 +308,7 @@ async function selectCharacter(
   conn.selfName = char.name;
   conn.selfGuidLow = char.guidLow;
   conn.selfGuidHigh = char.guidHigh;
+  conn.guildId = char.guildId;
 
   const w = new PacketWriter();
   w.uint32LE(char.guidLow);
@@ -342,10 +354,13 @@ export function worldSession(
       pendingNameQueries: new Set(),
       friendStore: new FriendStore(),
       ignoreStore: new IgnoreStore(),
+      guildStore: new GuildStore(),
+      guildId: 0,
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
     conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
+    conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
 
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -437,6 +452,12 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_FRIEND_STATUS, (r) =>
       handleFriendStatus(conn, r),
     );
+    conn.dispatch.on(GameOpcode.SMSG_GUILD_ROSTER, (r) =>
+      handleGuildRoster(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GUILD_QUERY_RESPONSE, (r) =>
+      handleGuildQueryResponse(conn, r),
+    );
 
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
@@ -461,6 +482,7 @@ export function worldSession(
           conn.onEntityEvent = undefined;
           conn.onFriendEvent = undefined;
           conn.onIgnoreEvent = undefined;
+          conn.onGuildEvent = undefined;
           conn.socket.end();
         },
         onMessage(cb) {
@@ -712,6 +734,22 @@ export function worldSession(
         },
         onIgnoreEvent(cb) {
           conn.onIgnoreEvent = cb;
+        },
+        requestGuildRoster() {
+          sendPacket(conn, GameOpcode.CMSG_GUILD_ROSTER);
+          if (conn.guildId) {
+            sendPacket(
+              conn,
+              GameOpcode.CMSG_GUILD_QUERY,
+              buildGuildQuery(conn.guildId),
+            );
+          }
+        },
+        getGuildRoster() {
+          return conn.guildStore.get();
+        },
+        onGuildEvent(cb) {
+          conn.onGuildEvent = cb;
         },
       };
       resolve(handle);

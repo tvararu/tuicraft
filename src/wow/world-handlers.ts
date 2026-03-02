@@ -40,8 +40,10 @@ import {
   FriendStatus,
   FriendResult,
 } from "wow/protocol/social";
+import { parseGuildRoster, parseGuildQueryResponse } from "wow/protocol/guild";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
+import type { GuildMember } from "wow/guild-store";
 import type { WorldConn } from "wow/client";
 
 function ensureNameQuery(conn: WorldConn, guid: bigint): void {
@@ -646,4 +648,31 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
       break;
     }
   }
+}
+
+export function handleGuildRoster(conn: WorldConn, r: PacketReader): void {
+  const raw = parseGuildRoster(r);
+  const members: GuildMember[] = raw.members.map((m) => ({
+    guid: m.guid,
+    name: m.name,
+    rankIndex: m.rankIndex,
+    level: m.level,
+    playerClass: m.playerClass,
+    gender: m.gender,
+    area: m.area,
+    status: m.status,
+    timeOffline: m.timeOffline,
+    publicNote: m.publicNote,
+    officerNote: m.officerNote,
+  }));
+  conn.guildStore.setRoster(raw.motd, raw.guildInfo, members);
+}
+
+export function handleGuildQueryResponse(
+  conn: WorldConn,
+  r: PacketReader,
+): void {
+  const result = parseGuildQueryResponse(r);
+  const rankNames = result.rankNames.filter((n) => n.length > 0);
+  conn.guildStore.setGuildMeta(result.name, rankNames);
 }
