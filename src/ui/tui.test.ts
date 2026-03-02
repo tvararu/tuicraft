@@ -496,12 +496,40 @@ describe("startTui", () => {
       input,
       write: (s) => void output.push(s),
     });
-    writeLine(input, "/join Trade");
+    writeLine(input, "/ginvite Foo");
     await flush();
 
     expect(output.join("")).toContain(
-      "Channel join/leave is not yet implemented",
+      "Guild management is not yet implemented",
     );
+
+    input.end();
+    await done;
+  });
+
+  test("/join calls joinChannel", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/join Trade");
+    await flush();
+
+    expect(handle.joinChannel).toHaveBeenCalledWith("Trade", undefined);
+
+    input.end();
+    await done;
+  });
+
+  test("/leave with channel calls leaveChannel", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, "/leave Trade");
+    await flush();
+
+    expect(handle.leaveChannel).toHaveBeenCalledWith("Trade");
 
     input.end();
     await done;
