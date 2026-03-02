@@ -157,7 +157,7 @@ that the official game client does.
 | Group roster + member stats          | ✅     |
 | Friends list                         | ✅     |
 | Ignore list                          | ✅     |
-| Channel join / leave                 | ❌     |
+| Channel join / leave                 | ✅     |
 | Duel accept / decline                | ❌     |
 
 ### 🏰 Guild

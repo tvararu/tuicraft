@@ -126,6 +126,8 @@ When running in TUI mode, the following slash commands are available:
 | `/afk` [_msg_]               | Toggle Away From Keyboard   |
 | `/1` _msg_                   | Channel 1 (usually General) |
 | `/2` _msg_                   | Channel 2 (usually Trade)   |
+| `/join` _channel_            | Join a chat channel         |
+| `/leave` _channel_           | Leave a chat channel        |
 | `/who` _query_               | Who search                  |
 | `/invite` _name_             | Invite player to group      |
 | `/kick` _name_               | Remove player from group    |

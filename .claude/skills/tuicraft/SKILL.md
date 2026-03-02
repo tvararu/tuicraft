@@ -82,6 +82,11 @@ Entity events include `guid`, `objectType`, `name`, and type-specific fields lik
     tuicraft who              # all online players
     tuicraft who "warrior"    # filter by name/class/etc
 
+## Channel Commands
+
+    tuicraft send "/join ChannelName"    # join a chat channel
+    tuicraft send "/leave ChannelName"   # leave a chat channel
+
 ## Group Commands
 
     tuicraft send "/invite PlayerName"   # invite to group
