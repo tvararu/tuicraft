@@ -90,6 +90,12 @@ export async function executeCommand(
     case "leave":
       state.handle.leaveGroup();
       break;
+    case "join-channel":
+      state.handle.joinChannel(cmd.channel, cmd.password);
+      break;
+    case "leave-channel":
+      state.handle.leaveChannel(cmd.channel);
+      break;
     case "leader":
       state.handle.setLeader(cmd.target);
       break;
