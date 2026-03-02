@@ -56,6 +56,7 @@ INTERACTIVE COMMANDS (TUI mode)
   /ignore <name>  Add a player to ignore list
   /unignore <n>   Remove a player from ignore
   /ignorelist     Show your ignore list
+  /groster        Show guild roster
   /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 
