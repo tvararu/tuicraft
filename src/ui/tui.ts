@@ -11,6 +11,7 @@ import {
   formatEntityEvent,
   formatFriendList,
   formatIgnoreList,
+  formatGuildRoster,
 } from "ui/format";
 
 export type TuiState = {
@@ -144,6 +145,16 @@ export async function executeCommand(
     case "remove-ignore":
       state.handle.removeIgnore(cmd.target);
       break;
+    case "guild-roster": {
+      state.handle.requestGuildRoster();
+      const roster = state.handle.getGuildRoster();
+      if (roster) {
+        state.write(formatGuildRoster(roster) + "\n");
+      } else {
+        state.write("[guild] No guild roster available\n");
+      }
+      break;
+    }
     case "roll":
       state.handle.sendRoll(cmd.min, cmd.max);
       break;

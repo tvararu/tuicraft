@@ -29,6 +29,7 @@ export type Command =
   | { type: "ignored" }
   | { type: "add-ignore"; target: string }
   | { type: "remove-ignore"; target: string }
+  | { type: "guild-roster" }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -122,6 +123,8 @@ export function parseCommand(input: string): Command {
       const [channel, password] = rest.split(" ") as [string, string?];
       return { type: "join-channel", channel, password };
     }
+    case "/groster":
+      return { type: "guild-roster" };
     case "/ginvite":
     case "/gkick":
     case "/gleave":

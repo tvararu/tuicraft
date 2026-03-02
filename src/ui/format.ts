@@ -6,6 +6,8 @@ import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import type { GuildRoster } from "wow/guild-store";
+import { GuildMemberStatus } from "wow/protocol/guild";
 import type { LogEntry } from "lib/session-log";
 
 const CHAT_TYPE_LABELS: Record<number, string> = {
@@ -431,4 +433,68 @@ export function formatIgnoreEventObj(
     case "ignore-list":
       return undefined;
   }
+}
+
+function rankName(roster: GuildRoster, index: number): string {
+  return roster.rankNames[index] ?? `Rank ${index}`;
+}
+
+function formatOfflineTime(days: number): string {
+  if (days < 1) {
+    const hours = Math.floor(days * 24);
+    return hours <= 1 ? "< 1 hr ago" : `${hours} hrs ago`;
+  }
+  const d = Math.floor(days);
+  return d === 1 ? "1 day ago" : `${d} days ago`;
+}
+
+export function formatGuildRoster(roster: GuildRoster): string {
+  const online = roster.members.filter(
+    (m) => m.status !== GuildMemberStatus.OFFLINE,
+  );
+  const offline = roster.members.filter(
+    (m) => m.status === GuildMemberStatus.OFFLINE,
+  );
+  const header = roster.guildName
+    ? `[guild] ${roster.guildName} — ${online.length}/${roster.members.length} online`
+    : `[guild] ${online.length}/${roster.members.length} online`;
+  const lines: string[] = [header];
+  if (roster.motd) lines.push(`  MOTD: ${roster.motd}`);
+  if (roster.guildInfo) lines.push(`  Info: ${roster.guildInfo}`);
+  for (const m of online) {
+    const cls = CLASS_NAMES[m.playerClass] ?? `class ${m.playerClass}`;
+    const rank = rankName(roster, m.rankIndex);
+    lines.push(`  ${m.name} — ${rank}, Level ${m.level} ${cls}`);
+  }
+  for (const m of offline) {
+    const rank = rankName(roster, m.rankIndex);
+    const ago = formatOfflineTime(m.timeOffline);
+    lines.push(`  ${m.name} — ${rank}, Offline (${ago})`);
+  }
+  return lines.join("\n");
+}
+
+export function formatGuildRosterJson(roster: GuildRoster): string {
+  return JSON.stringify({
+    type: "GUILD_ROSTER",
+    guildName: roster.guildName,
+    motd: roster.motd,
+    guildInfo: roster.guildInfo,
+    rankNames: roster.rankNames,
+    count: roster.members.length,
+    online: roster.members.filter((m) => m.status !== GuildMemberStatus.OFFLINE)
+      .length,
+    members: roster.members.map((m) => ({
+      guid: `0x${m.guid.toString(16)}`,
+      name: m.name,
+      rank: rankName(roster, m.rankIndex),
+      rankIndex: m.rankIndex,
+      level: m.level,
+      class: CLASS_NAMES[m.playerClass] ?? `class ${m.playerClass}`,
+      status: m.status === GuildMemberStatus.OFFLINE ? "OFFLINE" : "ONLINE",
+      area: m.area,
+      publicNote: m.publicNote,
+      officerNote: m.officerNote,
+    })),
+  });
 }
