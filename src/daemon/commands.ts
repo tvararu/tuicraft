@@ -16,9 +16,12 @@ import {
   formatIgnoreListJson,
   formatIgnoreEvent,
   formatIgnoreEventObj,
+  formatGuildRoster,
+  formatGuildRosterJson,
 } from "ui/format";
 import type { FriendEvent } from "wow/friend-store";
 import type { IgnoreEvent } from "wow/ignore-store";
+import type { GuildEvent } from "wow/guild-store";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -73,6 +76,8 @@ export type IpcCommand =
   | { type: "add_ignore"; target: string }
   | { type: "del_ignore"; target: string }
   | { type: "roll"; min: number; max: number }
+  | { type: "guild_roster" }
+  | { type: "guild_roster_json" }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -122,6 +127,8 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return { type: "del_ignore", target: parsed.target };
       case "roll":
         return parsed;
+      case "guild-roster":
+        return { type: "guild_roster" };
       case "unimplemented":
         return parsed;
       default:
@@ -225,6 +232,10 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       const [channel, password] = rest.split(" ") as [string, string?];
       return { type: "join_channel", channel, password };
     }
+    case "GUILD_ROSTER":
+      return { type: "guild_roster" };
+    case "GUILD_ROSTER_JSON":
+      return { type: "guild_roster_json" };
     case "GINVITE":
     case "GKICK":
     case "GLEAVE":
@@ -452,6 +463,28 @@ export async function dispatchCommand(
       handle.leaveChannel(cmd.channel);
       writeLines(socket, ["OK"]);
       return false;
+    case "guild_roster": {
+      handle.requestGuildRoster();
+      const roster = handle.getGuildRoster();
+      if (roster) {
+        writeLines(socket, formatGuildRoster(roster).split("\n"));
+      } else {
+        writeLines(socket, ["[guild] No guild roster available"]);
+      }
+      return false;
+    }
+    case "guild_roster_json": {
+      handle.requestGuildRoster();
+      const roster = handle.getGuildRoster();
+      if (roster) {
+        writeLines(socket, [formatGuildRosterJson(roster)]);
+      } else {
+        writeLines(socket, [
+          JSON.stringify({ type: "GUILD_ROSTER", members: [] }),
+        ]);
+      }
+      return false;
+    }
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
@@ -631,4 +664,20 @@ export function onIgnoreEvent(
     events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
   }
+}
+
+export function onGuildEvent(
+  event: GuildEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const roster = event.roster;
+  const text = `[guild] Roster updated: ${roster.members.length} members`;
+  const obj = {
+    type: "GUILD_ROSTER_UPDATED",
+    sender: "",
+    message: `${roster.members.length} members`,
+  };
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
 }

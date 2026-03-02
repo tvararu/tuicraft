@@ -8,6 +8,7 @@ import type {
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import type { GuildRoster, GuildEvent } from "wow/guild-store";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
@@ -15,6 +16,7 @@ export function createMockHandle(): WorldHandle & {
   triggerEntityEvent(event: EntityEvent): void;
   triggerFriendEvent(event: FriendEvent): void;
   triggerIgnoreEvent(event: IgnoreEvent): void;
+  triggerGuildEvent(event: GuildEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
@@ -22,6 +24,7 @@ export function createMockHandle(): WorldHandle & {
   let entityEventCb: ((event: EntityEvent) => void) | undefined;
   let friendEventCb: ((event: FriendEvent) => void) | undefined;
   let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
+  let guildEventCb: ((event: GuildEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -80,6 +83,11 @@ export function createMockHandle(): WorldHandle & {
     onIgnoreEvent(cb) {
       ignoreEventCb = cb;
     },
+    requestGuildRoster: jest.fn(),
+    getGuildRoster: jest.fn((): GuildRoster | undefined => undefined),
+    onGuildEvent(cb) {
+      guildEventCb = cb;
+    },
     triggerMessage(msg) {
       messageCb?.(msg);
     },
@@ -94,6 +102,9 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerIgnoreEvent(event) {
       ignoreEventCb?.(event);
+    },
+    triggerGuildEvent(event) {
+      guildEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();
