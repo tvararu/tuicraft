@@ -57,6 +57,8 @@ export type IpcCommand =
   | { type: "invite"; target: string }
   | { type: "kick"; target: string }
   | { type: "leave" }
+  | { type: "join_channel"; channel: string; password?: string }
+  | { type: "leave_channel"; channel: string }
   | { type: "leader"; target: string }
   | { type: "accept" }
   | { type: "decline" }
@@ -98,6 +100,16 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "accept":
       case "decline":
         return parsed;
+      case "join-channel":
+        return parsed.password
+          ? {
+              type: "join_channel",
+              channel: parsed.channel,
+              password: parsed.password,
+            }
+          : { type: "join_channel", channel: parsed.channel };
+      case "leave-channel":
+        return { type: "leave_channel", channel: parsed.channel };
       case "friends":
         return { type: "friends" };
       case "add-friend":
@@ -179,6 +191,10 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "KICK":
       return rest ? { type: "kick", target: rest } : undefined;
     case "LEAVE":
+      if (rest) {
+        const channel = rest.split(" ")[0]!;
+        return { type: "leave_channel", channel };
+      }
       return { type: "leave" };
     case "LEADER":
       return rest ? { type: "leader", target: rest } : undefined;
@@ -206,8 +222,15 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return rest ? { type: "add_ignore", target: rest } : undefined;
     case "DEL_IGNORE":
       return rest ? { type: "del_ignore", target: rest } : undefined;
-    case "JOIN":
-      return { type: "unimplemented", feature: "Channel join/leave" };
+    case "JOIN": {
+      if (!rest) return undefined;
+      const parts = rest.split(" ");
+      const channel = parts[0]!;
+      const password = parts[1];
+      return password
+        ? { type: "join_channel", channel, password }
+        : { type: "join_channel", channel };
+    }
     case "GINVITE":
     case "GKICK":
     case "GLEAVE":
@@ -425,6 +448,14 @@ export async function dispatchCommand(
       return false;
     case "del_ignore":
       handle.removeIgnore(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "join_channel":
+      handle.joinChannel(cmd.channel, cmd.password);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "leave_channel":
+      handle.leaveChannel(cmd.channel);
       writeLines(socket, ["OK"]);
       return false;
     case "unimplemented":
