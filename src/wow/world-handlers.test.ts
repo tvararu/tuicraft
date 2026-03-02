@@ -2862,4 +2862,57 @@ describe("world handler tests", () => {
       }
     });
   });
+
+  test("joinChannel sends CMSG_JOIN_CHANNEL", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      handle.joinChannel("MyCustom", "pass123");
+
+      const captured = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_JOIN_CHANNEL,
+      );
+      const r = new PacketReader(captured.body);
+      expect(r.uint32LE()).toBe(0);
+      expect(r.uint8()).toBe(0);
+      expect(r.uint8()).toBe(0);
+      expect(r.cString()).toBe("MyCustom");
+      expect(r.cString()).toBe("pass123");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("leaveChannel sends CMSG_LEAVE_CHANNEL", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      handle.leaveChannel("General");
+
+      const captured = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_LEAVE_CHANNEL,
+      );
+      const r = new PacketReader(captured.body);
+      expect(r.uint32LE()).toBe(0);
+      expect(r.cString()).toBe("General");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
 });
