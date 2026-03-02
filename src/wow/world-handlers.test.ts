@@ -686,6 +686,78 @@ describe("world handler tests", () => {
     }
   });
 
+  test("channel join emits system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const messages: ChatMessage[] = [];
+      const probeReceived = new Promise<void>((resolve) => {
+        handle.onMessage((msg) => {
+          messages.push(msg);
+          if (msg.message === "probe") resolve();
+        });
+      });
+
+      const w = new PacketWriter();
+      w.uint8(ChannelNotify.YOU_JOINED);
+      w.cString("MyChannel");
+      w.uint8(0);
+      w.uint32LE(5);
+      w.uint32LE(0);
+      ws.inject(GameOpcode.SMSG_CHANNEL_NOTIFY, w.finish());
+
+      handle.sendSay("probe");
+      await probeReceived;
+      expect(messages.some((m) => m.message.includes("MyChannel"))).toBe(true);
+      expect(handle.getChannel(3)).toBe("MyChannel");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("channel notify error emits system message", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const messages: ChatMessage[] = [];
+      const probeReceived = new Promise<void>((resolve) => {
+        handle.onMessage((msg) => {
+          messages.push(msg);
+          if (msg.message === "probe") resolve();
+        });
+      });
+
+      const w = new PacketWriter();
+      w.uint8(ChannelNotify.WRONG_PASSWORD);
+      w.cString("Secret");
+      ws.inject(GameOpcode.SMSG_CHANNEL_NOTIFY, w.finish());
+
+      handle.sendSay("probe");
+      await probeReceived;
+      expect(
+        messages.some((m) => m.message === "Wrong password for Secret"),
+      ).toBe(true);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("getLastChatMode defaults to say", async () => {
     const ws = await startMockWorldServer();
     try {

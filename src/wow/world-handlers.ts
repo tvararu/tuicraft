@@ -176,9 +176,25 @@ export function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
   const event = parseChannelNotify(r);
   if (event.type === "joined") {
     conn.channels.push(event.channel);
+    conn.onMessage?.({
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: `Joined channel: ${event.channel}`,
+    });
   } else if (event.type === "left") {
     const idx = conn.channels.indexOf(event.channel);
     if (idx !== -1) conn.channels.splice(idx, 1);
+    conn.onMessage?.({
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: `Left channel: ${event.channel}`,
+    });
+  } else if (event.type === "error") {
+    conn.onMessage?.({
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: event.message,
+    });
   }
 }
 
