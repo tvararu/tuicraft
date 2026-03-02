@@ -346,10 +346,17 @@ describe("parseIpcCommand", () => {
     });
   });
 
-  test("slash /join maps to unimplemented", () => {
+  test("slash /join maps to join_channel", () => {
     expect(parseIpcCommand("/join Trade")).toEqual({
-      type: "unimplemented",
-      feature: "Channel join/leave",
+      type: "join_channel",
+      channel: "Trade",
+    });
+  });
+
+  test("slash /leave channel maps to leave_channel", () => {
+    expect(parseIpcCommand("/leave Trade")).toEqual({
+      type: "leave_channel",
+      channel: "Trade",
     });
   });
 
@@ -379,9 +386,38 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("LEADER")).toBeUndefined();
   });
 
+  test("JOIN parses channel", () => {
+    expect(parseIpcCommand("JOIN Trade")).toEqual({
+      type: "join_channel",
+      channel: "Trade",
+    });
+  });
+
+  test("JOIN parses channel with password", () => {
+    expect(parseIpcCommand("JOIN Secret hunter2")).toEqual({
+      type: "join_channel",
+      channel: "Secret",
+      password: "hunter2",
+    });
+  });
+
+  test("JOIN with no channel returns undefined", () => {
+    expect(parseIpcCommand("JOIN")).toBeUndefined();
+  });
+
+  test("LEAVE with channel parses leave_channel", () => {
+    expect(parseIpcCommand("LEAVE Trade")).toEqual({
+      type: "leave_channel",
+      channel: "Trade",
+    });
+  });
+
+  test("LEAVE without channel parses leave", () => {
+    expect(parseIpcCommand("LEAVE")).toEqual({ type: "leave" });
+  });
+
   describe("unimplemented IPC commands", () => {
     const cases = [
-      ["JOIN Trade", "Channel join/leave"],
       ["GINVITE Foo", "Guild management"],
       ["GKICK Foo", "Guild management"],
       ["GLEAVE", "Guild management"],
@@ -964,6 +1000,60 @@ describe("dispatchCommand", () => {
     await dispatchCommand({ type: "leave" }, handle, events, socket, cleanup);
 
     expect(handle.leaveGroup).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("join_channel calls handle.joinChannel and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "join_channel", channel: "Trade" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.joinChannel).toHaveBeenCalledWith("Trade", undefined);
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("join_channel with password passes it through", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "join_channel", channel: "Secret", password: "hunter2" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.joinChannel).toHaveBeenCalledWith("Secret", "hunter2");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("leave_channel calls handle.leaveChannel and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "leave_channel", channel: "Trade" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.leaveChannel).toHaveBeenCalledWith("Trade");
     expect(socket.written()).toBe("OK\n\n");
   });
 
