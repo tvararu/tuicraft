@@ -54,6 +54,8 @@ export function createMockHandle(): WorldHandle & {
     invite: jest.fn(),
     uninvite: jest.fn(),
     leaveGroup: jest.fn(),
+    joinChannel: jest.fn(),
+    leaveChannel: jest.fn(),
     setLeader: jest.fn(),
     acceptInvite: jest.fn(),
     declineInvite: jest.fn(),
