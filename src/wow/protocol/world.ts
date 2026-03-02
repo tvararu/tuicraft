@@ -16,6 +16,7 @@ export interface CharacterInfo {
   level: number;
   zone: number;
   map: number;
+  guildId: number;
 }
 
 const ADDON_ENTRIES = [
@@ -113,7 +114,7 @@ export function parseCharacterList(r: PacketReader): CharacterInfo[] {
     const zone = r.uint32LE();
     const map = r.uint32LE();
     r.skip(4 * 3);
-    r.skip(4);
+    const guildId = r.uint32LE();
     r.skip(4);
     r.skip(4);
     r.skip(1);
@@ -131,6 +132,7 @@ export function parseCharacterList(r: PacketReader): CharacterInfo[] {
       level,
       zone,
       map,
+      guildId,
     });
   }
   return chars;
