@@ -563,6 +563,20 @@ describe("parseIpcCommand", () => {
   test("DEL_IGNORE with no target returns undefined", () => {
     expect(parseIpcCommand("DEL_IGNORE")).toBeUndefined();
   });
+
+  test("GUILD_ROSTER", () => {
+    expect(parseIpcCommand("GUILD_ROSTER")).toEqual({ type: "guild_roster" });
+  });
+
+  test("GUILD_ROSTER_JSON", () => {
+    expect(parseIpcCommand("GUILD_ROSTER_JSON")).toEqual({
+      type: "guild_roster_json",
+    });
+  });
+
+  test("/groster", () => {
+    expect(parseIpcCommand("/groster")).toEqual({ type: "guild_roster" });
+  });
 });
 
 describe("dispatchCommand", () => {
@@ -1525,6 +1539,52 @@ describe("dispatchCommand", () => {
 
     expect(handle.removeIgnore).toHaveBeenCalledWith("Spammer");
     expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_roster calls requestGuildRoster and writes roster", async () => {
+    const handle = createMockHandle();
+    (handle.getGuildRoster as ReturnType<typeof jest.fn>).mockReturnValue(
+      undefined,
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_roster" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.requestGuildRoster).toHaveBeenCalled();
+    expect(handle.getGuildRoster).toHaveBeenCalled();
+    expect(socket.written()).toContain("No guild roster available");
+  });
+
+  test("guild_roster_json calls requestGuildRoster and writes JSON", async () => {
+    const handle = createMockHandle();
+    (handle.getGuildRoster as ReturnType<typeof jest.fn>).mockReturnValue(
+      undefined,
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_roster_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.requestGuildRoster).toHaveBeenCalled();
+    expect(handle.getGuildRoster).toHaveBeenCalled();
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("GUILD_ROSTER");
+    expect(parsed.members).toEqual([]);
   });
 
   test("unimplemented writes UNIMPLEMENTED response", async () => {
