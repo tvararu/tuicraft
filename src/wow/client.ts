@@ -7,6 +7,8 @@ import {
   buildWhoRequest,
   parseWhoResponse,
   buildRandomRoll,
+  buildJoinChannel,
+  buildLeaveChannel,
   type ChatMessage as RawChatMessage,
   type WhoResult,
 } from "wow/protocol/chat";
@@ -171,6 +173,8 @@ export type WorldHandle = {
   invite(name: string): void;
   uninvite(name: string): void;
   leaveGroup(): void;
+  joinChannel(name: string, password?: string): void;
+  leaveChannel(name: string): void;
   setLeader(name: string): void;
   acceptInvite(): void;
   declineInvite(): void;
@@ -599,6 +603,20 @@ export function worldSession(
         },
         leaveGroup() {
           sendPacket(conn, GameOpcode.CMSG_GROUP_DISBAND, buildGroupDisband());
+        },
+        joinChannel(name, password) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_JOIN_CHANNEL,
+            buildJoinChannel(name, password),
+          );
+        },
+        leaveChannel(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_LEAVE_CHANNEL,
+            buildLeaveChannel(name),
+          );
         },
         setLeader(name) {
           const member = conn.partyMembers.get(name);
