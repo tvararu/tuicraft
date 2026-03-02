@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "e62943a6f7c3",
+  "strategy": "manual-commit",
+  "branch": "feat/channel-join-leave",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.ts",
+    "src/ui/commands.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e6/2943a6f7c3/0/metadata.json",
+      "transcript": "/e6/2943a6f7c3/0/full.jsonl",
+      "context": "/e6/2943a6f7c3/0/context.md",
+      "content_hash": "/e6/2943a6f7c3/0/content_hash.txt",
+      "prompt": "/e6/2943a6f7c3/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 10,
+    "cache_creation_tokens": 31864,
+    "cache_read_tokens": 316688,
+    "output_tokens": 9760,
+    "api_call_count": 8
+  }
+}
