@@ -142,6 +142,7 @@ When running in TUI mode, the following slash commands are available:
 | `/ignore` _name_             | Add a player to ignore list |
 | `/unignore` _name_           | Remove from ignore list     |
 | `/ignorelist`                | Show your ignore list       |
+| `/groster`                   | Show guild roster           |
 | `/tuicraft entities on\|off` | Toggle entity event display |
 | `/quit`                      | Disconnect and exit         |
 

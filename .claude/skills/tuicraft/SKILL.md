@@ -45,33 +45,34 @@ Add `--json` for structured output. Each JSON line:
 
 ## Event Types
 
-| Type             | Meaning                                          |
-| ---------------- | ------------------------------------------------ |
-| SAY              | Nearby /say chat                                 |
-| YELL             | /yell chat                                       |
-| PARTY            | Party member message                             |
-| PARTY_LEADER     | Party leader message                             |
-| GUILD            | Guild chat                                       |
-| OFFICER          | Officer chat                                     |
-| RAID             | Raid chat                                        |
-| RAID_LEADER      | Raid leader message                              |
-| RAID_WARNING     | Raid warning                                     |
-| WHISPER          | Incoming whisper                                 |
-| WHISPER_TO       | Outgoing whisper confirmation                    |
-| CHANNEL          | Custom channel message                           |
-| EMOTE            | Player emote                                     |
-| SYSTEM           | System messages and unimplemented packet notices |
-| ENTITY_APPEAR    | NPC/player/object appeared nearby (--json only)  |
-| ENTITY_DISAPPEAR | Entity left range (--json only)                  |
-| ENTITY_UPDATE    | Entity field changed (--json only)               |
-| FRIEND_ONLINE    | Friend came online                               |
-| FRIEND_OFFLINE   | Friend went offline                              |
-| FRIEND_ADDED     | Friend added to list                             |
-| FRIEND_REMOVED   | Friend removed from list                         |
-| FRIEND_ERROR     | Friend operation error                           |
-| IGNORE_ADDED     | Player added to ignore list                      |
-| IGNORE_REMOVED   | Player removed from ignore list                  |
-| IGNORE_ERROR     | Ignore operation error                           |
+| Type                 | Meaning                                          |
+| -------------------- | ------------------------------------------------ |
+| SAY                  | Nearby /say chat                                 |
+| YELL                 | /yell chat                                       |
+| PARTY                | Party member message                             |
+| PARTY_LEADER         | Party leader message                             |
+| GUILD                | Guild chat                                       |
+| OFFICER              | Officer chat                                     |
+| RAID                 | Raid chat                                        |
+| RAID_LEADER          | Raid leader message                              |
+| RAID_WARNING         | Raid warning                                     |
+| WHISPER              | Incoming whisper                                 |
+| WHISPER_TO           | Outgoing whisper confirmation                    |
+| CHANNEL              | Custom channel message                           |
+| EMOTE                | Player emote                                     |
+| SYSTEM               | System messages and unimplemented packet notices |
+| ENTITY_APPEAR        | NPC/player/object appeared nearby (--json only)  |
+| ENTITY_DISAPPEAR     | Entity left range (--json only)                  |
+| ENTITY_UPDATE        | Entity field changed (--json only)               |
+| FRIEND_ONLINE        | Friend came online                               |
+| FRIEND_OFFLINE       | Friend went offline                              |
+| FRIEND_ADDED         | Friend added to list                             |
+| FRIEND_REMOVED       | Friend removed from list                         |
+| FRIEND_ERROR         | Friend operation error                           |
+| IGNORE_ADDED         | Player added to ignore list                      |
+| IGNORE_REMOVED       | Player removed from ignore list                  |
+| IGNORE_ERROR         | Ignore operation error                           |
+| GUILD_ROSTER_UPDATED | Guild roster data received                       |
 
 The `channel` field appears on CHANNEL events only.
 
@@ -123,6 +124,17 @@ IPC verbs:
     echo "IGNORED_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "ADD_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "DEL_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
+## Guild Roster
+
+    tuicraft send "/groster"              # show guild roster
+
+Displays MOTD, guild info, and all members sorted by online status. Shows rank, level, class, zone, and notes for each member.
+
+IPC verbs:
+
+    echo "GUILD_ROSTER" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "GUILD_ROSTER_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 ## Entity Queries
 
