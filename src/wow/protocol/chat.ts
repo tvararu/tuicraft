@@ -118,7 +118,21 @@ export function buildWhoRequest(opts: {
 export type ChannelNotifyEvent =
   | { type: "joined"; channel: string }
   | { type: "left"; channel: string }
+  | { type: "error"; channel: string; code: number; message: string }
   | { type: "other" };
+
+const CHANNEL_NOTIFY_MESSAGES: Record<number, (ch: string) => string> = {
+  [ChannelNotify.WRONG_PASSWORD]: (ch) => `Wrong password for ${ch}`,
+  [ChannelNotify.NOT_MEMBER]: (ch) => `Not on channel ${ch}`,
+  [ChannelNotify.MUTED]: (ch) => `You do not have permission to speak in ${ch}`,
+  [ChannelNotify.BANNED]: (ch) => `You are banned from ${ch}`,
+  [ChannelNotify.ALREADY_MEMBER]: (ch) => `You are already in ${ch}`,
+  [ChannelNotify.WRONG_FACTION]: (ch) => `Wrong faction for ${ch}`,
+  [ChannelNotify.INVALID_NAME]: () => "Invalid channel name",
+  [ChannelNotify.THROTTLED]: (ch) => `Channel message throttled in ${ch}`,
+  [ChannelNotify.NOT_IN_AREA]: (ch) =>
+    `You are not in the correct area for ${ch}`,
+};
 
 export function parseChannelNotify(r: PacketReader): ChannelNotifyEvent {
   const notifyType = r.uint8();
@@ -137,7 +151,29 @@ export function parseChannelNotify(r: PacketReader): ChannelNotifyEvent {
     return { type: "left", channel };
   }
 
+  const fmt = CHANNEL_NOTIFY_MESSAGES[notifyType];
+  if (fmt) {
+    return { type: "error", channel, code: notifyType, message: fmt(channel) };
+  }
+
   return { type: "other" };
+}
+
+export function buildJoinChannel(name: string, password?: string): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(0);
+  w.uint8(0);
+  w.uint8(0);
+  w.cString(name);
+  w.cString(password ?? "");
+  return w.finish();
+}
+
+export function buildLeaveChannel(name: string): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(0);
+  w.cString(name);
+  return w.finish();
 }
 
 export type RandomRoll = {

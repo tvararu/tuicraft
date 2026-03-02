@@ -13,6 +13,8 @@ import {
   parseRandomRoll,
   parseServerBroadcast,
   parseNotification,
+  buildJoinChannel,
+  buildLeaveChannel,
 } from "wow/protocol/chat";
 
 describe("parseChatMessage", () => {
@@ -302,6 +304,163 @@ describe("parseChannelNotify", () => {
 
     const result = parseChannelNotify(new PacketReader(w.finish()));
     expect(result).toEqual({ type: "other" });
+  });
+
+  test("parses WRONG_PASSWORD", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.WRONG_PASSWORD);
+    w.cString("Secret");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "Secret",
+      code: ChannelNotify.WRONG_PASSWORD,
+      message: "Wrong password for Secret",
+    });
+  });
+
+  test("parses NOT_MEMBER", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.NOT_MEMBER);
+    w.cString("Trade");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "Trade",
+      code: ChannelNotify.NOT_MEMBER,
+      message: "Not on channel Trade",
+    });
+  });
+
+  test("parses BANNED", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.BANNED);
+    w.cString("Trade");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "Trade",
+      code: ChannelNotify.BANNED,
+      message: "You are banned from Trade",
+    });
+  });
+
+  test("parses MUTED", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.MUTED);
+    w.cString("General");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "General",
+      code: ChannelNotify.MUTED,
+      message: "You do not have permission to speak in General",
+    });
+  });
+
+  test("parses ALREADY_MEMBER", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.ALREADY_MEMBER);
+    w.cString("General");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "General",
+      code: ChannelNotify.ALREADY_MEMBER,
+      message: "You are already in General",
+    });
+  });
+
+  test("parses INVALID_NAME", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.INVALID_NAME);
+    w.cString("");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "",
+      code: ChannelNotify.INVALID_NAME,
+      message: "Invalid channel name",
+    });
+  });
+
+  test("parses THROTTLED", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.THROTTLED);
+    w.cString("General");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "General",
+      code: ChannelNotify.THROTTLED,
+      message: "Channel message throttled in General",
+    });
+  });
+
+  test("parses WRONG_FACTION", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.WRONG_FACTION);
+    w.cString("General");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "General",
+      code: ChannelNotify.WRONG_FACTION,
+      message: "Wrong faction for General",
+    });
+  });
+
+  test("parses NOT_IN_AREA", () => {
+    const w = new PacketWriter();
+    w.uint8(ChannelNotify.NOT_IN_AREA);
+    w.cString("LocalDefense");
+
+    const result = parseChannelNotify(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "error",
+      channel: "LocalDefense",
+      code: ChannelNotify.NOT_IN_AREA,
+      message: "You are not in the correct area for LocalDefense",
+    });
+  });
+});
+
+describe("buildJoinChannel", () => {
+  test("builds join packet without password", () => {
+    const body = buildJoinChannel("General");
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(0);
+    expect(r.uint8()).toBe(0);
+    expect(r.uint8()).toBe(0);
+    expect(r.cString()).toBe("General");
+    expect(r.cString()).toBe("");
+  });
+
+  test("builds join packet with password", () => {
+    const body = buildJoinChannel("Secret", "hunter2");
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(0);
+    expect(r.uint8()).toBe(0);
+    expect(r.uint8()).toBe(0);
+    expect(r.cString()).toBe("Secret");
+    expect(r.cString()).toBe("hunter2");
+  });
+});
+
+describe("buildLeaveChannel", () => {
+  test("builds leave packet", () => {
+    const body = buildLeaveChannel("General");
+    const r = new PacketReader(body);
+    expect(r.uint32LE()).toBe(0);
+    expect(r.cString()).toBe("General");
   });
 });
 

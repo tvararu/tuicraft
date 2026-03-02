@@ -639,6 +639,15 @@ export const Language = {
 export const ChannelNotify = {
   YOU_JOINED: 0x02,
   YOU_LEFT: 0x03,
+  WRONG_PASSWORD: 0x04,
+  NOT_MEMBER: 0x05,
+  MUTED: 0x11,
+  BANNED: 0x13,
+  ALREADY_MEMBER: 0x17,
+  WRONG_FACTION: 0x1a,
+  INVALID_NAME: 0x1b,
+  THROTTLED: 0x1f,
+  NOT_IN_AREA: 0x20,
 } as const;
 
 export const ChatType = {
