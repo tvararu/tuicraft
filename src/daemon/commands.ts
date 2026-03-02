@@ -101,13 +101,11 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "decline":
         return parsed;
       case "join-channel":
-        return parsed.password
-          ? {
-              type: "join_channel",
-              channel: parsed.channel,
-              password: parsed.password,
-            }
-          : { type: "join_channel", channel: parsed.channel };
+        return {
+          type: "join_channel",
+          channel: parsed.channel,
+          password: parsed.password,
+        };
       case "leave-channel":
         return { type: "leave_channel", channel: parsed.channel };
       case "friends":
@@ -224,12 +222,8 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return rest ? { type: "del_ignore", target: rest } : undefined;
     case "JOIN": {
       if (!rest) return undefined;
-      const parts = rest.split(" ");
-      const channel = parts[0]!;
-      const password = parts[1];
-      return password
-        ? { type: "join_channel", channel, password }
-        : { type: "join_channel", channel };
+      const [channel, password] = rest.split(" ") as [string, string?];
+      return { type: "join_channel", channel, password };
     }
     case "GINVITE":
     case "GKICK":
