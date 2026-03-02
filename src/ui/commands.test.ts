@@ -143,8 +143,15 @@ describe("parseCommand", () => {
     });
   });
 
-  test("/leave", () => {
+  test("/leave with no argument leaves party", () => {
     expect(parseCommand("/leave")).toEqual({ type: "leave" });
+  });
+
+  test("/leave with argument leaves channel", () => {
+    expect(parseCommand("/leave Trade")).toEqual({
+      type: "leave-channel",
+      channel: "Trade",
+    });
   });
 
   test("/leader", () => {
@@ -246,13 +253,26 @@ describe("parseCommand", () => {
     expect(parseCommand("/ignorelist")).toEqual({ type: "ignored" });
   });
 
-  describe("unimplemented commands", () => {
-    test("/join returns unimplemented", () => {
-      expect(parseCommand("/join Trade")).toEqual({
-        type: "unimplemented",
-        feature: "Channel join/leave",
-      });
+  test("/join parses channel name", () => {
+    expect(parseCommand("/join Trade")).toEqual({
+      type: "join-channel",
+      channel: "Trade",
     });
+  });
+
+  test("/join parses channel name with password", () => {
+    expect(parseCommand("/join Secret hunter2")).toEqual({
+      type: "join-channel",
+      channel: "Secret",
+      password: "hunter2",
+    });
+  });
+
+  test("/join with no argument sends say", () => {
+    expect(parseCommand("/join")).toEqual({ type: "say", message: "/join" });
+  });
+
+  describe("unimplemented commands", () => {
     test("/ginvite returns unimplemented", () => {
       expect(parseCommand("/ginvite Foo")).toEqual({
         type: "unimplemented",

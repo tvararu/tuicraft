@@ -15,6 +15,8 @@ export type Command =
   | { type: "invite"; target: string }
   | { type: "kick"; target: string }
   | { type: "leave" }
+  | { type: "join-channel"; channel: string; password?: string }
+  | { type: "leave-channel"; channel: string }
   | { type: "leader"; target: string }
   | { type: "accept" }
   | { type: "decline" }
@@ -75,6 +77,7 @@ export function parseCommand(input: string): Command {
         ? { type: "kick", target: rest }
         : { type: "say", message: input };
     case "/leave":
+      if (rest) return { type: "leave-channel", channel: rest.split(" ")[0]! };
       return { type: "leave" };
     case "/leader":
       return rest
@@ -114,8 +117,15 @@ export function parseCommand(input: string): Command {
         : { type: "say", message: input };
     case "/ignorelist":
       return { type: "ignored" };
-    case "/join":
-      return { type: "unimplemented", feature: "Channel join/leave" };
+    case "/join": {
+      if (!rest) return { type: "say", message: input };
+      const parts = rest.split(" ");
+      const channel = parts[0]!;
+      const password = parts[1];
+      return password
+        ? { type: "join-channel", channel, password }
+        : { type: "join-channel", channel };
+    }
     case "/ginvite":
     case "/gkick":
     case "/gleave":
