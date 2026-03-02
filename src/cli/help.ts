@@ -40,6 +40,8 @@ INTERACTIVE COMMANDS (TUI mode)
   /dnd [message]  Toggle Do Not Disturb status
   /afk [message]  Toggle Away From Keyboard status
   /r              Reply to last whisper
+  /join <channel> Join a chat channel
+  /leave <chan>   Leave a chat channel
   /who [filter]   Who search
   /invite <name>  Invite player to group
   /kick <name>    Remove player from group
