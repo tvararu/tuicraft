@@ -797,6 +797,79 @@ describe("world handler tests", () => {
     }
   });
 
+  test("context-aware accept sends CMSG_GROUP_ACCEPT after group invite", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const groupEvent = new Promise<GroupEvent>((resolve) =>
+        handle.onGroupEvent(resolve),
+      );
+
+      const invite = new PacketWriter();
+      invite.uint8(1);
+      invite.cString("Leader");
+      invite.uint32LE(0);
+      invite.uint8(0);
+      invite.uint32LE(0);
+      ws.inject(GameOpcode.SMSG_GROUP_INVITE, invite.finish());
+      await groupEvent;
+
+      const sent = ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_GROUP_ACCEPT,
+      );
+      handle.acceptInvite();
+      const packet = await sent;
+      const r = new PacketReader(packet.body);
+      expect(r.uint32LE()).toBe(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("context-aware decline sends CMSG_GROUP_DECLINE after group invite", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const groupEvent = new Promise<GroupEvent>((resolve) =>
+        handle.onGroupEvent(resolve),
+      );
+
+      const invite = new PacketWriter();
+      invite.uint8(1);
+      invite.cString("Leader");
+      invite.uint32LE(0);
+      invite.uint8(0);
+      invite.uint32LE(0);
+      ws.inject(GameOpcode.SMSG_GROUP_INVITE, invite.finish());
+      await groupEvent;
+
+      const sent = ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_GROUP_DECLINE,
+      );
+      handle.declineInvite();
+      const packet = await sent;
+      expect(packet.body.byteLength).toBe(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("accept with no pending request fires system message", async () => {
     const ws = await startMockWorldServer();
     try {
