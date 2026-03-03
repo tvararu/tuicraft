@@ -131,7 +131,7 @@ export function parseCommand(input: string): Command {
     case "/gpromote":
       return { type: "unimplemented", feature: "Guild management" };
     case "/mail":
-      return { type: "unimplemented", feature: "Mail" };
+      return { type: "unimplemented", feature: "Mail reading" };
     case "/roll": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)

@@ -242,7 +242,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "GPROMOTE":
       return { type: "unimplemented", feature: "Guild management" };
     case "MAIL":
-      return { type: "unimplemented", feature: "Mail" };
+      return { type: "unimplemented", feature: "Mail reading" };
     case "ROLL": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)
