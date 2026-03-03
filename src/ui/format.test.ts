@@ -99,6 +99,16 @@ describe("formatMessage", () => {
     };
     expect(formatMessage(msg)).toBe("[server] Autobroadcast text");
   });
+
+  test("mail origin shows [mail] label", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "You have new mail.",
+      origin: "mail" as const,
+    };
+    expect(formatMessage(msg)).toBe("[mail] You have new mail.");
+  });
 });
 
 describe("formatMessageJson", () => {
@@ -204,6 +214,20 @@ describe("formatMessageJson", () => {
       type: "NOTIFICATION",
       sender: "",
       message: "Auto message",
+    });
+  });
+
+  test("mail origin uses MAIL JSON type", () => {
+    const msg = {
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: "You have new mail.",
+      origin: "mail" as const,
+    };
+    expect(formatMessageObj(msg)).toEqual({
+      type: "MAIL",
+      sender: "",
+      message: "You have new mail.",
     });
   });
 });
