@@ -223,12 +223,6 @@ export const STUBS: StubEntry[] = [
     priority: "medium",
   },
   {
-    opcode: GameOpcode.SMSG_RECEIVED_MAIL,
-    area: "mail",
-    label: "New mail notification",
-    priority: "medium",
-  },
-  {
     opcode: GameOpcode.SMSG_SHOW_MAILBOX,
     area: "mail",
     label: "Mailbox opened",

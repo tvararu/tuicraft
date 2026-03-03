@@ -581,6 +581,31 @@ describe("world handler tests", () => {
     }
   });
 
+  test("handles SMSG_RECEIVED_MAIL", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+      const received = new Promise<ChatMessage>((resolve) =>
+        handle.onMessage(resolve),
+      );
+      const body = new PacketWriter(4);
+      body.floatLE(0);
+      ws.inject(GameOpcode.SMSG_RECEIVED_MAIL, body.finish());
+      const msg = await received;
+      expect(msg.type).toBe(ChatType.SYSTEM);
+      expect(msg.message).toBe("You have new mail.");
+      expect(msg.origin).toBe("mail");
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("SMSG_CHAT_RESTRICTED delivers restriction-specific system message", async () => {
     const ws = await startMockWorldServer();
     try {

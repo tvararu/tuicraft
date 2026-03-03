@@ -62,6 +62,7 @@ import {
   handleChannelNotify,
   handleServerBroadcast,
   handleNotification,
+  handleReceivedMail,
   handlePartyCommandResult,
   handleGroupInviteReceived,
   handleGroupSetLeaderMsg,
@@ -398,6 +399,9 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
       handleNotification(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_RECEIVED_MAIL, (r) =>
+      handleReceivedMail(conn, r),
     );
     conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
       handlePartyCommandResult(conn, r),
