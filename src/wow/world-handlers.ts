@@ -269,7 +269,7 @@ export function handleNotification(conn: WorldConn, r: PacketReader): void {
 }
 
 export function handleReceivedMail(conn: WorldConn, r: PacketReader): void {
-  r.floatLE();
+  r.uint32LE();
   conn.onMessage?.({
     type: ChatType.SYSTEM,
     sender: "",
