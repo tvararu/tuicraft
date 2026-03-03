@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "188feda0d36c",
+  "strategy": "manual-commit",
+  "branch": "feat/mail-notifications",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/client.ts",
+    "src/wow/protocol/stubs.ts",
+    "src/wow/world-handlers.test.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/18/8feda0d36c/0/metadata.json",
+      "transcript": "/18/8feda0d36c/0/full.jsonl",
+      "context": "/18/8feda0d36c/0/context.md",
+      "content_hash": "/18/8feda0d36c/0/content_hash.txt",
+      "prompt": "/18/8feda0d36c/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}
