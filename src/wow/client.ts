@@ -102,7 +102,7 @@ export type ChatMessage = {
   sender: string;
   message: string;
   channel?: string;
-  origin?: "server" | "notification";
+  origin?: "server" | "notification" | "mail";
 };
 
 export type GroupEvent =
