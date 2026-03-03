@@ -102,12 +102,6 @@ export const STUBS: StubEntry[] = [
     priority: "high",
   },
   {
-    opcode: GameOpcode.SMSG_GUILD_EVENT,
-    area: "guild",
-    label: "Guild events",
-    priority: "high",
-  },
-  {
     opcode: GameOpcode.SMSG_GUILD_COMMAND_RESULT,
     area: "guild",
     label: "Guild command result",
