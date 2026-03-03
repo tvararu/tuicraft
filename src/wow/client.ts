@@ -196,8 +196,7 @@ export type WorldHandle = {
   addIgnore(name: string): void;
   removeIgnore(name: string): void;
   onIgnoreEvent(cb: (event: IgnoreEvent) => void): void;
-  requestGuildRoster(): void;
-  getGuildRoster(): GuildRoster | undefined;
+  requestGuildRoster(): Promise<GuildRoster | undefined>;
   onGuildEvent(cb: (event: GuildEvent) => void): void;
 };
 
@@ -735,17 +734,24 @@ export function worldSession(
         onIgnoreEvent(cb) {
           conn.onIgnoreEvent = cb;
         },
-        requestGuildRoster() {
+        async requestGuildRoster() {
           sendPacket(conn, GameOpcode.CMSG_GUILD_ROSTER);
+          const rosterPromise = conn.dispatch.expect(
+            GameOpcode.SMSG_GUILD_ROSTER,
+          );
+          let queryPromise: Promise<PacketReader> | undefined;
           if (conn.guildId) {
             sendPacket(
               conn,
               GameOpcode.CMSG_GUILD_QUERY,
               buildGuildQuery(conn.guildId),
             );
+            queryPromise = conn.dispatch.expect(
+              GameOpcode.SMSG_GUILD_QUERY_RESPONSE,
+            );
           }
-        },
-        getGuildRoster() {
+          handleGuildRoster(conn, await rosterPromise);
+          if (queryPromise) handleGuildQueryResponse(conn, await queryPromise);
           return conn.guildStore.get();
         },
         onGuildEvent(cb) {

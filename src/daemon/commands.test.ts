@@ -1543,9 +1543,6 @@ describe("dispatchCommand", () => {
 
   test("guild_roster calls requestGuildRoster and writes roster", async () => {
     const handle = createMockHandle();
-    (handle.getGuildRoster as ReturnType<typeof jest.fn>).mockReturnValue(
-      undefined,
-    );
     const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
@@ -1559,15 +1556,11 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.requestGuildRoster).toHaveBeenCalled();
-    expect(handle.getGuildRoster).toHaveBeenCalled();
     expect(socket.written()).toContain("No guild roster available");
   });
 
   test("guild_roster_json calls requestGuildRoster and writes JSON", async () => {
     const handle = createMockHandle();
-    (handle.getGuildRoster as ReturnType<typeof jest.fn>).mockReturnValue(
-      undefined,
-    );
     const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
@@ -1581,7 +1574,6 @@ describe("dispatchCommand", () => {
     );
 
     expect(handle.requestGuildRoster).toHaveBeenCalled();
-    expect(handle.getGuildRoster).toHaveBeenCalled();
     const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
     expect(parsed.type).toBe("GUILD_ROSTER");
     expect(parsed.members).toEqual([]);

@@ -146,8 +146,7 @@ export async function executeCommand(
       state.handle.removeIgnore(cmd.target);
       break;
     case "guild-roster": {
-      state.handle.requestGuildRoster();
-      const roster = state.handle.getGuildRoster();
+      const roster = await state.handle.requestGuildRoster();
       if (roster) {
         state.write(formatGuildRoster(roster) + "\n");
       } else {
