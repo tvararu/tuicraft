@@ -94,8 +94,13 @@ Entity events include `guid`, `objectType`, `name`, and type-specific fields lik
     tuicraft send "/kick PlayerName"     # remove from group
     tuicraft send "/leave"               # leave group
     tuicraft send "/leader PlayerName"   # transfer leadership
-    tuicraft send "/accept"              # accept group invite
-    tuicraft send "/decline"             # decline group invite
+    tuicraft send "/accept"              # accept pending invite (group or duel)
+    tuicraft send "/decline"             # decline pending invite (group or duel)
+
+Duel events (SMSG_DUEL_REQUESTED, COUNTDOWN, COMPLETE, WINNER,
+OUTOFBOUNDS, INBOUNDS) are surfaced in the event stream as `[duel]`
+labeled messages. Use `/accept` or `/decline` to respond to incoming
+duel requests.
 
 ## Friends List
 

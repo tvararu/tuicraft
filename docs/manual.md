@@ -111,40 +111,40 @@ idles out after 30 minutes of inactivity.
 
 When running in TUI mode, the following slash commands are available:
 
-| Command                      | Action                      |
-| ---------------------------- | --------------------------- |
-| _text_                       | Say (no slash needed)       |
-| `/s` _msg_                   | Say (explicit)              |
-| `/y` _msg_                   | Yell                        |
-| `/w` _name_ _msg_            | Whisper                     |
-| `/r` _msg_                   | Reply to last whisper       |
-| `/g` _msg_                   | Guild chat                  |
-| `/p` _msg_                   | Party chat                  |
-| `/raid` _msg_                | Raid chat                   |
-| `/e` _msg_                   | Text emote                  |
-| `/dnd` [_msg_]               | Toggle Do Not Disturb       |
-| `/afk` [_msg_]               | Toggle Away From Keyboard   |
-| `/1` _msg_                   | Channel 1 (usually General) |
-| `/2` _msg_                   | Channel 2 (usually Trade)   |
-| `/join` _channel_            | Join a chat channel         |
-| `/leave` _channel_           | Leave a chat channel        |
-| `/who` _query_               | Who search                  |
-| `/invite` _name_             | Invite player to group      |
-| `/kick` _name_               | Remove player from group    |
-| `/leave`                     | Leave the current group     |
-| `/leader` _name_             | Transfer group leadership   |
-| `/accept`                    | Accept a group invitation   |
-| `/decline`                   | Decline a group invitation  |
-| `/roll` [_N_] [_M_]          | Roll random number (1-100)  |
-| `/friends`                   | Show your friends list      |
-| `/friend add` _name_         | Add a player to friends     |
-| `/friend remove` _name_      | Remove from friends         |
-| `/ignore` _name_             | Add a player to ignore list |
-| `/unignore` _name_           | Remove from ignore list     |
-| `/ignorelist`                | Show your ignore list       |
-| `/groster`                   | Show guild roster           |
-| `/tuicraft entities on\|off` | Toggle entity event display |
-| `/quit`                      | Disconnect and exit         |
+| Command                      | Action                                     |
+| ---------------------------- | ------------------------------------------ |
+| _text_                       | Say (no slash needed)                      |
+| `/s` _msg_                   | Say (explicit)                             |
+| `/y` _msg_                   | Yell                                       |
+| `/w` _name_ _msg_            | Whisper                                    |
+| `/r` _msg_                   | Reply to last whisper                      |
+| `/g` _msg_                   | Guild chat                                 |
+| `/p` _msg_                   | Party chat                                 |
+| `/raid` _msg_                | Raid chat                                  |
+| `/e` _msg_                   | Text emote                                 |
+| `/dnd` [_msg_]               | Toggle Do Not Disturb                      |
+| `/afk` [_msg_]               | Toggle Away From Keyboard                  |
+| `/1` _msg_                   | Channel 1 (usually General)                |
+| `/2` _msg_                   | Channel 2 (usually Trade)                  |
+| `/join` _channel_            | Join a chat channel                        |
+| `/leave` _channel_           | Leave a chat channel                       |
+| `/who` _query_               | Who search                                 |
+| `/invite` _name_             | Invite player to group                     |
+| `/kick` _name_               | Remove player from group                   |
+| `/leave`                     | Leave the current group                    |
+| `/leader` _name_             | Transfer group leadership                  |
+| `/accept`                    | Accept pending invitation (group or duel)  |
+| `/decline`                   | Decline pending invitation (group or duel) |
+| `/roll` [_N_] [_M_]          | Roll random number (1-100)                 |
+| `/friends`                   | Show your friends list                     |
+| `/friend add` _name_         | Add a player to friends                    |
+| `/friend remove` _name_      | Remove from friends                        |
+| `/ignore` _name_             | Add a player to ignore list                |
+| `/unignore` _name_           | Remove from ignore list                    |
+| `/ignorelist`                | Show your ignore list                      |
+| `/groster`                   | Show guild roster                          |
+| `/tuicraft entities on\|off` | Toggle entity event display                |
+| `/quit`                      | Disconnect and exit                        |
 
 ## Output Format
 

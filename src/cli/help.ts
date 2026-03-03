@@ -47,8 +47,8 @@ INTERACTIVE COMMANDS (TUI mode)
   /kick <name>    Remove player from group
   /leave          Leave the current group
   /leader <name>  Transfer group leadership
-  /accept         Accept a group invitation
-  /decline        Decline a group invitation
+  /accept         Accept pending invitation (group or duel)
+  /decline        Decline pending invitation (group or duel)
   /roll [N] [M]   Roll random number (default 1-100)
   /friends        Show your friends list
   /friend add <n> Add a player to friends
