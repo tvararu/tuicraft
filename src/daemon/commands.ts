@@ -464,8 +464,7 @@ export async function dispatchCommand(
       writeLines(socket, ["OK"]);
       return false;
     case "guild_roster": {
-      handle.requestGuildRoster();
-      const roster = handle.getGuildRoster();
+      const roster = await handle.requestGuildRoster();
       if (roster) {
         writeLines(socket, formatGuildRoster(roster).split("\n"));
       } else {
@@ -474,8 +473,7 @@ export async function dispatchCommand(
       return false;
     }
     case "guild_roster_json": {
-      handle.requestGuildRoster();
-      const roster = handle.getGuildRoster();
+      const roster = await handle.requestGuildRoster();
       if (roster) {
         writeLines(socket, [formatGuildRosterJson(roster)]);
       } else {

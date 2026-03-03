@@ -97,7 +97,7 @@ describe("parseGuildRoster", () => {
     w.uint8(8);
     w.uint8(1);
     w.uint32LE(1637);
-    w.floatLE(3600.5);
+    w.floatLE(1.5);
     w.cString("");
     w.cString("on vacation");
 
@@ -129,7 +129,7 @@ describe("parseGuildRoster", () => {
     expect(m1.playerClass).toBe(8);
     expect(m1.gender).toBe(1);
     expect(m1.area).toBe(1637);
-    expect(m1.timeOffline).toBeCloseTo(3600.5, 0);
+    expect(m1.timeOffline).toBeCloseTo(1.5, 1);
     expect(m1.publicNote).toBe("");
     expect(m1.officerNote).toBe("on vacation");
   });

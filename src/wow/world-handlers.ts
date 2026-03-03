@@ -673,6 +673,5 @@ export function handleGuildQueryResponse(
   r: PacketReader,
 ): void {
   const result = parseGuildQueryResponse(r);
-  const rankNames = result.rankNames.filter((n) => n.length > 0);
-  conn.guildStore.setGuildMeta(result.name, rankNames);
+  conn.guildStore.setGuildMeta(result.name, result.rankNames);
 }

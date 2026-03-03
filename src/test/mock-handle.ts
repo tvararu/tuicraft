@@ -83,8 +83,9 @@ export function createMockHandle(): WorldHandle & {
     onIgnoreEvent(cb) {
       ignoreEventCb = cb;
     },
-    requestGuildRoster: jest.fn(),
-    getGuildRoster: jest.fn((): GuildRoster | undefined => undefined),
+    requestGuildRoster: jest.fn(
+      async (): Promise<GuildRoster | undefined> => undefined,
+    ),
     onGuildEvent(cb) {
       guildEventCb = cb;
     },
