@@ -158,7 +158,7 @@ that the official game client does.
 | Friends list                         | ✅     |
 | Ignore list                          | ✅     |
 | Channel join / leave                 | ✅     |
-| Duel accept / decline                | ❌     |
+| Duel accept / decline                | ✅     |
 
 ### 🏰 Guild
 
@@ -175,7 +175,7 @@ that the official game client does.
 | Feature             | Status |
 | ------------------- | ------ |
 | Send / receive mail | ❌     |
-| Mail notifications  | ❌     |
+| Mail notifications  | ✅     |
 
 ### 🏪 Economy
 
