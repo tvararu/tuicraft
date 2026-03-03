@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "dee7ef75b586",
+  "strategy": "manual-commit",
+  "branch": "feat/duel-accept-decline",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/world-handlers.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/de/e7ef75b586/0/metadata.json",
+      "transcript": "/de/e7ef75b586/0/full.jsonl",
+      "context": "/de/e7ef75b586/0/context.md",
+      "content_hash": "/de/e7ef75b586/0/content_hash.txt",
+      "prompt": "/de/e7ef75b586/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}
