@@ -5,7 +5,13 @@
   "branch": "feat/guild-roster",
   "checkpoints_count": 0,
   "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/test/mock-handle.test.ts",
+    "src/test/mock-world-server.ts",
+    "src/ui/tui.test.ts",
     "src/wow/client.ts",
+    "src/wow/guild-store.ts",
+    "src/wow/world-handlers.test.ts",
     "src/wow/world-handlers.ts"
   ],
   "sessions": [
@@ -15,13 +21,20 @@
       "context": "/9f/614fcbab67/0/context.md",
       "content_hash": "/9f/614fcbab67/0/content_hash.txt",
       "prompt": "/9f/614fcbab67/0/prompt.txt"
+    },
+    {
+      "metadata": "/9f/614fcbab67/1/metadata.json",
+      "transcript": "/9f/614fcbab67/1/full.jsonl",
+      "context": "/9f/614fcbab67/1/context.md",
+      "content_hash": "/9f/614fcbab67/1/content_hash.txt",
+      "prompt": "/9f/614fcbab67/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 23,
-    "cache_creation_tokens": 43049,
-    "cache_read_tokens": 835116,
-    "output_tokens": 4480,
-    "api_call_count": 20
+    "input_tokens": 166,
+    "cache_creation_tokens": 149493,
+    "cache_read_tokens": 12151076,
+    "output_tokens": 34708,
+    "api_call_count": 160
   }
 }
