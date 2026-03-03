@@ -44,6 +44,9 @@ export function formatMessage(msg: ChatMessage): string {
   ) {
     return `[server] ${message}`;
   }
+  if (msg.type === ChatType.SYSTEM && msg.origin === "mail") {
+    return `[mail] ${message}`;
+  }
   if (msg.type === ChatType.SYSTEM) {
     return `[system] ${message}`;
   }
@@ -80,7 +83,9 @@ export function formatMessageObj(msg: ChatMessage): LogEntry {
       ? "SERVER_BROADCAST"
       : msg.origin === "notification"
         ? "NOTIFICATION"
-        : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
+        : msg.origin === "mail"
+          ? "MAIL"
+          : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
   const obj: LogEntry = {
     type,
     sender: msg.sender,
