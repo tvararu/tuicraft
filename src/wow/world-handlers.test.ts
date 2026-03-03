@@ -593,7 +593,7 @@ describe("world handler tests", () => {
         handle.onMessage(resolve),
       );
       const body = new PacketWriter(4);
-      body.floatLE(0);
+      body.uint32LE(0);
       ws.inject(GameOpcode.SMSG_RECEIVED_MAIL, body.finish());
       const msg = await received;
       expect(msg.type).toBe(ChatType.SYSTEM);
