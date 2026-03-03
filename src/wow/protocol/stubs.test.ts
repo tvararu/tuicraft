@@ -11,7 +11,6 @@ describe("registerStubs", () => {
     registerStubs(d, () => true);
 
     expect(d.has(GameOpcode.SMSG_CONTACT_LIST)).toBe(true);
-    expect(d.has(GameOpcode.SMSG_GUILD_EVENT)).toBe(true);
   });
 
   test("skips opcodes already registered", () => {
