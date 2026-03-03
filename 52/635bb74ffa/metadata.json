@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "52635bb74ffa",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/protocol/stubs.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/52/635bb74ffa/0/metadata.json",
+      "transcript": "/52/635bb74ffa/0/full.jsonl",
+      "context": "/52/635bb74ffa/0/context.md",
+      "content_hash": "/52/635bb74ffa/0/content_hash.txt",
+      "prompt": "/52/635bb74ffa/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1866,
+    "cache_creation_tokens": 474544,
+    "cache_read_tokens": 17581150,
+    "output_tokens": 51129,
+    "api_call_count": 156
+  }
+}
