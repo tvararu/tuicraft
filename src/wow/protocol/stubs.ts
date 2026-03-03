@@ -319,25 +319,6 @@ export const STUBS: StubEntry[] = [
   },
 
   {
-    opcode: GameOpcode.SMSG_DUEL_REQUESTED,
-    area: "duel",
-    label: "Duel request",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.SMSG_DUEL_WINNER,
-    area: "duel",
-    label: "Duel result",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.SMSG_DUEL_COMPLETE,
-    area: "duel",
-    label: "Duel complete",
-    priority: "medium",
-  },
-
-  {
     opcode: GameOpcode.SMSG_MONSTER_MOVE,
     area: "movement",
     label: "NPC movement",
