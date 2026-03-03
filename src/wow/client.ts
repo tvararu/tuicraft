@@ -82,6 +82,7 @@ import {
   handleFriendStatus,
   handleGuildRoster,
   handleGuildQueryResponse,
+  handleGuildEvent,
   handleDuelRequested,
   handleDuelCountdown,
   handleDuelComplete,
@@ -504,6 +505,9 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_GUILD_QUERY_RESPONSE, (r) =>
       handleGuildQueryResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GUILD_EVENT, (r) =>
+      handleGuildEvent(conn, r),
     );
 
     registerStubs(conn.dispatch, (msg) => {

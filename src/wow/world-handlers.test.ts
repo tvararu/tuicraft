@@ -9,7 +9,9 @@ import {
   type FriendEvent,
   type IgnoreEvent,
   type GuildEvent,
+  type WorldConn,
 } from "wow/client";
+import { handleGuildEvent } from "wow/world-handlers";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
@@ -3399,5 +3401,178 @@ describe("world handler tests", () => {
         ws.stop();
       }
     });
+
+    test("SMSG_GUILD_EVENT signed_on fires guild event", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+
+        const w = new PacketWriter();
+        w.uint8(12);
+        w.uint8(1);
+        w.cString("Thrall");
+        w.uint64LE(10n);
+        ws.inject(GameOpcode.SMSG_GUILD_EVENT, w.finish());
+
+        const event = await eventReady;
+        expect(event.type).toBe("signed_on");
+        if (event.type === "signed_on") {
+          expect(event.name).toBe("Thrall");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_GUILD_EVENT promotion fires guild event", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+
+        const w = new PacketWriter();
+        w.uint8(0);
+        w.uint8(3);
+        w.cString("Thrall");
+        w.cString("Garrosh");
+        w.cString("Officer");
+        ws.inject(GameOpcode.SMSG_GUILD_EVENT, w.finish());
+
+        const event = await eventReady;
+        expect(event.type).toBe("promotion");
+        if (event.type === "promotion") {
+          expect(event.officer).toBe("Thrall");
+          expect(event.member).toBe("Garrosh");
+          expect(event.rank).toBe("Officer");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_GUILD_EVENT unknown type is silently ignored", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const events: GuildEvent[] = [];
+        handle.onGuildEvent((e) => events.push(e));
+
+        const w = new PacketWriter();
+        w.uint8(9);
+        w.uint8(0);
+        ws.inject(GameOpcode.SMSG_GUILD_EVENT, w.finish());
+
+        await Bun.sleep(50);
+        expect(events).toHaveLength(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+  });
+});
+
+describe("handleGuildEvent unit", () => {
+  function fireEvent(
+    eventType: number,
+    params: string[],
+    guid?: bigint,
+  ): GuildEvent {
+    const w = new PacketWriter();
+    w.uint8(eventType);
+    w.uint8(params.length);
+    for (const p of params) w.cString(p);
+    if (guid !== undefined) w.uint64LE(guid);
+    let result!: GuildEvent;
+    const conn = {
+      onGuildEvent: (e: GuildEvent) => {
+        result = e;
+      },
+    } as unknown as WorldConn;
+    handleGuildEvent(conn, new PacketReader(w.finish()));
+    return result;
+  }
+
+  test("demotion", () => {
+    const e = fireEvent(1, ["Thrall", "Garrosh", "Member"]);
+    expect(e).toEqual({
+      type: "demotion",
+      officer: "Thrall",
+      member: "Garrosh",
+      rank: "Member",
+    });
+  });
+
+  test("motd", () => {
+    const e = fireEvent(2, ["Raid tonight!"]);
+    expect(e).toEqual({ type: "motd", text: "Raid tonight!" });
+  });
+
+  test("joined", () => {
+    const e = fireEvent(3, ["Arthas"], 99n);
+    expect(e).toEqual({ type: "joined", name: "Arthas" });
+  });
+
+  test("left", () => {
+    const e = fireEvent(4, ["Sylvanas"], 7n);
+    expect(e).toEqual({ type: "left", name: "Sylvanas" });
+  });
+
+  test("removed", () => {
+    const e = fireEvent(5, ["Garrosh", "Thrall"]);
+    expect(e).toEqual({
+      type: "removed",
+      member: "Garrosh",
+      officer: "Thrall",
+    });
+  });
+
+  test("leader_is", () => {
+    const e = fireEvent(6, ["Thrall"]);
+    expect(e).toEqual({ type: "leader_is", name: "Thrall" });
+  });
+
+  test("leader_changed", () => {
+    const e = fireEvent(7, ["Thrall", "Garrosh"]);
+    expect(e).toEqual({
+      type: "leader_changed",
+      oldLeader: "Thrall",
+      newLeader: "Garrosh",
+    });
+  });
+
+  test("disbanded", () => {
+    const e = fireEvent(8, []);
+    expect(e).toEqual({ type: "disbanded" });
+  });
+
+  test("signed_off", () => {
+    const e = fireEvent(13, ["Varian"], 55n);
+    expect(e).toEqual({ type: "signed_off", name: "Varian" });
   });
 });

@@ -46,7 +46,12 @@ import {
   FriendStatus,
   FriendResult,
 } from "wow/protocol/social";
-import { parseGuildRoster, parseGuildQueryResponse } from "wow/protocol/guild";
+import {
+  parseGuildRoster,
+  parseGuildQueryResponse,
+  parseGuildEvent,
+  GuildEventCode,
+} from "wow/protocol/guild";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
 import type { GuildMember } from "wow/guild-store";
@@ -712,4 +717,62 @@ export function handleGuildQueryResponse(
 ): void {
   const result = parseGuildQueryResponse(r);
   conn.guildStore.setGuildMeta(result.name, result.rankNames);
+}
+
+export function handleGuildEvent(conn: WorldConn, r: PacketReader): void {
+  const raw = parseGuildEvent(r);
+  const p = raw.params;
+  switch (raw.eventType) {
+    case GuildEventCode.PROMOTION:
+      conn.onGuildEvent?.({
+        type: "promotion",
+        officer: p[0] ?? "",
+        member: p[1] ?? "",
+        rank: p[2] ?? "",
+      });
+      break;
+    case GuildEventCode.DEMOTION:
+      conn.onGuildEvent?.({
+        type: "demotion",
+        officer: p[0] ?? "",
+        member: p[1] ?? "",
+        rank: p[2] ?? "",
+      });
+      break;
+    case GuildEventCode.MOTD:
+      conn.onGuildEvent?.({ type: "motd", text: p[0] ?? "" });
+      break;
+    case GuildEventCode.JOINED:
+      conn.onGuildEvent?.({ type: "joined", name: p[0] ?? "" });
+      break;
+    case GuildEventCode.LEFT:
+      conn.onGuildEvent?.({ type: "left", name: p[0] ?? "" });
+      break;
+    case GuildEventCode.REMOVED:
+      conn.onGuildEvent?.({
+        type: "removed",
+        member: p[0] ?? "",
+        officer: p[1] ?? "",
+      });
+      break;
+    case GuildEventCode.LEADER_IS:
+      conn.onGuildEvent?.({ type: "leader_is", name: p[0] ?? "" });
+      break;
+    case GuildEventCode.LEADER_CHANGED:
+      conn.onGuildEvent?.({
+        type: "leader_changed",
+        oldLeader: p[0] ?? "",
+        newLeader: p[1] ?? "",
+      });
+      break;
+    case GuildEventCode.DISBANDED:
+      conn.onGuildEvent?.({ type: "disbanded" });
+      break;
+    case GuildEventCode.SIGNED_ON:
+      conn.onGuildEvent?.({ type: "signed_on", name: p[0] ?? "" });
+      break;
+    case GuildEventCode.SIGNED_OFF:
+      conn.onGuildEvent?.({ type: "signed_off", name: p[0] ?? "" });
+      break;
+  }
 }
