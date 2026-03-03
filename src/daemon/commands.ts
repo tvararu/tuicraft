@@ -669,18 +669,93 @@ export function onIgnoreEvent(
   }
 }
 
+function formatGuildEvent(event: GuildEvent): string {
+  switch (event.type) {
+    case "guild-roster":
+      return `[guild] Roster updated: ${event.roster.members.length} members`;
+    case "promotion":
+      return `[guild] ${event.officer} promoted ${event.member} to ${event.rank}`;
+    case "demotion":
+      return `[guild] ${event.officer} demoted ${event.member} to ${event.rank}`;
+    case "motd":
+      return `[guild] MOTD: ${event.text}`;
+    case "joined":
+      return `[guild] ${event.name} has joined the guild`;
+    case "left":
+      return `[guild] ${event.name} has left the guild`;
+    case "removed":
+      return `[guild] ${event.officer} removed ${event.member} from the guild`;
+    case "leader_is":
+      return `[guild] ${event.name} is the guild leader`;
+    case "leader_changed":
+      return `[guild] ${event.oldLeader} has made ${event.newLeader} the new guild leader`;
+    case "disbanded":
+      return "[guild] Guild has been disbanded";
+    case "signed_on":
+      return `[guild] ${event.name} has come online`;
+    case "signed_off":
+      return `[guild] ${event.name} has gone offline`;
+  }
+}
+
+function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "guild-roster":
+      return {
+        type: "GUILD_ROSTER_UPDATED",
+        sender: "",
+        message: `${event.roster.members.length} members`,
+      };
+    case "promotion":
+      return {
+        type: "GUILD_PROMOTION",
+        officer: event.officer,
+        member: event.member,
+        rank: event.rank,
+      };
+    case "demotion":
+      return {
+        type: "GUILD_DEMOTION",
+        officer: event.officer,
+        member: event.member,
+        rank: event.rank,
+      };
+    case "motd":
+      return { type: "GUILD_MOTD", text: event.text };
+    case "joined":
+      return { type: "GUILD_JOINED", name: event.name };
+    case "left":
+      return { type: "GUILD_LEFT", name: event.name };
+    case "removed":
+      return {
+        type: "GUILD_REMOVED",
+        member: event.member,
+        officer: event.officer,
+      };
+    case "leader_is":
+      return { type: "GUILD_LEADER_IS", name: event.name };
+    case "leader_changed":
+      return {
+        type: "GUILD_LEADER_CHANGED",
+        oldLeader: event.oldLeader,
+        newLeader: event.newLeader,
+      };
+    case "disbanded":
+      return { type: "GUILD_DISBANDED" };
+    case "signed_on":
+      return { type: "GUILD_SIGNED_ON", name: event.name };
+    case "signed_off":
+      return { type: "GUILD_SIGNED_OFF", name: event.name };
+  }
+}
+
 export function onGuildEvent(
   event: GuildEvent,
   events: RingBuffer<EventEntry>,
   log: SessionLog,
 ): void {
-  const roster = event.roster;
-  const text = `[guild] Roster updated: ${roster.members.length} members`;
-  const obj = {
-    type: "GUILD_ROSTER_UPDATED",
-    sender: "",
-    message: `${roster.members.length} members`,
-  };
+  const text = formatGuildEvent(event);
+  const obj = formatGuildEventObj(event);
   events.push({ text, json: JSON.stringify(obj) });
   log.append(obj as LogEntry).catch(() => {});
 }

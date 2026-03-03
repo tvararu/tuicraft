@@ -20,7 +20,19 @@ export type GuildRoster = {
   members: GuildMember[];
 };
 
-export type GuildEvent = { type: "guild-roster"; roster: GuildRoster };
+export type GuildEvent =
+  | { type: "guild-roster"; roster: GuildRoster }
+  | { type: "promotion"; officer: string; member: string; rank: string }
+  | { type: "demotion"; officer: string; member: string; rank: string }
+  | { type: "motd"; text: string }
+  | { type: "joined"; name: string }
+  | { type: "left"; name: string }
+  | { type: "removed"; member: string; officer: string }
+  | { type: "leader_is"; name: string }
+  | { type: "leader_changed"; oldLeader: string; newLeader: string }
+  | { type: "disbanded" }
+  | { type: "signed_on"; name: string }
+  | { type: "signed_off"; name: string };
 
 export class GuildStore {
   private members: Map<bigint, GuildMember>;

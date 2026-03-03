@@ -3283,6 +3283,7 @@ describe("world handler tests", () => {
 
         const event = await guildReady;
         expect(event.type).toBe("guild-roster");
+        if (event.type !== "guild-roster") throw new Error("expected roster");
         expect(event.roster.motd).toBe("Welcome!");
         expect(event.roster.members).toHaveLength(1);
         expect(event.roster.members[0]!.name).toBe("Thrall");
@@ -3316,6 +3317,7 @@ describe("world handler tests", () => {
           buildGuildQueryResponsePacket(),
         );
         const event = await metaEvent;
+        if (event.type !== "guild-roster") throw new Error("expected roster");
 
         expect(event.roster.guildName).toBe("Horde Elite");
         expect(event.roster.rankNames[0]).toBe("Guild Master");
