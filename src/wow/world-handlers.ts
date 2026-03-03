@@ -13,6 +13,12 @@ import {
 } from "wow/protocol/chat";
 import { buildOutgoingPacket } from "wow/protocol/world";
 import {
+  parseDuelRequested,
+  parseDuelCountdown,
+  parseDuelComplete,
+  parseDuelWinner,
+} from "wow/protocol/duel";
+import {
   parsePartyCommandResult,
   parseGroupInvite,
   parseGroupSetLeader,
@@ -276,6 +282,39 @@ export function handleReceivedMail(conn: WorldConn, r: PacketReader): void {
     message: "You have new mail.",
     origin: "mail",
   });
+}
+
+export function handleDuelRequested(conn: WorldConn, r: PacketReader): void {
+  const duel = parseDuelRequested(r);
+  conn.duelArbiter = duel.arbiter;
+  conn.pendingRequest = "duel";
+  const guidLow = Number(duel.initiator & 0xffffffffn);
+  const name = conn.nameCache.get(guidLow) ?? "Unknown";
+  conn.onDuelEvent?.({ type: "duel_requested", challenger: name });
+}
+
+export function handleDuelCountdown(conn: WorldConn, r: PacketReader): void {
+  const { timeMs } = parseDuelCountdown(r);
+  conn.onDuelEvent?.({ type: "duel_countdown", timeMs });
+}
+
+export function handleDuelComplete(conn: WorldConn, r: PacketReader): void {
+  const { completed } = parseDuelComplete(r);
+  conn.onDuelEvent?.({ type: "duel_complete", completed });
+}
+
+export function handleDuelWinner(conn: WorldConn, r: PacketReader): void {
+  const { reason, winner, loser } = parseDuelWinner(r);
+  conn.duelArbiter = 0n;
+  conn.onDuelEvent?.({ type: "duel_winner", reason, winner, loser });
+}
+
+export function handleDuelOutOfBounds(conn: WorldConn): void {
+  conn.onDuelEvent?.({ type: "duel_out_of_bounds" });
+}
+
+export function handleDuelInBounds(conn: WorldConn): void {
+  conn.onDuelEvent?.({ type: "duel_in_bounds" });
 }
 
 export function handlePartyCommandResult(

@@ -82,6 +82,12 @@ import {
   handleFriendStatus,
   handleGuildRoster,
   handleGuildQueryResponse,
+  handleDuelRequested,
+  handleDuelCountdown,
+  handleDuelComplete,
+  handleDuelWinner,
+  handleDuelOutOfBounds,
+  handleDuelInBounds,
 } from "wow/world-handlers";
 
 export type ClientConfig = {
@@ -422,6 +428,24 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_RECEIVED_MAIL, (r) =>
       handleReceivedMail(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_REQUESTED, (r) =>
+      handleDuelRequested(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_COUNTDOWN, (r) =>
+      handleDuelCountdown(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_COMPLETE, (r) =>
+      handleDuelComplete(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_WINNER, (r) =>
+      handleDuelWinner(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_OUTOFBOUNDS, () =>
+      handleDuelOutOfBounds(conn),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DUEL_INBOUNDS, () =>
+      handleDuelInBounds(conn),
     );
     conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
       handlePartyCommandResult(conn, r),
