@@ -88,7 +88,7 @@ function handleAuthSession(
   send(socket, GameOpcode.SMSG_AUTH_RESPONSE, new Uint8Array([authStatus]));
 }
 
-function buildCharEnumBody(): Uint8Array {
+function buildCharEnumBody(guildId = 0): Uint8Array {
   const w = new PacketWriter(512);
   w.uint8(1);
   w.uint32LE(0x42);
@@ -104,7 +104,7 @@ function buildCharEnumBody(): Uint8Array {
   w.floatLE(0);
   w.floatLE(0);
   w.floatLE(0);
-  w.uint32LE(0);
+  w.uint32LE(guildId);
   w.uint32LE(0);
   w.uint32LE(0);
   w.uint8(0);
@@ -119,8 +119,8 @@ function buildCharEnumBody(): Uint8Array {
   return w.finish();
 }
 
-function handleCharEnum(socket: Socket<ConnState>): void {
-  send(socket, GameOpcode.SMSG_CHAR_ENUM, buildCharEnumBody());
+function handleCharEnum(socket: Socket<ConnState>, guildId = 0): void {
+  send(socket, GameOpcode.SMSG_CHAR_ENUM, buildCharEnumBody(guildId));
 }
 
 function buildChannelNotifyJoined(channel: string): Uint8Array {
@@ -233,13 +233,15 @@ function handlePacket(
   sendTimeSync: boolean,
   captured: CapturedPacket[],
   captureListeners: CaptureListener[],
+  guildId = 0,
 ): void {
   const packet: CapturedPacket = { opcode, body: new Uint8Array(body) };
   captured.push(packet);
   for (const listener of captureListeners) listener(packet);
   if (opcode === GameOpcode.CMSG_AUTH_SESSION)
     handleAuthSession(socket, authStatus);
-  else if (opcode === GameOpcode.CMSG_CHAR_ENUM) handleCharEnum(socket);
+  else if (opcode === GameOpcode.CMSG_CHAR_ENUM)
+    handleCharEnum(socket, guildId);
   else if (opcode === GameOpcode.CMSG_PLAYER_LOGIN)
     handlePlayerLogin(socket, sendTimeSync);
   else if (opcode === GameOpcode.CMSG_PING) handlePing(socket, body);
@@ -255,6 +257,7 @@ function drainPackets(
   sendTimeSync: boolean,
   captured: CapturedPacket[],
   captureListeners: CaptureListener[],
+  guildId = 0,
 ): void {
   while (true) {
     if (!socket.data.pendingHeader) {
@@ -284,6 +287,7 @@ function drainPackets(
       sendTimeSync,
       captured,
       captureListeners,
+      guildId,
     );
   }
 }
@@ -309,6 +313,7 @@ export type CapturedPacket = { opcode: number; body: Uint8Array };
 export function startMockWorldServer(opts?: {
   authStatus?: number;
   sendTimeSyncAfterLogin?: boolean;
+  guildId?: number;
 }): Promise<{
   port: number;
   stop(): void;
@@ -320,6 +325,7 @@ export function startMockWorldServer(opts?: {
 }> {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
+  const guildId = opts?.guildId ?? 0;
   let activeSocket: Socket<ConnState> | undefined;
   const captured: CapturedPacket[] = [];
   const captureListeners: CaptureListener[] = [];
@@ -342,6 +348,7 @@ export function startMockWorldServer(opts?: {
             sendTimeSync,
             captured,
             captureListeners,
+            guildId,
           );
         },
         close() {

@@ -7,6 +7,7 @@ import {
   type WorldHandle,
   type FriendEvent,
   type IgnoreEvent,
+  type GuildEvent,
 } from "wow/client";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
@@ -2914,5 +2915,175 @@ describe("world handler tests", () => {
     } finally {
       ws.stop();
     }
+  });
+
+  describe("guild handlers", () => {
+    function buildGuildRosterPacket(): Uint8Array {
+      const w = new PacketWriter();
+      w.uint32LE(1);
+      w.cString("Welcome!");
+      w.cString("Guild info");
+      w.uint32LE(1);
+      w.uint32LE(0);
+      w.uint32LE(0);
+      for (let j = 0; j < 6; j++) {
+        w.uint32LE(0);
+        w.uint32LE(0);
+      }
+      w.uint64LE(10n);
+      w.uint8(1);
+      w.cString("Thrall");
+      w.uint32LE(0);
+      w.uint8(80);
+      w.uint8(7);
+      w.uint8(0);
+      w.uint32LE(1519);
+      w.cString("Warchief");
+      w.cString("");
+      return w.finish();
+    }
+
+    function buildGuildQueryResponsePacket(): Uint8Array {
+      const w = new PacketWriter();
+      w.uint32LE(1);
+      w.cString("Horde Elite");
+      w.cString("Guild Master");
+      w.cString("Officer");
+      for (let i = 0; i < 8; i++) {
+        w.cString("");
+      }
+      return w.finish();
+    }
+
+    test("SMSG_GUILD_ROSTER populates guildStore", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const guildReady = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+
+        ws.inject(GameOpcode.SMSG_GUILD_ROSTER, buildGuildRosterPacket());
+
+        const event = await guildReady;
+        expect(event.type).toBe("guild-roster");
+        expect(event.roster.motd).toBe("Welcome!");
+        expect(event.roster.members).toHaveLength(1);
+        expect(event.roster.members[0]!.name).toBe("Thrall");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_GUILD_QUERY_RESPONSE updates guild meta", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const firstEvent = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+        ws.inject(GameOpcode.SMSG_GUILD_ROSTER, buildGuildRosterPacket());
+        await firstEvent;
+
+        const metaEvent = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+        ws.inject(
+          GameOpcode.SMSG_GUILD_QUERY_RESPONSE,
+          buildGuildQueryResponsePacket(),
+        );
+        const event = await metaEvent;
+
+        expect(event.roster.guildName).toBe("Horde Elite");
+        expect(event.roster.rankNames[0]).toBe("Guild Master");
+        expect(event.roster.rankNames[1]).toBe("Officer");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("requestGuildRoster sends CMSG_GUILD_ROSTER and returns roster", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+        await waitForEchoProbe(handle);
+
+        const rosterPromise = handle.requestGuildRoster();
+
+        const captured = await ws.waitForCapture(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_ROSTER,
+        );
+        expect(captured).toBeDefined();
+
+        ws.inject(GameOpcode.SMSG_GUILD_ROSTER, buildGuildRosterPacket());
+
+        const roster = await rosterPromise;
+        expect(roster).toBeDefined();
+        expect(roster!.members).toHaveLength(1);
+        expect(roster!.members[0]!.name).toBe("Thrall");
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("requestGuildRoster with guildId also sends CMSG_GUILD_QUERY", async () => {
+      const ws = await startMockWorldServer({ guildId: 42 });
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+        await waitForEchoProbe(handle);
+
+        const rosterPromise = handle.requestGuildRoster();
+
+        const rosterCapture = await ws.waitForCapture(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_ROSTER,
+        );
+        expect(rosterCapture).toBeDefined();
+
+        const queryCapture = await ws.waitForCapture(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_QUERY,
+        );
+        const qr = new PacketReader(queryCapture.body);
+        expect(qr.uint32LE()).toBe(42);
+
+        ws.inject(GameOpcode.SMSG_GUILD_ROSTER, buildGuildRosterPacket());
+        ws.inject(
+          GameOpcode.SMSG_GUILD_QUERY_RESPONSE,
+          buildGuildQueryResponsePacket(),
+        );
+
+        const roster = await rosterPromise;
+        expect(roster).toBeDefined();
+        expect(roster!.guildName).toBe("Horde Elite");
+        expect(roster!.members).toHaveLength(1);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
   });
 });

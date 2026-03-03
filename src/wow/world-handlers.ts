@@ -652,19 +652,7 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
 
 export function handleGuildRoster(conn: WorldConn, r: PacketReader): void {
   const raw = parseGuildRoster(r);
-  const members: GuildMember[] = raw.members.map((m) => ({
-    guid: m.guid,
-    name: m.name,
-    rankIndex: m.rankIndex,
-    level: m.level,
-    playerClass: m.playerClass,
-    gender: m.gender,
-    area: m.area,
-    status: m.status,
-    timeOffline: m.timeOffline,
-    publicNote: m.publicNote,
-    officerNote: m.officerNote,
-  }));
+  const members: GuildMember[] = raw.members.map((m) => ({ ...m }));
   conn.guildStore.setRoster(raw.motd, raw.guildInfo, members);
 }
 

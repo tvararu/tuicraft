@@ -860,3 +860,66 @@ describe("ignore TUI commands", () => {
     await done;
   });
 });
+
+describe("guild TUI commands", () => {
+  test("/groster with no roster shows unavailable message", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/groster");
+    await flush(2);
+
+    expect(handle.requestGuildRoster).toHaveBeenCalled();
+    expect(output.join("")).toContain("No guild roster available");
+
+    input.end();
+    await done;
+  });
+
+  test("/groster with roster shows formatted output", async () => {
+    const handle = createMockHandle();
+    (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
+      {
+        guildName: "Horde Elite",
+        motd: "Welcome!",
+        guildInfo: "",
+        rankNames: ["GM"],
+        members: [
+          {
+            guid: 1n,
+            name: "Thrall",
+            rankIndex: 0,
+            level: 80,
+            playerClass: 7,
+            gender: 0,
+            area: 10,
+            status: 1,
+            timeOffline: 0,
+            publicNote: "",
+            officerNote: "",
+          },
+        ],
+      },
+    );
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/groster");
+    await flush(2);
+
+    expect(output.join("")).toContain("Horde Elite");
+    expect(output.join("")).toContain("Thrall");
+
+    input.end();
+    await done;
+  });
+});

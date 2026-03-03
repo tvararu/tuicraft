@@ -8,6 +8,7 @@ import {
   onEntityEvent,
   onFriendEvent,
   onIgnoreEvent,
+  onGuildEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -576,6 +577,13 @@ describe("parseIpcCommand", () => {
 
   test("/groster", () => {
     expect(parseIpcCommand("/groster")).toEqual({ type: "guild_roster" });
+  });
+
+  test("/ginvite via slash path returns unimplemented", () => {
+    expect(parseIpcCommand("/ginvite Foo")).toEqual({
+      type: "unimplemented",
+      feature: "Guild management",
+    });
   });
 });
 
@@ -1579,6 +1587,92 @@ describe("dispatchCommand", () => {
     expect(parsed.members).toEqual([]);
   });
 
+  test("guild_roster with data writes formatted roster", async () => {
+    const handle = createMockHandle();
+    const roster = {
+      guildName: "Horde Elite",
+      motd: "Welcome!",
+      guildInfo: "",
+      rankNames: ["GM"],
+      members: [
+        {
+          guid: 1n,
+          name: "Thrall",
+          rankIndex: 0,
+          level: 80,
+          playerClass: 7,
+          gender: 0,
+          area: 10,
+          status: 1,
+          timeOffline: 0,
+          publicNote: "",
+          officerNote: "",
+        },
+      ],
+    };
+    (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
+      roster,
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_roster" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toContain("Horde Elite");
+    expect(socket.written()).toContain("Thrall");
+  });
+
+  test("guild_roster_json with data writes JSON roster", async () => {
+    const handle = createMockHandle();
+    const roster = {
+      guildName: "Horde Elite",
+      motd: "Welcome!",
+      guildInfo: "",
+      rankNames: ["GM"],
+      members: [
+        {
+          guid: 1n,
+          name: "Thrall",
+          rankIndex: 0,
+          level: 80,
+          playerClass: 7,
+          gender: 0,
+          area: 10,
+          status: 1,
+          timeOffline: 0,
+          publicNote: "",
+          officerNote: "",
+        },
+      ],
+    };
+    (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
+      roster,
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_roster_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("GUILD_ROSTER");
+    expect(parsed.guildName).toBe("Horde Elite");
+    expect(parsed.count).toBe(1);
+  });
+
   test("unimplemented writes UNIMPLEMENTED response", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
@@ -2133,6 +2227,75 @@ describe("onIgnoreEvent", () => {
   });
 });
 
+describe("onGuildEvent", () => {
+  test("pushes guild-roster event to ring buffer", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(async () => {});
+    const log = { append } as unknown as SessionLog;
+
+    onGuildEvent(
+      {
+        type: "guild-roster",
+        roster: {
+          guildName: "Horde Elite",
+          motd: "Welcome!",
+          guildInfo: "",
+          rankNames: ["GM"],
+          members: [
+            {
+              guid: 1n,
+              name: "Thrall",
+              rankIndex: 0,
+              level: 80,
+              playerClass: 7,
+              gender: 0,
+              area: 10,
+              status: 1,
+              timeOffline: 0,
+              publicNote: "",
+              officerNote: "",
+            },
+          ],
+        },
+      },
+      events,
+      log,
+    );
+
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("Roster updated");
+    expect(drained[0]!.text).toContain("1 members");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("GUILD_ROSTER_UPDATED");
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  test("swallows guild event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log = { append } as unknown as SessionLog;
+
+    onGuildEvent(
+      {
+        type: "guild-roster",
+        roster: {
+          guildName: "",
+          motd: "",
+          guildInfo: "",
+          rankNames: [],
+          members: [],
+        },
+      },
+      events,
+      log,
+    );
+    await Promise.resolve();
+
+    expect(append).toHaveBeenCalled();
+  });
+});
+
 describe("IPC round-trip", () => {
   let sockCounter = 0;
   let sockPath: string;
@@ -2499,6 +2662,67 @@ describe("IPC round-trip", () => {
     const lines = await sendToSocket("NEARBY", sockPath);
     expect(lines[0]).toContain("Thrall");
     expect(lines[0]).toContain("level 80");
+  });
+
+  test("onGuildEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerGuildEvent({
+      type: "guild-roster",
+      roster: {
+        guildName: "Horde Elite",
+        motd: "Welcome!",
+        guildInfo: "",
+        rankNames: ["GM"],
+        members: [
+          {
+            guid: 1n,
+            name: "Thrall",
+            rankIndex: 0,
+            level: 80,
+            playerClass: 7,
+            gender: 0,
+            area: 10,
+            status: 1,
+            timeOffline: 0,
+            publicNote: "",
+            officerNote: "",
+          },
+        ],
+      },
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines[0]).toContain("Roster updated");
+  });
+
+  test("GUILD_ROSTER round-trip with data", async () => {
+    startTestServer();
+    const roster = {
+      guildName: "Horde Elite",
+      motd: "Welcome!",
+      guildInfo: "",
+      rankNames: ["GM"],
+      members: [
+        {
+          guid: 1n,
+          name: "Thrall",
+          rankIndex: 0,
+          level: 80,
+          playerClass: 7,
+          gender: 0,
+          area: 10,
+          status: 1,
+          timeOffline: 0,
+          publicNote: "",
+          officerNote: "",
+        },
+      ],
+    };
+    (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
+      roster,
+    );
+    const lines = await sendToSocket("GUILD_ROSTER", sockPath);
+    expect(lines[0]).toContain("Horde Elite");
+    expect(lines.join("\n")).toContain("Thrall");
   });
 
   test("dispatch error returns ERR internal", async () => {
