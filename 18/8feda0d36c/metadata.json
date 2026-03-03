@@ -3,7 +3,7 @@
   "checkpoint_id": "188feda0d36c",
   "strategy": "manual-commit",
   "branch": "feat/mail-notifications",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
     "src/wow/client.ts",
     "src/wow/protocol/stubs.ts",
@@ -17,13 +17,20 @@
       "context": "/18/8feda0d36c/0/context.md",
       "content_hash": "/18/8feda0d36c/0/content_hash.txt",
       "prompt": "/18/8feda0d36c/0/prompt.txt"
+    },
+    {
+      "metadata": "/18/8feda0d36c/1/metadata.json",
+      "transcript": "/18/8feda0d36c/1/full.jsonl",
+      "context": "/18/8feda0d36c/1/context.md",
+      "content_hash": "/18/8feda0d36c/1/content_hash.txt",
+      "prompt": "/18/8feda0d36c/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 0,
-    "cache_creation_tokens": 0,
-    "cache_read_tokens": 0,
-    "output_tokens": 0,
-    "api_call_count": 0
+    "input_tokens": 2019,
+    "cache_creation_tokens": 206204,
+    "cache_read_tokens": 2667054,
+    "output_tokens": 17873,
+    "api_call_count": 52
   }
 }
