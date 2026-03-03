@@ -166,7 +166,7 @@ that the official game client does.
 | ------------------------------------- | ------ |
 | Guild chat                            | ✅     |
 | Guild roster                          | ✅     |
-| Guild events                          | ❌     |
+| Guild events                          | ✅     |
 | Guild invite / kick / leave / promote | ❌     |
 | Guild bank                            | ❌     |
 
