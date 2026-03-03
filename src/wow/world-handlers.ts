@@ -268,6 +268,16 @@ export function handleNotification(conn: WorldConn, r: PacketReader): void {
   });
 }
 
+export function handleReceivedMail(conn: WorldConn, r: PacketReader): void {
+  r.floatLE();
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message: "You have new mail.",
+    origin: "mail",
+  });
+}
+
 export function handlePartyCommandResult(
   conn: WorldConn,
   r: PacketReader,
