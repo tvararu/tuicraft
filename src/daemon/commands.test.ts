@@ -423,7 +423,7 @@ describe("parseIpcCommand", () => {
       ["GKICK Foo", "Guild management"],
       ["GLEAVE", "Guild management"],
       ["GPROMOTE Foo", "Guild management"],
-      ["MAIL", "Mail"],
+      ["MAIL", "Mail reading"],
     ] as const;
 
     for (const [input, feature] of cases) {

@@ -300,7 +300,7 @@ describe("parseCommand", () => {
     test("/mail returns unimplemented", () => {
       expect(parseCommand("/mail")).toEqual({
         type: "unimplemented",
-        feature: "Mail",
+        feature: "Mail reading",
       });
     });
     test("/roll defaults to 1-100", () => {
