@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.4.2](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.1...tuicraft-v0.4.2) (2026-03-03)
+
+
+### Features
+
+* Add channel join/leave packet builders ([43ba07b](https://github.com/tvararu/tuicraft/commit/43ba07bde43604cd61b53370dfc04755aad14e4c))
+* Add guild roster support ([e5569f5](https://github.com/tvararu/tuicraft/commit/e5569f5b5c10f5d9d89212b8899ca6d11efd7dba))
+* Add joinChannel/leaveChannel to WorldHandle ([4386bcf](https://github.com/tvararu/tuicraft/commit/4386bcf6e4a4d2d2c2a48a3fd8fbcc15acd79dff))
+* Add server-side ignore list ([32dc2c7](https://github.com/tvararu/tuicraft/commit/32dc2c7bdf1ce960191c8b7f189133a3f889ea1a))
+* Handle /join and /leave in interactive TUI ([031c58b](https://github.com/tvararu/tuicraft/commit/031c58b2b86e497c40cdabe252d92c9836146720))
+* Parse /join and /leave channel commands ([da01515](https://github.com/tvararu/tuicraft/commit/da01515f7a59d115e486bc6a5fb6ca505718d9dc))
+* Surface channel notify events to user ([e10d1dc](https://github.com/tvararu/tuicraft/commit/e10d1dca87b90a5009efb66e14e3da86f68b2e70))
+* Wire channel join/leave through IPC dispatch ([2cdeb86](https://github.com/tvararu/tuicraft/commit/2cdeb8698e1eee8ca7aa871a2760f0aa258c4c7f))
+* Wire guild roster through IPC and TUI ([de232a7](https://github.com/tvararu/tuicraft/commit/de232a7883462de597858a8a0ded7b19728d6bc2))
+
+
+### Bug Fixes
+
+* Resolve guild roster race condition and rank alignment ([7fce77b](https://github.com/tvararu/tuicraft/commit/7fce77bd6d8dbb57762063f11ccd2f3a4717df13))
+
+
+### Documentation
+
+* Add guild roster documentation ([341f430](https://github.com/tvararu/tuicraft/commit/341f430bbbc081c050f1cc803a19e59ff22b9fc8))
+* Add ignore list design ([db406e1](https://github.com/tvararu/tuicraft/commit/db406e1f3ba9e938862a8d779f9562387eb910a0))
+
+
+### Maintenance
+
+* Add channel join/leave documentation ([cba77ef](https://github.com/tvararu/tuicraft/commit/cba77efbab3ea2ab91c09f99804890b1f9b9c4c5))
+* Add channel join/leave integration tests ([7989141](https://github.com/tvararu/tuicraft/commit/79891412470cf2a4485bdd1dbc4e9698aabaa754))
+* Add guild roster test coverage ([b606fb4](https://github.com/tvararu/tuicraft/commit/b606fb43e435ac5c37a11a03e3141beb6c46779c))
+* Add ignore list integration tests ([09347d9](https://github.com/tvararu/tuicraft/commit/09347d922dba8b33287155fada0fd800bc389351))
+* Reach 100% line and function coverage ([0b03513](https://github.com/tvararu/tuicraft/commit/0b03513ab8253805d45478aeb03a0a991412b79b))
+* Simplify channel command password handling ([f7eb9c6](https://github.com/tvararu/tuicraft/commit/f7eb9c696c3e9cafc344fd7ade309954eb289aa5))
+
 ## [0.4.1](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.0...tuicraft-v0.4.1) (2026-03-01)
 
 
