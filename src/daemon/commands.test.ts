@@ -9,6 +9,7 @@ import {
   onFriendEvent,
   onIgnoreEvent,
   onGuildEvent,
+  onDuelEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -2732,5 +2733,163 @@ describe("IPC round-trip", () => {
     );
     const lines = await sendToSocket("WHO", sockPath);
     expect(lines).toEqual(["ERR internal"]);
+  });
+
+  test("onDuelEvent wiring pushes to ring buffer", async () => {
+    startTestServer();
+    handle.triggerDuelEvent({
+      type: "duel_requested",
+      challenger: "Arthas",
+    });
+    const lines = await sendToSocket("READ", sockPath);
+    expect(lines).toEqual(["[duel] Arthas challenges you to a duel"]);
+  });
+});
+
+describe("onDuelEvent", () => {
+  test("duel_requested formats with challenger name", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_requested", challenger: "Arthas" }, events, log);
+    const entries = events.drain();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.text).toBe("[duel] Arthas challenges you to a duel");
+    expect(JSON.parse(entries[0]!.json)).toEqual({
+      type: "DUEL_REQUESTED",
+      challenger: "Arthas",
+    });
+  });
+
+  test("duel_countdown formats with seconds", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_countdown", timeMs: 3000 }, events, log);
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe("[duel] Duel starting in 3 seconds");
+  });
+
+  test("duel_winner won formats correctly", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent(
+      {
+        type: "duel_winner",
+        reason: "won",
+        winner: "Thrall",
+        loser: "Garrosh",
+      },
+      events,
+      log,
+    );
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe(
+      "[duel] Thrall has defeated Garrosh in a duel",
+    );
+  });
+
+  test("duel_winner fled formats correctly", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent(
+      {
+        type: "duel_winner",
+        reason: "fled",
+        winner: "Thrall",
+        loser: "Garrosh",
+      },
+      events,
+      log,
+    );
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe(
+      "[duel] Garrosh has fled from Thrall in a duel",
+    );
+  });
+
+  test("duel_out_of_bounds formats warning", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_out_of_bounds" }, events, log);
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe(
+      "[duel] Out of bounds \u2014 return to the duel area",
+    );
+  });
+
+  test("duel_in_bounds formats notice", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_in_bounds" }, events, log);
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe("[duel] Back in bounds");
+  });
+
+  test("duel_complete completed=true is silent text", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_complete", completed: true }, events, log);
+    const entries = events.drain();
+    expect(entries[0]!.text).toBeUndefined();
+    expect(JSON.parse(entries[0]!.json)).toEqual({
+      type: "DUEL_COMPLETE",
+      completed: true,
+    });
+  });
+
+  test("duel_complete completed=false shows interrupted", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_complete", completed: false }, events, log);
+    const entries = events.drain();
+    expect(entries[0]!.text).toBe("[duel] Duel interrupted");
+  });
+
+  test("swallows duel event log append errors", async () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.reject(new Error("disk full")));
+    const log = { append } as unknown as SessionLog;
+    onDuelEvent({ type: "duel_in_bounds" }, events, log);
+    await Promise.resolve();
+    expect(append).toHaveBeenCalled();
+  });
+
+  test("duel JSON objects include all fields", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    onDuelEvent(
+      {
+        type: "duel_winner",
+        reason: "won",
+        winner: "A",
+        loser: "B",
+      },
+      events,
+      log,
+    );
+    const json = JSON.parse(events.drain()[0]!.json);
+    expect(json).toEqual({
+      type: "DUEL_WINNER",
+      reason: "won",
+      winner: "A",
+      loser: "B",
+    });
   });
 });
