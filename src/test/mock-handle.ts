@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   ChatMode,
   GroupEvent,
+  DuelEvent,
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
@@ -13,6 +14,7 @@ import type { GuildRoster, GuildEvent } from "wow/guild-store";
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
   triggerGroupEvent(event: GroupEvent): void;
+  triggerDuelEvent(event: DuelEvent): void;
   triggerEntityEvent(event: EntityEvent): void;
   triggerFriendEvent(event: FriendEvent): void;
   triggerIgnoreEvent(event: IgnoreEvent): void;
@@ -21,6 +23,7 @@ export function createMockHandle(): WorldHandle & {
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
   let groupEventCb: ((event: GroupEvent) => void) | undefined;
+  let duelEventCb: ((event: DuelEvent) => void) | undefined;
   let entityEventCb: ((event: EntityEvent) => void) | undefined;
   let friendEventCb: ((event: FriendEvent) => void) | undefined;
   let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
@@ -65,6 +68,9 @@ export function createMockHandle(): WorldHandle & {
     onGroupEvent(cb) {
       groupEventCb = cb;
     },
+    onDuelEvent(cb) {
+      duelEventCb = cb;
+    },
     onEntityEvent(cb) {
       entityEventCb = cb;
     },
@@ -94,6 +100,9 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerGroupEvent(event) {
       groupEventCb?.(event);
+    },
+    triggerDuelEvent(event) {
+      duelEventCb?.(event);
     },
     triggerEntityEvent(event) {
       entityEventCb?.(event);
