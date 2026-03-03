@@ -23,7 +23,12 @@ import type { FriendEvent } from "wow/friend-store";
 import type { IgnoreEvent } from "wow/ignore-store";
 import type { GuildEvent } from "wow/guild-store";
 import { SessionLog, type LogEntry } from "lib/session-log";
-import type { WorldHandle, ChatMessage, GroupEvent } from "wow/client";
+import type {
+  WorldHandle,
+  ChatMessage,
+  GroupEvent,
+  DuelEvent,
+} from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
   Entity,
@@ -678,4 +683,60 @@ export function onGuildEvent(
   };
   events.push({ text, json: JSON.stringify(obj) });
   log.append(obj as LogEntry).catch(() => {});
+}
+
+function formatDuelEvent(event: DuelEvent): string | undefined {
+  switch (event.type) {
+    case "duel_requested":
+      return `[duel] ${event.challenger} challenges you to a duel`;
+    case "duel_countdown":
+      return `[duel] Duel starting in ${event.timeMs / 1000} seconds`;
+    case "duel_complete":
+      return event.completed ? undefined : "[duel] Duel interrupted";
+    case "duel_winner":
+      return event.reason === "won"
+        ? `[duel] ${event.winner} has defeated ${event.loser} in a duel`
+        : `[duel] ${event.loser} has fled from ${event.winner} in a duel`;
+    case "duel_out_of_bounds":
+      return "[duel] Out of bounds \u2014 return to the duel area";
+    case "duel_in_bounds":
+      return "[duel] Back in bounds";
+  }
+}
+
+function formatDuelEventObj(
+  event: DuelEvent,
+): Record<string, unknown> | undefined {
+  switch (event.type) {
+    case "duel_requested":
+      return { type: "DUEL_REQUESTED", challenger: event.challenger };
+    case "duel_countdown":
+      return { type: "DUEL_COUNTDOWN", timeMs: event.timeMs };
+    case "duel_complete":
+      return { type: "DUEL_COMPLETE", completed: event.completed };
+    case "duel_winner":
+      return {
+        type: "DUEL_WINNER",
+        reason: event.reason,
+        winner: event.winner,
+        loser: event.loser,
+      };
+    case "duel_out_of_bounds":
+      return { type: "DUEL_OUT_OF_BOUNDS" };
+    case "duel_in_bounds":
+      return { type: "DUEL_IN_BOUNDS" };
+  }
+}
+
+export function onDuelEvent(
+  event: DuelEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatDuelEvent(event);
+  const obj = formatDuelEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
 }
