@@ -32,10 +32,12 @@ describe("GuildStore", () => {
 
     expect(store.all()).toHaveLength(2);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("guild-roster");
-    expect(events[0]!.roster.motd).toBe("Welcome!");
-    expect(events[0]!.roster.guildInfo).toBe("Guild info text");
-    expect(events[0]!.roster.members).toHaveLength(2);
+    const e = events[0]!;
+    expect(e.type).toBe("guild-roster");
+    if (e.type !== "guild-roster") throw new Error("expected guild-roster");
+    expect(e.roster.motd).toBe("Welcome!");
+    expect(e.roster.guildInfo).toBe("Guild info text");
+    expect(e.roster.members).toHaveLength(2);
   });
 
   test("setRoster() clears previous members", () => {
@@ -63,12 +65,10 @@ describe("GuildStore", () => {
     store.setGuildMeta("Horde Elite", ["Guild Master", "Officer", "Member"]);
 
     expect(events).toHaveLength(1);
-    expect(events[0]!.roster.guildName).toBe("Horde Elite");
-    expect(events[0]!.roster.rankNames).toEqual([
-      "Guild Master",
-      "Officer",
-      "Member",
-    ]);
+    const e = events[0]!;
+    if (e.type !== "guild-roster") throw new Error("expected guild-roster");
+    expect(e.roster.guildName).toBe("Horde Elite");
+    expect(e.roster.rankNames).toEqual(["Guild Master", "Officer", "Member"]);
   });
 
   test("setGuildMeta() before setRoster() does not fire event", () => {
@@ -167,7 +167,9 @@ describe("GuildStore", () => {
     ]);
 
     expect(events).toHaveLength(1);
-    const roster = events[0]!.roster;
+    const e = events[0]!;
+    if (e.type !== "guild-roster") throw new Error("expected guild-roster");
+    const roster = e.roster;
     expect(roster.guildName).toBe("Horde Elite");
     expect(roster.motd).toBe("Welcome!");
     expect(roster.guildInfo).toBe("Info");

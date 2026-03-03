@@ -2295,6 +2295,138 @@ describe("onGuildEvent", () => {
 
     expect(append).toHaveBeenCalled();
   });
+
+  test("promotion formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      {
+        type: "promotion",
+        officer: "Thrall",
+        member: "Garrosh",
+        rank: "Officer",
+      },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Thrall promoted Garrosh to Officer");
+    expect(JSON.parse(d[0]!.json)).toEqual({
+      type: "GUILD_PROMOTION",
+      officer: "Thrall",
+      member: "Garrosh",
+      rank: "Officer",
+    });
+  });
+
+  test("demotion formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      {
+        type: "demotion",
+        officer: "Thrall",
+        member: "Garrosh",
+        rank: "Member",
+      },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Thrall demoted Garrosh to Member");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_DEMOTION");
+  });
+
+  test("motd formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "motd", text: "Raid tonight!" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] MOTD: Raid tonight!");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_MOTD");
+  });
+
+  test("joined formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "joined", name: "Arthas" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Arthas has joined the guild");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_JOINED");
+  });
+
+  test("left formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "left", name: "Sylvanas" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Sylvanas has left the guild");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEFT");
+  });
+
+  test("removed formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      { type: "removed", member: "Garrosh", officer: "Thrall" },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Thrall removed Garrosh from the guild");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_REMOVED");
+  });
+
+  test("leader_is formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "leader_is", name: "Thrall" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Thrall is the guild leader");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEADER_IS");
+  });
+
+  test("leader_changed formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      { type: "leader_changed", oldLeader: "Thrall", newLeader: "Garrosh" },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe(
+      "[guild] Thrall has made Garrosh the new guild leader",
+    );
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEADER_CHANGED");
+  });
+
+  test("disbanded formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "disbanded" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Guild has been disbanded");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_DISBANDED");
+  });
+
+  test("signed_on formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "signed_on", name: "Jaina" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Jaina has come online");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_ON");
+  });
+
+  test("signed_off formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent({ type: "signed_off", name: "Varian" }, events, log);
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Varian has gone offline");
+    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_OFF");
+  });
 });
 
 describe("IPC round-trip", () => {
