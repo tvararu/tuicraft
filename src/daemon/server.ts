@@ -15,6 +15,7 @@ import {
   onFriendEvent,
   onIgnoreEvent,
   onGuildEvent,
+  onDuelEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
@@ -114,6 +115,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onFriendEvent((event) => onFriendEvent(event, events, log));
   handle.onIgnoreEvent((event) => onIgnoreEvent(event, events, log));
   handle.onGuildEvent((event) => onGuildEvent(event, events, log));
+  handle.onDuelEvent((event) => onDuelEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
