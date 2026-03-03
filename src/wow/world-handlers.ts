@@ -296,6 +296,7 @@ export function handleGroupInviteReceived(
   r: PacketReader,
 ): void {
   const invite = parseGroupInvite(r);
+  conn.pendingRequest = "group";
   conn.onGroupEvent?.({ type: "invite_received", from: invite.name });
 }
 

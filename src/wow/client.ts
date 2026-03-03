@@ -49,6 +49,7 @@ import {
   buildDelIgnore,
 } from "wow/protocol/social";
 import { buildGuildQuery } from "wow/protocol/guild";
+import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
   sendPacket,
   handleTimeSync,
@@ -137,6 +138,19 @@ export type GroupEvent =
       level?: number;
     };
 
+export type DuelEvent =
+  | { type: "duel_requested"; challenger: string }
+  | { type: "duel_countdown"; timeMs: number }
+  | { type: "duel_complete"; completed: boolean }
+  | {
+      type: "duel_winner";
+      reason: "won" | "fled";
+      winner: string;
+      loser: string;
+    }
+  | { type: "duel_out_of_bounds" }
+  | { type: "duel_in_bounds" };
+
 export type { WhoResult };
 export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
@@ -199,6 +213,7 @@ export type WorldHandle = {
   onIgnoreEvent(cb: (event: IgnoreEvent) => void): void;
   requestGuildRoster(): Promise<GuildRoster | undefined>;
   onGuildEvent(cb: (event: GuildEvent) => void): void;
+  onDuelEvent(cb: (event: DuelEvent) => void): void;
 };
 
 export type WorldConn = {
@@ -231,6 +246,9 @@ export type WorldConn = {
   guildStore: GuildStore;
   guildId: number;
   onGuildEvent?: (event: GuildEvent) => void;
+  pendingRequest: "group" | "duel" | null;
+  duelArbiter: bigint;
+  onDuelEvent?: (event: DuelEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -356,6 +374,8 @@ export function worldSession(
       ignoreStore: new IgnoreStore(),
       guildStore: new GuildStore(),
       guildId: 0,
+      pendingRequest: null,
+      duelArbiter: 0n,
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
@@ -660,10 +680,44 @@ export function worldSession(
           );
         },
         acceptInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GROUP_ACCEPT, buildGroupAccept());
+          if (conn.pendingRequest === "duel") {
+            sendPacket(
+              conn,
+              GameOpcode.CMSG_DUEL_ACCEPTED,
+              buildDuelAccepted(conn.duelArbiter),
+            );
+          } else if (conn.pendingRequest === "group") {
+            sendPacket(conn, GameOpcode.CMSG_GROUP_ACCEPT, buildGroupAccept());
+          } else {
+            conn.onMessage?.({
+              type: ChatType.SYSTEM,
+              sender: "",
+              message: "Nothing to accept.",
+            });
+          }
+          conn.pendingRequest = null;
         },
         declineInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GROUP_DECLINE, buildGroupDecline());
+          if (conn.pendingRequest === "duel") {
+            sendPacket(
+              conn,
+              GameOpcode.CMSG_DUEL_CANCELLED,
+              buildDuelCancelled(conn.duelArbiter),
+            );
+          } else if (conn.pendingRequest === "group") {
+            sendPacket(
+              conn,
+              GameOpcode.CMSG_GROUP_DECLINE,
+              buildGroupDecline(),
+            );
+          } else {
+            conn.onMessage?.({
+              type: ChatType.SYSTEM,
+              sender: "",
+              message: "Nothing to decline.",
+            });
+          }
+          conn.pendingRequest = null;
         },
         onGroupEvent(cb) {
           conn.onGroupEvent = cb;
@@ -764,6 +818,9 @@ export function worldSession(
         },
         onGuildEvent(cb) {
           conn.onGuildEvent = cb;
+        },
+        onDuelEvent(cb) {
+          conn.onDuelEvent = cb;
         },
       };
       resolve(handle);
