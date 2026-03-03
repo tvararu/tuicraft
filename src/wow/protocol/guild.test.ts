@@ -2,8 +2,10 @@ import { test, expect, describe } from "bun:test";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
   GuildMemberStatus,
+  GuildEventCode,
   parseGuildRoster,
   parseGuildQueryResponse,
+  parseGuildEvent,
   buildGuildQuery,
 } from "wow/protocol/guild";
 
@@ -311,5 +313,137 @@ describe("buildGuildQuery", () => {
     const body = buildGuildQuery(0xdeadbeef);
     const r = new PacketReader(body);
     expect(r.uint32LE()).toBe(0xdeadbeef);
+  });
+});
+
+describe("GuildEventCode", () => {
+  test("PROMOTION is 0", () => {
+    expect(GuildEventCode.PROMOTION).toBe(0);
+  });
+
+  test("SIGNED_OFF is 13", () => {
+    expect(GuildEventCode.SIGNED_OFF).toBe(13);
+  });
+});
+
+describe("parseGuildEvent", () => {
+  test("parses MOTD with 1 string param", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.MOTD);
+    w.uint8(1);
+    w.cString("Welcome back!");
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      eventType: GuildEventCode.MOTD,
+      params: ["Welcome back!"],
+    });
+  });
+
+  test("parses PROMOTION with 3 string params", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.PROMOTION);
+    w.uint8(3);
+    w.cString("Thrall");
+    w.cString("Garrosh");
+    w.cString("Officer");
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      eventType: GuildEventCode.PROMOTION,
+      params: ["Thrall", "Garrosh", "Officer"],
+    });
+  });
+
+  test("parses DISBANDED with 0 string params", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.DISBANDED);
+    w.uint8(0);
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      eventType: GuildEventCode.DISBANDED,
+      params: [],
+    });
+  });
+
+  test("parses SIGNED_ON with trailing guid", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.SIGNED_ON);
+    w.uint8(1);
+    w.cString("Jaina");
+    w.uint64LE(42n);
+    const r = new PacketReader(w.finish());
+    const result = parseGuildEvent(r);
+    expect(result).toEqual({
+      eventType: GuildEventCode.SIGNED_ON,
+      params: ["Jaina"],
+    });
+    expect(r.remaining).toBe(0);
+  });
+
+  test("parses JOINED with trailing guid", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.JOINED);
+    w.uint8(1);
+    w.cString("Arthas");
+    w.uint64LE(99n);
+    const r = new PacketReader(w.finish());
+    parseGuildEvent(r);
+    expect(r.remaining).toBe(0);
+  });
+
+  test("parses LEFT with trailing guid", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.LEFT);
+    w.uint8(1);
+    w.cString("Sylvanas");
+    w.uint64LE(7n);
+    const r = new PacketReader(w.finish());
+    parseGuildEvent(r);
+    expect(r.remaining).toBe(0);
+  });
+
+  test("parses SIGNED_OFF with trailing guid", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.SIGNED_OFF);
+    w.uint8(1);
+    w.cString("Varian");
+    w.uint64LE(55n);
+    const r = new PacketReader(w.finish());
+    parseGuildEvent(r);
+    expect(r.remaining).toBe(0);
+  });
+
+  test("parses REMOVED with 2 string params", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.REMOVED);
+    w.uint8(2);
+    w.cString("Garrosh");
+    w.cString("Thrall");
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      eventType: GuildEventCode.REMOVED,
+      params: ["Garrosh", "Thrall"],
+    });
+  });
+
+  test("parses LEADER_CHANGED with 2 string params", () => {
+    const w = new PacketWriter();
+    w.uint8(GuildEventCode.LEADER_CHANGED);
+    w.uint8(2);
+    w.cString("Thrall");
+    w.cString("Garrosh");
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      eventType: GuildEventCode.LEADER_CHANGED,
+      params: ["Thrall", "Garrosh"],
+    });
+  });
+
+  test("parses unknown event type without crashing", () => {
+    const w = new PacketWriter();
+    w.uint8(19);
+    w.uint8(0);
+    const result = parseGuildEvent(new PacketReader(w.finish()));
+    expect(result.eventType).toBe(19);
+    expect(result.params).toEqual([]);
   });
 });

@@ -89,6 +89,45 @@ export function parseGuildQueryResponse(r: PacketReader): GuildQueryResult {
   return { guildId, name, rankNames };
 }
 
+export const GuildEventCode = {
+  PROMOTION: 0,
+  DEMOTION: 1,
+  MOTD: 2,
+  JOINED: 3,
+  LEFT: 4,
+  REMOVED: 5,
+  LEADER_IS: 6,
+  LEADER_CHANGED: 7,
+  DISBANDED: 8,
+  SIGNED_ON: 12,
+  SIGNED_OFF: 13,
+} as const;
+
+const HAS_TRAILING_GUID = new Set<number>([
+  GuildEventCode.JOINED,
+  GuildEventCode.LEFT,
+  GuildEventCode.SIGNED_ON,
+  GuildEventCode.SIGNED_OFF,
+]);
+
+export type GuildEventRaw = {
+  eventType: number;
+  params: string[];
+};
+
+export function parseGuildEvent(r: PacketReader): GuildEventRaw {
+  const eventType = r.uint8();
+  const paramCount = r.uint8();
+  const params: string[] = [];
+  for (let i = 0; i < paramCount; i++) {
+    params.push(r.cString());
+  }
+  if (HAS_TRAILING_GUID.has(eventType)) {
+    r.uint64LE();
+  }
+  return { eventType, params };
+}
+
 export function buildGuildQuery(guildId: number): Uint8Array {
   const w = new PacketWriter();
   w.uint32LE(guildId);
