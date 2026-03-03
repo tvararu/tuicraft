@@ -750,8 +750,12 @@ export function worldSession(
               GameOpcode.SMSG_GUILD_QUERY_RESPONSE,
             );
           }
-          handleGuildRoster(conn, await rosterPromise);
-          if (queryPromise) handleGuildQueryResponse(conn, await queryPromise);
+          const [rosterReader, queryReader] = await Promise.all([
+            rosterPromise,
+            queryPromise ?? Promise.resolve(undefined),
+          ]);
+          handleGuildRoster(conn, rosterReader);
+          if (queryReader) handleGuildQueryResponse(conn, queryReader);
           return conn.guildStore.get();
         },
         onGuildEvent(cb) {

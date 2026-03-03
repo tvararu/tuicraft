@@ -23,12 +23,20 @@ export type GuildRoster = {
 export type GuildEvent = { type: "guild-roster"; roster: GuildRoster };
 
 export class GuildStore {
-  private members = new Map<bigint, GuildMember>();
-  private guildName = "";
-  private motd = "";
-  private guildInfo = "";
-  private rankNames: string[] = [];
+  private members: Map<bigint, GuildMember>;
+  private guildName: string;
+  private motd: string;
+  private guildInfo: string;
+  private rankNames: string[];
   private listener?: (event: GuildEvent) => void;
+
+  constructor() {
+    this.members = new Map();
+    this.guildName = "";
+    this.motd = "";
+    this.guildInfo = "";
+    this.rankNames = [];
+  }
 
   onEvent(cb: (event: GuildEvent) => void): void {
     this.listener = cb;

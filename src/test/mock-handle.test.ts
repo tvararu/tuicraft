@@ -1,5 +1,7 @@
 import { test, expect } from "bun:test";
 import { createMockHandle } from "./mock-handle";
+import { ObjectType } from "wow/protocol/entity-fields";
+import type { UnitEntity } from "wow/entity-store";
 
 test("resolveClosed resolves closed promise", async () => {
   const handle = createMockHandle();
@@ -70,4 +72,77 @@ test("triggerFriendEvent forwards to onFriendEvent callback", () => {
   });
   handle.triggerFriendEvent({ type: "friend-list", friends: [] });
   expect(seen).toBe("friend-list");
+});
+
+test("triggerEntityEvent forwards to onEntityEvent callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onEntityEvent((event) => {
+    seen = event.type;
+  });
+  handle.triggerEntityEvent({
+    type: "appear",
+    entity: {
+      guid: 1n,
+      objectType: ObjectType.UNIT,
+      name: "NPC",
+      level: 10,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      health: 100,
+      maxHealth: 100,
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [],
+      maxPower: [],
+    } satisfies UnitEntity,
+  });
+  expect(seen).toBe("appear");
+});
+
+test("triggerIgnoreEvent forwards to onIgnoreEvent callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onIgnoreEvent((event) => {
+    seen = event.type;
+  });
+  handle.triggerIgnoreEvent({ type: "ignore-list", entries: [] });
+  expect(seen).toBe("ignore-list");
+});
+
+test("triggerGuildEvent forwards to onGuildEvent callback", () => {
+  const handle = createMockHandle();
+  let seen = "";
+  handle.onGuildEvent((event) => {
+    seen = event.type;
+  });
+  handle.triggerGuildEvent({
+    type: "guild-roster",
+    roster: {
+      guildName: "",
+      motd: "",
+      guildInfo: "",
+      rankNames: [],
+      members: [],
+    },
+  });
+  expect(seen).toBe("guild-roster");
+});
+
+test("default getIgnored returns empty list", () => {
+  const handle = createMockHandle();
+  expect(handle.getIgnored()).toEqual([]);
+});
+
+test("default requestGuildRoster returns undefined", async () => {
+  const handle = createMockHandle();
+  await expect(handle.requestGuildRoster()).resolves.toBeUndefined();
 });
