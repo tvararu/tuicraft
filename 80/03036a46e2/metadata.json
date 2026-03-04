@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "8003036a46e2",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/ui/tui.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/80/03036a46e2/0/metadata.json",
+      "transcript": "/80/03036a46e2/0/full.jsonl",
+      "context": "/80/03036a46e2/0/context.md",
+      "content_hash": "/80/03036a46e2/0/content_hash.txt",
+      "prompt": "/80/03036a46e2/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 10510,
+    "cache_creation_tokens": 46213,
+    "cache_read_tokens": 1436715,
+    "output_tokens": 7473,
+    "api_call_count": 27
+  }
+}
