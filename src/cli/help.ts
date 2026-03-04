@@ -57,6 +57,15 @@ INTERACTIVE COMMANDS (TUI mode)
   /unignore <n>   Remove a player from ignore
   /ignorelist     Show your ignore list
   /groster        Show guild roster
+  /ginvite <name> Invite player to guild
+  /gkick <name>   Remove player from guild
+  /gleave         Leave the guild
+  /gpromote <name> Promote guild member
+  /gdemote <name> Demote guild member
+  /gleader <name> Transfer guild leadership
+  /gmotd [msg]    Set guild message of the day
+  /gaccept        Accept guild invitation
+  /gdecline       Decline guild invitation
   /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 

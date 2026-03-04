@@ -143,6 +143,15 @@ When running in TUI mode, the following slash commands are available:
 | `/unignore` _name_           | Remove from ignore list                    |
 | `/ignorelist`                | Show your ignore list                      |
 | `/groster`                   | Show guild roster                          |
+| `/ginvite` _name_            | Invite player to guild                     |
+| `/gkick` _name_              | Remove player from guild                   |
+| `/gleave`                    | Leave the guild                            |
+| `/gpromote` _name_           | Promote guild member                       |
+| `/gdemote` _name_            | Demote guild member                        |
+| `/gleader` _name_            | Transfer guild leadership                  |
+| `/gmotd` [_msg_]             | Set guild message of the day               |
+| `/gaccept`                   | Accept guild invitation                    |
+| `/gdecline`                  | Decline guild invitation                   |
 | `/tuicraft entities on\|off` | Toggle entity event display                |
 | `/quit`                      | Disconnect and exit                        |
 
