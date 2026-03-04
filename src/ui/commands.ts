@@ -45,7 +45,7 @@ export type Command =
   | { type: "mail-delete"; index: number }
   | { type: "unimplemented"; feature: string };
 
-function parseMailSend(
+export function parseMailSend(
   input: string,
 ):
   | { type: "mail-send"; target: string; subject: string; body: string }

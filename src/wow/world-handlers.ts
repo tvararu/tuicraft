@@ -16,8 +16,8 @@ import {
   parseShowMailbox,
   parseMailListResult,
   parseSendMailResult,
-  buildGetMailList,
   MailAction,
+  MailResult,
   formatMailResultError,
 } from "wow/protocol/mail";
 import {
@@ -308,11 +308,6 @@ export function handleShowMailbox(conn: WorldConn, r: PacketReader): void {
     message: "Mailbox opened.",
     origin: "mail",
   });
-  sendPacket(
-    conn,
-    GameOpcode.CMSG_GET_MAIL_LIST,
-    buildGetMailList(conn.mailboxGuid),
-  );
 }
 
 export function handleMailListResult(conn: WorldConn, r: PacketReader): void {
@@ -331,14 +326,20 @@ export function handleSendMailResult(conn: WorldConn, r: PacketReader): void {
       origin: "mail",
     });
   } else if (packet.action === MailAction.DELETED) {
-    const err = formatMailResultError(packet.result);
-    if (err) {
-      conn.onMessage?.({
-        type: ChatType.SYSTEM,
-        sender: "",
-        message: err,
-        origin: "mail",
-      });
+    if (packet.result === MailResult.OK) {
+      conn.mailCache = conn.mailCache.filter(
+        (m) => m.messageId !== packet.mailId,
+      );
+    } else {
+      const err = formatMailResultError(packet.result);
+      if (err) {
+        conn.onMessage?.({
+          type: ChatType.SYSTEM,
+          sender: "",
+          message: err,
+          origin: "mail",
+        });
+      }
     }
   }
 }

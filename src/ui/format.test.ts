@@ -15,10 +15,19 @@ import {
   formatIgnoreListJson,
   formatIgnoreEvent,
   formatIgnoreEventObj,
+  formatMailList,
+  formatMailListJson,
+  formatMailRead,
+  formatMailReadJson,
 } from "ui/format";
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { FriendStatus } from "wow/protocol/social";
+import {
+  MailCheckMask,
+  MailMessageType,
+  type MailEntry,
+} from "wow/protocol/mail";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
 
@@ -1147,5 +1156,212 @@ describe("formatIgnoreEventObj", () => {
   test("ignore-list returns undefined", () => {
     const result = formatIgnoreEventObj({ type: "ignore-list", entries: [] });
     expect(result).toBeUndefined();
+  });
+});
+
+function mailEntry(overrides: Partial<MailEntry> = {}): MailEntry {
+  return {
+    messageId: 1,
+    messageType: MailMessageType.NORMAL,
+    senderGuid: 42n,
+    cod: 0,
+    stationery: 41,
+    money: 0,
+    flags: MailCheckMask.HAS_BODY,
+    expirationDays: 3,
+    subject: "Hello",
+    body: "Test body",
+    itemCount: 0,
+    ...overrides,
+  };
+}
+
+describe("formatMailList", () => {
+  test("empty mailbox", () => {
+    expect(formatMailList([], new Map())).toBe("[mail] Mailbox is empty");
+  });
+
+  test("single unread mail from player in name cache", () => {
+    const names = new Map([[42, "Thrall"]]);
+    const result = formatMailList([mailEntry()], names);
+    expect(result).toContain("=== Mailbox (1 messages) ===");
+    expect(result).toContain("*#1");
+    expect(result).toContain("Thrall");
+    expect(result).toContain("Hello");
+    expect(result).toContain("3d");
+  });
+
+  test("read mail shows space marker instead of asterisk", () => {
+    const result = formatMailList(
+      [mailEntry({ flags: MailCheckMask.READ })],
+      new Map(),
+    );
+    expect(result).toContain(" #1");
+    expect(result).not.toContain("*#1");
+  });
+
+  test("unknown player shows Player fallback", () => {
+    const result = formatMailList([mailEntry({ senderGuid: 999n })], new Map());
+    expect(result).toContain("Player");
+  });
+
+  test("auction mail shows Auction House", () => {
+    const result = formatMailList(
+      [
+        mailEntry({
+          messageType: MailMessageType.AUCTION,
+          senderGuid: undefined,
+          senderEntry: 1,
+        }),
+      ],
+      new Map(),
+    );
+    expect(result).toContain("Auction House");
+  });
+
+  test("creature mail shows NPC", () => {
+    const result = formatMailList(
+      [
+        mailEntry({
+          messageType: MailMessageType.CREATURE,
+          senderGuid: undefined,
+        }),
+      ],
+      new Map(),
+    );
+    expect(result).toContain("NPC");
+  });
+
+  test("gameobject mail shows System", () => {
+    const result = formatMailList(
+      [
+        mailEntry({
+          messageType: MailMessageType.GAMEOBJECT,
+          senderGuid: undefined,
+        }),
+      ],
+      new Map(),
+    );
+    expect(result).toContain("System");
+  });
+
+  test("calendar mail shows Calendar", () => {
+    const result = formatMailList(
+      [
+        mailEntry({
+          messageType: MailMessageType.CALENDAR,
+          senderGuid: undefined,
+        }),
+      ],
+      new Map(),
+    );
+    expect(result).toContain("Calendar");
+  });
+
+  test("long subject gets truncated", () => {
+    const result = formatMailList(
+      [mailEntry({ subject: "A very long subject that exceeds thirty chars" })],
+      new Map(),
+    );
+    expect(result).toContain("A very long subject that ex...");
+  });
+
+  test("age shows hours for sub-day", () => {
+    const result = formatMailList(
+      [mailEntry({ expirationDays: 0.5 })],
+      new Map(),
+    );
+    expect(result).toContain("12h");
+  });
+
+  test("age shows < 1m for sub-hour", () => {
+    const result = formatMailList(
+      [mailEntry({ expirationDays: 0.01 })],
+      new Map(),
+    );
+    expect(result).toContain("< 1m");
+  });
+});
+
+describe("formatMailListJson", () => {
+  test("returns JSON with mail list", () => {
+    const entries = [
+      mailEntry({ messageId: 5, money: 100, itemCount: 2 }),
+      mailEntry({
+        messageId: 6,
+        flags: MailCheckMask.READ,
+        subject: "Second",
+      }),
+    ];
+    const parsed = JSON.parse(formatMailListJson(entries));
+    expect(parsed.type).toBe("MAIL_LIST");
+    expect(parsed.count).toBe(2);
+    expect(parsed.mails[0].messageId).toBe(5);
+    expect(parsed.mails[0].read).toBe(false);
+    expect(parsed.mails[0].money).toBe(100);
+    expect(parsed.mails[0].itemCount).toBe(2);
+    expect(parsed.mails[1].read).toBe(true);
+    expect(parsed.mails[1].index).toBe(2);
+  });
+});
+
+describe("formatMailRead", () => {
+  test("basic mail with body", () => {
+    const result = formatMailRead(mailEntry(), "Thrall");
+    expect(result).toContain("From: Thrall");
+    expect(result).toContain("Subject: Hello");
+    expect(result).toContain("3d ago");
+    expect(result).toContain("Test body");
+  });
+
+  test("shows money breakdown", () => {
+    const result = formatMailRead(mailEntry({ money: 12345 }), "Thrall");
+    expect(result).toContain("Money: 1g 23s 45c");
+  });
+
+  test("shows only gold and copper when silver is 0", () => {
+    const result = formatMailRead(mailEntry({ money: 10001 }), "X");
+    expect(result).toContain("Money: 1g 1c");
+    expect(result).not.toContain("0s");
+  });
+
+  test("shows attachments count", () => {
+    const result = formatMailRead(mailEntry({ itemCount: 3 }), "X");
+    expect(result).toContain("Attachments: 3 item(s)");
+  });
+
+  test("no money line when money is 0", () => {
+    const result = formatMailRead(mailEntry({ money: 0 }), "X");
+    expect(result).not.toContain("Money:");
+  });
+
+  test("no attachments line when itemCount is 0", () => {
+    const result = formatMailRead(mailEntry({ itemCount: 0 }), "X");
+    expect(result).not.toContain("Attachments:");
+  });
+
+  test("empty body shows (no message)", () => {
+    const result = formatMailRead(mailEntry({ body: "" }), "X");
+    expect(result).toContain("(no message)");
+  });
+});
+
+describe("formatMailReadJson", () => {
+  test("returns JSON with mail details", () => {
+    const e = mailEntry({
+      messageId: 7,
+      money: 500,
+      itemCount: 1,
+      flags: MailCheckMask.READ,
+    });
+    const parsed = JSON.parse(formatMailReadJson(e, "Thrall"));
+    expect(parsed.type).toBe("MAIL_READ");
+    expect(parsed.messageId).toBe(7);
+    expect(parsed.sender).toBe("Thrall");
+    expect(parsed.subject).toBe("Hello");
+    expect(parsed.body).toBe("Test body");
+    expect(parsed.money).toBe(500);
+    expect(parsed.itemCount).toBe(1);
+    expect(parsed.read).toBe(true);
   });
 });

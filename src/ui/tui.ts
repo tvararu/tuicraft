@@ -14,6 +14,7 @@ import {
   formatGuildRoster,
   formatMailList,
   formatMailRead,
+  resolveMailSender,
 } from "ui/format";
 
 export type TuiState = {
@@ -213,11 +214,7 @@ export async function executeCommand(
         );
         break;
       }
-      let sender = "Unknown";
-      if (entry.senderGuid !== undefined) {
-        const guidLow = Number(entry.senderGuid & 0xffffffffn);
-        sender = state.handle.getNameCache().get(guidLow) ?? "Unknown";
-      }
+      const sender = resolveMailSender(entry, state.handle.getNameCache());
       state.handle.markMailAsRead(entry.messageId);
       state.write(formatMailRead(entry, sender) + "\n");
       break;

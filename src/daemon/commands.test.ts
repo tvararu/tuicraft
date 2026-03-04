@@ -26,6 +26,11 @@ import type {
 } from "wow/entity-store";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
+import {
+  MailCheckMask,
+  MailMessageType,
+  type MailEntry,
+} from "wow/protocol/mail";
 
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
@@ -445,6 +450,10 @@ describe("parseIpcCommand", () => {
       expect(parseIpcCommand("MAIL_READ")).toBeUndefined();
     });
 
+    test("MAIL_READ_JSON without number returns undefined", () => {
+      expect(parseIpcCommand("MAIL_READ_JSON")).toBeUndefined();
+    });
+
     test("MAIL_SEND parses quoted subject", () => {
       expect(parseIpcCommand('MAIL_SEND Thrall "Hello" Body text')).toEqual({
         type: "mail_send",
@@ -452,6 +461,10 @@ describe("parseIpcCommand", () => {
         subject: "Hello",
         body: "Body text",
       });
+    });
+
+    test("MAIL_SEND without quoted subject returns undefined", () => {
+      expect(parseIpcCommand("MAIL_SEND Thrall Hello")).toBeUndefined();
     });
 
     test("MAIL_DELETE 3 parses as mail_delete", () => {
@@ -3384,5 +3397,381 @@ describe("onDuelEvent", () => {
       winner: "A",
       loser: "B",
     });
+  });
+});
+
+function fakeMailEntry(overrides: Partial<MailEntry> = {}): MailEntry {
+  return {
+    messageId: 1,
+    messageType: MailMessageType.NORMAL,
+    senderGuid: 42n,
+    cod: 0,
+    stationery: 41,
+    money: 0,
+    flags: MailCheckMask.HAS_BODY,
+    expirationDays: 3,
+    subject: "Hello",
+    body: "Test body",
+    itemCount: 0,
+    ...overrides,
+  };
+}
+
+describe("dispatchCommand mail", () => {
+  test("mail_list with no mailbox returns error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_list" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mailbox open\n\n");
+  });
+
+  test("mail_list with mailbox returns formatted list", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.requestMailList as ReturnType<typeof jest.fn>).mockResolvedValue([
+      fakeMailEntry(),
+    ]);
+    (handle.getNameCache as ReturnType<typeof jest.fn>).mockReturnValue(
+      new Map([[42, "Thrall"]]),
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_list" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toContain("Mailbox (1 messages)");
+    expect(socket.written()).toContain("Thrall");
+  });
+
+  test("mail_list_json with no mailbox returns JSON error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_list_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("MAIL_LIST");
+    expect(parsed.error).toBe("No mailbox open");
+  });
+
+  test("mail_list_json with mailbox returns JSON list", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.requestMailList as ReturnType<typeof jest.fn>).mockResolvedValue([
+      fakeMailEntry({ messageId: 5 }),
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_list_json" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("MAIL_LIST");
+    expect(parsed.count).toBe(1);
+    expect(parsed.mails[0].messageId).toBe(5);
+  });
+
+  test("mail_read with no mailbox returns error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mailbox open\n\n");
+  });
+
+  test("mail_read with invalid index returns error", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mail #1\n\n");
+  });
+
+  test("mail_read with valid index returns formatted mail", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      fakeMailEntry({ senderGuid: 42n }),
+    ]);
+    (handle.getNameCache as ReturnType<typeof jest.fn>).mockReturnValue(
+      new Map([[42, "Thrall"]]),
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.markMailAsRead).toHaveBeenCalledWith(1);
+    expect(socket.written()).toContain("From: Thrall");
+    expect(socket.written()).toContain("Subject: Hello");
+  });
+
+  test("mail_read with unknown sender shows Player fallback", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      fakeMailEntry({ senderGuid: 999n }),
+    ]);
+    (handle.getNameCache as ReturnType<typeof jest.fn>).mockReturnValue(
+      new Map(),
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toContain("From: Player");
+  });
+
+  test("mail_read with auction type shows Auction House", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      fakeMailEntry({
+        senderGuid: undefined,
+        messageType: MailMessageType.AUCTION,
+      }),
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toContain("From: Auction House");
+  });
+
+  test("mail_read_json with no mailbox returns JSON error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read_json", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("MAIL_READ");
+    expect(parsed.error).toBe("No mailbox open");
+  });
+
+  test("mail_read_json with invalid index returns JSON error", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read_json", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("MAIL_READ");
+    expect(parsed.error).toBe("No mail #1");
+  });
+
+  test("mail_read_json with valid index returns JSON mail", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      fakeMailEntry({ senderGuid: 42n }),
+    ]);
+    (handle.getNameCache as ReturnType<typeof jest.fn>).mockReturnValue(
+      new Map([[42, "Thrall"]]),
+    );
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_read_json", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
+    expect(parsed.type).toBe("MAIL_READ");
+    expect(parsed.sender).toBe("Thrall");
+    expect(parsed.subject).toBe("Hello");
+    expect(handle.markMailAsRead).toHaveBeenCalledWith(1);
+  });
+
+  test("mail_send with no mailbox returns error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_send", target: "Thrall", subject: "Hi", body: "Hey" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mailbox open\n\n");
+  });
+
+  test("mail_send with mailbox calls sendMail and writes OK", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_send", target: "Thrall", subject: "Hi", body: "Hey" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.sendMail).toHaveBeenCalledWith("Thrall", "Hi", "Hey");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("mail_delete with no mailbox returns error", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_delete", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mailbox open\n\n");
+  });
+
+  test("mail_delete with invalid index returns error", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_delete", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(socket.written()).toBe("ERR No mail #1\n\n");
+  });
+
+  test("mail_delete with valid index calls deleteMail and writes OK", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      fakeMailEntry({ messageId: 77 }),
+    ]);
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "mail_delete", index: 1 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.deleteMail).toHaveBeenCalledWith(77);
+    expect(socket.written()).toBe("OK\n\n");
   });
 });

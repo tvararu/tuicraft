@@ -15,6 +15,9 @@ import {
   handleGuildEvent,
   handleGuildCommandResult,
   handleGuildInvitePacket,
+  handleShowMailbox,
+  handleMailListResult,
+  handleSendMailResult,
 } from "wow/world-handlers";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
@@ -3772,5 +3775,520 @@ describe("handleGuildInvitePacket", () => {
     expect(() =>
       handleGuildInvitePacket(conn, new PacketReader(w.finish())),
     ).not.toThrow();
+  });
+});
+
+describe("handleShowMailbox", () => {
+  test("sets mailboxGuid and fires system message", () => {
+    const w = new PacketWriter();
+    w.uint64LE(0xabn);
+    let msg: { message: string } | undefined;
+    const conn = {
+      onMessage: (m: { message: string }) => {
+        msg = m;
+      },
+    } as unknown as WorldConn;
+    handleShowMailbox(conn, new PacketReader(w.finish()));
+    expect(conn.mailboxGuid).toBe(0xabn);
+    expect(msg!.message).toBe("Mailbox opened.");
+  });
+
+  test("works when onMessage is not set", () => {
+    const w = new PacketWriter();
+    w.uint64LE(1n);
+    const conn = {} as unknown as WorldConn;
+    expect(() =>
+      handleShowMailbox(conn, new PacketReader(w.finish())),
+    ).not.toThrow();
+    expect(conn.mailboxGuid).toBe(1n);
+  });
+});
+
+describe("handleMailListResult", () => {
+  test("stores parsed entries in mailCache", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint8(1);
+    const inner = new PacketWriter();
+    inner.uint32LE(42);
+    inner.uint8(0);
+    inner.uint64LE(10n);
+    inner.uint32LE(0);
+    inner.uint32LE(0);
+    inner.uint32LE(41);
+    inner.uint32LE(0);
+    inner.uint32LE(0);
+    inner.floatLE(1.0);
+    inner.uint32LE(0);
+    inner.cString("Test");
+    inner.cString("");
+    inner.uint8(0);
+    const entryBytes = inner.finish();
+    w.uint16LE(entryBytes.byteLength);
+    w.rawBytes(entryBytes);
+    const conn = { mailCache: [] } as unknown as WorldConn;
+    handleMailListResult(conn, new PacketReader(w.finish()));
+    expect(conn.mailCache).toHaveLength(1);
+    expect(conn.mailCache[0]!.messageId).toBe(42);
+    expect(conn.mailCache[0]!.subject).toBe("Test");
+  });
+});
+
+describe("handleSendMailResult", () => {
+  test("SEND with OK fires Mail sent message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint32LE(0);
+    w.uint32LE(0);
+    let msg: { message: string } | undefined;
+    const conn = {
+      onMessage: (m: { message: string }) => {
+        msg = m;
+      },
+      mailCache: [],
+    } as unknown as WorldConn;
+    handleSendMailResult(conn, new PacketReader(w.finish()));
+    expect(msg!.message).toBe("Mail sent.");
+  });
+
+  test("SEND with error fires error message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint32LE(0);
+    w.uint32LE(4);
+    let msg: { message: string } | undefined;
+    const conn = {
+      onMessage: (m: { message: string }) => {
+        msg = m;
+      },
+      mailCache: [],
+    } as unknown as WorldConn;
+    handleSendMailResult(conn, new PacketReader(w.finish()));
+    expect(msg!.message).toBe("Player not found.");
+  });
+
+  test("DELETED with OK removes mail from cache", () => {
+    const w = new PacketWriter();
+    w.uint32LE(99);
+    w.uint32LE(4);
+    w.uint32LE(0);
+    const conn = {
+      mailCache: [
+        { messageId: 99, subject: "Gone" },
+        { messageId: 100, subject: "Stay" },
+      ],
+    } as unknown as WorldConn;
+    handleSendMailResult(conn, new PacketReader(w.finish()));
+    expect(conn.mailCache).toHaveLength(1);
+    expect(conn.mailCache[0]!.messageId).toBe(100);
+  });
+
+  test("DELETED with error fires error message", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint32LE(4);
+    w.uint32LE(6);
+    let msg: { message: string } | undefined;
+    const conn = {
+      onMessage: (m: { message: string }) => {
+        msg = m;
+      },
+      mailCache: [],
+    } as unknown as WorldConn;
+    handleSendMailResult(conn, new PacketReader(w.finish()));
+    expect(msg!.message).toBe("Internal mail error.");
+  });
+
+  test("other action is ignored", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint32LE(2);
+    w.uint32LE(0);
+    let called = false;
+    const conn = {
+      onMessage: () => {
+        called = true;
+      },
+      mailCache: [],
+    } as unknown as WorldConn;
+    handleSendMailResult(conn, new PacketReader(w.finish()));
+    expect(called).toBe(false);
+  });
+});
+
+describe("mail handle methods", () => {
+  test("getMailboxGuid returns null initially", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+      expect(handle.getMailboxGuid()).toBeNull();
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("SMSG_SHOW_MAILBOX sets mailboxGuid", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      const mbW = new PacketWriter();
+      mbW.uint64LE(0x42n);
+      ws.inject(GameOpcode.SMSG_SHOW_MAILBOX, mbW.finish());
+      const msg = await msgP;
+      expect(msg.message).toBe("Mailbox opened.");
+      expect(handle.getMailboxGuid()).toBe(0x42n);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("SMSG_MAIL_LIST_RESULT updates mailCache via dispatch", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const mlW = new PacketWriter();
+      mlW.uint32LE(1);
+      mlW.uint8(1);
+      const inner = new PacketWriter();
+      inner.uint32LE(55);
+      inner.uint8(0);
+      inner.uint64LE(10n);
+      inner.uint32LE(0);
+      inner.uint32LE(0);
+      inner.uint32LE(41);
+      inner.uint32LE(0);
+      inner.uint32LE(0);
+      inner.floatLE(1.0);
+      inner.uint32LE(0);
+      inner.cString("Dispatched");
+      inner.cString("");
+      inner.uint8(0);
+      const entryBytes = inner.finish();
+      mlW.uint16LE(entryBytes.byteLength);
+      mlW.rawBytes(entryBytes);
+      ws.inject(GameOpcode.SMSG_MAIL_LIST_RESULT, mlW.finish());
+
+      await Bun.sleep(1);
+      const cache = handle.getMailCache();
+      expect(cache).toHaveLength(1);
+      expect(cache[0]!.messageId).toBe(55);
+      expect(cache[0]!.subject).toBe("Dispatched");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("requestMailList sends CMSG_GET_MAIL_LIST and returns entries", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const mbW = new PacketWriter();
+      mbW.uint64LE(0x42n);
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      ws.inject(GameOpcode.SMSG_SHOW_MAILBOX, mbW.finish());
+      await msgP;
+
+      const listP = handle.requestMailList();
+
+      await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_GET_MAIL_LIST,
+      );
+
+      const mlW = new PacketWriter();
+      mlW.uint32LE(1);
+      mlW.uint8(1);
+      const inner = new PacketWriter();
+      inner.uint32LE(7);
+      inner.uint8(0);
+      inner.uint64LE(10n);
+      inner.uint32LE(0);
+      inner.uint32LE(0);
+      inner.uint32LE(41);
+      inner.uint32LE(0);
+      inner.uint32LE(0);
+      inner.floatLE(1.0);
+      inner.uint32LE(0);
+      inner.cString("Hello");
+      inner.cString("Body");
+      inner.uint8(0);
+      const entryBytes = inner.finish();
+      mlW.uint16LE(entryBytes.byteLength);
+      mlW.rawBytes(entryBytes);
+      ws.inject(GameOpcode.SMSG_MAIL_LIST_RESULT, mlW.finish());
+
+      const entries = await listP;
+      expect(entries).toHaveLength(1);
+      expect(entries[0]!.messageId).toBe(7);
+      expect(entries[0]!.subject).toBe("Hello");
+
+      expect(handle.getMailCache()).toHaveLength(1);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("requestMailList returns empty when no mailbox open", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const entries = await handle.requestMailList();
+      expect(entries).toHaveLength(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendMail sends CMSG_SEND_MAIL packet", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const mbW = new PacketWriter();
+      mbW.uint64LE(0x42n);
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      ws.inject(GameOpcode.SMSG_SHOW_MAILBOX, mbW.finish());
+      await msgP;
+
+      handle.sendMail("Thrall", "Hello", "Test body");
+
+      const captured = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_SEND_MAIL,
+      );
+      const r = new PacketReader(captured.body);
+      expect(r.uint64LE()).toBe(0x42n);
+      expect(r.cString()).toBe("Thrall");
+      expect(r.cString()).toBe("Hello");
+      expect(r.cString()).toBe("Test body");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("sendMail does nothing without mailbox", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      handle.sendMail("Thrall", "Hello", "body");
+      await Bun.sleep(1);
+      const sendMails = ws.captured.filter(
+        (p) => p.opcode === GameOpcode.CMSG_SEND_MAIL,
+      );
+      expect(sendMails).toHaveLength(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("deleteMail sends CMSG_MAIL_DELETE packet", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const mbW = new PacketWriter();
+      mbW.uint64LE(0x42n);
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      ws.inject(GameOpcode.SMSG_SHOW_MAILBOX, mbW.finish());
+      await msgP;
+
+      handle.deleteMail(77);
+
+      const captured = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_MAIL_DELETE,
+      );
+      const r = new PacketReader(captured.body);
+      expect(r.uint64LE()).toBe(0x42n);
+      expect(r.uint32LE()).toBe(77);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("deleteMail does nothing without mailbox", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      handle.deleteMail(1);
+      await Bun.sleep(1);
+      const deletes = ws.captured.filter(
+        (p) => p.opcode === GameOpcode.CMSG_MAIL_DELETE,
+      );
+      expect(deletes).toHaveLength(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("markMailAsRead sends CMSG_MAIL_MARK_AS_READ packet", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const mbW = new PacketWriter();
+      mbW.uint64LE(0x42n);
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      ws.inject(GameOpcode.SMSG_SHOW_MAILBOX, mbW.finish());
+      await msgP;
+
+      handle.markMailAsRead(55);
+
+      const captured = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_MAIL_MARK_AS_READ,
+      );
+      const r = new PacketReader(captured.body);
+      expect(r.uint64LE()).toBe(0x42n);
+      expect(r.uint32LE()).toBe(55);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("markMailAsRead does nothing without mailbox", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      handle.markMailAsRead(1);
+      await Bun.sleep(1);
+      const marks = ws.captured.filter(
+        (p) => p.opcode === GameOpcode.CMSG_MAIL_MARK_AS_READ,
+      );
+      expect(marks).toHaveLength(0);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("onDuelEvent registers callback", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      let called = false;
+      handle.onDuelEvent(() => {
+        called = true;
+      });
+      expect(called).toBe(false);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
+  test("getNameCache returns the name cache", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const cache = handle.getNameCache();
+      expect(cache).toBeInstanceOf(Map);
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
   });
 });

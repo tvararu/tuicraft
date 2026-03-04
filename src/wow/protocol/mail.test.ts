@@ -371,6 +371,12 @@ describe("formatMailResultError", () => {
     );
   });
 
+  test("returns message for TOO_MANY_ATTACHMENTS", () => {
+    expect(formatMailResultError(MailResult.ERR_TOO_MANY_ATTACHMENTS)).toBe(
+      "Too many attachments.",
+    );
+  });
+
   test("returns generic message for unknown code", () => {
     expect(formatMailResultError(99)).toBe("Mail error (code 99).");
   });

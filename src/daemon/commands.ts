@@ -1,5 +1,5 @@
 import { RingBuffer } from "lib/ring-buffer";
-import { parseCommand } from "ui/commands";
+import { parseCommand, parseMailSend } from "ui/commands";
 import {
   formatMessage,
   formatMessageObj,
@@ -22,6 +22,7 @@ import {
   formatMailListJson,
   formatMailRead,
   formatMailReadJson,
+  resolveMailSender,
 } from "ui/format";
 import type { FriendEvent } from "wow/friend-store";
 import type { IgnoreEvent } from "wow/ignore-store";
@@ -327,8 +328,8 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         : undefined;
     }
     case "MAIL_SEND": {
-      const parsed = parseCommand(`/mail send ${rest}`);
-      if (parsed.type === "mail-send") {
+      const parsed = parseMailSend(rest);
+      if (parsed) {
         return {
           type: "mail_send",
           target: parsed.target,
@@ -654,11 +655,7 @@ export async function dispatchCommand(
         writeLines(socket, [`ERR No mail #${cmd.index}`]);
         return false;
       }
-      let sender = "Unknown";
-      if (entry.senderGuid !== undefined) {
-        const guidLow = Number(entry.senderGuid & 0xffffffffn);
-        sender = handle.getNameCache().get(guidLow) ?? "Unknown";
-      }
+      const sender = resolveMailSender(entry, handle.getNameCache());
       handle.markMailAsRead(entry.messageId);
       writeLines(socket, formatMailRead(entry, sender).split("\n"));
       return false;
@@ -678,11 +675,7 @@ export async function dispatchCommand(
         ]);
         return false;
       }
-      let sender = "Unknown";
-      if (entry.senderGuid !== undefined) {
-        const guidLow = Number(entry.senderGuid & 0xffffffffn);
-        sender = handle.getNameCache().get(guidLow) ?? "Unknown";
-      }
+      const sender = resolveMailSender(entry, handle.getNameCache());
       handle.markMailAsRead(entry.messageId);
       writeLines(socket, [formatMailReadJson(entry, sender)]);
       return false;

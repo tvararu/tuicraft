@@ -519,12 +519,25 @@ function formatMailAge(days: number): string {
   return `${d}d`;
 }
 
-function senderLabel(entry: MailEntry): string {
+function nonPlayerSenderLabel(entry: MailEntry): string | undefined {
   if (entry.messageType === MailMessageType.AUCTION) return "Auction House";
   if (entry.messageType === MailMessageType.CREATURE) return "NPC";
   if (entry.messageType === MailMessageType.GAMEOBJECT) return "System";
   if (entry.messageType === MailMessageType.CALENDAR) return "Calendar";
-  return "";
+  return undefined;
+}
+
+export function resolveMailSender(
+  entry: MailEntry,
+  nameCache: Map<number, string>,
+): string {
+  const label = nonPlayerSenderLabel(entry);
+  if (label) return label;
+  if (entry.senderGuid !== undefined) {
+    const guidLow = Number(entry.senderGuid & 0xffffffffn);
+    return nameCache.get(guidLow) ?? "Player";
+  }
+  return "Unknown";
 }
 
 export function formatMailList(
@@ -538,11 +551,7 @@ export function formatMailList(
     const unread = !(e.flags & MailCheckMask.READ);
     const marker = unread ? "*" : " ";
     const idx = `#${i + 1}`;
-    let sender = senderLabel(e);
-    if (!sender && e.senderGuid !== undefined) {
-      const guidLow = Number(e.senderGuid & 0xffffffffn);
-      sender = nameCache.get(guidLow) ?? `Player`;
-    }
+    const sender = resolveMailSender(e, nameCache);
     const subj =
       e.subject.length > 30 ? e.subject.slice(0, 27) + "..." : e.subject;
     const age = formatMailAge(e.expirationDays);
