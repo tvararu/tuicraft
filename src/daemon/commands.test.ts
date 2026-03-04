@@ -653,6 +653,45 @@ describe("parseIpcCommand", () => {
   test("/gdecline via slash parses guild decline", () => {
     expect(parseIpcCommand("/gdecline")).toEqual({ type: "guild_decline" });
   });
+
+  test("/gkick via slash parses guild kick", () => {
+    expect(parseIpcCommand("/gkick Garrosh")).toEqual({
+      type: "guild_kick",
+      target: "Garrosh",
+    });
+  });
+
+  test("/gleave via slash parses guild leave", () => {
+    expect(parseIpcCommand("/gleave")).toEqual({ type: "guild_leave" });
+  });
+
+  test("/gpromote via slash parses guild promote", () => {
+    expect(parseIpcCommand("/gpromote Jaina")).toEqual({
+      type: "guild_promote",
+      target: "Jaina",
+    });
+  });
+
+  test("/gdemote via slash parses guild demote", () => {
+    expect(parseIpcCommand("/gdemote Arthas")).toEqual({
+      type: "guild_demote",
+      target: "Arthas",
+    });
+  });
+
+  test("/gleader via slash parses guild leader", () => {
+    expect(parseIpcCommand("/gleader Sylvanas")).toEqual({
+      type: "guild_leader",
+      target: "Sylvanas",
+    });
+  });
+
+  test("/gmotd via slash parses guild motd", () => {
+    expect(parseIpcCommand("/gmotd Raid tonight")).toEqual({
+      type: "guild_motd",
+      message: "Raid tonight",
+    });
+  });
 });
 
 describe("dispatchCommand", () => {
@@ -1741,6 +1780,168 @@ describe("dispatchCommand", () => {
     expect(parsed.count).toBe(1);
   });
 
+  test("guild_invite calls handle.guildInvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_invite", target: "Thrall" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildInvite).toHaveBeenCalledWith("Thrall");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_kick calls handle.guildRemove and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_kick", target: "Garrosh" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildRemove).toHaveBeenCalledWith("Garrosh");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_leave calls handle.guildLeave and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_leave" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildLeave).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_promote calls handle.guildPromote and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_promote", target: "Jaina" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildPromote).toHaveBeenCalledWith("Jaina");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_demote calls handle.guildDemote and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_demote", target: "Arthas" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildDemote).toHaveBeenCalledWith("Arthas");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_leader calls handle.guildLeader and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_leader", target: "Sylvanas" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildLeader).toHaveBeenCalledWith("Sylvanas");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_motd calls handle.guildMotd and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_motd", message: "Raid tonight" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.guildMotd).toHaveBeenCalledWith("Raid tonight");
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_accept calls handle.acceptGuildInvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_accept" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.acceptGuildInvite).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("guild_decline calls handle.declineGuildInvite and writes OK", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+
+    await dispatchCommand(
+      { type: "guild_decline" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+
+    expect(handle.declineGuildInvite).toHaveBeenCalled();
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
   test("unimplemented writes UNIMPLEMENTED response", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
@@ -2493,6 +2694,41 @@ describe("onGuildEvent", () => {
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Varian has gone offline");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_OFF");
+  });
+
+  test("command_result formats error text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      { type: "command_result", command: 1, name: "Thrall", result: 0x03 },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe("[guild] Thrall is already in a guild");
+    const json = JSON.parse(d[0]!.json);
+    expect(json.type).toBe("GUILD_COMMAND_RESULT");
+    expect(json.command).toBe(1);
+    expect(json.name).toBe("Thrall");
+    expect(json.result).toBe(0x03);
+  });
+
+  test("guild_invite formats text and JSON", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
+    onGuildEvent(
+      { type: "guild_invite", inviter: "Thrall", guildName: "Horde Heroes" },
+      events,
+      log,
+    );
+    const d = events.drain();
+    expect(d[0]!.text).toBe(
+      "[guild] Thrall has invited you to join Horde Heroes. Use /gaccept or /gdecline",
+    );
+    const json = JSON.parse(d[0]!.json);
+    expect(json.type).toBe("GUILD_INVITE_RECEIVED");
+    expect(json.inviter).toBe("Thrall");
+    expect(json.guildName).toBe("Horde Heroes");
   });
 });
 

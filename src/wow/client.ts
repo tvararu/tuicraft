@@ -887,7 +887,7 @@ export function worldSession(
           );
         },
         guildLeave() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_LEAVE, new Uint8Array(0));
+          sendPacket(conn, GameOpcode.CMSG_GUILD_LEAVE);
         },
         guildPromote(name) {
           sendPacket(
@@ -914,10 +914,10 @@ export function worldSession(
           sendPacket(conn, GameOpcode.CMSG_GUILD_MOTD, buildGuildMotd(motd));
         },
         acceptGuildInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_ACCEPT, new Uint8Array(0));
+          sendPacket(conn, GameOpcode.CMSG_GUILD_ACCEPT);
         },
         declineGuildInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE, new Uint8Array(0));
+          sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE);
         },
         onDuelEvent(cb) {
           conn.onDuelEvent = cb;

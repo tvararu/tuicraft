@@ -11,7 +11,11 @@ import {
   type GuildEvent,
   type WorldConn,
 } from "wow/client";
-import { handleGuildEvent } from "wow/world-handlers";
+import {
+  handleGuildEvent,
+  handleGuildCommandResult,
+  handleGuildInvitePacket,
+} from "wow/world-handlers";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
@@ -3494,6 +3498,122 @@ describe("world handler tests", () => {
         ws.stop();
       }
     });
+
+    test("guild management methods send correct packets", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        handle.guildInvite("Thrall");
+        handle.guildRemove("Garrosh");
+        handle.guildLeave();
+        handle.guildPromote("Jaina");
+        handle.guildDemote("Arthas");
+        handle.guildLeader("Sylvanas");
+        handle.guildMotd("Raid tonight");
+        handle.acceptGuildInvite();
+        handle.declineGuildInvite();
+        await Bun.sleep(1);
+
+        const opcodes = ws.captured.map((p) => p.opcode);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_INVITE);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_REMOVE);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_LEAVE);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_PROMOTE);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_DEMOTE);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_LEADER);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_MOTD);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_ACCEPT);
+        expect(opcodes).toContain(GameOpcode.CMSG_GUILD_DECLINE);
+
+        const invite = ws.captured.find(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_INVITE,
+        )!;
+        expect(new PacketReader(invite.body).cString()).toBe("Thrall");
+
+        const motd = ws.captured.find(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_MOTD,
+        )!;
+        expect(new PacketReader(motd.body).cString()).toBe("Raid tonight");
+
+        const leave = ws.captured.find(
+          (p) => p.opcode === GameOpcode.CMSG_GUILD_LEAVE,
+        )!;
+        expect(leave.body.length).toBe(0);
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_GUILD_COMMAND_RESULT fires guild event", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+
+        const w = new PacketWriter();
+        w.uint32LE(1);
+        w.cString("Thrall");
+        w.uint32LE(0x03);
+        ws.inject(GameOpcode.SMSG_GUILD_COMMAND_RESULT, w.finish());
+
+        const event = await eventReady;
+        expect(event.type).toBe("command_result");
+        if (event.type === "command_result") {
+          expect(event.command).toBe(1);
+          expect(event.name).toBe("Thrall");
+          expect(event.result).toBe(0x03);
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
+
+    test("SMSG_GUILD_INVITE fires guild invite event", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+
+        const eventReady = new Promise<GuildEvent>((resolve) => {
+          handle.onGuildEvent(resolve);
+        });
+
+        const w = new PacketWriter();
+        w.cString("Thrall");
+        w.cString("Horde Heroes");
+        ws.inject(GameOpcode.SMSG_GUILD_INVITE, w.finish());
+
+        const event = await eventReady;
+        expect(event.type).toBe("guild_invite");
+        if (event.type === "guild_invite") {
+          expect(event.inviter).toBe("Thrall");
+          expect(event.guildName).toBe("Horde Heroes");
+        }
+
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
   });
 });
 
@@ -3574,5 +3694,83 @@ describe("handleGuildEvent unit", () => {
   test("signed_off", () => {
     const e = fireEvent(13, ["Varian"], 55n);
     expect(e).toEqual({ type: "signed_off", name: "Varian" });
+  });
+});
+
+describe("handleGuildCommandResult", () => {
+  test("fires command_result event for error", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.cString("Thrall");
+    w.uint32LE(0x03);
+    let result!: GuildEvent;
+    const conn = {
+      onGuildEvent: (e: GuildEvent) => {
+        result = e;
+      },
+    } as unknown as WorldConn;
+    handleGuildCommandResult(conn, new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "command_result",
+      command: 1,
+      name: "Thrall",
+      result: 0x03,
+    });
+  });
+
+  test("suppresses success result (code 0)", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.cString("Thrall");
+    w.uint32LE(0x00);
+    let called = false;
+    const conn = {
+      onGuildEvent: () => {
+        called = true;
+      },
+    } as unknown as WorldConn;
+    handleGuildCommandResult(conn, new PacketReader(w.finish()));
+    expect(called).toBe(false);
+  });
+
+  test("works when onGuildEvent is not set", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.cString("X");
+    w.uint32LE(0x0b);
+    const conn = {} as unknown as WorldConn;
+    expect(() =>
+      handleGuildCommandResult(conn, new PacketReader(w.finish())),
+    ).not.toThrow();
+  });
+});
+
+describe("handleGuildInvitePacket", () => {
+  test("fires guild_invite event", () => {
+    const w = new PacketWriter();
+    w.cString("Thrall");
+    w.cString("Horde Heroes");
+    let result!: GuildEvent;
+    const conn = {
+      onGuildEvent: (e: GuildEvent) => {
+        result = e;
+      },
+    } as unknown as WorldConn;
+    handleGuildInvitePacket(conn, new PacketReader(w.finish()));
+    expect(result).toEqual({
+      type: "guild_invite",
+      inviter: "Thrall",
+      guildName: "Horde Heroes",
+    });
+  });
+
+  test("works when onGuildEvent is not set", () => {
+    const w = new PacketWriter();
+    w.cString("A");
+    w.cString("B");
+    const conn = {} as unknown as WorldConn;
+    expect(() =>
+      handleGuildInvitePacket(conn, new PacketReader(w.finish())),
+    ).not.toThrow();
   });
 });

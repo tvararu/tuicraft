@@ -53,7 +53,7 @@ import {
   GuildEventCode,
   parseGuildCommandResult,
   parseGuildInvitePacket,
-  formatGuildCommandError,
+  GuildCommandResult,
 } from "wow/protocol/guild";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
@@ -785,12 +785,7 @@ export function handleGuildCommandResult(
   r: PacketReader,
 ): void {
   const packet = parseGuildCommandResult(r);
-  const msg = formatGuildCommandError(
-    packet.command,
-    packet.name,
-    packet.result,
-  );
-  if (msg) {
+  if (packet.result !== GuildCommandResult.PLAYER_NO_MORE_IN_GUILD) {
     conn.onGuildEvent?.({
       type: "command_result",
       command: packet.command,

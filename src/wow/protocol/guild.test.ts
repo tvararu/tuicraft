@@ -17,6 +17,7 @@ import {
   GuildCommandResult,
   parseGuildCommandResult,
   parseGuildInvitePacket,
+  formatGuildCommandError,
 } from "wow/protocol/guild";
 
 describe("GuildMemberStatus", () => {
@@ -608,5 +609,121 @@ describe("parseGuildInvitePacket", () => {
     const r = new PacketReader(w.finish());
     parseGuildInvitePacket(r);
     expect(r.remaining).toBe(0);
+  });
+});
+
+describe("formatGuildCommandError", () => {
+  test("returns undefined for success (PLAYER_NO_MORE_IN_GUILD)", () => {
+    expect(
+      formatGuildCommandError(GuildCommand.INVITE, "Thrall", 0x00),
+    ).toBeUndefined();
+  });
+
+  test("returns internal error", () => {
+    expect(formatGuildCommandError(0, "", 0x01)).toBe(
+      "[guild] Internal guild error",
+    );
+  });
+
+  test("returns already in guild (no name)", () => {
+    expect(formatGuildCommandError(0, "", 0x02)).toBe(
+      "[guild] You are already in a guild",
+    );
+  });
+
+  test("returns already in guild with name", () => {
+    expect(formatGuildCommandError(GuildCommand.INVITE, "Thrall", 0x03)).toBe(
+      "[guild] Thrall is already in a guild",
+    );
+  });
+
+  test("returns already invited", () => {
+    expect(formatGuildCommandError(0, "", 0x04)).toBe(
+      "[guild] You have already been invited to a guild",
+    );
+  });
+
+  test("returns already invited with name", () => {
+    expect(formatGuildCommandError(0, "Jaina", 0x05)).toBe(
+      "[guild] Jaina has already been invited to a guild",
+    );
+  });
+
+  test("returns invalid guild name", () => {
+    expect(formatGuildCommandError(0, "", 0x06)).toBe(
+      "[guild] Invalid guild name",
+    );
+  });
+
+  test("returns guild name exists", () => {
+    expect(formatGuildCommandError(0, "Horde", 0x07)).toBe(
+      '[guild] Guild name "Horde" already exists',
+    );
+  });
+
+  test("returns permission denied", () => {
+    expect(formatGuildCommandError(0, "", 0x08)).toBe(
+      "[guild] You don't have permission to do that",
+    );
+  });
+
+  test("returns not in guild (self)", () => {
+    expect(formatGuildCommandError(0, "", 0x09)).toBe(
+      "[guild] You are not in a guild",
+    );
+  });
+
+  test("returns player not in guild with name", () => {
+    expect(formatGuildCommandError(0, "Garrosh", 0x0a)).toBe(
+      "[guild] Garrosh is not in your guild",
+    );
+  });
+
+  test("returns player not found", () => {
+    expect(formatGuildCommandError(0, "Nobody", 0x0b)).toBe(
+      '[guild] Player "Nobody" not found',
+    );
+  });
+
+  test("returns not allied", () => {
+    expect(formatGuildCommandError(0, "Alliance", 0x0c)).toBe(
+      "[guild] Alliance is not the same alliance as you",
+    );
+  });
+
+  test("returns rank too high", () => {
+    expect(formatGuildCommandError(0, "Officer", 0x0d)).toBe(
+      "[guild] Officer has a rank too high for that",
+    );
+  });
+
+  test("returns rank too low", () => {
+    expect(formatGuildCommandError(0, "Recruit", 0x0e)).toBe(
+      "[guild] Recruit has a rank too low for that",
+    );
+  });
+
+  test("returns ranks locked", () => {
+    expect(formatGuildCommandError(0, "", 0x11)).toBe(
+      "[guild] Guild ranks are locked",
+    );
+  });
+
+  test("returns rank in use", () => {
+    expect(formatGuildCommandError(0, "", 0x12)).toBe(
+      "[guild] That guild rank is in use",
+    );
+  });
+
+  test("returns ignoring you", () => {
+    expect(formatGuildCommandError(0, "Snob", 0x13)).toBe(
+      "[guild] Snob is ignoring you",
+    );
+  });
+
+  test("returns generic error for unknown result code", () => {
+    expect(formatGuildCommandError(0, "", 0xff)).toBe(
+      "[guild] Guild command error (255)",
+    );
   });
 });
