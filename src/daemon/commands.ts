@@ -22,6 +22,7 @@ import {
 import type { FriendEvent } from "wow/friend-store";
 import type { IgnoreEvent } from "wow/ignore-store";
 import type { GuildEvent } from "wow/guild-store";
+import { formatGuildCommandError } from "wow/protocol/guild";
 import { SessionLog, type LogEntry } from "lib/session-log";
 import type {
   WorldHandle,
@@ -771,10 +772,16 @@ function formatGuildEvent(event: GuildEvent): string {
       return `[guild] ${event.name} has come online`;
     case "signed_off":
       return `[guild] ${event.name} has gone offline`;
-    case "command_result":
-      return `[guild] Command error for ${event.name} (${event.result})`;
+    case "command_result": {
+      const msg = formatGuildCommandError(
+        event.command,
+        event.name,
+        event.result,
+      );
+      return msg ?? "[guild] Command succeeded";
+    }
     case "guild_invite":
-      return `[guild] ${event.inviter} has invited you to join ${event.guildName}`;
+      return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
   }
 }
 
@@ -835,7 +842,7 @@ function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
       };
     case "guild_invite":
       return {
-        type: "GUILD_INVITE",
+        type: "GUILD_INVITE_RECEIVED",
         inviter: event.inviter,
         guildName: event.guildName,
       };
