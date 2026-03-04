@@ -1,7 +1,11 @@
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { FriendStatus, FriendResult } from "wow/protocol/social";
-import { MailCheckMask, MailMessageType, type MailEntry } from "wow/protocol/mail";
+import {
+  MailCheckMask,
+  MailMessageType,
+  type MailEntry,
+} from "wow/protocol/mail";
 import { stripColorCodes } from "lib/strip-colors";
 import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
@@ -542,7 +546,9 @@ export function formatMailList(
     const subj =
       e.subject.length > 30 ? e.subject.slice(0, 27) + "..." : e.subject;
     const age = formatMailAge(e.expirationDays);
-    lines.push(`${marker}${idx.padEnd(4)} ${sender.padEnd(15)} ${subj.padEnd(32)} ${age}`);
+    lines.push(
+      `${marker}${idx.padEnd(4)} ${sender.padEnd(15)} ${subj.padEnd(32)} ${age}`,
+    );
   }
   return lines.join("\n");
 }
@@ -566,7 +572,11 @@ export function formatMailListJson(entries: MailEntry[]): string {
 
 export function formatMailRead(entry: MailEntry, sender: string): string {
   const age = formatMailAge(entry.expirationDays);
-  const lines = [`From: ${sender}`, `Subject: ${entry.subject}`, `Date: ${age} ago`];
+  const lines = [
+    `From: ${sender}`,
+    `Subject: ${entry.subject}`,
+    `Date: ${age} ago`,
+  ];
   if (entry.money > 0) {
     const gold = Math.floor(entry.money / 10000);
     const silver = Math.floor((entry.money % 10000) / 100);

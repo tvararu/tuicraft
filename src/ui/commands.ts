@@ -47,7 +47,9 @@ export type Command =
 
 function parseMailSend(
   input: string,
-): { type: "mail-send"; target: string; subject: string; body: string } | undefined {
+):
+  | { type: "mail-send"; target: string; subject: string; body: string }
+  | undefined {
   const trimmed = input.trim();
   if (!trimmed) return undefined;
   const spaceIdx = trimmed.indexOf(" ");

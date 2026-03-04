@@ -374,7 +374,10 @@ describe("parseCommand", () => {
     });
 
     test("/mail read 1 returns mail-read with index", () => {
-      expect(parseCommand("/mail read 1")).toEqual({ type: "mail-read", index: 1 });
+      expect(parseCommand("/mail read 1")).toEqual({
+        type: "mail-read",
+        index: 1,
+      });
     });
 
     test("/mail read 0 falls back to say", () => {
@@ -386,7 +389,9 @@ describe("parseCommand", () => {
     });
 
     test('/mail send Player "Subject" body text', () => {
-      expect(parseCommand('/mail send Thrall "Guild meeting" Hey there')).toEqual({
+      expect(
+        parseCommand('/mail send Thrall "Guild meeting" Hey there'),
+      ).toEqual({
         type: "mail-send",
         target: "Thrall",
         subject: "Guild meeting",
@@ -408,7 +413,10 @@ describe("parseCommand", () => {
     });
 
     test("/mail delete 3 returns mail-delete", () => {
-      expect(parseCommand("/mail delete 3")).toEqual({ type: "mail-delete", index: 3 });
+      expect(parseCommand("/mail delete 3")).toEqual({
+        type: "mail-delete",
+        index: 3,
+      });
     });
 
     test("/mail unknown returns mail-list", () => {

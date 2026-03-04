@@ -256,8 +256,18 @@ describe("parseMailListResult", () => {
     const w = new PacketWriter();
     w.uint32LE(2);
     w.uint8(2);
-    writeMailEntry(w, { messageId: 10, senderGuid: 1n, subject: "Mail 10", body: "" });
-    writeMailEntry(w, { messageId: 20, senderGuid: 2n, subject: "Mail 20", body: "" });
+    writeMailEntry(w, {
+      messageId: 10,
+      senderGuid: 1n,
+      subject: "Mail 10",
+      body: "",
+    });
+    writeMailEntry(w, {
+      messageId: 20,
+      senderGuid: 2n,
+      subject: "Mail 20",
+      body: "",
+    });
 
     const result = parseMailListResult(new PacketReader(w.finish()));
     expect(result.entries).toHaveLength(2);

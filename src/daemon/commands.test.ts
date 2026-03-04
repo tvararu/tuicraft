@@ -428,11 +428,17 @@ describe("parseIpcCommand", () => {
     });
 
     test("MAIL_READ 1 parses as mail_read", () => {
-      expect(parseIpcCommand("MAIL_READ 1")).toEqual({ type: "mail_read", index: 1 });
+      expect(parseIpcCommand("MAIL_READ 1")).toEqual({
+        type: "mail_read",
+        index: 1,
+      });
     });
 
     test("MAIL_READ_JSON 2 parses as mail_read_json", () => {
-      expect(parseIpcCommand("MAIL_READ_JSON 2")).toEqual({ type: "mail_read_json", index: 2 });
+      expect(parseIpcCommand("MAIL_READ_JSON 2")).toEqual({
+        type: "mail_read_json",
+        index: 2,
+      });
     });
 
     test("MAIL_READ without number returns undefined", () => {
@@ -449,7 +455,10 @@ describe("parseIpcCommand", () => {
     });
 
     test("MAIL_DELETE 3 parses as mail_delete", () => {
-      expect(parseIpcCommand("MAIL_DELETE 3")).toEqual({ type: "mail_delete", index: 3 });
+      expect(parseIpcCommand("MAIL_DELETE 3")).toEqual({
+        type: "mail_delete",
+        index: 3,
+      });
     });
 
     test("/mail routes to mail_list", () => {
@@ -457,7 +466,10 @@ describe("parseIpcCommand", () => {
     });
 
     test("/mail read 1 routes to mail_read", () => {
-      expect(parseIpcCommand("/mail read 1")).toEqual({ type: "mail_read", index: 1 });
+      expect(parseIpcCommand("/mail read 1")).toEqual({
+        type: "mail_read",
+        index: 1,
+      });
     });
 
     test('/mail send Thrall "Hi" body routes to mail_send', () => {
@@ -470,7 +482,10 @@ describe("parseIpcCommand", () => {
     });
 
     test("/mail delete 2 routes to mail_delete", () => {
-      expect(parseIpcCommand("/mail delete 2")).toEqual({ type: "mail_delete", index: 2 });
+      expect(parseIpcCommand("/mail delete 2")).toEqual({
+        type: "mail_delete",
+        index: 2,
+      });
     });
   });
 

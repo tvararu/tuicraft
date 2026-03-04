@@ -177,7 +177,12 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "mail-read":
         return { type: "mail_read", index: parsed.index };
       case "mail-send":
-        return { type: "mail_send", target: parsed.target, subject: parsed.subject, body: parsed.body };
+        return {
+          type: "mail_send",
+          target: parsed.target,
+          subject: parsed.subject,
+          body: parsed.body,
+        };
       case "mail-delete":
         return { type: "mail_delete", index: parsed.index };
       case "unimplemented":
@@ -311,22 +316,33 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "mail_list_json" };
     case "MAIL_READ": {
       const n = parseInt(rest, 10);
-      return Number.isFinite(n) && n > 0 ? { type: "mail_read", index: n } : undefined;
+      return Number.isFinite(n) && n > 0
+        ? { type: "mail_read", index: n }
+        : undefined;
     }
     case "MAIL_READ_JSON": {
       const n = parseInt(rest, 10);
-      return Number.isFinite(n) && n > 0 ? { type: "mail_read_json", index: n } : undefined;
+      return Number.isFinite(n) && n > 0
+        ? { type: "mail_read_json", index: n }
+        : undefined;
     }
     case "MAIL_SEND": {
       const parsed = parseCommand(`/mail send ${rest}`);
       if (parsed.type === "mail-send") {
-        return { type: "mail_send", target: parsed.target, subject: parsed.subject, body: parsed.body };
+        return {
+          type: "mail_send",
+          target: parsed.target,
+          subject: parsed.subject,
+          body: parsed.body,
+        };
       }
       return undefined;
     }
     case "MAIL_DELETE": {
       const n = parseInt(rest, 10);
-      return Number.isFinite(n) && n > 0 ? { type: "mail_delete", index: n } : undefined;
+      return Number.isFinite(n) && n > 0
+        ? { type: "mail_delete", index: n }
+        : undefined;
     }
     case "ROLL": {
       const parts = rest.split(" ").filter(Boolean);
@@ -610,12 +626,17 @@ export async function dispatchCommand(
         return false;
       }
       const entries = await handle.requestMailList();
-      writeLines(socket, formatMailList(entries, handle.getNameCache()).split("\n"));
+      writeLines(
+        socket,
+        formatMailList(entries, handle.getNameCache()).split("\n"),
+      );
       return false;
     }
     case "mail_list_json": {
       if (!handle.getMailboxGuid()) {
-        writeLines(socket, [JSON.stringify({ type: "MAIL_LIST", error: "No mailbox open" })]);
+        writeLines(socket, [
+          JSON.stringify({ type: "MAIL_LIST", error: "No mailbox open" }),
+        ]);
         return false;
       }
       const entries = await handle.requestMailList();
@@ -644,13 +665,17 @@ export async function dispatchCommand(
     }
     case "mail_read_json": {
       if (!handle.getMailboxGuid()) {
-        writeLines(socket, [JSON.stringify({ type: "MAIL_READ", error: "No mailbox open" })]);
+        writeLines(socket, [
+          JSON.stringify({ type: "MAIL_READ", error: "No mailbox open" }),
+        ]);
         return false;
       }
       const cache = handle.getMailCache();
       const entry = cache[cmd.index - 1];
       if (!entry) {
-        writeLines(socket, [JSON.stringify({ type: "MAIL_READ", error: `No mail #${cmd.index}` })]);
+        writeLines(socket, [
+          JSON.stringify({ type: "MAIL_READ", error: `No mail #${cmd.index}` }),
+        ]);
         return false;
       }
       let sender = "Unknown";

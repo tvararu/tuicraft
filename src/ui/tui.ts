@@ -188,7 +188,9 @@ export async function executeCommand(
       break;
     case "mail-list": {
       if (!state.handle.getMailboxGuid()) {
-        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        state.write(
+          formatError("No mailbox open. Interact with a mailbox first.") + "\n",
+        );
         break;
       }
       const entries = await state.handle.requestMailList();
@@ -197,13 +199,18 @@ export async function executeCommand(
     }
     case "mail-read": {
       if (!state.handle.getMailboxGuid()) {
-        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        state.write(
+          formatError("No mailbox open. Interact with a mailbox first.") + "\n",
+        );
         break;
       }
       const cache = state.handle.getMailCache();
       const entry = cache[cmd.index - 1];
       if (!entry) {
-        state.write(formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) + "\n");
+        state.write(
+          formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) +
+            "\n",
+        );
         break;
       }
       let sender = "Unknown";
@@ -217,7 +224,9 @@ export async function executeCommand(
     }
     case "mail-send": {
       if (!state.handle.getMailboxGuid()) {
-        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        state.write(
+          formatError("No mailbox open. Interact with a mailbox first.") + "\n",
+        );
         break;
       }
       state.handle.sendMail(cmd.target, cmd.subject, cmd.body);
@@ -225,13 +234,18 @@ export async function executeCommand(
     }
     case "mail-delete": {
       if (!state.handle.getMailboxGuid()) {
-        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        state.write(
+          formatError("No mailbox open. Interact with a mailbox first.") + "\n",
+        );
         break;
       }
       const delCache = state.handle.getMailCache();
       const delEntry = delCache[cmd.index - 1];
       if (!delEntry) {
-        state.write(formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) + "\n");
+        state.write(
+          formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) +
+            "\n",
+        );
         break;
       }
       state.handle.deleteMail(delEntry.messageId);
