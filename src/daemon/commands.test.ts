@@ -430,10 +430,10 @@ describe("parseIpcCommand", () => {
       });
     }
 
-    test("/mail slash path returns unimplemented", () => {
+    test("/mail slash path routes to say (pending mail IPC)", () => {
       expect(parseIpcCommand("/mail")).toEqual({
-        type: "unimplemented",
-        feature: "Mail reading",
+        type: "say",
+        message: "/mail",
       });
     });
   });

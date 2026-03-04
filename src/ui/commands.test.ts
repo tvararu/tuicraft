@@ -368,13 +368,55 @@ describe("parseCommand", () => {
     expect(parseCommand("/gdecline")).toEqual({ type: "guild-decline" });
   });
 
-  describe("unimplemented commands", () => {
-    test("/mail returns unimplemented", () => {
-      expect(parseCommand("/mail")).toEqual({
-        type: "unimplemented",
-        feature: "Mail reading",
+  describe("/mail commands", () => {
+    test("/mail returns mail-list", () => {
+      expect(parseCommand("/mail")).toEqual({ type: "mail-list" });
+    });
+
+    test("/mail read 1 returns mail-read with index", () => {
+      expect(parseCommand("/mail read 1")).toEqual({ type: "mail-read", index: 1 });
+    });
+
+    test("/mail read 0 falls back to say", () => {
+      expect(parseCommand("/mail read 0").type).toBe("say");
+    });
+
+    test("/mail read abc falls back to say", () => {
+      expect(parseCommand("/mail read abc").type).toBe("say");
+    });
+
+    test('/mail send Player "Subject" body text', () => {
+      expect(parseCommand('/mail send Thrall "Guild meeting" Hey there')).toEqual({
+        type: "mail-send",
+        target: "Thrall",
+        subject: "Guild meeting",
+        body: "Hey there",
       });
     });
+
+    test("/mail send with empty body", () => {
+      expect(parseCommand('/mail send Thrall "Hello"')).toEqual({
+        type: "mail-send",
+        target: "Thrall",
+        subject: "Hello",
+        body: "",
+      });
+    });
+
+    test("/mail send without quotes falls back to say", () => {
+      expect(parseCommand("/mail send Thrall no quotes").type).toBe("say");
+    });
+
+    test("/mail delete 3 returns mail-delete", () => {
+      expect(parseCommand("/mail delete 3")).toEqual({ type: "mail-delete", index: 3 });
+    });
+
+    test("/mail unknown returns mail-list", () => {
+      expect(parseCommand("/mail unknown")).toEqual({ type: "mail-list" });
+    });
+  });
+
+  describe("other commands", () => {
     test("/roll defaults to 1-100", () => {
       expect(parseCommand("/roll")).toEqual({
         type: "roll",

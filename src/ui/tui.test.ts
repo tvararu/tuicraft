@@ -487,7 +487,7 @@ describe("startTui", () => {
     await done;
   });
 
-  test("unimplemented command writes error message", async () => {
+  test("/mail parses without error", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
     const output: string[] = [];
@@ -498,8 +498,6 @@ describe("startTui", () => {
     });
     writeLine(input, "/mail");
     await flush();
-
-    expect(output.join("")).toContain("Mail reading is not yet implemented");
 
     input.end();
     await done;

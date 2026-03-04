@@ -39,7 +39,28 @@ export type Command =
   | { type: "guild-motd"; message: string }
   | { type: "guild-accept" }
   | { type: "guild-decline" }
+  | { type: "mail-list" }
+  | { type: "mail-read"; index: number }
+  | { type: "mail-send"; target: string; subject: string; body: string }
+  | { type: "mail-delete"; index: number }
   | { type: "unimplemented"; feature: string };
+
+function parseMailSend(
+  input: string,
+): { type: "mail-send"; target: string; subject: string; body: string } | undefined {
+  const trimmed = input.trim();
+  if (!trimmed) return undefined;
+  const spaceIdx = trimmed.indexOf(" ");
+  if (spaceIdx === -1) return undefined;
+  const target = trimmed.slice(0, spaceIdx);
+  const afterTarget = trimmed.slice(spaceIdx + 1).trim();
+  if (!afterTarget.startsWith('"')) return undefined;
+  const endQuote = afterTarget.indexOf('"', 1);
+  if (endQuote === -1) return undefined;
+  const subject = afterTarget.slice(1, endQuote);
+  const body = afterTarget.slice(endQuote + 1).trim();
+  return { type: "mail-send", target, subject, body };
+}
 
 export function parseCommand(input: string): Command {
   if (!input.startsWith("/")) return { type: "chat", message: input };
@@ -162,8 +183,29 @@ export function parseCommand(input: string): Command {
       return { type: "guild-accept" };
     case "/gdecline":
       return { type: "guild-decline" };
-    case "/mail":
-      return { type: "unimplemented", feature: "Mail reading" };
+    case "/mail": {
+      if (!rest) return { type: "mail-list" };
+      const parts = rest.split(" ");
+      const sub = parts[0]!;
+      const subRest = rest.slice(sub.length + 1);
+      if (sub === "read") {
+        const n = parseInt(subRest, 10);
+        return Number.isFinite(n) && n > 0
+          ? { type: "mail-read", index: n }
+          : { type: "say", message: input };
+      }
+      if (sub === "send") {
+        const parsed = parseMailSend(subRest);
+        return parsed ?? { type: "say", message: input };
+      }
+      if (sub === "delete") {
+        const n = parseInt(subRest, 10);
+        return Number.isFinite(n) && n > 0
+          ? { type: "mail-delete", index: n }
+          : { type: "say", message: input };
+      }
+      return { type: "mail-list" };
+    }
     case "/roll": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)
