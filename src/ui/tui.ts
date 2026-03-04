@@ -157,6 +157,33 @@ export async function executeCommand(
     case "roll":
       state.handle.sendRoll(cmd.min, cmd.max);
       break;
+    case "guild-invite":
+      state.handle.guildInvite(cmd.target);
+      break;
+    case "guild-kick":
+      state.handle.guildRemove(cmd.target);
+      break;
+    case "guild-leave":
+      state.handle.guildLeave();
+      break;
+    case "guild-promote":
+      state.handle.guildPromote(cmd.target);
+      break;
+    case "guild-demote":
+      state.handle.guildDemote(cmd.target);
+      break;
+    case "guild-leader":
+      state.handle.guildLeader(cmd.target);
+      break;
+    case "guild-motd":
+      state.handle.guildMotd(cmd.message);
+      break;
+    case "guild-accept":
+      state.handle.acceptGuildInvite();
+      break;
+    case "guild-decline":
+      state.handle.declineGuildInvite();
+      break;
     case "unimplemented":
       state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
       break;

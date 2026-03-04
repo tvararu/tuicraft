@@ -496,12 +496,24 @@ describe("startTui", () => {
       input,
       write: (s) => void output.push(s),
     });
+    writeLine(input, "/mail");
+    await flush();
+
+    expect(output.join("")).toContain("Mail reading is not yet implemented");
+
+    input.end();
+    await done;
+  });
+
+  test("/ginvite calls handle.guildInvite", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
     writeLine(input, "/ginvite Foo");
     await flush();
 
-    expect(output.join("")).toContain(
-      "Guild management is not yet implemented",
-    );
+    expect(handle.guildInvite).toHaveBeenCalledWith("Foo");
 
     input.end();
     await done;
