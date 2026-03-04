@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "eb799f558134",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/eb/799f558134/0/metadata.json",
+      "transcript": "/eb/799f558134/0/full.jsonl",
+      "context": "/eb/799f558134/0/context.md",
+      "content_hash": "/eb/799f558134/0/content_hash.txt",
+      "prompt": "/eb/799f558134/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 82,
+    "cache_creation_tokens": 322671,
+    "cache_read_tokens": 5552401,
+    "output_tokens": 43396,
+    "api_call_count": 63
+  }
+}
