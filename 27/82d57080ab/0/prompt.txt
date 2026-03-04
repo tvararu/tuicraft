@@ -559,3 +559,233 @@ Done!
 
 **Alternative workflow:**
 - **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: The user invoked the brainstorming skill for implementing guild management commands: /ginvite, /gkick, /gleave, /gpromote, /gdemote plus handling SMSG_GUILD_INVITE with /gaccept and /gdecline.
+
+2. **Brainstorming Phase**: I explored the codebase thoroughly using agents, identified all relevant files, patterns, and packet formats. I proposed a design covering 7 commands initially.
+
+3. **User Feedback - Scope Expansion**: I tried to ask if /gleader and /gmotd should be included but the user declined the question multiple times. I then presented the design without them. The user then explicitly said: "Yes, include /gleader and /gmotd — same pattern, knock them all out. Design looks right. Move to planning."
+
+4. **Design Doc**: Written to `docs/plans/2026-03-04-guild-management-design.md` and committed.
+
+5. **Implementation Plan**: Written to `docs/plans/2026-03-04-guild-management-plan.md` with 11 tasks covering protocol, types, handlers, client, mocks, UI, daemon, formatting, stubs, docs, and live validation.
+
+6. **User chose execution approach**: "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now"
+
+7. **Execution via Subagent-Driven Development**:
+   - Tasks 1-3 (protocol layer): Subagent implemented builders, parsers, enums, GuildEvent types, world handlers. Also proactively did Task 8 (event formatting).
+   - Tasks 4-5 (client + mocks): Subagent added 9 WorldHandle methods, 2 SMSG handler registrations, updated both mock handles.
+   - Task 6 (UI commands): Subagent added 9 Command types and parseCommand cases with 15 tests.
+   - Tasks 7-8 (daemon): Subagent added IPC types, parsing, dispatch with 14 tests. Task 8 confirmed already done.
+   - Task 9 (stubs): I directly removed 11 guild stubs from stubs.ts.
+   - Task 10 (docs): Subagent updated help.ts, manual.md, SKILL.md, README.md.
+
+8. **Errors Found and Fixed**:
+   - TUI test failure: `startTui > unimplemented command writes error message` was testing `/ginvite` returning unimplemented. Fixed by changing test to use `/mail` and adding a new `/ginvite` TUI test.
+   - TUI dispatch missing: `src/ui/tui.ts` had no cases for new guild commands in `executeCommand`. Added 9 new cases.
+   - Code review found 3 bugs:
+     a. `formatGuildEvent` for `command_result` showed raw numeric codes instead of calling `formatGuildCommandError`
+     b. `formatGuildEvent` for `guild_invite` missing `/gaccept or /gdecline` hint
+     c. `formatGuildEventObj` used `GUILD_INVITE` instead of `GUILD_INVITE_RECEIVED`
+   - All 3 fixed by editing `src/daemon/commands.ts`.
+
+9. **PR Created**: https://github.com/tvararu/tuicraft/pull/76
+
+10. **Notification sent**: `openclaw system event --text "Done: Guild management commands implemented" --mode now`
+
+Key files modified:
+- src/wow/protocol/guild.ts - builders, parsers, enums
+- src/wow/protocol/guild.test.ts - 21 new tests
+- src/wow/guild-store.ts - GuildEvent union extended
+- src/wow/world-handlers.ts - handleGuildCommandResult, handleGuildInvitePacket
+- src/wow/client.ts - WorldHandle type + 9 methods + 2 handler registrations
+- src/ui/commands.ts - Command union + parseCommand
+- src/ui/commands.test.ts - 15 new tests
+- src/ui/tui.ts - executeCommand guild cases
+- src/ui/tui.test.ts - fixed unimplemented test, added ginvite test
+- src/daemon/commands.ts - IpcCommand types, parsing, dispatch, formatting
+- src/daemon/commands.test.ts - 14 new tests
+- src/daemon/start.test.ts - mock updates
+- src/test/mock-handle.ts - mock updates
+- src/wow/protocol/stubs.ts - removed 11 stubs
+- src/cli/help.ts - guild commands help text
+- docs/manual.md - guild management section
+- .claude/skills/tuicraft/SKILL.md - guild management section
+- README.md - feature matrix updated
+
+Commits on feat/guild-management:
+1. docs: Add guild management commands design
+2. docs: Add guild management implementation plan
+3. feat: Add guild management packet builders
+4. feat: Handle SMSG_GUILD_COMMAND_RESULT and invite
+5. feat: Add guild management methods to WorldHandle
+6. feat: Parse guild management slash commands
+7. feat: Wire guild management commands through IPC
+8. chore: Remove guild management stubs
+9. docs: Document guild management commands
+10. fix: Use human-readable guild command errors
+
+Summary:
+1. Primary Request and Intent:
+   The user requested implementation of guild management commands for a WoW 3.3.5a TUI chat client (tuicraft). The specific commands are: `/ginvite <player>`, `/gkick <player>`, `/gleave`, `/gpromote <player>`, `/gdemote <player>`, `/gleader <player>`, `/gmotd <message>`, `/gaccept`, `/gdecline`. These are fire-and-forget commands sending CMSG packets (GUILD_INVITE, GUILD_REMOVE, GUILD_LEAVE, GUILD_PROMOTE, GUILD_DEMOTE, GUILD_LEADER, GUILD_MOTD, GUILD_ACCEPT, GUILD_DECLINE). The server responds with SMSG_GUILD_COMMAND_RESULT for errors and SMSG_GUILD_INVITE for incoming guild invite prompts. The user explicitly requested: "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now". The scope was expanded to include `/gleader` and `/gmotd` per user instruction.
+
+2. Key Technical Concepts:
+   - Fire-and-forget command pattern: send CMSG packet, return "OK" immediately, errors arrive asynchronously
+   - WoW 3.3.5a protocol: PacketWriter/PacketReader for CString serialization, opcode dispatch
+   - Three-layer architecture: UI commands (parseCommand) → IPC commands (parseIpcCommand/dispatchCommand) → WorldHandle methods → sendPacket
+   - GuildEvent union type for routing server responses through event pipeline
+   - Subagent-driven development workflow with TDD and code review
+   - Bun test runner with `bun:test` imports
+   - Conventional Commits with 50-char subject lines
+   - Strict TypeScript (no comments, no unused params without `_` prefix)
+
+3. Files and Code Sections:
+
+   - **src/wow/protocol/guild.ts** — Protocol layer: packet builders, parsers, and enums
+     - Added 6 build functions: `buildGuildInvite`, `buildGuildRemove`, `buildGuildPromote`, `buildGuildDemote`, `buildGuildLeader`, `buildGuildMotd` — each writes a CString via PacketWriter
+     - Added `GuildCommand` enum (CREATE=0, INVITE=1, QUIT=2, PROMOTE=3, FOUNDER=0x0c, MEMBER=0x0d, PUBLIC_NOTE_CHANGED=0x13, OFFICER_NOTE_CHANGED=0x14)
+     - Added `GuildCommandResult` enum (18 error codes: PLAYER_NO_MORE_IN_GUILD=0x00 through GUILD_IGNORING_YOU_S=0x13)
+     - Added `parseGuildCommandResult(r)` → `{ command, name, result }`
+     - Added `parseGuildInvitePacket(r)` → `{ inviterName, guildName }`
+     - Added `formatGuildCommandError(_command, name, result)` → human-readable error string or undefined for success
+     ```typescript
+     export function buildGuildInvite(name: string): Uint8Array {
+       const w = new PacketWriter();
+       w.cString(name);
+       return w.finish();
+     }
+     ```
+
+   - **src/wow/protocol/guild.test.ts** — 21 new tests covering all builders, enums, and parsers
+
+   - **src/wow/guild-store.ts** — Extended GuildEvent union with two new variants:
+     ```typescript
+     | { type: "command_result"; command: number; name: string; result: number }
+     | { type: "guild_invite"; inviter: string; guildName: string };
+     ```
+
+   - **src/wow/world-handlers.ts** — Added two handler functions after `handleGuildEvent`:
+     ```typescript
+     export function handleGuildCommandResult(conn: WorldConn, r: PacketReader): void {
+       const packet = parseGuildCommandResult(r);
+       const msg = formatGuildCommandError(packet.command, packet.name, packet.result);
+       if (msg) {
+         conn.onGuildEvent?.({ type: "command_result", command: packet.command, name: packet.name, result: packet.result });
+       }
+     }
+     export function handleGuildInvitePacket(conn: WorldConn, r: PacketReader): void {
+       const packet = parseGuildInvitePacket(r);
+       conn.onGuildEvent?.({ type: "guild_invite", inviter: packet.inviterName, guildName: packet.guildName });
+     }
+     ```
+
+   - **src/wow/client.ts** — WorldHandle type extended with 9 methods, 2 SMSG handlers registered, 9 method implementations added:
+     ```typescript
+     guildInvite(name: string): void;
+     guildRemove(name: string): void;
+     guildLeave(): void;
+     guildPromote(name: string): void;
+     guildDemote(name: string): void;
+     guildLeader(name: string): void;
+     guildMotd(motd: string): void;
+     acceptGuildInvite(): void;
+     declineGuildInvite(): void;
+     ```
+     Handler registrations:
+     ```typescript
+     conn.dispatch.on(GameOpcode.SMSG_GUILD_COMMAND_RESULT, (r) => handleGuildCommandResult(conn, r));
+     conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) => handleGuildInvitePacket(conn, r));
+     ```
+
+   - **src/ui/commands.ts** — Command union extended with 9 types, parseCommand switch updated replacing unimplemented stubs:
+     ```typescript
+     case "/ginvite":
+       return rest ? { type: "guild-invite", target: rest } : { type: "say", message: input };
+     case "/gmotd":
+       return { type: "guild-motd", message: rest };
+     case "/gaccept":
+       return { type: "guild-accept" };
+     // ... etc for all 9
+     ```
+
+   - **src/ui/commands.test.ts** — 15 new tests for all 9 guild commands
+
+   - **src/ui/tui.ts** — Added 9 cases to `executeCommand` switch:
+     ```typescript
+     case "guild-invite": state.handle.guildInvite(cmd.target); break;
+     case "guild-kick": state.handle.guildRemove(cmd.target); break;
+     case "guild-leave": state.handle.guildLeave(); break;
+     // ... etc for all 9
+     ```
+
+   - **src/ui/tui.test.ts** — Fixed unimplemented test to use `/mail`, added `/ginvite` TUI test
+
+   - **src/daemon/commands.ts** — IpcCommand union extended with 9 types, parseIpcCommand updated (slash mapping + verb stubs), dispatchCommand with 9 cases, formatGuildEvent/formatGuildEventObj extended, added `formatGuildCommandError` import:
+     ```typescript
+     case "command_result": {
+       const msg = formatGuildCommandError(event.command, event.name, event.result);
+       return msg ?? "[guild] Command succeeded";
+     }
+     case "guild_invite":
+       return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
+     ```
+
+   - **src/daemon/commands.test.ts** — 14 new tests for IPC parsing
+
+   - **src/test/mock-handle.ts** — Added 9 `jest.fn()` mock methods after `removeIgnore`
+
+   - **src/daemon/start.test.ts** — Added 9 `jest.fn()` mock methods after `onGuildEvent`
+
+   - **src/wow/protocol/stubs.ts** — Removed 11 guild opcode stubs (SMSG_GUILD_COMMAND_RESULT, CMSG_GUILD_INVITE, SMSG_GUILD_INVITE, CMSG_GUILD_ACCEPT, CMSG_GUILD_DECLINE, CMSG_GUILD_LEAVE, CMSG_GUILD_REMOVE, CMSG_GUILD_MOTD, CMSG_GUILD_PROMOTE, CMSG_GUILD_DEMOTE, CMSG_GUILD_LEADER). Kept SMSG_GUILD_INFO and SMSG_GUILD_BANK_LIST.
+
+   - **src/cli/help.ts** — Added 9 guild command lines after `/groster`
+
+   - **docs/manual.md** — Added guild management table rows, new "Guild Management" section with CLI/IPC examples, event type table entries
+
+   - **.claude/skills/tuicraft/SKILL.md** — Added "Guild Management" section, GUILD_COMMAND_RESULT/GUILD_INVITE_RECEIVED event types
+
+   - **README.md** — Changed `Guild invite / kick / leave / promote` from ❌ to ✅
+
+   - **docs/plans/2026-03-04-guild-management-design.md** — Design document
+
+   - **docs/plans/2026-03-04-guild-management-plan.md** — 11-task implementation plan
+
+4. Errors and fixes:
+   - **Hook blocked commit to main**: Initial commit attempt was blocked by a pre-commit hook that prevents commits to main. Fixed by creating `feat/guild-management` branch first.
+   - **TUI test failure** (`startTui > unimplemented command writes error message`): Test at `tui.test.ts:490` was sending `/ginvite Foo` and expecting "Guild management is not yet implemented". Fixed by changing the test to use `/mail` (still unimplemented) and adding a new test for `/ginvite` that verifies `handle.guildInvite` is called.
+   - **Missing TUI dispatch cases**: `src/ui/tui.ts` `executeCommand` switch had no cases for the 9 new guild commands — they fell through silently. Fixed by adding all 9 cases.
+   - **Code review bug #1**: `formatGuildEvent` for `command_result` used a generic `[guild] Command error for ${event.name} (${event.result})` instead of calling `formatGuildCommandError`. Fixed by importing `formatGuildCommandError` from `"wow/protocol/guild"` and calling it.
+   - **Code review bug #2**: `formatGuildEvent` for `guild_invite` was missing the `. Use /gaccept or /gdecline` hint suffix. Fixed by appending it.
+   - **Code review bug #3**: `formatGuildEventObj` for `guild_invite` used JSON type `"GUILD_INVITE"` instead of `"GUILD_INVITE_RECEIVED"` (which SKILL.md documents). Fixed by changing to `"GUILD_INVITE_RECEIVED"`.
+
+5. Problem Solving:
+   - Used brainstorming skill to go from requirements → design → plan
+   - Used subagent-driven development to execute plan task-by-task with fresh context per subagent
+   - Code review after implementation caught 3 bugs in event formatting that subagents had implemented incorrectly (generic error strings instead of using the dedicated formatting function)
+   - TUI layer was not in the original plan (plan only covered daemon commands.ts, not tui.ts) — caught by test failure during CI
+
+6. All user messages:
+   - "/superpowers:brainstorming — Implement guild management commands: /ginvite <player>, /gkick <player>, /gleave, /gpromote <player>, /gdemote <player>. These are fire-and-forget commands that send CMSG_GUILD_INVITE, CMSG_GUILD_REMOVE, CMSG_GUILD_LEAVE, CMSG_GUILD_PROMOTE, CMSG_GUILD_DEMOTE packets. The server responds with SMSG_GUILD_COMMAND_RESULT for errors (not in guild, insufficient rank, player not found, etc). The opcodes are already defined, stubs exist in stubs.ts, and commands are parsed in commands.ts but return 'unimplemented'. Follow existing patterns from /invite, /kick, /friend, /ignore for fire-and-forget command structure. Also handle SMSG_GUILD_INVITE (incoming guild invite prompt) with /gaccept and /gdecline commands."
+   - "Yes, include /gleader and /gmotd — same pattern, knock them all out. Design looks right. Move to planning."
+   - "Yes, include /gleader and /gmotd. Design is approved. Move to planning — write the plan."
+   - "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now"
+   - (Multiple system reminders about file modifications by linter — not direct user messages)
+
+7. Pending Tasks:
+   - None. All tasks completed. PR opened at https://github.com/tvararu/tuicraft/pull/76. Notification sent via openclaw.
+
+8. Current Work:
+   The entire guild management implementation is complete. The PR has been opened at https://github.com/tvararu/tuicraft/pull/76 with 10 commits on `feat/guild-management`. All 1162 tests pass, typecheck passes, live server tests pass. The `openclaw system event` notification was sent. The summary request was made after all work was concluded.
+
+9. Optional Next Step:
+   No next step — all tasks from the user's request have been completed. The PR is open and awaiting review. The 4 uncommitted changes noted in the PR creation warning are the plan docs in `docs/plans/` that were already tracked in earlier commits on this branch (they show as uncommitted because they exist on the branch but the working tree warning comes from untracked files on the base).
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/9148bea6-f465-4ed4-8562-ccdf33817fe3.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
