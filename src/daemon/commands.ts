@@ -772,14 +772,8 @@ function formatGuildEvent(event: GuildEvent): string {
       return `[guild] ${event.name} has come online`;
     case "signed_off":
       return `[guild] ${event.name} has gone offline`;
-    case "command_result": {
-      const msg = formatGuildCommandError(
-        event.command,
-        event.name,
-        event.result,
-      );
-      return msg ?? "[guild] Command succeeded";
-    }
+    case "command_result":
+      return formatGuildCommandError(event.command, event.name, event.result)!;
     case "guild_invite":
       return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
   }
