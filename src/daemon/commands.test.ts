@@ -474,6 +474,10 @@ describe("parseIpcCommand", () => {
       });
     });
 
+    test("MAIL_DELETE without valid number returns undefined", () => {
+      expect(parseIpcCommand("MAIL_DELETE abc")).toBeUndefined();
+    });
+
     test("/mail routes to mail_list", () => {
       expect(parseIpcCommand("/mail")).toEqual({ type: "mail_list" });
     });

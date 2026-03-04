@@ -412,11 +412,27 @@ describe("parseCommand", () => {
       expect(parseCommand("/mail send Thrall no quotes").type).toBe("say");
     });
 
+    test("/mail send with no arguments falls back to say", () => {
+      expect(parseCommand("/mail send").type).toBe("say");
+    });
+
+    test("/mail send with only target falls back to say", () => {
+      expect(parseCommand("/mail send Thrall").type).toBe("say");
+    });
+
+    test("/mail send with unclosed quote falls back to say", () => {
+      expect(parseCommand('/mail send Thrall "unclosed').type).toBe("say");
+    });
+
     test("/mail delete 3 returns mail-delete", () => {
       expect(parseCommand("/mail delete 3")).toEqual({
         type: "mail-delete",
         index: 3,
       });
+    });
+
+    test("/mail delete 0 falls back to say", () => {
+      expect(parseCommand("/mail delete 0").type).toBe("say");
     });
 
     test("/mail unknown returns mail-list", () => {

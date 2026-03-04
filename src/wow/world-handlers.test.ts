@@ -4003,6 +4003,33 @@ describe("mail handle methods", () => {
     }
   });
 
+  test("SMSG_SEND_MAIL_RESULT fires message via dispatch", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      await waitForEchoProbe(handle);
+
+      const msgP = new Promise<ChatMessage>((resolve) => {
+        handle.onMessage(resolve);
+      });
+      const w = new PacketWriter();
+      w.uint32LE(1); // mailId
+      w.uint32LE(0); // action = SEND
+      w.uint32LE(0); // result = OK
+      ws.inject(GameOpcode.SMSG_SEND_MAIL_RESULT, w.finish());
+      const msg = await msgP;
+      expect(msg.message).toContain("Mail sent");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("requestMailList sends CMSG_GET_MAIL_LIST and returns entries", async () => {
     const ws = await startMockWorldServer();
     try {

@@ -1205,6 +1205,19 @@ describe("formatMailList", () => {
     expect(result).toContain("Player");
   });
 
+  test("normal mail without sender guid shows Unknown", () => {
+    const result = formatMailList(
+      [
+        mailEntry({
+          messageType: MailMessageType.NORMAL,
+          senderGuid: undefined,
+        }),
+      ],
+      new Map(),
+    );
+    expect(result).toContain("Unknown");
+  });
+
   test("auction mail shows Auction House", () => {
     const result = formatMailList(
       [

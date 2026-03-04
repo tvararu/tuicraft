@@ -186,8 +186,6 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         };
       case "mail-delete":
         return { type: "mail_delete", index: parsed.index };
-      case "unimplemented":
-        return parsed;
       default:
         return { type: "say", message: line };
     }

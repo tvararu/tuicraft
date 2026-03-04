@@ -249,9 +249,6 @@ export async function executeCommand(
       state.write(`[mail] Mail #${cmd.index} deleted.\n`);
       break;
     }
-    case "unimplemented":
-      state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
-      break;
   }
   return false;
 }

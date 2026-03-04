@@ -503,6 +503,215 @@ describe("startTui", () => {
     await done;
   });
 
+  test("/mail lists inbox when mailbox is open", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.requestMailList as ReturnType<typeof jest.fn>).mockResolvedValue(
+      [],
+    );
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail");
+    await flush(3);
+
+    expect(handle.requestMailList).toHaveBeenCalled();
+    expect(output.some((s) => s.includes("empty"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail read without mailbox shows error", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail read 1");
+    await flush();
+
+    expect(output.some((s) => s.includes("No mailbox open"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail send without mailbox shows error", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, '/mail send Thrall "Hi" body');
+    await flush();
+
+    expect(output.some((s) => s.includes("No mailbox open"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail delete without mailbox shows error", async () => {
+    const handle = createMockHandle();
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail delete 1");
+    await flush();
+
+    expect(output.some((s) => s.includes("No mailbox open"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail read shows mail content", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      {
+        messageId: 42,
+        messageType: 0,
+        senderGuid: 100n,
+        cod: 0,
+        stationery: 41,
+        money: 0,
+        flags: 0,
+        expirationDays: 5,
+        subject: "Hello",
+        body: "Test body",
+        itemCount: 0,
+      },
+    ]);
+    (handle.getNameCache as ReturnType<typeof jest.fn>).mockReturnValue(
+      new Map([[100, "Thrall"]]),
+    );
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail read 1");
+    await flush();
+
+    expect(handle.markMailAsRead).toHaveBeenCalledWith(42);
+    expect(output.some((s) => s.includes("Hello"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail read with invalid index shows error", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail read 1");
+    await flush();
+
+    expect(output.some((s) => s.includes("No mail #1"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail send calls handle.sendMail", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    const input = new PassThrough();
+
+    const done = startTui(handle, false, { input, write: () => {} });
+    writeLine(input, '/mail send Thrall "Greetings" Hello there');
+    await flush();
+
+    expect(handle.sendMail).toHaveBeenCalledWith(
+      "Thrall",
+      "Greetings",
+      "Hello there",
+    );
+
+    input.end();
+    await done;
+  });
+
+  test("/mail delete removes mail by index", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([
+      {
+        messageId: 77,
+        messageType: 0,
+        senderGuid: 100n,
+        cod: 0,
+        stationery: 41,
+        money: 0,
+        flags: 0,
+        expirationDays: 5,
+        subject: "Delete me",
+        body: "",
+        itemCount: 0,
+      },
+    ]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail delete 1");
+    await flush();
+
+    expect(handle.deleteMail).toHaveBeenCalledWith(77);
+    expect(output.some((s) => s.includes("deleted"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
+  test("/mail delete with invalid index shows error", async () => {
+    const handle = createMockHandle();
+    (handle.getMailboxGuid as ReturnType<typeof jest.fn>).mockReturnValue(1n);
+    (handle.getMailCache as ReturnType<typeof jest.fn>).mockReturnValue([]);
+    const input = new PassThrough();
+    const output: string[] = [];
+
+    const done = startTui(handle, false, {
+      input,
+      write: (s) => void output.push(s),
+    });
+    writeLine(input, "/mail delete 1");
+    await flush();
+
+    expect(output.some((s) => s.includes("No mail #1"))).toBe(true);
+
+    input.end();
+    await done;
+  });
+
   test("/ginvite calls handle.guildInvite", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
