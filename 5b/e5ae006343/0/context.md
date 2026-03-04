@@ -71,3 +71,14 @@ Execute plan by dispatching fresh subagent per task, with two-stage review after
 digraph when_to_use {
     "Have implem...
 
+### Prompt 8
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: The user invoked the brainstorming skill for implementing guild management commands: /ginvite, /gkick, /gleave, /gpromote, /gdemote plus handling SMSG_GUILD_INVITE with /gaccept and /gdecline.
+
+2. **Brainstorming Phase**: I explored the codebase thoroughly usi...
+
