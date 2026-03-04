@@ -1,6 +1,7 @@
 import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { FriendStatus, FriendResult } from "wow/protocol/social";
+import { MailCheckMask, MailMessageType, type MailEntry } from "wow/protocol/mail";
 import { stripColorCodes } from "lib/strip-colors";
 import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
@@ -501,5 +502,99 @@ export function formatGuildRosterJson(roster: GuildRoster): string {
       publicNote: m.publicNote,
       officerNote: m.officerNote,
     })),
+  });
+}
+
+function formatMailAge(days: number): string {
+  if (days < 1 / 24) return "< 1m";
+  if (days < 1) {
+    const hours = Math.floor(days * 24);
+    return `${hours}h`;
+  }
+  const d = Math.floor(days);
+  return `${d}d`;
+}
+
+function senderLabel(entry: MailEntry): string {
+  if (entry.messageType === MailMessageType.AUCTION) return "Auction House";
+  if (entry.messageType === MailMessageType.CREATURE) return "NPC";
+  if (entry.messageType === MailMessageType.GAMEOBJECT) return "System";
+  if (entry.messageType === MailMessageType.CALENDAR) return "Calendar";
+  return "";
+}
+
+export function formatMailList(
+  entries: MailEntry[],
+  nameCache: Map<number, string>,
+): string {
+  if (entries.length === 0) return "[mail] Mailbox is empty";
+  const lines: string[] = [`=== Mailbox (${entries.length} messages) ===`];
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i]!;
+    const unread = !(e.flags & MailCheckMask.READ);
+    const marker = unread ? "*" : " ";
+    const idx = `#${i + 1}`;
+    let sender = senderLabel(e);
+    if (!sender && e.senderGuid !== undefined) {
+      const guidLow = Number(e.senderGuid & 0xffffffffn);
+      sender = nameCache.get(guidLow) ?? `Player`;
+    }
+    const subj =
+      e.subject.length > 30 ? e.subject.slice(0, 27) + "..." : e.subject;
+    const age = formatMailAge(e.expirationDays);
+    lines.push(`${marker}${idx.padEnd(4)} ${sender.padEnd(15)} ${subj.padEnd(32)} ${age}`);
+  }
+  return lines.join("\n");
+}
+
+export function formatMailListJson(entries: MailEntry[]): string {
+  return JSON.stringify({
+    type: "MAIL_LIST",
+    count: entries.length,
+    mails: entries.map((e, i) => ({
+      index: i + 1,
+      messageId: e.messageId,
+      messageType: e.messageType,
+      subject: e.subject,
+      read: !!(e.flags & MailCheckMask.READ),
+      expirationDays: e.expirationDays,
+      money: e.money,
+      itemCount: e.itemCount,
+    })),
+  });
+}
+
+export function formatMailRead(entry: MailEntry, sender: string): string {
+  const age = formatMailAge(entry.expirationDays);
+  const lines = [`From: ${sender}`, `Subject: ${entry.subject}`, `Date: ${age} ago`];
+  if (entry.money > 0) {
+    const gold = Math.floor(entry.money / 10000);
+    const silver = Math.floor((entry.money % 10000) / 100);
+    const copper = entry.money % 100;
+    const parts: string[] = [];
+    if (gold > 0) parts.push(`${gold}g`);
+    if (silver > 0) parts.push(`${silver}s`);
+    if (copper > 0) parts.push(`${copper}c`);
+    lines.push(`Money: ${parts.join(" ")}`);
+  }
+  if (entry.itemCount > 0) {
+    lines.push(`Attachments: ${entry.itemCount} item(s)`);
+  }
+  lines.push("");
+  lines.push(entry.body || "(no message)");
+  return lines.join("\n");
+}
+
+export function formatMailReadJson(entry: MailEntry, sender: string): string {
+  return JSON.stringify({
+    type: "MAIL_READ",
+    messageId: entry.messageId,
+    sender,
+    subject: entry.subject,
+    body: entry.body,
+    money: entry.money,
+    itemCount: entry.itemCount,
+    expirationDays: entry.expirationDays,
+    read: !!(entry.flags & MailCheckMask.READ),
   });
 }
