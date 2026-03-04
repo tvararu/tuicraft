@@ -86,6 +86,15 @@ export function createMockHandle(): WorldHandle & {
     getIgnored: jest.fn((): IgnoreEntry[] => []),
     addIgnore: jest.fn(),
     removeIgnore: jest.fn(),
+    guildInvite: jest.fn(),
+    guildRemove: jest.fn(),
+    guildLeave: jest.fn(),
+    guildPromote: jest.fn(),
+    guildDemote: jest.fn(),
+    guildLeader: jest.fn(),
+    guildMotd: jest.fn(),
+    acceptGuildInvite: jest.fn(),
+    declineGuildInvite: jest.fn(),
     onIgnoreEvent(cb) {
       ignoreEventCb = cb;
     },

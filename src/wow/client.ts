@@ -48,7 +48,15 @@ import {
   buildAddIgnore,
   buildDelIgnore,
 } from "wow/protocol/social";
-import { buildGuildQuery } from "wow/protocol/guild";
+import {
+  buildGuildQuery,
+  buildGuildInvite,
+  buildGuildRemove,
+  buildGuildPromote,
+  buildGuildDemote,
+  buildGuildLeader,
+  buildGuildMotd,
+} from "wow/protocol/guild";
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
   sendPacket,
@@ -89,6 +97,8 @@ import {
   handleDuelWinner,
   handleDuelOutOfBounds,
   handleDuelInBounds,
+  handleGuildCommandResult,
+  handleGuildInvitePacket,
 } from "wow/world-handlers";
 
 export type ClientConfig = {
@@ -221,6 +231,15 @@ export type WorldHandle = {
   requestGuildRoster(): Promise<GuildRoster | undefined>;
   onGuildEvent(cb: (event: GuildEvent) => void): void;
   onDuelEvent(cb: (event: DuelEvent) => void): void;
+  guildInvite(name: string): void;
+  guildRemove(name: string): void;
+  guildLeave(): void;
+  guildPromote(name: string): void;
+  guildDemote(name: string): void;
+  guildLeader(name: string): void;
+  guildMotd(motd: string): void;
+  acceptGuildInvite(): void;
+  declineGuildInvite(): void;
 };
 
 export type WorldConn = {
@@ -508,6 +527,12 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_GUILD_EVENT, (r) =>
       handleGuildEvent(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GUILD_COMMAND_RESULT, (r) =>
+      handleGuildCommandResult(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) =>
+      handleGuildInvitePacket(conn, r),
     );
 
     registerStubs(conn.dispatch, (msg) => {
@@ -846,6 +871,53 @@ export function worldSession(
         },
         onGuildEvent(cb) {
           conn.onGuildEvent = cb;
+        },
+        guildInvite(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GUILD_INVITE,
+            buildGuildInvite(name),
+          );
+        },
+        guildRemove(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GUILD_REMOVE,
+            buildGuildRemove(name),
+          );
+        },
+        guildLeave() {
+          sendPacket(conn, GameOpcode.CMSG_GUILD_LEAVE, new Uint8Array(0));
+        },
+        guildPromote(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GUILD_PROMOTE,
+            buildGuildPromote(name),
+          );
+        },
+        guildDemote(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GUILD_DEMOTE,
+            buildGuildDemote(name),
+          );
+        },
+        guildLeader(name) {
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GUILD_LEADER,
+            buildGuildLeader(name),
+          );
+        },
+        guildMotd(motd) {
+          sendPacket(conn, GameOpcode.CMSG_GUILD_MOTD, buildGuildMotd(motd));
+        },
+        acceptGuildInvite() {
+          sendPacket(conn, GameOpcode.CMSG_GUILD_ACCEPT, new Uint8Array(0));
+        },
+        declineGuildInvite() {
+          sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE, new Uint8Array(0));
         },
         onDuelEvent(cb) {
           conn.onDuelEvent = cb;
