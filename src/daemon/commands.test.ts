@@ -429,6 +429,13 @@ describe("parseIpcCommand", () => {
         });
       });
     }
+
+    test("/mail slash path returns unimplemented", () => {
+      expect(parseIpcCommand("/mail")).toEqual({
+        type: "unimplemented",
+        feature: "Mail reading",
+      });
+    });
   });
 
   test("unrecognized verb becomes chat", () => {
