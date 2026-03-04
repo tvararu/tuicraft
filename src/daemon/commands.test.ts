@@ -418,23 +418,59 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("LEAVE")).toEqual({ type: "leave" });
   });
 
-  describe("unimplemented IPC commands", () => {
-    const cases = [["MAIL", "Mail reading"]] as const;
+  describe("mail IPC commands", () => {
+    test("MAIL parses as mail_list", () => {
+      expect(parseIpcCommand("MAIL")).toEqual({ type: "mail_list" });
+    });
 
-    for (const [input, feature] of cases) {
-      test(`${input.split(" ")[0]} returns unimplemented`, () => {
-        expect(parseIpcCommand(input)).toEqual({
-          type: "unimplemented",
-          feature,
-        });
-      });
-    }
+    test("MAIL_JSON parses as mail_list_json", () => {
+      expect(parseIpcCommand("MAIL_JSON")).toEqual({ type: "mail_list_json" });
+    });
 
-    test("/mail slash path routes to say (pending mail IPC)", () => {
-      expect(parseIpcCommand("/mail")).toEqual({
-        type: "say",
-        message: "/mail",
+    test("MAIL_READ 1 parses as mail_read", () => {
+      expect(parseIpcCommand("MAIL_READ 1")).toEqual({ type: "mail_read", index: 1 });
+    });
+
+    test("MAIL_READ_JSON 2 parses as mail_read_json", () => {
+      expect(parseIpcCommand("MAIL_READ_JSON 2")).toEqual({ type: "mail_read_json", index: 2 });
+    });
+
+    test("MAIL_READ without number returns undefined", () => {
+      expect(parseIpcCommand("MAIL_READ")).toBeUndefined();
+    });
+
+    test("MAIL_SEND parses quoted subject", () => {
+      expect(parseIpcCommand('MAIL_SEND Thrall "Hello" Body text')).toEqual({
+        type: "mail_send",
+        target: "Thrall",
+        subject: "Hello",
+        body: "Body text",
       });
+    });
+
+    test("MAIL_DELETE 3 parses as mail_delete", () => {
+      expect(parseIpcCommand("MAIL_DELETE 3")).toEqual({ type: "mail_delete", index: 3 });
+    });
+
+    test("/mail routes to mail_list", () => {
+      expect(parseIpcCommand("/mail")).toEqual({ type: "mail_list" });
+    });
+
+    test("/mail read 1 routes to mail_read", () => {
+      expect(parseIpcCommand("/mail read 1")).toEqual({ type: "mail_read", index: 1 });
+    });
+
+    test('/mail send Thrall "Hi" body routes to mail_send', () => {
+      expect(parseIpcCommand('/mail send Thrall "Hi" body')).toEqual({
+        type: "mail_send",
+        target: "Thrall",
+        subject: "Hi",
+        body: "body",
+      });
+    });
+
+    test("/mail delete 2 routes to mail_delete", () => {
+      expect(parseIpcCommand("/mail delete 2")).toEqual({ type: "mail_delete", index: 2 });
     });
   });
 

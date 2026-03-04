@@ -18,6 +18,10 @@ import {
   formatIgnoreEventObj,
   formatGuildRoster,
   formatGuildRosterJson,
+  formatMailList,
+  formatMailListJson,
+  formatMailRead,
+  formatMailReadJson,
 } from "ui/format";
 import type { FriendEvent } from "wow/friend-store";
 import type { IgnoreEvent } from "wow/ignore-store";
@@ -93,6 +97,12 @@ export type IpcCommand =
   | { type: "guild_motd"; message: string }
   | { type: "guild_accept" }
   | { type: "guild_decline" }
+  | { type: "mail_list" }
+  | { type: "mail_list_json" }
+  | { type: "mail_read"; index: number }
+  | { type: "mail_read_json"; index: number }
+  | { type: "mail_send"; target: string; subject: string; body: string }
+  | { type: "mail_delete"; index: number }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -162,6 +172,14 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return { type: "guild_accept" };
       case "guild-decline":
         return { type: "guild_decline" };
+      case "mail-list":
+        return { type: "mail_list" };
+      case "mail-read":
+        return { type: "mail_read", index: parsed.index };
+      case "mail-send":
+        return { type: "mail_send", target: parsed.target, subject: parsed.subject, body: parsed.body };
+      case "mail-delete":
+        return { type: "mail_delete", index: parsed.index };
       case "unimplemented":
         return parsed;
       default:
@@ -288,7 +306,28 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "GDECLINE":
       return { type: "guild_decline" };
     case "MAIL":
-      return { type: "unimplemented", feature: "Mail reading" };
+      return { type: "mail_list" };
+    case "MAIL_JSON":
+      return { type: "mail_list_json" };
+    case "MAIL_READ": {
+      const n = parseInt(rest, 10);
+      return Number.isFinite(n) && n > 0 ? { type: "mail_read", index: n } : undefined;
+    }
+    case "MAIL_READ_JSON": {
+      const n = parseInt(rest, 10);
+      return Number.isFinite(n) && n > 0 ? { type: "mail_read_json", index: n } : undefined;
+    }
+    case "MAIL_SEND": {
+      const parsed = parseCommand(`/mail send ${rest}`);
+      if (parsed.type === "mail-send") {
+        return { type: "mail_send", target: parsed.target, subject: parsed.subject, body: parsed.body };
+      }
+      return undefined;
+    }
+    case "MAIL_DELETE": {
+      const n = parseInt(rest, 10);
+      return Number.isFinite(n) && n > 0 ? { type: "mail_delete", index: n } : undefined;
+    }
     case "ROLL": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)
@@ -565,6 +604,88 @@ export async function dispatchCommand(
       handle.declineGuildInvite();
       writeLines(socket, ["OK"]);
       return false;
+    case "mail_list": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, ["ERR No mailbox open"]);
+        return false;
+      }
+      const entries = await handle.requestMailList();
+      writeLines(socket, formatMailList(entries, handle.getNameCache()).split("\n"));
+      return false;
+    }
+    case "mail_list_json": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, [JSON.stringify({ type: "MAIL_LIST", error: "No mailbox open" })]);
+        return false;
+      }
+      const entries = await handle.requestMailList();
+      writeLines(socket, [formatMailListJson(entries)]);
+      return false;
+    }
+    case "mail_read": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, ["ERR No mailbox open"]);
+        return false;
+      }
+      const cache = handle.getMailCache();
+      const entry = cache[cmd.index - 1];
+      if (!entry) {
+        writeLines(socket, [`ERR No mail #${cmd.index}`]);
+        return false;
+      }
+      let sender = "Unknown";
+      if (entry.senderGuid !== undefined) {
+        const guidLow = Number(entry.senderGuid & 0xffffffffn);
+        sender = handle.getNameCache().get(guidLow) ?? "Unknown";
+      }
+      handle.markMailAsRead(entry.messageId);
+      writeLines(socket, formatMailRead(entry, sender).split("\n"));
+      return false;
+    }
+    case "mail_read_json": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, [JSON.stringify({ type: "MAIL_READ", error: "No mailbox open" })]);
+        return false;
+      }
+      const cache = handle.getMailCache();
+      const entry = cache[cmd.index - 1];
+      if (!entry) {
+        writeLines(socket, [JSON.stringify({ type: "MAIL_READ", error: `No mail #${cmd.index}` })]);
+        return false;
+      }
+      let sender = "Unknown";
+      if (entry.senderGuid !== undefined) {
+        const guidLow = Number(entry.senderGuid & 0xffffffffn);
+        sender = handle.getNameCache().get(guidLow) ?? "Unknown";
+      }
+      handle.markMailAsRead(entry.messageId);
+      writeLines(socket, [formatMailReadJson(entry, sender)]);
+      return false;
+    }
+    case "mail_send": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, ["ERR No mailbox open"]);
+        return false;
+      }
+      handle.sendMail(cmd.target, cmd.subject, cmd.body);
+      writeLines(socket, ["OK"]);
+      return false;
+    }
+    case "mail_delete": {
+      if (!handle.getMailboxGuid()) {
+        writeLines(socket, ["ERR No mailbox open"]);
+        return false;
+      }
+      const delCache = handle.getMailCache();
+      const delEntry = delCache[cmd.index - 1];
+      if (!delEntry) {
+        writeLines(socket, [`ERR No mail #${cmd.index}`]);
+        return false;
+      }
+      handle.deleteMail(delEntry.messageId);
+      writeLines(socket, ["OK"]);
+      return false;
+    }
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
