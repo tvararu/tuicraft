@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "1ce402c8fe4b",
+  "session_id": "51e31bfb-99a9-4f52-a921-29c5aa3abbdc",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T02:22:28.358857453Z",
+  "branch": "feat/mail",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/2026-03-02-channel-join-leave.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "4b6a39885eca",
+  "token_usage": {
+    "input_tokens": 2619,
+    "cache_creation_tokens": 232604,
+    "cache_read_tokens": 2036956,
+    "output_tokens": 18830,
+    "api_call_count": 36
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T02:22:28.250661507Z",
+    "agent_lines": 929,
+    "human_added": 14942,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 15871,
+    "agent_percentage": 5.853443387310189
+  }
+}
