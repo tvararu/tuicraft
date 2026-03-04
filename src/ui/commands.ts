@@ -30,6 +30,15 @@ export type Command =
   | { type: "add-ignore"; target: string }
   | { type: "remove-ignore"; target: string }
   | { type: "guild-roster" }
+  | { type: "guild-invite"; target: string }
+  | { type: "guild-kick"; target: string }
+  | { type: "guild-leave" }
+  | { type: "guild-promote"; target: string }
+  | { type: "guild-demote"; target: string }
+  | { type: "guild-leader"; target: string }
+  | { type: "guild-motd"; message: string }
+  | { type: "guild-accept" }
+  | { type: "guild-decline" }
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
@@ -126,10 +135,33 @@ export function parseCommand(input: string): Command {
     case "/groster":
       return { type: "guild-roster" };
     case "/ginvite":
+      return rest
+        ? { type: "guild-invite", target: rest }
+        : { type: "say", message: input };
     case "/gkick":
+      return rest
+        ? { type: "guild-kick", target: rest }
+        : { type: "say", message: input };
     case "/gleave":
+      return { type: "guild-leave" };
     case "/gpromote":
-      return { type: "unimplemented", feature: "Guild management" };
+      return rest
+        ? { type: "guild-promote", target: rest }
+        : { type: "say", message: input };
+    case "/gdemote":
+      return rest
+        ? { type: "guild-demote", target: rest }
+        : { type: "say", message: input };
+    case "/gleader":
+      return rest
+        ? { type: "guild-leader", target: rest }
+        : { type: "say", message: input };
+    case "/gmotd":
+      return { type: "guild-motd", message: rest };
+    case "/gaccept":
+      return { type: "guild-accept" };
+    case "/gdecline":
+      return { type: "guild-decline" };
     case "/mail":
       return { type: "unimplemented", feature: "Mail reading" };
     case "/roll": {
