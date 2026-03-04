@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "5f89f11adf12",
+  "session_id": "9148bea6-f465-4ed4-8562-ccdf33817fe3",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T00:05:56.591198518Z",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-04-guild-management-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "281ba22274be",
+  "token_usage": {
+    "input_tokens": 23,
+    "cache_creation_tokens": 55895,
+    "cache_read_tokens": 619257,
+    "output_tokens": 7441,
+    "api_call_count": 18
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T00:05:56.555922385Z",
+    "agent_lines": 106,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 106,
+    "agent_percentage": 100
+  }
+}
