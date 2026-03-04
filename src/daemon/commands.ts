@@ -695,6 +695,10 @@ function formatGuildEvent(event: GuildEvent): string {
       return `[guild] ${event.name} has come online`;
     case "signed_off":
       return `[guild] ${event.name} has gone offline`;
+    case "command_result":
+      return `[guild] Command error for ${event.name} (${event.result})`;
+    case "guild_invite":
+      return `[guild] ${event.inviter} has invited you to join ${event.guildName}`;
   }
 }
 
@@ -746,6 +750,19 @@ function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
       return { type: "GUILD_SIGNED_ON", name: event.name };
     case "signed_off":
       return { type: "GUILD_SIGNED_OFF", name: event.name };
+    case "command_result":
+      return {
+        type: "GUILD_COMMAND_RESULT",
+        command: event.command,
+        name: event.name,
+        result: event.result,
+      };
+    case "guild_invite":
+      return {
+        type: "GUILD_INVITE",
+        inviter: event.inviter,
+        guildName: event.guildName,
+      };
   }
 }
 

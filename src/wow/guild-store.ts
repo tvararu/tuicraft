@@ -32,7 +32,9 @@ export type GuildEvent =
   | { type: "leader_changed"; oldLeader: string; newLeader: string }
   | { type: "disbanded" }
   | { type: "signed_on"; name: string }
-  | { type: "signed_off"; name: string };
+  | { type: "signed_off"; name: string }
+  | { type: "command_result"; command: number; name: string; result: number }
+  | { type: "guild_invite"; inviter: string; guildName: string };
 
 export class GuildStore {
   private members: Map<bigint, GuildMember>;

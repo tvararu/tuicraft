@@ -51,6 +51,9 @@ import {
   parseGuildQueryResponse,
   parseGuildEvent,
   GuildEventCode,
+  parseGuildCommandResult,
+  parseGuildInvitePacket,
+  formatGuildCommandError,
 } from "wow/protocol/guild";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
@@ -775,4 +778,36 @@ export function handleGuildEvent(conn: WorldConn, r: PacketReader): void {
       conn.onGuildEvent?.({ type: "signed_off", name: p[0] ?? "" });
       break;
   }
+}
+
+export function handleGuildCommandResult(
+  conn: WorldConn,
+  r: PacketReader,
+): void {
+  const packet = parseGuildCommandResult(r);
+  const msg = formatGuildCommandError(
+    packet.command,
+    packet.name,
+    packet.result,
+  );
+  if (msg) {
+    conn.onGuildEvent?.({
+      type: "command_result",
+      command: packet.command,
+      name: packet.name,
+      result: packet.result,
+    });
+  }
+}
+
+export function handleGuildInvitePacket(
+  conn: WorldConn,
+  r: PacketReader,
+): void {
+  const packet = parseGuildInvitePacket(r);
+  conn.onGuildEvent?.({
+    type: "guild_invite",
+    inviter: packet.inviterName,
+    guildName: packet.guildName,
+  });
 }
