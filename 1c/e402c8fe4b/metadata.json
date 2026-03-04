@@ -3,7 +3,7 @@
   "checkpoint_id": "1ce402c8fe4b",
   "strategy": "manual-commit",
   "branch": "feat/mail",
-  "checkpoints_count": 6,
+  "checkpoints_count": 7,
   "files_touched": [
     "docs/plans/2026-02-19-reconnect-auth-design.md",
     "docs/plans/2026-02-19-reconnect-auth-plan.md",
@@ -66,13 +66,20 @@
       "context": "/1c/e402c8fe4b/7/context.md",
       "content_hash": "/1c/e402c8fe4b/7/content_hash.txt",
       "prompt": "/1c/e402c8fe4b/7/prompt.txt"
+    },
+    {
+      "metadata": "/1c/e402c8fe4b/8/metadata.json",
+      "transcript": "/1c/e402c8fe4b/8/full.jsonl",
+      "context": "/1c/e402c8fe4b/8/context.md",
+      "content_hash": "/1c/e402c8fe4b/8/content_hash.txt",
+      "prompt": "/1c/e402c8fe4b/8/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 13225,
-    "cache_creation_tokens": 1790015,
-    "cache_read_tokens": 51442379,
-    "output_tokens": 205172,
-    "api_call_count": 570
+    "input_tokens": 13267,
+    "cache_creation_tokens": 1830221,
+    "cache_read_tokens": 53314834,
+    "output_tokens": 217259,
+    "api_call_count": 609
   }
 }
