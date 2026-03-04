@@ -5,6 +5,8 @@
   "branch": "feat/guild-management",
   "checkpoints_count": 1,
   "files_touched": [
+    "src/ui/tui.test.ts",
+    "src/ui/tui.ts",
     "src/wow/protocol/stubs.ts"
   ],
   "sessions": [
@@ -21,6 +23,13 @@
       "context": "/a4/4401e08bf1/1/context.md",
       "content_hash": "/a4/4401e08bf1/1/content_hash.txt",
       "prompt": "/a4/4401e08bf1/1/prompt.txt"
+    },
+    {
+      "metadata": "/a4/4401e08bf1/2/metadata.json",
+      "transcript": "/a4/4401e08bf1/2/full.jsonl",
+      "context": "/a4/4401e08bf1/2/context.md",
+      "content_hash": "/a4/4401e08bf1/2/content_hash.txt",
+      "prompt": "/a4/4401e08bf1/2/prompt.txt"
     }
   ],
   "token_usage": {
