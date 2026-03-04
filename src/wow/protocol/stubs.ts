@@ -127,37 +127,6 @@ export const STUBS: StubEntry[] = [
     priority: "medium",
   },
   {
-    opcode: GameOpcode.CMSG_SEND_MAIL,
-    area: "mail",
-    label: "Send mail",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.SMSG_SEND_MAIL_RESULT,
-    area: "mail",
-    label: "Mail result",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.CMSG_GET_MAIL_LIST,
-    area: "mail",
-    label: "Read mail",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.SMSG_MAIL_LIST_RESULT,
-    area: "mail",
-    label: "Mail list",
-    priority: "medium",
-  },
-  {
-    opcode: GameOpcode.SMSG_SHOW_MAILBOX,
-    area: "mail",
-    label: "Mailbox opened",
-    priority: "medium",
-  },
-
-  {
     opcode: GameOpcode.CMSG_TEXT_EMOTE,
     area: "emote",
     label: "Text emote",

@@ -5,6 +5,7 @@ import type {
   ChatMode,
   GroupEvent,
   DuelEvent,
+  MailEntry,
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
@@ -101,6 +102,13 @@ export function createMockHandle(): WorldHandle & {
     requestGuildRoster: jest.fn(
       async (): Promise<GuildRoster | undefined> => undefined,
     ),
+    requestMailList: jest.fn(async (): Promise<MailEntry[]> => []),
+    sendMail: jest.fn(),
+    deleteMail: jest.fn(),
+    markMailAsRead: jest.fn(),
+    getMailboxGuid: jest.fn((): bigint | null => null),
+    getMailCache: jest.fn((): MailEntry[] => []),
+    getNameCache: jest.fn((): Map<number, string> => new Map()),
     onGuildEvent(cb) {
       guildEventCb = cb;
     },
