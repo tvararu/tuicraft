@@ -152,6 +152,10 @@ When running in TUI mode, the following slash commands are available:
 | `/gmotd` [_msg_]             | Set guild message of the day               |
 | `/gaccept`                   | Accept guild invitation                    |
 | `/gdecline`                  | Decline guild invitation                   |
+| `/mail`                      | List mailbox                               |
+| `/mail read` _n_             | Read mail by number                        |
+| `/mail send` _player_ _"subject"_ _body_ | Send text mail              |
+| `/mail delete` _n_           | Delete mail by number                      |
 | `/tuicraft entities on\|off` | Toggle entity event display                |
 | `/quit`                      | Disconnect and exit                        |
 

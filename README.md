@@ -174,7 +174,7 @@ that the official game client does.
 
 | Feature             | Status |
 | ------------------- | ------ |
-| Send / receive mail | ❌     |
+| Send / receive mail | ✅     |
 | Mail notifications  | ✅     |
 
 ### 🏪 Economy

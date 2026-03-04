@@ -66,6 +66,10 @@ INTERACTIVE COMMANDS (TUI mode)
   /gmotd [msg]    Set guild message of the day
   /gaccept        Accept guild invitation
   /gdecline       Decline guild invitation
+  /mail           List mailbox
+  /mail read <n>  Read mail by number
+  /mail send <player> "<subject>" <body>  Send text mail
+  /mail delete <n> Delete mail by number
   /tuicraft entities on|off  Toggle entity event display
   /quit           Disconnect and exit
 

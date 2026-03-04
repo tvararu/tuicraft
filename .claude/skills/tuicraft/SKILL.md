@@ -167,6 +167,24 @@ IPC verbs:
     echo "GACCEPT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "GDECLINE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
+## Mail
+
+    tuicraft send "/mail"                             # list mailbox
+    tuicraft send "/mail read 1"                      # read mail #1
+    tuicraft send '/mail send Player "Subject" body'  # send text mail
+    tuicraft send "/mail delete 1"                    # delete mail #1
+
+Requires an open mailbox (interact with a mailbox NPC in-game first).
+
+IPC verbs:
+
+    echo "MAIL" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "MAIL_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "MAIL_READ 1" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "MAIL_READ_JSON 1" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo 'MAIL_SEND Player "Subject" body' | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "MAIL_DELETE 1" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
 ## Entity Queries
 
 The daemon exposes `NEARBY` and `NEARBY_JSON` IPC verbs for querying tracked entities:
