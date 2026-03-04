@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "98d8e8a997cd",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-04-guild-management-plan.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/98/d8e8a997cd/0/metadata.json",
+      "transcript": "/98/d8e8a997cd/0/full.jsonl",
+      "context": "/98/d8e8a997cd/0/context.md",
+      "content_hash": "/98/d8e8a997cd/0/content_hash.txt",
+      "prompt": "/98/d8e8a997cd/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}
