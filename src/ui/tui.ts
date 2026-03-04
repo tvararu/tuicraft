@@ -12,6 +12,8 @@ import {
   formatFriendList,
   formatIgnoreList,
   formatGuildRoster,
+  formatMailList,
+  formatMailRead,
 } from "ui/format";
 
 export type TuiState = {
@@ -184,6 +186,58 @@ export async function executeCommand(
     case "guild-decline":
       state.handle.declineGuildInvite();
       break;
+    case "mail-list": {
+      if (!state.handle.getMailboxGuid()) {
+        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        break;
+      }
+      const entries = await state.handle.requestMailList();
+      state.write(formatMailList(entries, state.handle.getNameCache()) + "\n");
+      break;
+    }
+    case "mail-read": {
+      if (!state.handle.getMailboxGuid()) {
+        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        break;
+      }
+      const cache = state.handle.getMailCache();
+      const entry = cache[cmd.index - 1];
+      if (!entry) {
+        state.write(formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) + "\n");
+        break;
+      }
+      let sender = "Unknown";
+      if (entry.senderGuid !== undefined) {
+        const guidLow = Number(entry.senderGuid & 0xffffffffn);
+        sender = state.handle.getNameCache().get(guidLow) ?? "Unknown";
+      }
+      state.handle.markMailAsRead(entry.messageId);
+      state.write(formatMailRead(entry, sender) + "\n");
+      break;
+    }
+    case "mail-send": {
+      if (!state.handle.getMailboxGuid()) {
+        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        break;
+      }
+      state.handle.sendMail(cmd.target, cmd.subject, cmd.body);
+      break;
+    }
+    case "mail-delete": {
+      if (!state.handle.getMailboxGuid()) {
+        state.write(formatError("No mailbox open. Interact with a mailbox first.") + "\n");
+        break;
+      }
+      const delCache = state.handle.getMailCache();
+      const delEntry = delCache[cmd.index - 1];
+      if (!delEntry) {
+        state.write(formatError(`No mail #${cmd.index}. Use /mail to list your inbox.`) + "\n");
+        break;
+      }
+      state.handle.deleteMail(delEntry.messageId);
+      state.write(`[mail] Mail #${cmd.index} deleted.\n`);
+      break;
+    }
     case "unimplemented":
       state.write(formatError(`${cmd.feature} is not yet implemented`) + "\n");
       break;
