@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "2782d57080ab",
+  "session_id": "98a95ea6-f2e6-4495-80cc-a6eca20584e6",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T00:18:56.621955861Z",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "cba99c182209",
+  "checkpoint_transcript_start": 201,
+  "transcript_lines_at_start": 201,
+  "token_usage": {
+    "input_tokens": 1715,
+    "cache_creation_tokens": 367097,
+    "cache_read_tokens": 8529148,
+    "output_tokens": 15261,
+    "api_call_count": 71
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T00:18:56.301822926Z",
+    "agent_lines": 4,
+    "human_added": 2037,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 2041,
+    "agent_percentage": 0.19598236158745713
+  }
+}
