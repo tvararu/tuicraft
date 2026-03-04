@@ -272,31 +272,103 @@ describe("parseCommand", () => {
     expect(parseCommand("/join")).toEqual({ type: "say", message: "/join" });
   });
 
+  test("/ginvite parses target", () => {
+    expect(parseCommand("/ginvite Thrall")).toEqual({
+      type: "guild-invite",
+      target: "Thrall",
+    });
+  });
+
+  test("/ginvite without target becomes say", () => {
+    expect(parseCommand("/ginvite")).toEqual({
+      type: "say",
+      message: "/ginvite",
+    });
+  });
+
+  test("/gkick parses target", () => {
+    expect(parseCommand("/gkick Garrosh")).toEqual({
+      type: "guild-kick",
+      target: "Garrosh",
+    });
+  });
+
+  test("/gkick without target becomes say", () => {
+    expect(parseCommand("/gkick")).toEqual({
+      type: "say",
+      message: "/gkick",
+    });
+  });
+
+  test("/gleave parses", () => {
+    expect(parseCommand("/gleave")).toEqual({ type: "guild-leave" });
+  });
+
+  test("/gpromote parses target", () => {
+    expect(parseCommand("/gpromote Jaina")).toEqual({
+      type: "guild-promote",
+      target: "Jaina",
+    });
+  });
+
+  test("/gpromote without target becomes say", () => {
+    expect(parseCommand("/gpromote")).toEqual({
+      type: "say",
+      message: "/gpromote",
+    });
+  });
+
+  test("/gdemote parses target", () => {
+    expect(parseCommand("/gdemote Arthas")).toEqual({
+      type: "guild-demote",
+      target: "Arthas",
+    });
+  });
+
+  test("/gdemote without target becomes say", () => {
+    expect(parseCommand("/gdemote")).toEqual({
+      type: "say",
+      message: "/gdemote",
+    });
+  });
+
+  test("/gleader parses target", () => {
+    expect(parseCommand("/gleader Sylvanas")).toEqual({
+      type: "guild-leader",
+      target: "Sylvanas",
+    });
+  });
+
+  test("/gleader without target becomes say", () => {
+    expect(parseCommand("/gleader")).toEqual({
+      type: "say",
+      message: "/gleader",
+    });
+  });
+
+  test("/gmotd parses message", () => {
+    expect(parseCommand("/gmotd Raid tonight at 8pm")).toEqual({
+      type: "guild-motd",
+      message: "Raid tonight at 8pm",
+    });
+  });
+
+  test("/gmotd with empty message clears motd", () => {
+    expect(parseCommand("/gmotd")).toEqual({
+      type: "guild-motd",
+      message: "",
+    });
+  });
+
+  test("/gaccept parses", () => {
+    expect(parseCommand("/gaccept")).toEqual({ type: "guild-accept" });
+  });
+
+  test("/gdecline parses", () => {
+    expect(parseCommand("/gdecline")).toEqual({ type: "guild-decline" });
+  });
+
   describe("unimplemented commands", () => {
-    test("/ginvite returns unimplemented", () => {
-      expect(parseCommand("/ginvite Foo")).toEqual({
-        type: "unimplemented",
-        feature: "Guild management",
-      });
-    });
-    test("/gkick returns unimplemented", () => {
-      expect(parseCommand("/gkick Foo")).toEqual({
-        type: "unimplemented",
-        feature: "Guild management",
-      });
-    });
-    test("/gleave returns unimplemented", () => {
-      expect(parseCommand("/gleave")).toEqual({
-        type: "unimplemented",
-        feature: "Guild management",
-      });
-    });
-    test("/gpromote returns unimplemented", () => {
-      expect(parseCommand("/gpromote Foo")).toEqual({
-        type: "unimplemented",
-        feature: "Guild management",
-      });
-    });
     test("/mail returns unimplemented", () => {
       expect(parseCommand("/mail")).toEqual({
         type: "unimplemented",
