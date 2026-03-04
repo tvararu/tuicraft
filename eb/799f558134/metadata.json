@@ -24,6 +24,13 @@
       "context": "/eb/799f558134/1/context.md",
       "content_hash": "/eb/799f558134/1/content_hash.txt",
       "prompt": "/eb/799f558134/1/prompt.txt"
+    },
+    {
+      "metadata": "/eb/799f558134/2/metadata.json",
+      "transcript": "/eb/799f558134/2/full.jsonl",
+      "context": "/eb/799f558134/2/context.md",
+      "content_hash": "/eb/799f558134/2/content_hash.txt",
+      "prompt": "/eb/799f558134/2/prompt.txt"
     }
   ],
   "token_usage": {
