@@ -7,6 +7,16 @@ import {
   parseGuildQueryResponse,
   parseGuildEvent,
   buildGuildQuery,
+  buildGuildInvite,
+  buildGuildRemove,
+  buildGuildPromote,
+  buildGuildDemote,
+  buildGuildLeader,
+  buildGuildMotd,
+  GuildCommand,
+  GuildCommandResult,
+  parseGuildCommandResult,
+  parseGuildInvitePacket,
 } from "wow/protocol/guild";
 
 describe("GuildMemberStatus", () => {
@@ -445,5 +455,158 @@ describe("parseGuildEvent", () => {
     const result = parseGuildEvent(new PacketReader(w.finish()));
     expect(result.eventType).toBe(19);
     expect(result.params).toEqual([]);
+  });
+});
+
+describe("buildGuildInvite", () => {
+  test("writes player name as CString", () => {
+    const buf = buildGuildInvite("Thrall");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Thrall");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildGuildRemove", () => {
+  test("writes player name as CString", () => {
+    const buf = buildGuildRemove("Garrosh");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Garrosh");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildGuildPromote", () => {
+  test("writes player name as CString", () => {
+    const buf = buildGuildPromote("Jaina");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Jaina");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildGuildDemote", () => {
+  test("writes player name as CString", () => {
+    const buf = buildGuildDemote("Arthas");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Arthas");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildGuildLeader", () => {
+  test("writes player name as CString", () => {
+    const buf = buildGuildLeader("Sylvanas");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Sylvanas");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("buildGuildMotd", () => {
+  test("writes motd as CString", () => {
+    const buf = buildGuildMotd("Raid tonight at 8pm");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("Raid tonight at 8pm");
+    expect(r.remaining).toBe(0);
+  });
+
+  test("writes empty motd", () => {
+    const buf = buildGuildMotd("");
+    const r = new PacketReader(buf);
+    expect(r.cString()).toBe("");
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("GuildCommand", () => {
+  test("INVITE is 1", () => {
+    expect(GuildCommand.INVITE).toBe(1);
+  });
+
+  test("QUIT is 2", () => {
+    expect(GuildCommand.QUIT).toBe(2);
+  });
+
+  test("PROMOTE is 3", () => {
+    expect(GuildCommand.PROMOTE).toBe(3);
+  });
+
+  test("FOUNDER is 0x0C", () => {
+    expect(GuildCommand.FOUNDER).toBe(0x0c);
+  });
+});
+
+describe("GuildCommandResult", () => {
+  test("PLAYER_NO_MORE_IN_GUILD is 0", () => {
+    expect(GuildCommandResult.PLAYER_NO_MORE_IN_GUILD).toBe(0);
+  });
+
+  test("PLAYER_NOT_FOUND_S is 0x0B", () => {
+    expect(GuildCommandResult.GUILD_PLAYER_NOT_FOUND_S).toBe(0x0b);
+  });
+
+  test("GUILD_LEADER_LEAVE_OR_PERMISSIONS is 0x08", () => {
+    expect(GuildCommandResult.GUILD_LEADER_LEAVE_OR_PERMISSIONS).toBe(0x08);
+  });
+});
+
+describe("parseGuildCommandResult", () => {
+  test("parses command, name, and result", () => {
+    const w = new PacketWriter();
+    w.uint32LE(GuildCommand.INVITE);
+    w.cString("Thrall");
+    w.uint32LE(GuildCommandResult.ALREADY_IN_GUILD_S);
+    const result = parseGuildCommandResult(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      command: GuildCommand.INVITE,
+      name: "Thrall",
+      result: GuildCommandResult.ALREADY_IN_GUILD_S,
+    });
+  });
+
+  test("parses result with empty name", () => {
+    const w = new PacketWriter();
+    w.uint32LE(GuildCommand.QUIT);
+    w.cString("");
+    w.uint32LE(GuildCommandResult.GUILD_LEADER_LEAVE_OR_PERMISSIONS);
+    const result = parseGuildCommandResult(new PacketReader(w.finish()));
+    expect(result.command).toBe(GuildCommand.QUIT);
+    expect(result.name).toBe("");
+    expect(result.result).toBe(
+      GuildCommandResult.GUILD_LEADER_LEAVE_OR_PERMISSIONS,
+    );
+  });
+
+  test("consumes all bytes", () => {
+    const w = new PacketWriter();
+    w.uint32LE(0);
+    w.cString("X");
+    w.uint32LE(0);
+    const r = new PacketReader(w.finish());
+    parseGuildCommandResult(r);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseGuildInvitePacket", () => {
+  test("parses inviter name and guild name", () => {
+    const w = new PacketWriter();
+    w.cString("Thrall");
+    w.cString("Horde Heroes");
+    const result = parseGuildInvitePacket(new PacketReader(w.finish()));
+    expect(result).toEqual({
+      inviterName: "Thrall",
+      guildName: "Horde Heroes",
+    });
+  });
+
+  test("consumes all bytes", () => {
+    const w = new PacketWriter();
+    w.cString("A");
+    w.cString("B");
+    const r = new PacketReader(w.finish());
+    parseGuildInvitePacket(r);
+    expect(r.remaining).toBe(0);
   });
 });
