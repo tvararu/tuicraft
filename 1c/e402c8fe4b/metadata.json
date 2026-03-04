@@ -157,6 +157,13 @@
       "context": "/1c/e402c8fe4b/20/context.md",
       "content_hash": "/1c/e402c8fe4b/20/content_hash.txt",
       "prompt": "/1c/e402c8fe4b/20/prompt.txt"
+    },
+    {
+      "metadata": "/1c/e402c8fe4b/21/metadata.json",
+      "transcript": "/1c/e402c8fe4b/21/full.jsonl",
+      "context": "/1c/e402c8fe4b/21/context.md",
+      "content_hash": "/1c/e402c8fe4b/21/content_hash.txt",
+      "prompt": "/1c/e402c8fe4b/21/prompt.txt"
     }
   ],
   "token_usage": {
