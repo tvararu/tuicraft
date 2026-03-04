@@ -59,6 +59,13 @@ import {
 } from "wow/protocol/guild";
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
+  buildGetMailList,
+  buildSendMail,
+  buildMailDelete,
+  buildMailMarkAsRead,
+  type MailEntry,
+} from "wow/protocol/mail";
+import {
   sendPacket,
   handleTimeSync,
   handleChatMessage,
@@ -99,6 +106,9 @@ import {
   handleDuelInBounds,
   handleGuildCommandResult,
   handleGuildInvitePacket,
+  handleShowMailbox,
+  handleMailListResult,
+  handleSendMailResult,
 } from "wow/world-handlers";
 
 export type ClientConfig = {
@@ -173,6 +183,7 @@ export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
 export type { IgnoreEntry, IgnoreEvent };
 export type { GuildRoster, GuildEvent };
+export type { MailEntry };
 
 export type ChatMode =
   | { type: "say" }
@@ -240,6 +251,13 @@ export type WorldHandle = {
   guildMotd(motd: string): void;
   acceptGuildInvite(): void;
   declineGuildInvite(): void;
+  requestMailList(): Promise<MailEntry[]>;
+  sendMail(receiver: string, subject: string, body: string): void;
+  deleteMail(mailId: number): void;
+  markMailAsRead(mailId: number): void;
+  getMailboxGuid(): bigint | null;
+  getMailCache(): MailEntry[];
+  getNameCache(): Map<number, string>;
 };
 
 export type WorldConn = {
@@ -275,6 +293,8 @@ export type WorldConn = {
   pendingRequest: "group" | "duel" | null;
   duelArbiter: bigint;
   onDuelEvent?: (event: DuelEvent) => void;
+  mailboxGuid: bigint | null;
+  mailCache: MailEntry[];
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -402,6 +422,8 @@ export function worldSession(
       guildId: 0,
       pendingRequest: null,
       duelArbiter: 0n,
+      mailboxGuid: null,
+      mailCache: [],
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
@@ -533,6 +555,15 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) =>
       handleGuildInvitePacket(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SHOW_MAILBOX, (r) =>
+      handleShowMailbox(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_MAIL_LIST_RESULT, (r) =>
+      handleMailListResult(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SEND_MAIL_RESULT, (r) =>
+      handleSendMailResult(conn, r),
     );
 
     registerStubs(conn.dispatch, (msg) => {
@@ -921,6 +952,52 @@ export function worldSession(
         },
         onDuelEvent(cb) {
           conn.onDuelEvent = cb;
+        },
+        async requestMailList() {
+          if (!conn.mailboxGuid) return [];
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_GET_MAIL_LIST,
+            buildGetMailList(conn.mailboxGuid),
+          );
+          const r = await conn.dispatch.expect(
+            GameOpcode.SMSG_MAIL_LIST_RESULT,
+          );
+          handleMailListResult(conn, r);
+          return conn.mailCache;
+        },
+        sendMail(receiver, subject, body) {
+          if (!conn.mailboxGuid) return;
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_SEND_MAIL,
+            buildSendMail(conn.mailboxGuid, receiver, subject, body),
+          );
+        },
+        deleteMail(mailId) {
+          if (!conn.mailboxGuid) return;
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MAIL_DELETE,
+            buildMailDelete(conn.mailboxGuid, mailId),
+          );
+        },
+        markMailAsRead(mailId) {
+          if (!conn.mailboxGuid) return;
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_MAIL_MARK_AS_READ,
+            buildMailMarkAsRead(conn.mailboxGuid, mailId),
+          );
+        },
+        getMailboxGuid() {
+          return conn.mailboxGuid;
+        },
+        getMailCache() {
+          return conn.mailCache;
+        },
+        getNameCache() {
+          return conn.nameCache;
         },
       };
       resolve(handle);
