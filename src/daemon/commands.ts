@@ -83,6 +83,15 @@ export type IpcCommand =
   | { type: "roll"; min: number; max: number }
   | { type: "guild_roster" }
   | { type: "guild_roster_json" }
+  | { type: "guild_invite"; target: string }
+  | { type: "guild_kick"; target: string }
+  | { type: "guild_leave" }
+  | { type: "guild_promote"; target: string }
+  | { type: "guild_demote"; target: string }
+  | { type: "guild_leader"; target: string }
+  | { type: "guild_motd"; message: string }
+  | { type: "guild_accept" }
+  | { type: "guild_decline" }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -134,6 +143,24 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return parsed;
       case "guild-roster":
         return { type: "guild_roster" };
+      case "guild-invite":
+        return { type: "guild_invite", target: parsed.target };
+      case "guild-kick":
+        return { type: "guild_kick", target: parsed.target };
+      case "guild-leave":
+        return { type: "guild_leave" };
+      case "guild-promote":
+        return { type: "guild_promote", target: parsed.target };
+      case "guild-demote":
+        return { type: "guild_demote", target: parsed.target };
+      case "guild-leader":
+        return { type: "guild_leader", target: parsed.target };
+      case "guild-motd":
+        return { type: "guild_motd", message: parsed.message };
+      case "guild-accept":
+        return { type: "guild_accept" };
+      case "guild-decline":
+        return { type: "guild_decline" };
       case "unimplemented":
         return parsed;
       default:
@@ -242,10 +269,23 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "GUILD_ROSTER_JSON":
       return { type: "guild_roster_json" };
     case "GINVITE":
+      return rest ? { type: "guild_invite", target: rest } : undefined;
     case "GKICK":
+      return rest ? { type: "guild_kick", target: rest } : undefined;
     case "GLEAVE":
+      return { type: "guild_leave" };
     case "GPROMOTE":
-      return { type: "unimplemented", feature: "Guild management" };
+      return rest ? { type: "guild_promote", target: rest } : undefined;
+    case "GDEMOTE":
+      return rest ? { type: "guild_demote", target: rest } : undefined;
+    case "GLEADER":
+      return rest ? { type: "guild_leader", target: rest } : undefined;
+    case "GMOTD":
+      return { type: "guild_motd", message: rest };
+    case "GACCEPT":
+      return { type: "guild_accept" };
+    case "GDECLINE":
+      return { type: "guild_decline" };
     case "MAIL":
       return { type: "unimplemented", feature: "Mail reading" };
     case "ROLL": {
@@ -488,6 +528,42 @@ export async function dispatchCommand(
       }
       return false;
     }
+    case "guild_invite":
+      handle.guildInvite(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_kick":
+      handle.guildRemove(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_leave":
+      handle.guildLeave();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_promote":
+      handle.guildPromote(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_demote":
+      handle.guildDemote(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_leader":
+      handle.guildLeader(cmd.target);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_motd":
+      handle.guildMotd(cmd.message);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_accept":
+      handle.acceptGuildInvite();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "guild_decline":
+      handle.declineGuildInvite();
+      writeLines(socket, ["OK"]);
+      return false;
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;

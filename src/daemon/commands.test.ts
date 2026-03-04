@@ -419,13 +419,7 @@ describe("parseIpcCommand", () => {
   });
 
   describe("unimplemented IPC commands", () => {
-    const cases = [
-      ["GINVITE Foo", "Guild management"],
-      ["GKICK Foo", "Guild management"],
-      ["GLEAVE", "Guild management"],
-      ["GPROMOTE Foo", "Guild management"],
-      ["MAIL", "Mail reading"],
-    ] as const;
+    const cases = [["MAIL", "Mail reading"]] as const;
 
     for (const [input, feature] of cases) {
       test(`${input.split(" ")[0]} returns unimplemented`, () => {
@@ -580,11 +574,84 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("/groster")).toEqual({ type: "guild_roster" });
   });
 
-  test("/ginvite via slash path returns unimplemented", () => {
-    expect(parseIpcCommand("/ginvite Foo")).toEqual({
-      type: "unimplemented",
-      feature: "Guild management",
+  test("GINVITE parses guild invite", () => {
+    expect(parseIpcCommand("GINVITE Thrall")).toEqual({
+      type: "guild_invite",
+      target: "Thrall",
     });
+  });
+
+  test("GINVITE without target returns undefined", () => {
+    expect(parseIpcCommand("GINVITE")).toBeUndefined();
+  });
+
+  test("GKICK parses guild kick", () => {
+    expect(parseIpcCommand("GKICK Garrosh")).toEqual({
+      type: "guild_kick",
+      target: "Garrosh",
+    });
+  });
+
+  test("GLEAVE parses guild leave", () => {
+    expect(parseIpcCommand("GLEAVE")).toEqual({ type: "guild_leave" });
+  });
+
+  test("GPROMOTE parses guild promote", () => {
+    expect(parseIpcCommand("GPROMOTE Jaina")).toEqual({
+      type: "guild_promote",
+      target: "Jaina",
+    });
+  });
+
+  test("GDEMOTE parses guild demote", () => {
+    expect(parseIpcCommand("GDEMOTE Arthas")).toEqual({
+      type: "guild_demote",
+      target: "Arthas",
+    });
+  });
+
+  test("GLEADER parses guild leader", () => {
+    expect(parseIpcCommand("GLEADER Sylvanas")).toEqual({
+      type: "guild_leader",
+      target: "Sylvanas",
+    });
+  });
+
+  test("GMOTD parses guild motd", () => {
+    expect(parseIpcCommand("GMOTD Raid tonight")).toEqual({
+      type: "guild_motd",
+      message: "Raid tonight",
+    });
+  });
+
+  test("GMOTD with empty message clears motd", () => {
+    expect(parseIpcCommand("GMOTD")).toEqual({
+      type: "guild_motd",
+      message: "",
+    });
+  });
+
+  test("GACCEPT parses guild accept", () => {
+    expect(parseIpcCommand("GACCEPT")).toEqual({ type: "guild_accept" });
+  });
+
+  test("GDECLINE parses guild decline", () => {
+    expect(parseIpcCommand("GDECLINE")).toEqual({ type: "guild_decline" });
+  });
+
+  test("/ginvite via slash parses guild invite", () => {
+    expect(parseIpcCommand("/ginvite Thrall")).toEqual({
+      type: "guild_invite",
+      target: "Thrall",
+    });
+  });
+
+  test("/gaccept via slash parses guild accept", () => {
+    expect(parseIpcCommand("/gaccept")).toEqual({ type: "guild_accept" });
+  });
+
+  test("/gdecline via slash parses guild decline", () => {
+    expect(parseIpcCommand("/gdecline")).toEqual({ type: "guild_decline" });
   });
 });
 
