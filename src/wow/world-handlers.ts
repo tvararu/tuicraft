@@ -13,6 +13,14 @@ import {
 } from "wow/protocol/chat";
 import { buildOutgoingPacket } from "wow/protocol/world";
 import {
+  parseShowMailbox,
+  parseMailListResult,
+  parseSendMailResult,
+  buildGetMailList,
+  MailAction,
+  formatMailResultError,
+} from "wow/protocol/mail";
+import {
   parseDuelRequested,
   parseDuelCountdown,
   parseDuelComplete,
@@ -290,6 +298,49 @@ export function handleReceivedMail(conn: WorldConn, r: PacketReader): void {
     message: "You have new mail.",
     origin: "mail",
   });
+}
+
+export function handleShowMailbox(conn: WorldConn, r: PacketReader): void {
+  conn.mailboxGuid = parseShowMailbox(r);
+  conn.onMessage?.({
+    type: ChatType.SYSTEM,
+    sender: "",
+    message: "Mailbox opened.",
+    origin: "mail",
+  });
+  sendPacket(
+    conn,
+    GameOpcode.CMSG_GET_MAIL_LIST,
+    buildGetMailList(conn.mailboxGuid),
+  );
+}
+
+export function handleMailListResult(conn: WorldConn, r: PacketReader): void {
+  const result = parseMailListResult(r);
+  conn.mailCache = result.entries;
+}
+
+export function handleSendMailResult(conn: WorldConn, r: PacketReader): void {
+  const packet = parseSendMailResult(r);
+  if (packet.action === MailAction.SEND) {
+    const err = formatMailResultError(packet.result);
+    conn.onMessage?.({
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: err ?? "Mail sent.",
+      origin: "mail",
+    });
+  } else if (packet.action === MailAction.DELETED) {
+    const err = formatMailResultError(packet.result);
+    if (err) {
+      conn.onMessage?.({
+        type: ChatType.SYSTEM,
+        sender: "",
+        message: err,
+        origin: "mail",
+      });
+    }
+  }
 }
 
 export function handleDuelRequested(conn: WorldConn, r: PacketReader): void {
