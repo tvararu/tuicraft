@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "a1b67c933b24",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/wow/client.ts",
+    "src/wow/protocol/guild.test.ts",
+    "src/wow/world-handlers.test.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/a1/b67c933b24/0/metadata.json",
+      "transcript": "/a1/b67c933b24/0/full.jsonl",
+      "context": "/a1/b67c933b24/0/context.md",
+      "content_hash": "/a1/b67c933b24/0/content_hash.txt",
+      "prompt": "/a1/b67c933b24/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2412,
+    "cache_creation_tokens": 596683,
+    "cache_read_tokens": 14671414,
+    "output_tokens": 70658,
+    "api_call_count": 146
+  }
+}
