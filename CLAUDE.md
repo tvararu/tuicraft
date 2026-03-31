@@ -9,7 +9,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format` — check formatting (`biome format`)
 - `mise format:fix` — fix formatting (`biome format --write`)
 - `mise bundle` — install dependencies (`bun install`)
-- `mise ci` — run typecheck, test, and format in parallel
+- `mise ci` — run typecheck, test, and format; then `gh signoff ci`
 - `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
