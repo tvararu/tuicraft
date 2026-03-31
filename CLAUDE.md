@@ -6,8 +6,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - `mise test` — run all tests (`bun test`)
 - `mise typecheck` — type-check (`tsc --noEmit`)
-- `mise format` — check formatting (`prettier --check`)
-- `mise format:fix` — fix formatting (`prettier --write`)
+- `mise format` — check formatting (`biome format`)
+- `mise format:fix` — fix formatting (`biome format --write`)
 - `mise bundle` — install dependencies (`bun install`)
 - `mise ci` — run typecheck, test, and format in parallel
 - `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)

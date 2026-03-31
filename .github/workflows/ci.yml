@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   format:
-    name: format / prettier
+    name: format / biome
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
