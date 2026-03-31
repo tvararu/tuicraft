@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.7",
+  "checkpoint_id": "15b5fbb8eae4",
+  "session_id": "e9450fee-ba06-42a4-9233-22a689b6eee7",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-31T07:36:36.871024Z",
+  "branch": "chore/biome",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "mise.toml"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "cfca78884f16",
+  "token_usage": {
+    "input_tokens": 115,
+    "cache_creation_tokens": 201697,
+    "cache_read_tokens": 5754639,
+    "output_tokens": 26408,
+    "api_call_count": 85
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-31T07:36:35.554559Z",
+    "agent_lines": 4,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 4,
+    "agent_percentage": 100
+  }
+}
