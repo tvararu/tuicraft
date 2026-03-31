@@ -64,7 +64,9 @@ async function waitForEchoProbe(
   handle: Pick<WorldHandle, "onMessage" | "sendSay">,
 ): Promise<void> {
   const received = new Promise<ChatMessage>((resolve) => {
-    handle.onMessage(resolve);
+    handle.onMessage((msg) => {
+      if (msg.message === "probe") resolve(msg);
+    });
   });
   handle.sendSay("probe");
   await received;
@@ -136,6 +138,7 @@ describe("world handler tests", () => {
         fakeAuth(ws.port),
       );
 
+      await waitForEchoProbe(handle);
       const messageReceived = new Promise<ChatMessage>((resolve) => {
         handle.onMessage(resolve);
       });
@@ -199,6 +202,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendSay("test say");
       const msg = await received;
@@ -218,6 +222,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendYell("test yell");
       const msg = await received;
@@ -237,6 +242,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendGuild("test guild");
       const msg = await received;
@@ -256,6 +262,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendParty("test party");
       const msg = await received;
@@ -275,6 +282,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendRaid("test raid");
       const msg = await received;
@@ -294,6 +302,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendEmote("test emote");
       const msg = await received;
@@ -313,6 +322,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendDnd("busy right now");
       const msg = await received;
@@ -332,6 +342,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendAfk("grabbing coffee");
       const msg = await received;
@@ -351,6 +362,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendChannel("General", "test channel");
       const msg = await received;
@@ -372,6 +384,7 @@ describe("world handler tests", () => {
         fakeAuth(ws.port),
       );
 
+      await waitForEchoProbe(handle);
       const first = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendSay("first");
       await first;
@@ -397,6 +410,7 @@ describe("world handler tests", () => {
         fakeAuth(ws.port),
       );
 
+      await waitForEchoProbe(handle);
       const messages: ChatMessage[] = [];
       const gotTwo = new Promise<void>((resolve) => {
         handle.onMessage((msg) => {
@@ -426,6 +440,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -461,6 +476,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -499,6 +515,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -526,6 +543,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -553,6 +571,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -581,6 +600,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -906,6 +926,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -932,6 +953,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -958,6 +980,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -1115,6 +1138,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("hello via say");
       const msg = await received;
@@ -1134,6 +1158,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "whisper", target: "Someone" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("whisper test");
@@ -1157,6 +1182,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "yell" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("yell test");
@@ -1177,6 +1203,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "guild" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("guild test");
@@ -1197,6 +1224,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "party" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("party test");
@@ -1217,6 +1245,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "raid" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("raid test");
@@ -1237,6 +1266,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "emote" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("emote test");
@@ -1257,6 +1287,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
       handle.setLastChatMode({ type: "channel", channel: "General" });
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
       handle.sendInCurrentMode("channel test");
@@ -1441,6 +1472,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((resolve) => {
         handle.onMessage(resolve);
@@ -1465,6 +1497,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((resolve) => {
         handle.onMessage((msg) => {
@@ -1598,6 +1631,7 @@ describe("world handler tests", () => {
         { ...base, host: "127.0.0.1", port: ws.port },
         fakeAuth(ws.port),
       );
+      await waitForEchoProbe(handle);
 
       const received = new Promise<ChatMessage>((r) => handle.onMessage(r));
 
@@ -2825,6 +2859,7 @@ describe("world handler tests", () => {
           { ...base, host: "127.0.0.1", port: ws.port },
           fakeAuth(ws.port),
         );
+        await waitForEchoProbe(handle);
 
         const received = new Promise<ChatMessage>((resolve) => {
           handle.onMessage(resolve);
@@ -3163,6 +3198,7 @@ describe("world handler tests", () => {
           { ...base, host: "127.0.0.1", port: ws.port },
           fakeAuth(ws.port),
         );
+        await waitForEchoProbe(handle);
 
         const received = new Promise<ChatMessage>((resolve) => {
           handle.onMessage(resolve);
