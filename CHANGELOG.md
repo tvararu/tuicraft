@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.4.3](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.2...tuicraft-v0.4.3) (2026-03-31)
+
+
+### Features
+
+* Add duel event formatters and ring buffer ([bbd3532](https://github.com/tvararu/tuicraft/commit/bbd35320cf7b51248a7fb99ea749a42d16fbecf0))
+* Add duel protocol parse/build functions ([a361af8](https://github.com/tvararu/tuicraft/commit/a361af840facd5b463bd38740b84acdb2ea4bf94))
+* Add DuelEvent type and context-aware accept ([e78d0bc](https://github.com/tvararu/tuicraft/commit/e78d0bc46ffd81615083cd262b908492fe7d6bdc))
+* Add guild management methods to WorldHandle ([1596cc9](https://github.com/tvararu/tuicraft/commit/1596cc95f7eac3c3a517baba0257d18c539e23b3))
+* Add guild management packet builders ([4eec249](https://github.com/tvararu/tuicraft/commit/4eec249ae094bd20c74f5ee54ac78cc8e70024ad))
+* Add mail origin to ChatMessage type ([8418941](https://github.com/tvararu/tuicraft/commit/84189415199e504ba02a2fb089622c7b07e58c88))
+* Add parseGuildEvent for SMSG_GUILD_EVENT ([2cb97c7](https://github.com/tvararu/tuicraft/commit/2cb97c7eba1d0fb9bf5895fe5206fa79e1fe2a0c))
+* Expand GuildEvent union and add formatters ([5e70167](https://github.com/tvararu/tuicraft/commit/5e701678332e1d6813de49bbce34a37d1f513ec0))
+* Format mail notifications as [mail] label ([3500bd9](https://github.com/tvararu/tuicraft/commit/3500bd9dd97cb6e0877a34d4359219064ce93274))
+* Handle SMSG_GUILD_COMMAND_RESULT and invite ([69e1f71](https://github.com/tvararu/tuicraft/commit/69e1f716ec3674ac1b187bc9ea6780b39e19ad88))
+* Handle SMSG_GUILD_EVENT opcode ([f0a5d4c](https://github.com/tvararu/tuicraft/commit/f0a5d4cccdfe14bab0d8a35f5cb8cb566f5df65b))
+* Handle SMSG_RECEIVED_MAIL notification ([0f83eba](https://github.com/tvararu/tuicraft/commit/0f83ebab2d65d0f212f0d1d82a1392acdb421b08))
+* Parse guild management slash commands ([9d5cb45](https://github.com/tvararu/tuicraft/commit/9d5cb45e538dede57d04956db442832c6342ecf7))
+* Register duel SMSG handlers ([8a41fc9](https://github.com/tvararu/tuicraft/commit/8a41fc99d36cd7961a57aaf6a3ee348eaade7372))
+* Update /mail stub to say Mail reading ([e7f73bd](https://github.com/tvararu/tuicraft/commit/e7f73bdd7e01347d17f7bcdf25f0d644932674c8))
+* Wire guild management commands through IPC ([d27ceda](https://github.com/tvararu/tuicraft/commit/d27ceda6d43444d5b75b7330b495c46af7ecfe29))
+
+
+### Bug Fixes
+
+* Read SMSG_RECEIVED_MAIL field as u32 not f32 ([b2bb38f](https://github.com/tvararu/tuicraft/commit/b2bb38fb1d2fedd866c1dbff3cc353c383b955bd))
+* Use human-readable guild command errors ([b4fc717](https://github.com/tvararu/tuicraft/commit/b4fc717122310d70a988c5d000db4ed00e674f87))
+
+
+### Documentation
+
+* Add duel accept/decline design ([4f37900](https://github.com/tvararu/tuicraft/commit/4f37900600f1375ed040d64ed5f52700ba6a9ee9))
+* Add duel accept/decline implementation plan ([e9406a4](https://github.com/tvararu/tuicraft/commit/e9406a44ad4c0c1a23c55c979d3efe282e270114))
+* Add guild events design ([9f7f506](https://github.com/tvararu/tuicraft/commit/9f7f506c2a62a5a76545a6a6e36c0b1d6a7e7860))
+* Add guild events implementation plan ([0e6ebdd](https://github.com/tvararu/tuicraft/commit/0e6ebdd9c549c9f0b6aadf7e63a0298cec91706a))
+* Add guild management commands design ([d0c26ea](https://github.com/tvararu/tuicraft/commit/d0c26eafec1c135b405b8d133de91375bf54408a))
+* Add guild management implementation plan ([6e0b0b6](https://github.com/tvararu/tuicraft/commit/6e0b0b66a11bff154aad1aff8463658648398f4b))
+* Add mail notifications design ([fc739ce](https://github.com/tvararu/tuicraft/commit/fc739ce9fbf895e34fe8b9c6662d6ca2f8b673a0))
+* Add mail notifications implementation plan ([285898e](https://github.com/tvararu/tuicraft/commit/285898e59a218e645c4e3ec0bb4fe897349d51be))
+* Document guild management commands ([e7c567c](https://github.com/tvararu/tuicraft/commit/e7c567cce5fe821e4d4131a150038e58014c83fc))
+* Mark duel and mail notifications as done ([7b0a24c](https://github.com/tvararu/tuicraft/commit/7b0a24c948db6ffbce277e113f284882208e2cb1))
+* Mark guild events as done ([3c9dc40](https://github.com/tvararu/tuicraft/commit/3c9dc40d42fff7de5d90d41304ef5838bcf2b9ad))
+* Update help text for context-aware accept ([83927ad](https://github.com/tvararu/tuicraft/commit/83927ad490b568269583eb77708ed4fb38a44f64))
+
+
+### Maintenance
+
+* Add coverage for guild management commands ([e0a7c6a](https://github.com/tvararu/tuicraft/commit/e0a7c6a19dd28ee025791cddefb7bdc6999131ef))
+* Add duel event format tests ([ae0fc87](https://github.com/tvararu/tuicraft/commit/ae0fc87c678f179cef4cd4f50b2b4036e0293532))
+* Add duel handler integration tests ([706b880](https://github.com/tvararu/tuicraft/commit/706b88087db7f0dd748a7d249d2b677d54a03ee9))
+* Add raw output to test mise tasks ([751ccfc](https://github.com/tvararu/tuicraft/commit/751ccfc8addb9b3d061269c0cfe5457754c6d314))
+* Cover group accept/decline paths ([d00109a](https://github.com/tvararu/tuicraft/commit/d00109a8575f3e8f98a25dad46fdbc3f9b93ed53))
+* Cover remaining guild command paths ([e83a4e1](https://github.com/tvararu/tuicraft/commit/e83a4e1c881be1401c18a8615606241294a7a57c))
+* Drain login messages before asserting ([51f9daa](https://github.com/tvararu/tuicraft/commit/51f9daaa93015911c28cb3245e7ec92d4f9964c5))
+* Remove guild management stubs ([43dda45](https://github.com/tvararu/tuicraft/commit/43dda458fb575b2e586afe3f6e32dd9bd240de8a))
+* Remove SMSG_GUILD_EVENT stub ([3bba8fd](https://github.com/tvararu/tuicraft/commit/3bba8fd99f6eba3ce14edb393f5a24e477213553))
+* Replace GitHub Actions CI with local gh-signoff ([3e4bd40](https://github.com/tvararu/tuicraft/commit/3e4bd404fe913c161b10bbb0bd35a46f849a0c7e))
+* Replace Prettier with Biome formatter ([bde0724](https://github.com/tvararu/tuicraft/commit/bde07248fb04b7c6b04a61e2c870b4e2c78f03f9))
+* Update mocks for DuelEvent ([64bd2fb](https://github.com/tvararu/tuicraft/commit/64bd2fb37637d3ef75c5e59afa7025895136be73))
+
 ## [0.4.2](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.1...tuicraft-v0.4.2) (2026-03-03)
 
 
