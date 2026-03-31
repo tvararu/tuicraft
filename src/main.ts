@@ -1,7 +1,9 @@
 import { parseArgs } from "cli/args";
 import { sendToSocket, ensureDaemon } from "cli/ipc";
 import { formatSendOutput } from "cli/send-output";
-import skillContent from "../.claude/skills/tuicraft/SKILL.md" with { type: "text" };
+import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
+  type: "text",
+};
 
 const action = parseArgs(Bun.argv.slice(2));
 

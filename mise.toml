@@ -1,5 +1,9 @@
 [tools]
+"npm:@biomejs/biome" = "latest"
 bun = "latest"
+
+[settings]
+npm.package_manager = "bun"
 
 [tasks.bundle]
 description = "Install dependencies"
@@ -56,11 +60,11 @@ run = "bun run typecheck"
 
 [tasks.format]
 description = "Check formatting"
-run = "bunx prettier --check src/"
+run = "biome format src/"
 
 [tasks."format:fix"]
 description = "Fix formatting"
-run = "bunx prettier --write src/"
+run = "biome format --write src/"
 
 [tasks.worktree]
 description = "Create a worktree for feature work"
