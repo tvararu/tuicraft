@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "1cd502b1ad78",
+  "strategy": "manual-commit",
+  "branch": "feat/duel-accept-decline",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/client.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/1c/d502b1ad78/0/metadata.json",
+      "transcript": "/1c/d502b1ad78/0/full.jsonl",
+      "context": "/1c/d502b1ad78/0/context.md",
+      "content_hash": "/1c/d502b1ad78/0/content_hash.txt",
+      "prompt": "/1c/d502b1ad78/0/prompt.txt"
+    },
+    {
+      "metadata": "/1c/d502b1ad78/1/metadata.json",
+      "transcript": "/1c/d502b1ad78/1/full.jsonl",
+      "context": "/1c/d502b1ad78/1/context.md",
+      "content_hash": "/1c/d502b1ad78/1/content_hash.txt",
+      "prompt": "/1c/d502b1ad78/1/prompt.txt"
+    },
+    {
+      "metadata": "/1c/d502b1ad78/2/metadata.json",
+      "transcript": "/1c/d502b1ad78/2/full.jsonl",
+      "context": "/1c/d502b1ad78/2/context.md",
+      "content_hash": "/1c/d502b1ad78/2/content_hash.txt",
+      "prompt": "/1c/d502b1ad78/2/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 3793,
+    "cache_creation_tokens": 425397,
+    "cache_read_tokens": 10016602,
+    "output_tokens": 45517,
+    "api_call_count": 128
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "48e1bff45d21",
+  "session_id": "b40cbf28-e020-4c24-b9fe-ef3b6f34614d",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T23:27:36.653187549Z",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 0,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "docs/plans/2026-03-01-ignore-list-plan.md",
+    "src/cli/help.ts",
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/server.ts",
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/ui/commands.test.ts",
+    "src/ui/commands.ts",
+    "src/ui/format.test.ts",
+    "src/ui/format.ts",
+    "src/ui/tui.test.ts",
+    "src/ui/tui.ts",
+    "src/wow/client.ts",
+    "src/wow/ignore-store.test.ts",
+    "src/wow/ignore-store.ts",
+    "src/wow/protocol/social.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "23d5cdf7e12a",
+  "token_usage": {
+    "input_tokens": 68,
+    "cache_creation_tokens": 131020,
+    "cache_read_tokens": 7926690,
+    "output_tokens": 20681,
+    "api_call_count": 65
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T23:27:36.402752213Z",
+    "agent_lines": 1103,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1103,
+    "agent_percentage": 100
+  }
+}

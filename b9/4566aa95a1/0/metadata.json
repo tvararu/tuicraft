@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "b94566aa95a1",
+  "session_id": "beba0e57-80cb-42f8-8c71-f2a6a9caa897",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T01:55:09.63626721Z",
+  "branch": "feat/mail",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/client.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "200ca5f066c5",
+  "token_usage": {
+    "input_tokens": 8,
+    "cache_creation_tokens": 19377,
+    "cache_read_tokens": 129069,
+    "output_tokens": 802,
+    "api_call_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T01:55:09.599977403Z",
+    "agent_lines": 0,
+    "human_added": 77,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 77,
+    "agent_percentage": 0
+  }
+}

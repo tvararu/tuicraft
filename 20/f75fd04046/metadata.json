@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "20f75fd04046",
+  "strategy": "manual-commit",
+  "branch": "feat/mail",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/ui/commands.test.ts",
+    "src/ui/commands.ts",
+    "src/ui/format.ts",
+    "src/ui/tui.ts",
+    "src/wow/protocol/mail.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/20/f75fd04046/0/metadata.json",
+      "transcript": "/20/f75fd04046/0/full.jsonl",
+      "context": "/20/f75fd04046/0/context.md",
+      "content_hash": "/20/f75fd04046/0/content_hash.txt",
+      "prompt": "/20/f75fd04046/0/prompt.txt"
+    },
+    {
+      "metadata": "/20/f75fd04046/1/metadata.json",
+      "transcript": "/20/f75fd04046/1/full.jsonl",
+      "context": "/20/f75fd04046/1/context.md",
+      "content_hash": "/20/f75fd04046/1/content_hash.txt",
+      "prompt": "/20/f75fd04046/1/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "8003036a46e2",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/ui/tui.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/80/03036a46e2/0/metadata.json",
+      "transcript": "/80/03036a46e2/0/full.jsonl",
+      "context": "/80/03036a46e2/0/context.md",
+      "content_hash": "/80/03036a46e2/0/content_hash.txt",
+      "prompt": "/80/03036a46e2/0/prompt.txt"
+    },
+    {
+      "metadata": "/80/03036a46e2/1/metadata.json",
+      "transcript": "/80/03036a46e2/1/full.jsonl",
+      "context": "/80/03036a46e2/1/context.md",
+      "content_hash": "/80/03036a46e2/1/content_hash.txt",
+      "prompt": "/80/03036a46e2/1/prompt.txt"
+    },
+    {
+      "metadata": "/80/03036a46e2/2/metadata.json",
+      "transcript": "/80/03036a46e2/2/full.jsonl",
+      "context": "/80/03036a46e2/2/context.md",
+      "content_hash": "/80/03036a46e2/2/content_hash.txt",
+      "prompt": "/80/03036a46e2/2/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12922,
+    "cache_creation_tokens": 642896,
+    "cache_read_tokens": 16108129,
+    "output_tokens": 78131,
+    "api_call_count": 173
+  }
+}

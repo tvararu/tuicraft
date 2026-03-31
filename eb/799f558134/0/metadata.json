@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "eb799f558134",
+  "session_id": "9148bea6-f465-4ed4-8562-ccdf33817fe3",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T00:32:03.31453294Z",
+  "branch": "feat/guild-management",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "884254471ea7",
+  "token_usage": {
+    "input_tokens": 82,
+    "cache_creation_tokens": 322671,
+    "cache_read_tokens": 5552401,
+    "output_tokens": 43396,
+    "api_call_count": 63
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T00:32:03.192863856Z",
+    "agent_lines": 73,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 73,
+    "agent_percentage": 100
+  }
+}

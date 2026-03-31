@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "24d2c8b06f26",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-03-guild-events-design.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/24/d2c8b06f26/0/metadata.json",
+      "transcript": "/24/d2c8b06f26/0/full.jsonl",
+      "context": "/24/d2c8b06f26/0/context.md",
+      "content_hash": "/24/d2c8b06f26/0/content_hash.txt",
+      "prompt": "/24/d2c8b06f26/0/prompt.txt"
+    },
+    {
+      "metadata": "/24/d2c8b06f26/1/metadata.json",
+      "transcript": "/24/d2c8b06f26/1/full.jsonl",
+      "context": "/24/d2c8b06f26/1/context.md",
+      "content_hash": "/24/d2c8b06f26/1/content_hash.txt",
+      "prompt": "/24/d2c8b06f26/1/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1538,
+    "cache_creation_tokens": 110235,
+    "cache_read_tokens": 681766,
+    "output_tokens": 8563,
+    "api_call_count": 19
+  }
+}

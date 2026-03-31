@@ -1,0 +1,62 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "7379106a17cf",
+  "strategy": "manual-commit",
+  "branch": "feat/mail",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/ui/commands.ts",
+    "src/ui/format.test.ts",
+    "src/ui/format.ts",
+    "src/ui/tui.ts",
+    "src/wow/protocol/mail.test.ts",
+    "src/wow/world-handlers.test.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/73/79106a17cf/0/metadata.json",
+      "transcript": "/73/79106a17cf/0/full.jsonl",
+      "context": "/73/79106a17cf/0/context.md",
+      "content_hash": "/73/79106a17cf/0/content_hash.txt",
+      "prompt": "/73/79106a17cf/0/prompt.txt"
+    },
+    {
+      "metadata": "/73/79106a17cf/1/metadata.json",
+      "transcript": "/73/79106a17cf/1/full.jsonl",
+      "context": "/73/79106a17cf/1/context.md",
+      "content_hash": "/73/79106a17cf/1/content_hash.txt",
+      "prompt": "/73/79106a17cf/1/prompt.txt"
+    },
+    {
+      "metadata": "/73/79106a17cf/2/metadata.json",
+      "transcript": "/73/79106a17cf/2/full.jsonl",
+      "context": "/73/79106a17cf/2/context.md",
+      "content_hash": "/73/79106a17cf/2/content_hash.txt",
+      "prompt": "/73/79106a17cf/2/prompt.txt"
+    },
+    {
+      "metadata": "/73/79106a17cf/3/metadata.json",
+      "transcript": "/73/79106a17cf/3/full.jsonl",
+      "context": "/73/79106a17cf/3/context.md",
+      "content_hash": "/73/79106a17cf/3/content_hash.txt",
+      "prompt": "/73/79106a17cf/3/prompt.txt"
+    },
+    {
+      "metadata": "/73/79106a17cf/4/metadata.json",
+      "transcript": "/73/79106a17cf/4/full.jsonl",
+      "context": "/73/79106a17cf/4/context.md",
+      "content_hash": "/73/79106a17cf/4/content_hash.txt",
+      "prompt": "/73/79106a17cf/4/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 136,
+    "cache_creation_tokens": 237011,
+    "cache_read_tokens": 10751774,
+    "output_tokens": 58360,
+    "api_call_count": 125
+  }
+}

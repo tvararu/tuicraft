@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "e60ae93a7622",
+  "strategy": "manual-commit",
+  "branch": "feat/mail",
+  "checkpoints_count": 0,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "src/cli/help.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e6/0ae93a7622/0/metadata.json",
+      "transcript": "/e6/0ae93a7622/0/full.jsonl",
+      "context": "/e6/0ae93a7622/0/context.md",
+      "content_hash": "/e6/0ae93a7622/0/content_hash.txt",
+      "prompt": "/e6/0ae93a7622/0/prompt.txt"
+    },
+    {
+      "metadata": "/e6/0ae93a7622/1/metadata.json",
+      "transcript": "/e6/0ae93a7622/1/full.jsonl",
+      "context": "/e6/0ae93a7622/1/context.md",
+      "content_hash": "/e6/0ae93a7622/1/content_hash.txt",
+      "prompt": "/e6/0ae93a7622/1/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}

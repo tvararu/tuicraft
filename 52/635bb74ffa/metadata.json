@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "52635bb74ffa",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "src/wow/protocol/stubs.test.ts",
+    "src/wow/protocol/stubs.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/52/635bb74ffa/0/metadata.json",
+      "transcript": "/52/635bb74ffa/0/full.jsonl",
+      "context": "/52/635bb74ffa/0/context.md",
+      "content_hash": "/52/635bb74ffa/0/content_hash.txt",
+      "prompt": "/52/635bb74ffa/0/prompt.txt"
+    },
+    {
+      "metadata": "/52/635bb74ffa/1/metadata.json",
+      "transcript": "/52/635bb74ffa/1/full.jsonl",
+      "context": "/52/635bb74ffa/1/context.md",
+      "content_hash": "/52/635bb74ffa/1/content_hash.txt",
+      "prompt": "/52/635bb74ffa/1/prompt.txt"
+    },
+    {
+      "metadata": "/52/635bb74ffa/2/metadata.json",
+      "transcript": "/52/635bb74ffa/2/full.jsonl",
+      "context": "/52/635bb74ffa/2/context.md",
+      "content_hash": "/52/635bb74ffa/2/content_hash.txt",
+      "prompt": "/52/635bb74ffa/2/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1934,
+    "cache_creation_tokens": 588546,
+    "cache_read_tokens": 21117337,
+    "output_tokens": 68256,
+    "api_call_count": 214
+  }
+}

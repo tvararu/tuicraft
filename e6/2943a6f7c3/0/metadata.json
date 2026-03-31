@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "e62943a6f7c3",
+  "session_id": "b1e3a59e-0176-45f7-8feb-b2bfc9ed90b7",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-02T03:08:01.766960059Z",
+  "branch": "feat/channel-join-leave",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.ts",
+    "src/ui/commands.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "31bba4b064d3",
+  "token_usage": {
+    "input_tokens": 10,
+    "cache_creation_tokens": 31864,
+    "cache_read_tokens": 316688,
+    "output_tokens": 9760,
+    "api_call_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-02T03:08:01.70524234Z",
+    "agent_lines": 9,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 9,
+    "agent_percentage": 100
+  }
+}

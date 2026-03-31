@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "5be5a1c44f3f",
+  "session_id": "beba0e57-80cb-42f8-8c71-f2a6a9caa897",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T02:03:09.456526809Z",
+  "branch": "feat/mail",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/wow/protocol/stubs.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "200ca5f066c5",
+  "checkpoint_transcript_start": 22,
+  "transcript_lines_at_start": 22,
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T02:03:09.434126604Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 15,
+    "human_removed": 16,
+    "total_committed": 0,
+    "agent_percentage": 0
+  }
+}

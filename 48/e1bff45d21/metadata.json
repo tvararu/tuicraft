@@ -1,0 +1,60 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "48e1bff45d21",
+  "strategy": "manual-commit",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/tuicraft/SKILL.md",
+    "README.md",
+    "docs/manual.md",
+    "docs/plans/2026-03-01-ignore-list-plan.md",
+    "src/cli/help.ts",
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/server.ts",
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/ui/commands.test.ts",
+    "src/ui/commands.ts",
+    "src/ui/format.test.ts",
+    "src/ui/format.ts",
+    "src/ui/tui.test.ts",
+    "src/ui/tui.ts",
+    "src/wow/client.ts",
+    "src/wow/ignore-store.test.ts",
+    "src/wow/ignore-store.ts",
+    "src/wow/protocol/social.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/48/e1bff45d21/0/metadata.json",
+      "transcript": "/48/e1bff45d21/0/full.jsonl",
+      "context": "/48/e1bff45d21/0/context.md",
+      "content_hash": "/48/e1bff45d21/0/content_hash.txt",
+      "prompt": "/48/e1bff45d21/0/prompt.txt"
+    },
+    {
+      "metadata": "/48/e1bff45d21/1/metadata.json",
+      "transcript": "/48/e1bff45d21/1/full.jsonl",
+      "context": "/48/e1bff45d21/1/context.md",
+      "content_hash": "/48/e1bff45d21/1/content_hash.txt",
+      "prompt": "/48/e1bff45d21/1/prompt.txt"
+    },
+    {
+      "metadata": "/48/e1bff45d21/2/metadata.json",
+      "transcript": "/48/e1bff45d21/2/full.jsonl",
+      "context": "/48/e1bff45d21/2/context.md",
+      "content_hash": "/48/e1bff45d21/2/content_hash.txt",
+      "prompt": "/48/e1bff45d21/2/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 789,
+    "cache_creation_tokens": 423766,
+    "cache_read_tokens": 17206317,
+    "output_tokens": 63725,
+    "api_call_count": 198
+  }
+}

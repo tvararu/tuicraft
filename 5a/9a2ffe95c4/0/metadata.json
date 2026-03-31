@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "5a9a2ffe95c4",
+  "session_id": "0dbfad8c-91c9-4454-a98b-585963dfc326",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-03T11:22:56.102980953Z",
+  "branch": "feat/duel-accept-decline",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/world-handlers.test.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "c49f4c441cc2",
+  "token_usage": {
+    "input_tokens": 14,
+    "cache_creation_tokens": 20579,
+    "cache_read_tokens": 375578,
+    "output_tokens": 2988,
+    "api_call_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-03T11:22:56.055585595Z",
+    "agent_lines": 0,
+    "human_added": 73,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 73,
+    "agent_percentage": 0
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "48e1bff45d21",
+  "session_id": "e55f7f11-80db-4c9e-a08c-8e1be46b8e37",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-01T23:27:36.894719263Z",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/wow/client.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "2099d00260fc",
+  "token_usage": {
+    "input_tokens": 662,
+    "cache_creation_tokens": 206200,
+    "cache_read_tokens": 4801511,
+    "output_tokens": 21011,
+    "api_call_count": 79
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-01T23:27:36.682393266Z",
+    "agent_lines": 0,
+    "human_added": 6655,
+    "human_modified": 767,
+    "human_removed": 0,
+    "total_committed": 6655,
+    "agent_percentage": 0
+  }
+}

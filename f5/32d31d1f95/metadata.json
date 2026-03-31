@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f532d31d1f95",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "src/daemon/commands.ts",
+    "src/wow/guild-store.test.ts",
+    "src/wow/guild-store.ts",
+    "src/wow/world-handlers.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f5/32d31d1f95/0/metadata.json",
+      "transcript": "/f5/32d31d1f95/0/full.jsonl",
+      "context": "/f5/32d31d1f95/0/context.md",
+      "content_hash": "/f5/32d31d1f95/0/content_hash.txt",
+      "prompt": "/f5/32d31d1f95/0/prompt.txt"
+    },
+    {
+      "metadata": "/f5/32d31d1f95/1/metadata.json",
+      "transcript": "/f5/32d31d1f95/1/full.jsonl",
+      "context": "/f5/32d31d1f95/1/context.md",
+      "content_hash": "/f5/32d31d1f95/1/content_hash.txt",
+      "prompt": "/f5/32d31d1f95/1/prompt.txt"
+    },
+    {
+      "metadata": "/f5/32d31d1f95/2/metadata.json",
+      "transcript": "/f5/32d31d1f95/2/full.jsonl",
+      "context": "/f5/32d31d1f95/2/context.md",
+      "content_hash": "/f5/32d31d1f95/2/content_hash.txt",
+      "prompt": "/f5/32d31d1f95/2/prompt.txt"
+    },
+    {
+      "metadata": "/f5/32d31d1f95/3/metadata.json",
+      "transcript": "/f5/32d31d1f95/3/full.jsonl",
+      "context": "/f5/32d31d1f95/3/context.md",
+      "content_hash": "/f5/32d31d1f95/3/content_hash.txt",
+      "prompt": "/f5/32d31d1f95/3/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1932,
+    "cache_creation_tokens": 593888,
+    "cache_read_tokens": 20730987,
+    "output_tokens": 67588,
+    "api_call_count": 210
+  }
+}

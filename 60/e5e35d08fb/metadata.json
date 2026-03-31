@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "60e5e35d08fb",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-roster",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts",
+    "src/daemon/start.test.ts",
+    "src/test/mock-handle.ts",
+    "src/ui/tui.ts",
+    "src/wow/client.ts",
+    "src/wow/protocol/guild.test.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/60/e5e35d08fb/0/metadata.json",
+      "transcript": "/60/e5e35d08fb/0/full.jsonl",
+      "context": "/60/e5e35d08fb/0/context.md",
+      "content_hash": "/60/e5e35d08fb/0/content_hash.txt",
+      "prompt": "/60/e5e35d08fb/0/prompt.txt"
+    },
+    {
+      "metadata": "/60/e5e35d08fb/1/metadata.json",
+      "transcript": "/60/e5e35d08fb/1/full.jsonl",
+      "context": "/60/e5e35d08fb/1/context.md",
+      "content_hash": "/60/e5e35d08fb/1/content_hash.txt",
+      "prompt": "/60/e5e35d08fb/1/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 39,
+    "cache_creation_tokens": 39344,
+    "cache_read_tokens": 1695965,
+    "output_tokens": 11557,
+    "api_call_count": 36
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "83327dbbaab6",
+  "strategy": "manual-commit",
+  "branch": "feat/mail",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/daemon/commands.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/83/327dbbaab6/0/metadata.json",
+      "transcript": "/83/327dbbaab6/0/full.jsonl",
+      "context": "/83/327dbbaab6/0/context.md",
+      "content_hash": "/83/327dbbaab6/0/content_hash.txt",
+      "prompt": "/83/327dbbaab6/0/prompt.txt"
+    },
+    {
+      "metadata": "/83/327dbbaab6/1/metadata.json",
+      "transcript": "/83/327dbbaab6/1/full.jsonl",
+      "context": "/83/327dbbaab6/1/context.md",
+      "content_hash": "/83/327dbbaab6/1/content_hash.txt",
+      "prompt": "/83/327dbbaab6/1/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}

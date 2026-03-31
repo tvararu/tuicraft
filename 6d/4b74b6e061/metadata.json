@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "6d4b74b6e061",
+  "strategy": "manual-commit",
+  "branch": "feat/ignore-list",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.test.ts",
+    "src/wow/world-handlers.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/6d/4b74b6e061/0/metadata.json",
+      "transcript": "/6d/4b74b6e061/0/full.jsonl",
+      "context": "/6d/4b74b6e061/0/context.md",
+      "content_hash": "/6d/4b74b6e061/0/content_hash.txt",
+      "prompt": "/6d/4b74b6e061/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 151,
+    "cache_creation_tokens": 376872,
+    "cache_read_tokens": 15649947,
+    "output_tokens": 34230,
+    "api_call_count": 137
+  }
+}

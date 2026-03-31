@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f86dfab9defa",
+  "session_id": "98a95ea6-f2e6-4495-80cc-a6eca20584e6",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-03T23:28:48.428217937Z",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "README.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "3c635fda28ce",
+  "checkpoint_transcript_start": 198,
+  "transcript_lines_at_start": 198,
+  "token_usage": {
+    "input_tokens": 1,
+    "cache_creation_tokens": 196,
+    "cache_read_tokens": 81688,
+    "output_tokens": 109,
+    "api_call_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-03T23:28:48.265748283Z",
+    "agent_lines": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1,
+    "agent_percentage": 100
+  }
+}

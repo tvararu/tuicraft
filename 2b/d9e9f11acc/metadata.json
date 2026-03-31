@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "2bd9e9f11acc",
+  "strategy": "manual-commit",
+  "branch": "feat/duel-accept-decline",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/daemon/commands.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/2b/d9e9f11acc/0/metadata.json",
+      "transcript": "/2b/d9e9f11acc/0/full.jsonl",
+      "context": "/2b/d9e9f11acc/0/context.md",
+      "content_hash": "/2b/d9e9f11acc/0/content_hash.txt",
+      "prompt": "/2b/d9e9f11acc/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}

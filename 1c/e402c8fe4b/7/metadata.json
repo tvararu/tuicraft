@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "1ce402c8fe4b",
+  "session_id": "488c24a4-33dd-4699-9fa8-fc3f72ed9fa4",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-04T02:22:25.115937073Z",
+  "branch": "feat/mail",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/2026-02-19-reconnect-auth-design.md",
+    "docs/plans/2026-02-19-reconnect-auth-plan.md",
+    "docs/plans/2026-03-01-chat-notices.md",
+    "docs/plans/2026-03-02-channel-join-leave.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "1fd1fb96cc25",
+  "token_usage": {
+    "input_tokens": 4081,
+    "cache_creation_tokens": 721954,
+    "cache_read_tokens": 3819897,
+    "output_tokens": 38531,
+    "api_call_count": 53
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-04T02:22:24.951014982Z",
+    "agent_lines": 2065,
+    "human_added": 1798,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 3863,
+    "agent_percentage": 53.45586331866426
+  }
+}

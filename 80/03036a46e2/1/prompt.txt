@@ -1,0 +1,1245 @@
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/using-superpowers
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+
+ARGUMENTS: Implement guild management commands: /ginvite <player>, /gkick <player>, /gleave, /gpromote <player>, /gdemote <player>. These are fire-and-forget commands that send CMSG_GUILD_INVITE, CMSG_GUILD_REMOVE, CMSG_GUILD_LEAVE, CMSG_GUILD_PROMOTE, CMSG_GUILD_DEMOTE packets. The server responds with SMSG_GUILD_COMMAND_RESULT for errors (not in guild, insufficient rank, player not found, etc). The opcodes are already defined, stubs exist in stubs.ts, and commands are parsed in commands.ts but return "unimplemented". Follow existing patterns from /invite, /kick, /friend, /ignore for fire-and-forget command structure. Also handle SMSG_GUILD_INVITE (incoming guild invite prompt) with /gaccept and /gdecline commands.
+
+---
+
+Yes, include /gleader and /gmotd — same pattern, knock them all out. Design looks right. Move to planning.
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+**Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+
+---
+
+Yes, include /gleader and /gmotd. Design is approved. Move to planning — write the plan.
+
+---
+
+Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text "Done: Guild management commands implemented" --mode now
+
+---
+
+Base directory for this skill: /home/openclaw/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/subagent-driven-development
+
+# Subagent-Driven Development
+
+Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+
+**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+## When to Use
+
+```dot
+digraph when_to_use {
+    "Have implementation plan?" [shape=diamond];
+    "Tasks mostly independent?" [shape=diamond];
+    "Stay in this session?" [shape=diamond];
+    "subagent-driven-development" [shape=box];
+    "executing-plans" [shape=box];
+    "Manual execution or brainstorm first" [shape=box];
+
+    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
+    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
+    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+}
+```
+
+**vs. Executing Plans (parallel session):**
+- Same session (no context switch)
+- Fresh subagent per task (no context pollution)
+- Two-stage review after each task: spec compliance first, then code quality
+- Faster iteration (no human-in-loop between tasks)
+
+## The Process
+
+```dot
+digraph process {
+    rankdir=TB;
+
+    subgraph cluster_per_task {
+        label="Per Task";
+        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+        "Implementer subagent asks questions?" [shape=diamond];
+        "Answer questions, provide context" [shape=box];
+        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
+        "Implementer subagent fixes spec gaps" [shape=box];
+        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Code quality reviewer subagent approves?" [shape=diamond];
+        "Implementer subagent fixes quality issues" [shape=box];
+        "Mark task complete in TodoWrite" [shape=box];
+    }
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
+    "More tasks remain?" [shape=diamond];
+    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
+    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Mark task complete in TodoWrite" -> "More tasks remain?";
+    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+}
+```
+
+## Prompt Templates
+
+- `./implementer-prompt.md` - Dispatch implementer subagent
+- `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
+- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+
+## Example Workflow
+
+```
+You: I'm using Subagent-Driven Development to execute this plan.
+
+[Read plan file once: docs/plans/feature-plan.md]
+[Extract all 5 tasks with full text and context]
+[Create TodoWrite with all tasks]
+
+Task 1: Hook installation script
+
+[Get Task 1 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: "Before I begin - should the hook be installed at user or system level?"
+
+You: "User level (~/.config/superpowers/hooks/)"
+
+Implementer: "Got it. Implementing now..."
+[Later] Implementer:
+  - Implemented install-hook command
+  - Added tests, 5/5 passing
+  - Self-review: Found I missed --force flag, added it
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
+
+[Get git SHAs, dispatch code quality reviewer]
+Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+
+[Mark Task 1 complete]
+
+Task 2: Recovery modes
+
+[Get Task 2 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: [No questions, proceeds]
+Implementer:
+  - Added verify/repair modes
+  - 8/8 tests passing
+  - Self-review: All good
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ❌ Issues:
+  - Missing: Progress reporting (spec says "report every 100 items")
+  - Extra: Added --json flag (not requested)
+
+[Implementer fixes issues]
+Implementer: Removed --json flag, added progress reporting
+
+[Spec reviewer reviews again]
+Spec reviewer: ✅ Spec compliant now
+
+[Dispatch code quality reviewer]
+Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+
+[Implementer fixes]
+Implementer: Extracted PROGRESS_INTERVAL constant
+
+[Code reviewer reviews again]
+Code reviewer: ✅ Approved
+
+[Mark Task 2 complete]
+
+...
+
+[After all tasks]
+[Dispatch final code-reviewer]
+Final reviewer: All requirements met, ready to merge
+
+Done!
+```
+
+## Advantages
+
+**vs. Manual execution:**
+- Subagents follow TDD naturally
+- Fresh context per task (no confusion)
+- Parallel-safe (subagents don't interfere)
+- Subagent can ask questions (before AND during work)
+
+**vs. Executing Plans:**
+- Same session (no handoff)
+- Continuous progress (no waiting)
+- Review checkpoints automatic
+
+**Efficiency gains:**
+- No file reading overhead (controller provides full text)
+- Controller curates exactly what context is needed
+- Subagent gets complete information upfront
+- Questions surfaced before work begins (not after)
+
+**Quality gates:**
+- Self-review catches issues before handoff
+- Two-stage review: spec compliance, then code quality
+- Review loops ensure fixes actually work
+- Spec compliance prevents over/under-building
+- Code quality ensures implementation is well-built
+
+**Cost:**
+- More subagent invocations (implementer + 2 reviewers per task)
+- Controller does more prep work (extracting all tasks upfront)
+- Review loops add iterations
+- But catches issues early (cheaper than debugging later)
+
+## Red Flags
+
+**Never:**
+- Start implementation on main/master branch without explicit user consent
+- Skip reviews (spec compliance OR code quality)
+- Proceed with unfixed issues
+- Dispatch multiple implementation subagents in parallel (conflicts)
+- Make subagent read plan file (provide full text instead)
+- Skip scene-setting context (subagent needs to understand where task fits)
+- Ignore subagent questions (answer before letting them proceed)
+- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
+- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Let implementer self-review replace actual review (both are needed)
+- **Start code quality review before spec compliance is ✅** (wrong order)
+- Move to next task while either review has open issues
+
+**If subagent asks questions:**
+- Answer clearly and completely
+- Provide additional context if needed
+- Don't rush them into implementation
+
+**If reviewer finds issues:**
+- Implementer (same subagent) fixes them
+- Reviewer reviews again
+- Repeat until approved
+- Don't skip the re-review
+
+**If subagent fails task:**
+- Dispatch fix subagent with specific instructions
+- Don't try to fix manually (context pollution)
+
+## Integration
+
+**Required workflow skills:**
+- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+
+**Subagents should use:**
+- **superpowers:test-driven-development** - Subagents follow TDD for each task
+
+**Alternative workflow:**
+- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: The user invoked the brainstorming skill for implementing guild management commands: /ginvite, /gkick, /gleave, /gpromote, /gdemote plus handling SMSG_GUILD_INVITE with /gaccept and /gdecline.
+
+2. **Brainstorming Phase**: I explored the codebase thoroughly using agents, identified all relevant files, patterns, and packet formats. I proposed a design covering 7 commands initially.
+
+3. **User Feedback - Scope Expansion**: I tried to ask if /gleader and /gmotd should be included but the user declined the question multiple times. I then presented the design without them. The user then explicitly said: "Yes, include /gleader and /gmotd — same pattern, knock them all out. Design looks right. Move to planning."
+
+4. **Design Doc**: Written to `docs/plans/2026-03-04-guild-management-design.md` and committed.
+
+5. **Implementation Plan**: Written to `docs/plans/2026-03-04-guild-management-plan.md` with 11 tasks covering protocol, types, handlers, client, mocks, UI, daemon, formatting, stubs, docs, and live validation.
+
+6. **User chose execution approach**: "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now"
+
+7. **Execution via Subagent-Driven Development**:
+   - Tasks 1-3 (protocol layer): Subagent implemented builders, parsers, enums, GuildEvent types, world handlers. Also proactively did Task 8 (event formatting).
+   - Tasks 4-5 (client + mocks): Subagent added 9 WorldHandle methods, 2 SMSG handler registrations, updated both mock handles.
+   - Task 6 (UI commands): Subagent added 9 Command types and parseCommand cases with 15 tests.
+   - Tasks 7-8 (daemon): Subagent added IPC types, parsing, dispatch with 14 tests. Task 8 confirmed already done.
+   - Task 9 (stubs): I directly removed 11 guild stubs from stubs.ts.
+   - Task 10 (docs): Subagent updated help.ts, manual.md, SKILL.md, README.md.
+
+8. **Errors Found and Fixed**:
+   - TUI test failure: `startTui > unimplemented command writes error message` was testing `/ginvite` returning unimplemented. Fixed by changing test to use `/mail` and adding a new `/ginvite` TUI test.
+   - TUI dispatch missing: `src/ui/tui.ts` had no cases for new guild commands in `executeCommand`. Added 9 new cases.
+   - Code review found 3 bugs:
+     a. `formatGuildEvent` for `command_result` showed raw numeric codes instead of calling `formatGuildCommandError`
+     b. `formatGuildEvent` for `guild_invite` missing `/gaccept or /gdecline` hint
+     c. `formatGuildEventObj` used `GUILD_INVITE` instead of `GUILD_INVITE_RECEIVED`
+   - All 3 fixed by editing `src/daemon/commands.ts`.
+
+9. **PR Created**: https://github.com/tvararu/tuicraft/pull/76
+
+10. **Notification sent**: `openclaw system event --text "Done: Guild management commands implemented" --mode now`
+
+Key files modified:
+- src/wow/protocol/guild.ts - builders, parsers, enums
+- src/wow/protocol/guild.test.ts - 21 new tests
+- src/wow/guild-store.ts - GuildEvent union extended
+- src/wow/world-handlers.ts - handleGuildCommandResult, handleGuildInvitePacket
+- src/wow/client.ts - WorldHandle type + 9 methods + 2 handler registrations
+- src/ui/commands.ts - Command union + parseCommand
+- src/ui/commands.test.ts - 15 new tests
+- src/ui/tui.ts - executeCommand guild cases
+- src/ui/tui.test.ts - fixed unimplemented test, added ginvite test
+- src/daemon/commands.ts - IpcCommand types, parsing, dispatch, formatting
+- src/daemon/commands.test.ts - 14 new tests
+- src/daemon/start.test.ts - mock updates
+- src/test/mock-handle.ts - mock updates
+- src/wow/protocol/stubs.ts - removed 11 stubs
+- src/cli/help.ts - guild commands help text
+- docs/manual.md - guild management section
+- .claude/skills/tuicraft/SKILL.md - guild management section
+- README.md - feature matrix updated
+
+Commits on feat/guild-management:
+1. docs: Add guild management commands design
+2. docs: Add guild management implementation plan
+3. feat: Add guild management packet builders
+4. feat: Handle SMSG_GUILD_COMMAND_RESULT and invite
+5. feat: Add guild management methods to WorldHandle
+6. feat: Parse guild management slash commands
+7. feat: Wire guild management commands through IPC
+8. chore: Remove guild management stubs
+9. docs: Document guild management commands
+10. fix: Use human-readable guild command errors
+
+Summary:
+1. Primary Request and Intent:
+   The user requested implementation of guild management commands for a WoW 3.3.5a TUI chat client (tuicraft). The specific commands are: `/ginvite <player>`, `/gkick <player>`, `/gleave`, `/gpromote <player>`, `/gdemote <player>`, `/gleader <player>`, `/gmotd <message>`, `/gaccept`, `/gdecline`. These are fire-and-forget commands sending CMSG packets (GUILD_INVITE, GUILD_REMOVE, GUILD_LEAVE, GUILD_PROMOTE, GUILD_DEMOTE, GUILD_LEADER, GUILD_MOTD, GUILD_ACCEPT, GUILD_DECLINE). The server responds with SMSG_GUILD_COMMAND_RESULT for errors and SMSG_GUILD_INVITE for incoming guild invite prompts. The user explicitly requested: "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now". The scope was expanded to include `/gleader` and `/gmotd` per user instruction.
+
+2. Key Technical Concepts:
+   - Fire-and-forget command pattern: send CMSG packet, return "OK" immediately, errors arrive asynchronously
+   - WoW 3.3.5a protocol: PacketWriter/PacketReader for CString serialization, opcode dispatch
+   - Three-layer architecture: UI commands (parseCommand) → IPC commands (parseIpcCommand/dispatchCommand) → WorldHandle methods → sendPacket
+   - GuildEvent union type for routing server responses through event pipeline
+   - Subagent-driven development workflow with TDD and code review
+   - Bun test runner with `bun:test` imports
+   - Conventional Commits with 50-char subject lines
+   - Strict TypeScript (no comments, no unused params without `_` prefix)
+
+3. Files and Code Sections:
+
+   - **src/wow/protocol/guild.ts** — Protocol layer: packet builders, parsers, and enums
+     - Added 6 build functions: `buildGuildInvite`, `buildGuildRemove`, `buildGuildPromote`, `buildGuildDemote`, `buildGuildLeader`, `buildGuildMotd` — each writes a CString via PacketWriter
+     - Added `GuildCommand` enum (CREATE=0, INVITE=1, QUIT=2, PROMOTE=3, FOUNDER=0x0c, MEMBER=0x0d, PUBLIC_NOTE_CHANGED=0x13, OFFICER_NOTE_CHANGED=0x14)
+     - Added `GuildCommandResult` enum (18 error codes: PLAYER_NO_MORE_IN_GUILD=0x00 through GUILD_IGNORING_YOU_S=0x13)
+     - Added `parseGuildCommandResult(r)` → `{ command, name, result }`
+     - Added `parseGuildInvitePacket(r)` → `{ inviterName, guildName }`
+     - Added `formatGuildCommandError(_command, name, result)` → human-readable error string or undefined for success
+     ```typescript
+     export function buildGuildInvite(name: string): Uint8Array {
+       const w = new PacketWriter();
+       w.cString(name);
+       return w.finish();
+     }
+     ```
+
+   - **src/wow/protocol/guild.test.ts** — 21 new tests covering all builders, enums, and parsers
+
+   - **src/wow/guild-store.ts** — Extended GuildEvent union with two new variants:
+     ```typescript
+     | { type: "command_result"; command: number; name: string; result: number }
+     | { type: "guild_invite"; inviter: string; guildName: string };
+     ```
+
+   - **src/wow/world-handlers.ts** — Added two handler functions after `handleGuildEvent`:
+     ```typescript
+     export function handleGuildCommandResult(conn: WorldConn, r: PacketReader): void {
+       const packet = parseGuildCommandResult(r);
+       const msg = formatGuildCommandError(packet.command, packet.name, packet.result);
+       if (msg) {
+         conn.onGuildEvent?.({ type: "command_result", command: packet.command, name: packet.name, result: packet.result });
+       }
+     }
+     export function handleGuildInvitePacket(conn: WorldConn, r: PacketReader): void {
+       const packet = parseGuildInvitePacket(r);
+       conn.onGuildEvent?.({ type: "guild_invite", inviter: packet.inviterName, guildName: packet.guildName });
+     }
+     ```
+
+   - **src/wow/client.ts** — WorldHandle type extended with 9 methods, 2 SMSG handlers registered, 9 method implementations added:
+     ```typescript
+     guildInvite(name: string): void;
+     guildRemove(name: string): void;
+     guildLeave(): void;
+     guildPromote(name: string): void;
+     guildDemote(name: string): void;
+     guildLeader(name: string): void;
+     guildMotd(motd: string): void;
+     acceptGuildInvite(): void;
+     declineGuildInvite(): void;
+     ```
+     Handler registrations:
+     ```typescript
+     conn.dispatch.on(GameOpcode.SMSG_GUILD_COMMAND_RESULT, (r) => handleGuildCommandResult(conn, r));
+     conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) => handleGuildInvitePacket(conn, r));
+     ```
+
+   - **src/ui/commands.ts** — Command union extended with 9 types, parseCommand switch updated replacing unimplemented stubs:
+     ```typescript
+     case "/ginvite":
+       return rest ? { type: "guild-invite", target: rest } : { type: "say", message: input };
+     case "/gmotd":
+       return { type: "guild-motd", message: rest };
+     case "/gaccept":
+       return { type: "guild-accept" };
+     // ... etc for all 9
+     ```
+
+   - **src/ui/commands.test.ts** — 15 new tests for all 9 guild commands
+
+   - **src/ui/tui.ts** — Added 9 cases to `executeCommand` switch:
+     ```typescript
+     case "guild-invite": state.handle.guildInvite(cmd.target); break;
+     case "guild-kick": state.handle.guildRemove(cmd.target); break;
+     case "guild-leave": state.handle.guildLeave(); break;
+     // ... etc for all 9
+     ```
+
+   - **src/ui/tui.test.ts** — Fixed unimplemented test to use `/mail`, added `/ginvite` TUI test
+
+   - **src/daemon/commands.ts** — IpcCommand union extended with 9 types, parseIpcCommand updated (slash mapping + verb stubs), dispatchCommand with 9 cases, formatGuildEvent/formatGuildEventObj extended, added `formatGuildCommandError` import:
+     ```typescript
+     case "command_result": {
+       const msg = formatGuildCommandError(event.command, event.name, event.result);
+       return msg ?? "[guild] Command succeeded";
+     }
+     case "guild_invite":
+       return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
+     ```
+
+   - **src/daemon/commands.test.ts** — 14 new tests for IPC parsing
+
+   - **src/test/mock-handle.ts** — Added 9 `jest.fn()` mock methods after `removeIgnore`
+
+   - **src/daemon/start.test.ts** — Added 9 `jest.fn()` mock methods after `onGuildEvent`
+
+   - **src/wow/protocol/stubs.ts** — Removed 11 guild opcode stubs (SMSG_GUILD_COMMAND_RESULT, CMSG_GUILD_INVITE, SMSG_GUILD_INVITE, CMSG_GUILD_ACCEPT, CMSG_GUILD_DECLINE, CMSG_GUILD_LEAVE, CMSG_GUILD_REMOVE, CMSG_GUILD_MOTD, CMSG_GUILD_PROMOTE, CMSG_GUILD_DEMOTE, CMSG_GUILD_LEADER). Kept SMSG_GUILD_INFO and SMSG_GUILD_BANK_LIST.
+
+   - **src/cli/help.ts** — Added 9 guild command lines after `/groster`
+
+   - **docs/manual.md** — Added guild management table rows, new "Guild Management" section with CLI/IPC examples, event type table entries
+
+   - **.claude/skills/tuicraft/SKILL.md** — Added "Guild Management" section, GUILD_COMMAND_RESULT/GUILD_INVITE_RECEIVED event types
+
+   - **README.md** — Changed `Guild invite / kick / leave / promote` from ❌ to ✅
+
+   - **docs/plans/2026-03-04-guild-management-design.md** — Design document
+
+   - **docs/plans/2026-03-04-guild-management-plan.md** — 11-task implementation plan
+
+4. Errors and fixes:
+   - **Hook blocked commit to main**: Initial commit attempt was blocked by a pre-commit hook that prevents commits to main. Fixed by creating `feat/guild-management` branch first.
+   - **TUI test failure** (`startTui > unimplemented command writes error message`): Test at `tui.test.ts:490` was sending `/ginvite Foo` and expecting "Guild management is not yet implemented". Fixed by changing the test to use `/mail` (still unimplemented) and adding a new test for `/ginvite` that verifies `handle.guildInvite` is called.
+   - **Missing TUI dispatch cases**: `src/ui/tui.ts` `executeCommand` switch had no cases for the 9 new guild commands — they fell through silently. Fixed by adding all 9 cases.
+   - **Code review bug #1**: `formatGuildEvent` for `command_result` used a generic `[guild] Command error for ${event.name} (${event.result})` instead of calling `formatGuildCommandError`. Fixed by importing `formatGuildCommandError` from `"wow/protocol/guild"` and calling it.
+   - **Code review bug #2**: `formatGuildEvent` for `guild_invite` was missing the `. Use /gaccept or /gdecline` hint suffix. Fixed by appending it.
+   - **Code review bug #3**: `formatGuildEventObj` for `guild_invite` used JSON type `"GUILD_INVITE"` instead of `"GUILD_INVITE_RECEIVED"` (which SKILL.md documents). Fixed by changing to `"GUILD_INVITE_RECEIVED"`.
+
+5. Problem Solving:
+   - Used brainstorming skill to go from requirements → design → plan
+   - Used subagent-driven development to execute plan task-by-task with fresh context per subagent
+   - Code review after implementation caught 3 bugs in event formatting that subagents had implemented incorrectly (generic error strings instead of using the dedicated formatting function)
+   - TUI layer was not in the original plan (plan only covered daemon commands.ts, not tui.ts) — caught by test failure during CI
+
+6. All user messages:
+   - "/superpowers:brainstorming — Implement guild management commands: /ginvite <player>, /gkick <player>, /gleave, /gpromote <player>, /gdemote <player>. These are fire-and-forget commands that send CMSG_GUILD_INVITE, CMSG_GUILD_REMOVE, CMSG_GUILD_LEAVE, CMSG_GUILD_PROMOTE, CMSG_GUILD_DEMOTE packets. The server responds with SMSG_GUILD_COMMAND_RESULT for errors (not in guild, insufficient rank, player not found, etc). The opcodes are already defined, stubs exist in stubs.ts, and commands are parsed in commands.ts but return 'unimplemented'. Follow existing patterns from /invite, /kick, /friend, /ignore for fire-and-forget command structure. Also handle SMSG_GUILD_INVITE (incoming guild invite prompt) with /gaccept and /gdecline commands."
+   - "Yes, include /gleader and /gmotd — same pattern, knock them all out. Design looks right. Move to planning."
+   - "Yes, include /gleader and /gmotd. Design is approved. Move to planning — write the plan."
+   - "Execute the plan. Branch, implement, open PR. When completely finished, run: openclaw system event --text 'Done: Guild management commands implemented' --mode now"
+   - (Multiple system reminders about file modifications by linter — not direct user messages)
+
+7. Pending Tasks:
+   - None. All tasks completed. PR opened at https://github.com/tvararu/tuicraft/pull/76. Notification sent via openclaw.
+
+8. Current Work:
+   The entire guild management implementation is complete. The PR has been opened at https://github.com/tvararu/tuicraft/pull/76 with 10 commits on `feat/guild-management`. All 1162 tests pass, typecheck passes, live server tests pass. The `openclaw system event` notification was sent. The summary request was made after all work was concluded.
+
+9. Optional Next Step:
+   No next step — all tasks from the user's request have been completed. The PR is open and awaiting review. The 4 uncommitted changes noted in the PR creation warning are the plan docs in `docs/plans/` that were already tracked in earlier commits on this branch (they show as uncommitted because they exist on the branch but the working tree warning comes from untracked files on the base).
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/9148bea6-f465-4ed4-8562-ccdf33817fe3.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+You are a senior security engineer conducting a focused security review of the changes on this branch.
+
+GIT STATUS:
+
+```
+On branch feat/guild-management
+Your branch is up to date with 'origin/feat/guild-management'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/plans/2026-02-19-reconnect-auth-design.md
+	docs/plans/2026-02-19-reconnect-auth-plan.md
+	docs/plans/2026-03-01-chat-notices.md
+	docs/plans/2026-03-02-channel-join-leave.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+FILES MODIFIED:
+
+```
+.claude/skills/tuicraft/SKILL.md
+README.md
+docs/manual.md
+docs/plans/2026-03-04-guild-management-design.md
+docs/plans/2026-03-04-guild-management-plan.md
+src/cli/help.ts
+src/daemon/commands.test.ts
+src/daemon/commands.ts
+src/daemon/start.test.ts
+src/test/mock-handle.ts
+src/ui/commands.test.ts
+src/ui/commands.ts
+src/ui/tui.test.ts
+src/ui/tui.ts
+src/wow/client.ts
+src/wow/guild-store.ts
+src/wow/protocol/guild.test.ts
+src/wow/protocol/guild.ts
+src/wow/protocol/stubs.ts
+src/wow/world-handlers.ts
+```
+
+COMMITS:
+
+```
+commit 3f0c915d87e52b1e902499b711f77e631f36ba27
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:35:26 2026 +0000
+
+    fix: Use human-readable guild command errors
+    
+    formatGuildEvent now calls formatGuildCommandError for readable
+    error messages. Add /gaccept /gdecline hint to guild invite text.
+    Fix JSON event type to GUILD_INVITE_RECEIVED.
+    
+    Entire-Checkpoint: 7b67121deb5c
+
+commit cf4b84a159fc07be580633e563ed91000d10c451
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:32:00 2026 +0000
+
+    docs: Document guild management commands
+    
+    Update help text, manual, SKILL.md, and README feature matrix
+    with all 9 guild management commands and their IPC verbs.
+    
+    Entire-Checkpoint: eb799f558134
+
+commit b572d82d2311118ef555b4bcbc06266648130e64
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:31:45 2026 +0000
+
+    chore: Remove guild management stubs
+    
+    All 11 guild management opcodes now have real handlers or send
+    functions. Fix TUI dispatch for guild commands and update the
+    unimplemented test to use /mail instead of /ginvite.
+    
+    Entire-Checkpoint: a44401e08bf1
+
+commit 6f22031168b068311553ff6c418a1c5520fd65cf
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:28:11 2026 +0000
+
+    feat: Wire guild management commands through IPC
+    
+    GINVITE, GKICK, GLEAVE, GPROMOTE, GDEMOTE, GLEADER, GMOTD, GACCEPT,
+    GDECLINE IPC verbs now dispatch to WorldHandle methods. Slash
+    commands route through the same pipeline.
+    
+    Entire-Checkpoint: ad4bca91c07c
+
+commit 8aa554f61fb847e8f2a166869829923a2ee1afeb
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:24:38 2026 +0000
+
+    feat: Parse guild management slash commands
+    
+    /ginvite, /gkick, /gleave, /gpromote, /gdemote, /gleader, /gmotd,
+    /gaccept, /gdecline now parse into typed Command objects instead
+    of returning unimplemented.
+    
+    Entire-Checkpoint: 7fdb228123f7
+
+commit 27a81716bbbf0565c5082095b6b0e95d32245aeb
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:22:12 2026 +0000
+
+    feat: Add guild management methods to WorldHandle
+    
+    Nine fire-and-forget methods: guildInvite, guildRemove, guildLeave,
+    guildPromote, guildDemote, guildLeader, guildMotd, acceptGuildInvite,
+    declineGuildInvite. Register SMSG_GUILD_COMMAND_RESULT and
+    SMSG_GUILD_INVITE handlers.
+    
+    Entire-Checkpoint: 5be5ae006343
+
+commit f58ae4d3e719afc50eeb024d058c2b2c1477f654
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:18:53 2026 +0000
+
+    feat: Handle SMSG_GUILD_COMMAND_RESULT and invite
+    
+    Extend GuildEvent union with command_result and guild_invite
+    variants. Add world handlers that parse these packets and fire
+    events through the existing pipeline.
+    
+    Entire-Checkpoint: 2782d57080ab
+
+commit 19336586cf3efb338fb9dfbb3edd47360d89fb98
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:18:28 2026 +0000
+
+    feat: Add guild management packet builders
+    
+    Build functions for CMSG_GUILD_INVITE, REMOVE, PROMOTE, DEMOTE,
+    LEADER, MOTD. Parse functions for SMSG_GUILD_COMMAND_RESULT and
+    SMSG_GUILD_INVITE. Enums for GuildCommand and GuildCommandResult.
+    
+    Entire-Checkpoint: 13e5e5493993
+
+commit 1f06378ee0a9a1fd966d50667710ca23430e39a8
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:12:51 2026 +0000
+
+    docs: Add guild management implementation plan
+    
+    11 tasks covering protocol builders, event types, world handlers,
+    client methods, command parsing, IPC dispatch, event formatting,
+    stub removal, documentation, and live server validation.
+    
+    Entire-Checkpoint: 98d8e8a997cd
+
+commit d0427e82450980f083350d1fefe90196e4cf33c6
+Author: OpenClaw <openclaw@vararu.org>
+Date:   Wed Mar 4 00:05:47 2026 +0000
+
+    docs: Add guild management commands design
+    
+    Covers 9 fire-and-forget guild commands (ginvite, gkick, gleave,
+    gpromote, gdemote, gleader, gmotd, gaccept, gdecline) plus SMSG
+    handlers for GUILD_COMMAND_RESULT and GUILD_INVITE.
+    
+    Entire-Checkpoint: 5f89f11adf12
+```
+
+DIFF CONTENT:
+
+```
+<persisted-output>
+Output too large (86KB). Full output saved to: /home/openclaw/.claude/projects/-home-openclaw-code-tuicraft/9148bea6-f465-4ed4-8562-ccdf33817fe3/tool-results/bk7odjfi5.txt
+
+Preview (first 2KB):
+diff --git a/.claude/skills/tuicraft/SKILL.md b/.claude/skills/tuicraft/SKILL.md
+index aba1761..e6960dc 100644
+--- a/.claude/skills/tuicraft/SKILL.md
++++ b/.claude/skills/tuicraft/SKILL.md
+@@ -45,34 +45,36 @@ Add `--json` for structured output. Each JSON line:
+ 
+ ## Event Types
+ 
+-| Type                 | Meaning                                          |
+-| -------------------- | ------------------------------------------------ |
+-| SAY                  | Nearby /say chat                                 |
+-| YELL                 | /yell chat                                       |
+-| PARTY                | Party member message                             |
+-| PARTY_LEADER         | Party leader message                             |
+-| GUILD                | Guild chat                                       |
+-| OFFICER              | Officer chat                                     |
+-| RAID                 | Raid chat                                        |
+-| RAID_LEADER          | Raid leader message                              |
+-| RAID_WARNING         | Raid warning                                     |
+-| WHISPER              | Incoming whisper                                 |
+-| WHISPER_TO           | Outgoing whisper confirmation                    |
+-| CHANNEL              | Custom channel message                           |
+-| EMOTE                | Player emote                                     |
+-| SYSTEM               | System messages and unimplemented packet notices |
+-| ENTITY_APPEAR        | NPC/player/object appeared nearby (--json only)  |
+-| ENTITY_DISAPPEAR     | Entity left range (--json only)                  |
+-| ENTITY_UPDATE        | Entity field changed (--json only)               |
+-| FRIEND_ONLINE        | Friend came online                               |
+-| FRIEND_OFFLINE       | Friend went offline                              |
+-| FRIEND_ADDED         | Friend added to list                             |
+...
+</persisted-output>
+```
+
+Review the complete diff above. This contains all code changes in the PR.
+
+
+OBJECTIVE:
+Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential. This is not a general code review - focus ONLY on security implications newly added by this PR. Do not comment on existing security concerns.
+
+CRITICAL INSTRUCTIONS:
+1. MINIMIZE FALSE POSITIVES: Only flag issues where you're >80% confident of actual exploitability
+2. AVOID NOISE: Skip theoretical issues, style concerns, or low-impact findings
+3. FOCUS ON IMPACT: Prioritize vulnerabilities that could lead to unauthorized access, data breaches, or system compromise
+4. EXCLUSIONS: Do NOT report the following issue types:
+   - Denial of Service (DOS) vulnerabilities, even if they allow service disruption
+   - Secrets or sensitive data stored on disk (these are handled by other processes)
+   - Rate limiting or resource exhaustion issues
+
+SECURITY CATEGORIES TO EXAMINE:
+
+**Input Validation Vulnerabilities:**
+- SQL injection via unsanitized user input
+- Command injection in system calls or subprocesses
+- XXE injection in XML parsing
+- Template injection in templating engines
+- NoSQL injection in database queries
+- Path traversal in file operations
+
+**Authentication & Authorization Issues:**
+- Authentication bypass logic
+- Privilege escalation paths
+- Session management flaws
+- JWT token vulnerabilities
+- Authorization logic bypasses
+
+**Crypto & Secrets Management:**
+- Hardcoded API keys, passwords, or tokens
+- Weak cryptographic algorithms or implementations
+- Improper key storage or management
+- Cryptographic randomness issues
+- Certificate validation bypasses
+
+**Injection & Code Execution:**
+- Remote code execution via deseralization
+- Pickle injection in Python
+- YAML deserialization vulnerabilities
+- Eval injection in dynamic code execution
+- XSS vulnerabilities in web applications (reflected, stored, DOM-based)
+
+**Data Exposure:**
+- Sensitive data logging or storage
+- PII handling violations
+- API endpoint data leakage
+- Debug information exposure
+
+Additional notes:
+- Even if something is only exploitable from the local network, it can still be a HIGH severity issue
+
+ANALYSIS METHODOLOGY:
+
+Phase 1 - Repository Context Research (Use file search tools):
+- Identify existing security frameworks and libraries in use
+- Look for established secure coding patterns in the codebase
+- Examine existing sanitization and validation patterns
+- Understand the project's security model and threat model
+
+Phase 2 - Comparative Analysis:
+- Compare new code changes against existing security patterns
+- Identify deviations from established secure practices
+- Look for inconsistent security implementations
+- Flag code that introduces new attack surfaces
+
+Phase 3 - Vulnerability Assessment:
+- Examine each modified file for security implications
+- Trace data flow from user inputs to sensitive operations
+- Look for privilege boundaries being crossed unsafely
+- Identify injection points and unsafe deserialization
+
+REQUIRED OUTPUT FORMAT:
+
+You MUST output your findings in markdown. The markdown output should contain the file, line number, severity, category (e.g. `sql_injection` or `xss`), description, exploit scenario, and fix recommendation.
+
+For example:
+
+# Vuln 1: XSS: `foo.py:42`
+
+* Severity: High
+* Description: User input from `username` parameter is directly interpolated into HTML without escaping, allowing reflected XSS attacks
+* Exploit Scenario: Attacker crafts URL like /bar?q=<script>alert(document.cookie)</script> to execute JavaScript in victim's browser, enabling session hijacking or data theft
+* Recommendation: Use Flask's escape() function or Jinja2 templates with auto-escaping enabled for all user inputs rendered in HTML
+
+SEVERITY GUIDELINES:
+- **HIGH**: Directly exploitable vulnerabilities leading to RCE, data breach, or authentication bypass
+- **MEDIUM**: Vulnerabilities requiring specific conditions but with significant impact
+- **LOW**: Defense-in-depth issues or lower-impact vulnerabilities
+
+CONFIDENCE SCORING:
+- 0.9-1.0: Certain exploit path identified, tested if possible
+- 0.8-0.9: Clear vulnerability pattern with known exploitation methods
+- 0.7-0.8: Suspicious pattern requiring specific conditions to exploit
+- Below 0.7: Don't report (too speculative)
+
+FINAL REMINDER:
+Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues than flood the report with false positives. Each finding should be something a security engineer would confidently raise in a PR review.
+
+FALSE POSITIVE FILTERING:
+
+> You do not need to run commands to reproduce the vulnerability, just read the code to determine if it is a real vulnerability. Do not use the bash tool or write to any files.
+>
+> HARD EXCLUSIONS - Automatically exclude findings matching these patterns:
+> 1. Denial of Service (DOS) vulnerabilities or resource exhaustion attacks.
+> 2. Secrets or credentials stored on disk if they are otherwise secured.
+> 3. Rate limiting concerns or service overload scenarios.
+> 4. Memory consumption or CPU exhaustion issues.
+> 5. Lack of input validation on non-security-critical fields without proven security impact.
+> 6. Input sanitization concerns for GitHub Action workflows unless they are clearly triggerable via untrusted input.
+> 7. A lack of hardening measures. Code is not expected to implement all security best practices, only flag concrete vulnerabilities.
+> 8. Race conditions or timing attacks that are theoretical rather than practical issues. Only report a race condition if it is concretely problematic.
+> 9. Vulnerabilities related to outdated third-party libraries. These are managed separately and should not be reported here.
+> 10. Memory safety issues such as buffer overflows or use-after-free-vulnerabilities are impossible in rust. Do not report memory safety issues in rust or any other memory safe languages.
+> 11. Files that are only unit tests or only used as part of running tests.
+> 12. Log spoofing concerns. Outputting un-sanitized user input to logs is not a vulnerability.
+> 13. SSRF vulnerabilities that only control the path. SSRF is only a concern if it can control the host or protocol.
+> 14. Including user-controlled content in AI system prompts is not a vulnerability.
+> 15. Regex injection. Injecting untrusted content into a regex is not a vulnerability.
+> 16. Regex DOS concerns.
+> 16. Insecure documentation. Do not report any findings in documentation files such as markdown files.
+> 17. A lack of audit logs is not a vulnerability.
+>
+> PRECEDENTS -
+> 1. Logging high value secrets in plaintext is a vulnerability. Logging URLs is assumed to be safe.
+> 2. UUIDs can be assumed to be unguessable and do not need to be validated.
+> 3. Environment variables and CLI flags are trusted values. Attackers are generally not able to modify them in a secure environment. Any attack that relies on controlling an environment variable is invalid.
+> 4. Resource management issues such as memory or file descriptor leaks are not valid.
+> 5. Subtle or low impact web vulnerabilities such as tabnabbing, XS-Leaks, prototype pollution, and open redirects should not be reported unless they are extremely high confidence.
+> 6. React and Angular are generally secure against XSS. These frameworks do not need to sanitize or escape user input unless it is using dangerouslySetInnerHTML, bypassSecurityTrustHtml, or similar methods. Do not report XSS vulnerabilities in React or Angular components or tsx files unless they are using unsafe methods.
+> 7. Most vulnerabilities in github action workflows are not exploitable in practice. Before validating a github action workflow vulnerability ensure it is concrete and has a very specific attack path.
+> 8. A lack of permission checking or authentication in client-side JS/TS code is not a vulnerability. Client-side code is not trusted and does not need to implement these checks, they are handled on the server-side. The same applies to all flows that send untrusted data to the backend, the backend is responsible for validating and sanitizing all inputs.
+> 9. Only include MEDIUM findings if they are obvious and concrete issues.
+> 10. Most vulnerabilities in ipython notebooks (*.ipynb files) are not exploitable in practice. Before validating a notebook vulnerability ensure it is concrete and has a very specific attack path where untrusted input can trigger the vulnerability.
+> 11. Logging non-PII data is not a vulnerability even if the data may be sensitive. Only report logging vulnerabilities if they expose sensitive information such as secrets, passwords, or personally identifiable information (PII).
+> 12. Command injection vulnerabilities in shell scripts are generally not exploitable in practice since shell scripts generally do not run with untrusted user input. Only report command injection vulnerabilities in shell scripts if they are concrete and have a very specific attack path for untrusted input.
+>
+> SIGNAL QUALITY CRITERIA - For remaining findings, assess:
+> 1. Is there a concrete, exploitable vulnerability with a clear attack path?
+> 2. Does this represent a real security risk vs theoretical best practice?
+> 3. Are there specific code locations and reproduction steps?
+> 4. Would this finding be actionable for a security team?
+>
+> For each finding, assign a confidence score from 1-10:
+> - 1-3: Low confidence, likely false positive or noise
+> - 4-6: Medium confidence, needs investigation
+> - 7-10: High confidence, likely true vulnerability
+
+START ANALYSIS:
+
+Begin your analysis now. Do this in 3 steps:
+
+1. Use a sub-task to identify vulnerabilities. Use the repository exploration tools to understand the codebase context, then analyze the PR changes for security implications. In the prompt for this sub-task, include all of the above.
+2. Then for each vulnerability identified by the above sub-task, create a new sub-task to filter out false-positives. Launch these sub-tasks as parallel sub-tasks. In the prompt for these sub-tasks, include everything in the "FALSE POSITIVE FILTERING" instructions.
+3. Filter out any vulnerabilities where the sub-task reported a confidence less than 8.
+
+Your final reply must contain the markdown report and nothing else.
+
+---
+
+You are an expert code reviewer. Follow these steps:
+
+      1. If no PR number is provided in the args, run `gh pr list` to show open PRs
+      2. If a PR number is provided, run `gh pr view <number>` to get PR details
+      3. Run `gh pr diff <number>` to get the diff
+      4. Analyze the changes and provide a thorough code review that includes:
+         - Overview of what the PR does
+         - Analysis of code quality and style
+         - Specific suggestions for improvements
+         - Any potential issues or risks
+
+      Keep your review concise but thorough. Focus on:
+      - Code correctness
+      - Following project conventions
+      - Performance implications
+      - Test coverage
+      - Security considerations
+
+      Format your review with clear sections and bullet points.
+
+      PR number:
+
+---
+
+# Simplify: Code Review and Cleanup
+
+Review all changed files for reuse, quality, and efficiency. Fix any issues found.
+
+## Phase 1: Identify Changes
+
+Run `git diff` (or `git diff HEAD` if there are staged changes) to see what changed. If there are no git changes, review the most recently modified files that the user mentioned or that you edited earlier in this conversation.
+
+## Phase 2: Launch Three Review Agents in Parallel
+
+Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent the full diff so it has the complete context.
+
+### Agent 1: Code Reuse Review
+
+For each change:
+
+1. **Search for existing utilities and helpers** that could replace newly written code. Use Grep to find similar patterns elsewhere in the codebase — common locations are utility directories, shared modules, and files adjacent to the changed ones.
+2. **Flag any new function that duplicates existing functionality.** Suggest the existing function to use instead.
+3. **Flag any inline logic that could use an existing utility** — hand-rolled string manipulation, manual path handling, custom environment checks, ad-hoc type guards, and similar patterns are common candidates.
+
+### Agent 2: Code Quality Review
+
+Review the same changes for hacky patterns:
+
+1. **Redundant state**: state that duplicates existing state, cached values that could be derived, observers/effects that could be direct calls
+2. **Parameter sprawl**: adding new parameters to a function instead of generalizing or restructuring existing ones
+3. **Copy-paste with slight variation**: near-duplicate code blocks that should be unified with a shared abstraction
+4. **Leaky abstractions**: exposing internal details that should be encapsulated, or breaking existing abstraction boundaries
+5. **Stringly-typed code**: using raw strings where constants, enums (string unions), or branded types already exist in the codebase
+
+### Agent 3: Efficiency Review
+
+Review the same changes for efficiency:
+
+1. **Unnecessary work**: redundant computations, repeated file reads, duplicate network/API calls, N+1 patterns
+2. **Missed concurrency**: independent operations run sequentially when they could run in parallel
+3. **Hot-path bloat**: new blocking work added to startup or per-request/per-render hot paths
+4. **Unnecessary existence checks**: pre-checking file/resource existence before operating (TOCTOU anti-pattern) — operate directly and handle the error
+5. **Memory**: unbounded data structures, missing cleanup, event listener leaks
+6. **Overly broad operations**: reading entire files when only a portion is needed, loading all items when filtering for one
+
+## Phase 3: Fix Issues
+
+Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.
+
+When done, briefly summarize what was fixed (or confirm the code was already clean).
+
+---
+
+Coverage is not 100%. Uncovered lines:
+- src/wow/protocol/guild.ts:233-275 (formatGuildCommandError)
+- src/wow/world-handlers.ts:783-806 (handleGuildCommandResult, handleGuildInvite)
+- src/daemon/commands.ts:531-566,775-778,830-841 (guild dispatch cases, guild event formatting)
+- src/wow/client.ts:875-916 (guild methods on WorldHandle)
+
+Add tests to cover ALL of these. The convention is integration tests in world-handlers.test.ts for handlers, unit tests for formatters, dispatch tests in commands.test.ts. Make sure `mise test:coverage` shows 100% or as close as the existing baseline.

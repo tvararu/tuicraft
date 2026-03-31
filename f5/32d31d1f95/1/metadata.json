@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f532d31d1f95",
+  "session_id": "98a95ea6-f2e6-4495-80cc-a6eca20584e6",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-03T23:27:58.341443182Z",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/daemon/commands.ts",
+    "src/wow/guild-store.test.ts",
+    "src/wow/guild-store.ts",
+    "src/wow/world-handlers.test.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "3c635fda28ce",
+  "token_usage": {
+    "input_tokens": 63,
+    "cache_creation_tokens": 113029,
+    "cache_read_tokens": 3130546,
+    "output_tokens": 16450,
+    "api_call_count": 53
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-03T23:27:58.182701611Z",
+    "agent_lines": 116,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 93,
+    "total_committed": 116,
+    "agent_percentage": 100
+  }
+}

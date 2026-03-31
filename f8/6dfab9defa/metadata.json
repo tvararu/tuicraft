@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "f86dfab9defa",
+  "strategy": "manual-commit",
+  "branch": "feat/guild-events",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f8/6dfab9defa/0/metadata.json",
+      "transcript": "/f8/6dfab9defa/0/full.jsonl",
+      "context": "/f8/6dfab9defa/0/context.md",
+      "content_hash": "/f8/6dfab9defa/0/content_hash.txt",
+      "prompt": "/f8/6dfab9defa/0/prompt.txt"
+    },
+    {
+      "metadata": "/f8/6dfab9defa/1/metadata.json",
+      "transcript": "/f8/6dfab9defa/1/full.jsonl",
+      "context": "/f8/6dfab9defa/1/context.md",
+      "content_hash": "/f8/6dfab9defa/1/content_hash.txt",
+      "prompt": "/f8/6dfab9defa/1/prompt.txt"
+    },
+    {
+      "metadata": "/f8/6dfab9defa/2/metadata.json",
+      "transcript": "/f8/6dfab9defa/2/full.jsonl",
+      "context": "/f8/6dfab9defa/2/context.md",
+      "content_hash": "/f8/6dfab9defa/2/content_hash.txt",
+      "prompt": "/f8/6dfab9defa/2/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1867,
+    "cache_creation_tokens": 474740,
+    "cache_read_tokens": 17662838,
+    "output_tokens": 51238,
+    "api_call_count": 157
+  }
+}

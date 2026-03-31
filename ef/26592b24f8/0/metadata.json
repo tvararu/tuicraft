@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "ef26592b24f8",
+  "session_id": "6467db6f-aeaf-4eec-8151-bc19886714c2",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-03T10:37:49.709558839Z",
+  "branch": "feat/duel-accept-decline",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans/2026-03-03-duel-accept-decline-design.md"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "f84c59782c42",
+  "token_usage": {
+    "input_tokens": 24,
+    "cache_creation_tokens": 84731,
+    "cache_read_tokens": 576853,
+    "output_tokens": 7318,
+    "api_call_count": 17
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-03T10:37:49.664937428Z",
+    "agent_lines": 99,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 99,
+    "agent_percentage": 100
+  }
+}

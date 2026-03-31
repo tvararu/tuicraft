@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "11896053ed4f",
+  "strategy": "manual-commit",
+  "branch": "feat/channel-join-leave",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/world-handlers.test.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/11/896053ed4f/0/metadata.json",
+      "transcript": "/11/896053ed4f/0/full.jsonl",
+      "context": "/11/896053ed4f/0/context.md",
+      "content_hash": "/11/896053ed4f/0/content_hash.txt",
+      "prompt": "/11/896053ed4f/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}

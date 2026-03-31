@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "8507b7aae937",
+  "session_id": "0a267433-12b2-4e4b-b8c0-a308901127bc",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-02T04:28:48.932017684Z",
+  "branch": "feat/guild-roster",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "src/wow/client.ts",
+    "src/wow/guild-store.ts",
+    "src/wow/protocol/guild.ts",
+    "src/wow/protocol/world.ts",
+    "src/wow/world-handlers.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "87ff33470a67",
+  "token_usage": {
+    "input_tokens": 7812,
+    "cache_creation_tokens": 233687,
+    "cache_read_tokens": 15699468,
+    "output_tokens": 41699,
+    "api_call_count": 144
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-02T04:28:48.575121739Z",
+    "agent_lines": 240,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 240,
+    "agent_percentage": 100
+  }
+}
