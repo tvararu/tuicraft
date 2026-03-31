@@ -31,18 +31,22 @@ echo "Done. Binaries in dist/"
 
 [tasks.test]
 description = "Run all tests"
+raw = true
 run = "bun test"
 
 [tasks."test:live"]
 description = "Run tests against a live server"
+raw = true
 run = "bun test ./src/test/live.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"
+raw = true
 run = "bun test --coverage"
 
 [tasks."test:slowest"]
 description = "Show 10 slowest tests"
+raw = true
 run = '''
 bun test --reporter=junit \
   --reporter-outfile=tmp/junit.xml && \
