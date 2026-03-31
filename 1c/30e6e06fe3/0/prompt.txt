@@ -1,0 +1,37 @@
+Can we migrate to biome, same setup as ../gromit?
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+No linter, just the formatter drop-in replacement
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+Do we need to specify bun as the npm package manager in mise.toml?
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+Can you check that that's the minimal biome.json, that none of those options are already default so they can be elided?
+
+---
+
+Commit
+
+---
+
+[Request interrupted by user]
+
+---
+
+Continue
