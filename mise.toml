@@ -1,6 +1,7 @@
 [tools]
 "npm:@biomejs/biome" = "latest"
 bun = "latest"
+gh = "latest"
 
 [settings]
 npm.package_manager = "bun"
@@ -52,7 +53,8 @@ sed -n 's/.*<testcase name="\([^"]*\)".* time="\([^"]*\)".*/\2\t\1/p' \
 
 [tasks.ci]
 description = "Run all CI checks in parallel"
-run = "mise typecheck ::: test ::: format"
+depends = ["typecheck", "test", "format"]
+run = "gh signoff ci 2>/dev/null || true"
 
 [tasks.typecheck]
 description = "Type-check with tsc"
