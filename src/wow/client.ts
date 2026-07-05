@@ -75,6 +75,7 @@ import {
   type MoveEvent,
   type MoveState,
 } from "wow/movement-engine";
+import type { NavProvider } from "nav/provider";
 import {
   sendPacket,
   handleTimeSync,
@@ -132,6 +133,7 @@ export type ClientConfig = {
   moveTickMs?: number;
   moveHeartbeatMs?: number;
   moveProgressMs?: number;
+  nav?: NavProvider;
 };
 
 import type { AuthResult } from "wow/auth";
@@ -640,6 +642,7 @@ export function worldSession(
           tickMs: config.moveTickMs,
           heartbeatMs: config.moveHeartbeatMs,
           progressMs: config.moveProgressMs,
+          nav: config.nav,
         },
       );
       const lang = config.language ?? Language.COMMON;

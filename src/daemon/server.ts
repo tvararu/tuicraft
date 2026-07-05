@@ -2,6 +2,7 @@ import { readConfig } from "lib/config";
 import { authHandshake, authWithRetry } from "wow/auth";
 import { worldSession } from "wow/client";
 import type { WorldHandle } from "wow/client";
+import type { NavProvider } from "nav/provider";
 import { RingBuffer } from "lib/ring-buffer";
 import { socketPath, pidPath, runtimeDir, logPath } from "lib/paths";
 import { SessionLog } from "lib/session-log";
@@ -137,7 +138,22 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   return { server, events, cleanup };
 }
 
-function buildClientConfig(cfg: Awaited<ReturnType<typeof readConfig>>) {
+async function openNav(
+  cfg: Awaited<ReturnType<typeof readConfig>>,
+): Promise<NavProvider | undefined> {
+  if (!cfg.nav_lib || !cfg.nav_data) return undefined;
+  const { openNavProvider } = await import("nav/provider");
+  try {
+    return openNavProvider(cfg.nav_lib, cfg.nav_data);
+  } catch {
+    return undefined;
+  }
+}
+
+function buildClientConfig(
+  cfg: Awaited<ReturnType<typeof readConfig>>,
+  nav?: NavProvider,
+) {
   return {
     host: cfg.host,
     port: cfg.port,
@@ -145,6 +161,7 @@ function buildClientConfig(cfg: Awaited<ReturnType<typeof readConfig>>) {
     password: cfg.password.toUpperCase(),
     character: cfg.character,
     language: cfg.language,
+    nav,
   };
 }
 
@@ -161,7 +178,8 @@ export async function startDaemon(client?: DaemonClient): Promise<void> {
   const cfg = await readConfig();
   const { sock, pid } = await prepareDaemonPaths();
 
-  const clientCfg = buildClientConfig(cfg);
+  const nav = client ? undefined : await openNav(cfg);
+  const clientCfg = buildClientConfig(cfg, nav);
   const auth = await (client
     ? client.authHandshake(clientCfg)
     : authWithRetry(clientCfg));
@@ -177,6 +195,7 @@ export async function startDaemon(client?: DaemonClient): Promise<void> {
     cleaned = true;
     stopServer();
     clearInterval(idleCheck);
+    nav?.close();
     unlink(pid).catch(() => {});
   }
 

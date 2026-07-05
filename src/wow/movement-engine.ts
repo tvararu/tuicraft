@@ -3,16 +3,17 @@ import { MovementFlag, ObjectType } from "wow/protocol/entity-fields";
 import { buildMoveMessage } from "wow/protocol/movement";
 import { currentMovementInfo } from "wow/movement-handlers";
 import { sendPacket, selfGuid } from "wow/world-handlers";
+import type { NavProvider, NavRoute } from "nav/provider";
 import type { WorldConn } from "wow/client";
 
 export type MoveEvent =
-  | { type: "move_started"; x: number; y: number; z: number }
+  | { type: "move_started"; x: number; y: number; z: number; waypoints: number }
   | { type: "follow_started"; name: string }
   | { type: "progress"; x: number; y: number; z: number; remaining: number }
   | { type: "arrived"; x: number; y: number; z: number }
   | {
       type: "move_stopped";
-      reason: "command" | "root" | "teleport" | "target_lost";
+      reason: "command" | "root" | "teleport" | "target_lost" | "no_path";
     };
 
 export type MoveState =
@@ -33,12 +34,16 @@ export type EngineOpts = {
   tickMs?: number;
   heartbeatMs?: number;
   progressMs?: number;
+  nav?: NavProvider;
 };
 
 const TWO_PI = Math.PI * 2;
 const FACING_EPSILON = 0.05;
 const FOLLOW_STOP_DISTANCE = 4;
 const FOLLOW_RESUME_DISTANCE = 5;
+const FOLLOW_REPATH_DISTANCE = 2;
+
+type Target = { x: number; y: number; z: number };
 
 function normalizeOrientation(o: number): number {
   return ((o % TWO_PI) + TWO_PI) % TWO_PI;
@@ -58,18 +63,24 @@ export function createMovementEngine(
   const heartbeatMs = opts.heartbeatMs ?? 500;
   const progressMs = opts.progressMs ?? 2000;
 
-  type Target = { x: number; y: number; z: number };
   let mode:
     | { kind: "idle" }
-    | { kind: "goto"; target: Target }
+    | { kind: "goto"; final: Target; queue: Target[]; route?: NavRoute }
     | {
         kind: "follow";
         guid: bigint;
         name: string;
+        queue: Target[];
+        pathedDest?: Target;
         walking: boolean;
+        route?: NavRoute;
       } = { kind: "idle" };
   let lastHeartbeat = 0;
   let lastProgress = 0;
+
+  function routeForCurrentMap(): NavRoute | undefined {
+    return opts.nav?.forMap(conn.own.mapId);
+  }
 
   function sendMove(opcode: number): void {
     sendPacket(
@@ -83,9 +94,23 @@ export function createMovementEngine(
     );
   }
 
-  function startForward(target: Target): void {
+  function computeQueue(
+    route: NavRoute | undefined,
+    target: Target,
+  ): Target[] | undefined {
+    if (!route) return [target];
+    const path = route.findPath(
+      { x: conn.own.x, y: conn.own.y, z: conn.own.z },
+      target,
+    );
+    if (!path) return undefined;
+    const queue = path.length > 1 ? path.slice(1) : [...path];
+    return queue.length > 0 ? queue : [target];
+  }
+
+  function startForward(leg: Target): void {
     conn.own.orientation = normalizeOrientation(
-      Math.atan2(target.y - conn.own.y, target.x - conn.own.x),
+      Math.atan2(leg.y - conn.own.y, leg.x - conn.own.x),
     );
     conn.own.moveFlags |= MovementFlag.FORWARD;
     sendMove(GameOpcode.MSG_MOVE_START_FORWARD);
@@ -105,7 +130,9 @@ export function createMovementEngine(
     });
   }
 
-  function halt(reason: "command" | "root" | "teleport" | "target_lost"): void {
+  function halt(
+    reason: "command" | "root" | "teleport" | "target_lost" | "no_path",
+  ): void {
     const wasMoving = (conn.own.moveFlags & MovementFlag.FORWARD) !== 0;
     mode = { kind: "idle" };
     if (wasMoving && reason !== "teleport" && reason !== "root") {
@@ -116,19 +143,32 @@ export function createMovementEngine(
     emit({ type: "move_stopped", reason });
   }
 
-  function advance(target: Target): "arrived" | "moving" {
-    const dx = target.x - conn.own.x;
-    const dy = target.y - conn.own.y;
-    const dz = target.z - conn.own.z;
+  function remainingDistance(queue: Target[]): number {
+    let total = 0;
+    let px = conn.own.x;
+    let py = conn.own.y;
+    let pz = conn.own.z;
+    for (const wp of queue) {
+      total += Math.hypot(wp.x - px, wp.y - py, wp.z - pz);
+      px = wp.x;
+      py = wp.y;
+      pz = wp.z;
+    }
+    return total;
+  }
+
+  function advance(leg: Target, route: NavRoute | undefined): boolean {
+    const dx = leg.x - conn.own.x;
+    const dy = leg.y - conn.own.y;
+    const dz = leg.z - conn.own.z;
     const dist = Math.hypot(dx, dy, dz);
     const step = conn.own.runSpeed * (tickMs / 1000);
 
     if (dist <= step) {
-      conn.own.x = target.x;
-      conn.own.y = target.y;
-      conn.own.z = target.z;
-      stopForward();
-      return "arrived";
+      conn.own.x = leg.x;
+      conn.own.y = leg.y;
+      conn.own.z = leg.z;
+      return true;
     }
 
     const heading = normalizeOrientation(Math.atan2(dy, dx));
@@ -138,15 +178,44 @@ export function createMovementEngine(
     }
 
     const scale = step / dist;
+    const fromX = conn.own.x;
+    const fromY = conn.own.y;
+    const fromZ = conn.own.z;
     conn.own.x += dx * scale;
     conn.own.y += dy * scale;
     conn.own.z += dz * scale;
+    if (route) {
+      const ground = route.groundHeight(
+        { x: fromX, y: fromY, z: fromZ },
+        conn.own.x,
+        conn.own.y,
+      );
+      if (ground !== undefined) conn.own.z = ground;
+    }
 
     const now = conn.ticks();
     if (now - lastHeartbeat >= heartbeatMs) {
       lastHeartbeat = now;
       sendMove(GameOpcode.MSG_MOVE_HEARTBEAT);
     }
+    return false;
+  }
+
+  function walkQueue(
+    queue: Target[],
+    route: NavRoute | undefined,
+  ): "done" | "moving" {
+    const leg = queue[0];
+    if (!leg) return "done";
+    if (advance(leg, route)) {
+      queue.shift();
+      if (queue.length === 0) {
+        stopForward();
+        return "done";
+      }
+      return "moving";
+    }
+    const now = conn.ticks();
     if (now - lastProgress >= progressMs) {
       lastProgress = now;
       emit({
@@ -154,7 +223,7 @@ export function createMovementEngine(
         x: conn.own.x,
         y: conn.own.y,
         z: conn.own.z,
-        remaining: dist - step,
+        remaining: remainingDistance(queue),
       });
     }
     return "moving";
@@ -164,33 +233,54 @@ export function createMovementEngine(
     kind: "follow";
     guid: bigint;
     name: string;
+    queue: Target[];
+    pathedDest?: Target;
     walking: boolean;
+    route?: NavRoute;
   }): void {
     const entity = conn.entityStore.get(state.guid);
     if (!entity?.position) {
       halt("target_lost");
       return;
     }
+    const pos = entity.position;
     const dist = Math.hypot(
-      entity.position.x - conn.own.x,
-      entity.position.y - conn.own.y,
-      entity.position.z - conn.own.z,
+      pos.x - conn.own.x,
+      pos.y - conn.own.y,
+      pos.z - conn.own.z,
     );
 
     if (!state.walking) {
       if (dist > FOLLOW_RESUME_DISTANCE) {
+        const queue = computeQueue(state.route, pos) ?? [pos];
+        state.queue = queue;
+        state.pathedDest = { x: pos.x, y: pos.y, z: pos.z };
         state.walking = true;
-        startForward(entity.position);
+        startForward(queue[0]!);
       }
       return;
     }
 
     if (dist <= FOLLOW_STOP_DISTANCE) {
       state.walking = false;
+      state.queue = [];
       stopForward();
       return;
     }
-    advance(entity.position);
+
+    const dest = state.pathedDest;
+    if (
+      dest &&
+      Math.hypot(pos.x - dest.x, pos.y - dest.y, pos.z - dest.z) >
+        FOLLOW_REPATH_DISTANCE
+    ) {
+      state.queue = computeQueue(state.route, pos) ?? [pos];
+      state.pathedDest = { x: pos.x, y: pos.y, z: pos.z };
+    }
+
+    if (walkQueue(state.queue, state.route) === "done") {
+      state.walking = false;
+    }
   }
 
   function tick(): void {
@@ -200,10 +290,10 @@ export function createMovementEngine(
       return;
     }
     if (mode.kind === "goto") {
-      const target = mode.target;
-      if (advance(target) === "arrived") {
+      const { final, queue, route } = mode;
+      if (walkQueue(queue, route) === "done") {
         mode = { kind: "idle" };
-        emit({ type: "arrived", x: target.x, y: target.y, z: target.z });
+        emit({ type: "arrived", x: final.x, y: final.y, z: final.z });
       }
       return;
     }
@@ -218,9 +308,16 @@ export function createMovementEngine(
 
   return {
     moveTo(x, y, z) {
-      mode = { kind: "goto", target: { x, y, z } };
-      startForward({ x, y, z });
-      emit({ type: "move_started", x, y, z });
+      const route = routeForCurrentMap();
+      const target = { x, y, z };
+      const queue = computeQueue(route, target);
+      if (!queue) {
+        emit({ type: "move_stopped", reason: "no_path" });
+        return;
+      }
+      mode = { kind: "goto", final: target, queue, route };
+      startForward(queue[0]!);
+      emit({ type: "move_started", x, y, z, waypoints: queue.length });
     },
     follow(name) {
       const lower = name.toLowerCase();
@@ -238,7 +335,9 @@ export function createMovementEngine(
         kind: "follow",
         guid: entity.guid,
         name: entity.name ?? name,
+        queue: [],
         walking: false,
+        route: routeForCurrentMap(),
       };
       emit({ type: "follow_started", name: entity.name ?? name });
       return true;
@@ -255,9 +354,9 @@ export function createMovementEngine(
       if (mode.kind === "goto") {
         return {
           kind: "moving",
-          x: mode.target.x,
-          y: mode.target.y,
-          z: mode.target.z,
+          x: mode.final.x,
+          y: mode.final.y,
+          z: mode.final.z,
         };
       }
       if (mode.kind === "follow") {

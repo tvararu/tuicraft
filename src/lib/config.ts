@@ -6,6 +6,8 @@ export type Config = {
   port: number;
   language: number;
   timeout_minutes: number;
+  nav_lib?: string;
+  nav_data?: string;
 };
 
 const DEFAULTS: Partial<Config> = {
@@ -43,6 +45,11 @@ export function parseConfig(text: string): Config {
     const v = result[field];
     if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
       throw new Error(`Invalid ${field}: must be a finite positive number`);
+    }
+  }
+  for (const field of ["nav_lib", "nav_data"] as const) {
+    if (result[field] !== undefined && typeof result[field] !== "string") {
+      throw new Error(`Invalid ${field}: must be a string`);
     }
   }
   return result as unknown as Config;

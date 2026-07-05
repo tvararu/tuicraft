@@ -325,6 +325,122 @@ describe("movement engine goto", () => {
   });
 });
 
+describe("movement engine pathed", () => {
+  function fakeNav(paths: {
+    findPath(
+      start: unknown,
+      end: { x: number },
+    ):
+      | Array<{
+          x: number;
+          y: number;
+          z: number;
+        }>
+      | undefined;
+    groundHeight?(): number | undefined;
+  }) {
+    return {
+      forMap: () => ({
+        findPath: paths.findPath,
+        groundHeight: paths.groundHeight ?? (() => undefined),
+      }),
+      close: () => {},
+    };
+  }
+
+  async function startNavSession(nav: ReturnType<typeof fakeNav>) {
+    const ws = await startMockWorldServer();
+    const handle = await worldSession(
+      { ...base, nav, host: "127.0.0.1", port: ws.port },
+      fakeAuth(ws.port),
+    );
+    return { handle, ws, moves: collectMoveEvents(handle) };
+  }
+
+  test("goto walks through navmesh waypoints in order", async () => {
+    const corner = { x: 1, y: 0, z: 0 };
+    const final = { x: 1, y: 1, z: 0 };
+    const nav = fakeNav({
+      findPath: () => [{ x: 0, y: 0, z: 0 }, corner, final],
+    });
+    const s = await startNavSession(nav);
+    try {
+      s.handle.moveTo(1, 1, 0);
+      const started = await s.moves.waitFor((e) => e.type === "move_started");
+      expect(started).toEqual({
+        type: "move_started",
+        x: 1,
+        y: 1,
+        z: 0,
+        waypoints: 2,
+      });
+      await s.moves.waitFor((e) => e.type === "arrived");
+
+      const beats = s.ws.captured
+        .filter(
+          (p) =>
+            p.opcode === GameOpcode.MSG_MOVE_HEARTBEAT ||
+            p.opcode === GameOpcode.MSG_MOVE_SET_FACING,
+        )
+        .map((p) => readMoveBody(p).info);
+      const cornerVisited = beats.some((i) => i.x > 0.9 && i.y < 0.4);
+      const secondLeg = beats.some((i) => i.x > 0.9 && i.y > 0.4);
+      expect(cornerVisited).toBe(true);
+      expect(secondLeg).toBe(true);
+
+      const stop = await s.ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.MSG_MOVE_STOP,
+      );
+      const { info } = readMoveBody(stop);
+      expect(info.x).toBeCloseTo(1, 4);
+      expect(info.y).toBeCloseTo(1, 4);
+    } finally {
+      await endSession(s);
+    }
+  });
+
+  test("goto emits no_path and stays put when pathing fails", async () => {
+    const nav = fakeNav({ findPath: () => undefined });
+    const s = await startNavSession(nav);
+    try {
+      s.handle.moveTo(50, 50, 0);
+      const stopped = await s.moves.waitFor((e) => e.type === "move_stopped");
+      expect(stopped).toEqual({ type: "move_stopped", reason: "no_path" });
+      expect(
+        s.ws.captured.filter(
+          (p) => p.opcode === GameOpcode.MSG_MOVE_START_FORWARD,
+        ).length,
+      ).toBe(0);
+      expect(s.handle.getOwnPosition().state.kind).toBe("idle");
+    } finally {
+      await endSession(s);
+    }
+  });
+
+  test("ground height glues z during legs", async () => {
+    const nav = fakeNav({
+      findPath: () => [
+        { x: 0, y: 0, z: 0 },
+        { x: 2, y: 0, z: 0 },
+      ],
+      groundHeight: () => 5,
+    });
+    const s = await startNavSession(nav);
+    try {
+      s.handle.moveTo(2, 0, 0);
+      await s.ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.MSG_MOVE_HEARTBEAT,
+      );
+      const beat = s.ws.captured.find(
+        (p) => p.opcode === GameOpcode.MSG_MOVE_HEARTBEAT,
+      )!;
+      expect(readMoveBody(beat).info.z).toBe(5);
+    } finally {
+      await endSession(s);
+    }
+  });
+});
+
 describe("movement engine follow", () => {
   async function spawnWolf(s: Session, x: number, y: number): Promise<void> {
     s.ws.inject(
