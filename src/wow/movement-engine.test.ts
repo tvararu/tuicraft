@@ -337,12 +337,12 @@ describe("movement engine pathed", () => {
           z: number;
         }>
       | undefined;
-    groundHeight?(): number | undefined;
+    ground?(): number | undefined;
   }) {
     return {
       forMap: () => ({
         findPath: paths.findPath,
-        groundHeight: paths.groundHeight ?? (() => undefined),
+        ground: paths.ground ?? (() => undefined),
       }),
       close: () => {},
     };
@@ -423,7 +423,7 @@ describe("movement engine pathed", () => {
         { x: 0, y: 0, z: 0 },
         { x: 2, y: 0, z: 0 },
       ],
-      groundHeight: () => 5,
+      ground: () => 5,
     });
     const s = await startNavSession(nav);
     try {

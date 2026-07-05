@@ -2,7 +2,7 @@ import { openNavMap, type NavMap, type Vec3 } from "nav/namigator";
 
 export type NavRoute = {
   findPath(start: Vec3, end: Vec3): Vec3[] | undefined;
-  groundHeight(from: Vec3, toX: number, toY: number): number | undefined;
+  ground(x: number, y: number, nearZ: number): number | undefined;
 };
 
 export type NavProvider = {
@@ -65,9 +65,19 @@ export function openNavProvider(libPath: string, dataDir: string): NavProvider {
         ensureCorridor(start, end);
         return map.findPath(start, end);
       },
-      groundHeight(from, toX, toY) {
-        ensureAdt(toX, toY);
-        return map.findHeight(from, toX, toY);
+      ground(x, y, nearZ) {
+        ensureAdt(x, y);
+        const heights = map.findHeights(x, y);
+        let best: number | undefined;
+        for (const h of heights) {
+          if (
+            best === undefined ||
+            Math.abs(h - nearZ) < Math.abs(best - nearZ)
+          )
+            best = h;
+        }
+        if (best === undefined || Math.abs(best - nearZ) > 5) return undefined;
+        return best;
       },
     };
   }

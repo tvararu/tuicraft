@@ -160,11 +160,10 @@ export function createMovementEngine(
   function advance(leg: Target, route: NavRoute | undefined): boolean {
     const dx = leg.x - conn.own.x;
     const dy = leg.y - conn.own.y;
-    const dz = leg.z - conn.own.z;
-    const dist = Math.hypot(dx, dy, dz);
+    const dist2d = Math.hypot(dx, dy);
     const step = conn.own.runSpeed * (tickMs / 1000);
 
-    if (dist <= step) {
+    if (dist2d <= step) {
       conn.own.x = leg.x;
       conn.own.y = leg.y;
       conn.own.z = leg.z;
@@ -177,21 +176,11 @@ export function createMovementEngine(
       sendMove(GameOpcode.MSG_MOVE_SET_FACING);
     }
 
-    const scale = step / dist;
-    const fromX = conn.own.x;
-    const fromY = conn.own.y;
-    const fromZ = conn.own.z;
+    const scale = step / dist2d;
     conn.own.x += dx * scale;
     conn.own.y += dy * scale;
-    conn.own.z += dz * scale;
-    if (route) {
-      const ground = route.groundHeight(
-        { x: fromX, y: fromY, z: fromZ },
-        conn.own.x,
-        conn.own.y,
-      );
-      if (ground !== undefined) conn.own.z = ground;
-    }
+    const expectedZ = conn.own.z + (leg.z - conn.own.z) * scale;
+    conn.own.z = route?.ground(conn.own.x, conn.own.y, expectedZ) ?? expectedZ;
 
     const now = conn.ticks();
     if (now - lastHeartbeat >= heartbeatMs) {
