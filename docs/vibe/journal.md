@@ -54,3 +54,58 @@ goto first, live-verified) → FFI bridge → pathed goto/follow → acceptance.
     client needs GM escape hatches.
   - GM command replies take 3-5 s; `read --wait 8` minimum. Grep session
     log (`~/.local/state/tuicraft/session.log`) as ground truth.
+
+## 2026-07-05 — engine, FFI, pathed movement, acceptance walk
+
+- Movement engine (2802cdb): tick loop, goto/follow/face/halt, heartbeats,
+  observed MSG_MOVE broadcasts feed the entity store. Live-verified:
+  first goto landed at exact server-side coords; second-account
+  observation showed steady 3.5 yd / 500 ms steps (7.0 yd/s — smooth,
+  research Q4 answered); Xiara followed Deity 60 yd and parked 3.98 yd
+  behind.
+- FFI bridge (8552326): libnamigator.so linked from namigator's own PIC
+  archives, no shim; stormlib bundles zlib/bz2 (Q5 answered). Fixture
+  tests reproduce namigator-rs known-good values. Expansion01 probe:
+  heights + zone/area match .gps exactly; 43-waypoint 1175 yd path in
+  23 ms.
+- Pathed movement (0ff24a0): navmesh corridors, follow re-pathing,
+  on-demand ADT streaming (~150 ms/tile, cached), no_path stop reason.
+- **Bug found live** (eead2de): 3D-distance legs stalled on Fairbreeze's
+  stacked floors — find_height hopped levels, step collapsed to zero.
+  Fix: navigate in 2D, snap z via find_heights closest to expected.
+- **Acceptance walk**: Fairbreeze → Silvermoon City gates
+  (9487.69, -7279.2, 14.29 — discovered via .tele SilvermoonCity), one
+  command, 40 waypoints, 1076 yd. First attempt DIED in The Dead Scar:
+  Scourge mobs rooted her (engine halted with reason "root", correctly)
+  and killed the combat-less bot. Revived + .gm on to scope out mob
+  interference; resumed walk arrived with ZERO coordinate error,
+  confirmed by all three oracles (client MOVE_ARRIVED, server .gps,
+  Deity's independent client seeing her at the gates).
+- Design note for later: after FORCE_MOVE_UNROOT the engine stays idle
+  by intent — the JSONL consumer decides whether to resume. Death is
+  not yet detected (a dead client can still "walk"); combat-era work.
+
+## 2026-07-05 — acceptance PASSED
+
+Second live bug (cfeb009): the follow run ended standing exactly on the
+target. On the steep descent the z-glue tolerance broke, interpolation
+drift fed back into itself (z ~11 yd above ground), and follow's 3D
+stop check could never reach 4 yd. Fixed by anchoring leg z at a fixed
+leg-start (drift-free) and making follow decisions 2D. Regression test
+added.
+
+Final acceptance results, all live against t1:
+
+1. One command, Fairbreeze → Silvermoon City gates (9487.69, -7279.2,
+   14.29): 40-waypoint navmesh corridor, 1076 yd. Interrupted once by
+   the Dead Scar (rooted + killed by Scourge — combat is out of scope;
+   revived, .gm on, resumed). Arrived with ZERO coordinate error.
+2. Smoothness: second account observed steady 3.5 yd / 500 ms steps.
+3. MOVE_ARRIVED in the JSONL stream; server .gps exact match; Deity's
+   independent client saw her standing at the gates.
+4. Reverse journey: exact arrival back at Fairbreeze.
+5. Follow: tracked Deity 155 yd down the descent, stopped 3.49 yd
+   behind him (2D), .gps confirms.
+
+Movement is done end to end: wire → acks → engine → namigator FFI →
+pathed goto/follow, all live-verified with mock tests as the spec.
