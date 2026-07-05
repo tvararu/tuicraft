@@ -77,6 +77,44 @@ import {
 } from "wow/movement-engine";
 import type { NavProvider } from "nav/provider";
 import {
+  handleAiReaction,
+  handleAttackStart,
+  handleAttackStop,
+  handleSwingError,
+  handleAttackerStateUpdate,
+  handleSpellStart,
+  handleSpellGo,
+  handleCastFailed,
+  handleSpellFailure,
+  handleInitialSpells,
+  handleSpellCooldownList,
+  handleCooldownEvent,
+  handleClearCooldown,
+  handleAuraUpdatePacket,
+  handleLootResponse,
+  handleItemPushResult,
+  handleLootMoneyNotify,
+  handleItemQueryResponse,
+  handleXpGain,
+  handleLevelUp,
+  handleSpellDamageLog,
+  handleSpellHealLogPacket,
+  handleHealthUpdate,
+  handlePowerUpdate,
+  handleDeathReleaseLoc,
+  handleCorpseQueryResponse,
+  handleCorpseReclaimDelay,
+  handleResurrectRequest,
+  type CombatEvent,
+  type Aura,
+} from "wow/combat-handlers";
+import type { LootResponse } from "wow/protocol/combat";
+import {
+  createCombatEngine,
+  type HuntEvent,
+  type Vitals,
+} from "wow/combat-engine";
+import {
   sendPacket,
   handleTimeSync,
   handleChatMessage,
@@ -133,6 +171,7 @@ export type ClientConfig = {
   moveTickMs?: number;
   moveHeartbeatMs?: number;
   moveProgressMs?: number;
+  combatTickMs?: number;
   nav?: NavProvider;
 };
 
@@ -192,6 +231,8 @@ export type DuelEvent =
 
 export type { WhoResult };
 export type { MoveEvent, MoveState };
+export type { CombatEvent, HuntEvent, Vitals };
+export type CombatFeedEvent = CombatEvent | HuntEvent;
 export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
 export type { IgnoreEntry, IgnoreEvent };
@@ -269,6 +310,26 @@ export type WorldHandle = {
   stopMoving(): void;
   getOwnPosition(): OwnState & { state: MoveState };
   onMoveEvent(cb: (event: MoveEvent) => void): void;
+  targetByName(name: string): boolean;
+  attackTarget(): boolean;
+  stopAttack(): void;
+  castSpell(spellId: number, onSelf: boolean): boolean;
+  lootTarget(): boolean;
+  hunt(name: string): boolean;
+  releaseSpirit(): void;
+  reclaimCorpse(): void;
+  queryCorpse(): void;
+  acceptResurrect(): void;
+  sit(): void;
+  stand(): void;
+  getSpellbook(): number[];
+  getAuras(unit: "self" | "target"): Array<{
+    spellId: number;
+    remainingMs?: number;
+  }>;
+  getVitals(): Vitals;
+  getCombatState(): string;
+  onCombatEvent(cb: (event: CombatFeedEvent) => void): void;
 };
 
 export type OwnState = {
@@ -318,6 +379,15 @@ export type WorldConn = {
   onDuelEvent?: (event: DuelEvent) => void;
   onMoveEvent?: (event: MoveEvent) => void;
   onOwnTeleport?: () => void;
+  spellbook: Set<number>;
+  cooldowns: Map<number, number>;
+  auras: Map<bigint, Map<number, Aura>>;
+  currentTarget: bigint;
+  pendingLoot?: LootResponse;
+  itemNameCache: Map<number, string>;
+  pendingResurrector?: bigint;
+  onCombatEvent?: (event: CombatFeedEvent) => void;
+  onCombatEventInternal?: (event: CombatEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -466,6 +536,11 @@ export function worldSession(
       guildId: 0,
       pendingRequest: null,
       duelArbiter: 0n,
+      spellbook: new Set(),
+      cooldowns: new Map(),
+      auras: new Map(),
+      currentTarget: 0n,
+      itemNameCache: new Map(),
     };
     conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
@@ -621,6 +696,95 @@ export function worldSession(
       conn.dispatch.on(opcode, (r) => handleObservedMove(conn, r));
     }
 
+    conn.dispatch.on(GameOpcode.SMSG_AI_REACTION, (r) =>
+      handleAiReaction(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_ATTACKSTART, (r) =>
+      handleAttackStart(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_ATTACKSTOP, (r) =>
+      handleAttackStop(conn, r),
+    );
+    for (const opcode of [
+      GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
+      GameOpcode.SMSG_ATTACKSWING_BADFACING,
+      GameOpcode.SMSG_ATTACKSWING_DEADTARGET,
+      GameOpcode.SMSG_ATTACKSWING_CANT_ATTACK,
+    ]) {
+      conn.dispatch.on(opcode, () => handleSwingError(conn, opcode));
+    }
+    conn.dispatch.on(GameOpcode.SMSG_ATTACKERSTATEUPDATE, (r) =>
+      handleAttackerStateUpdate(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELL_START, (r) =>
+      handleSpellStart(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELL_GO, (r) => handleSpellGo(conn, r));
+    conn.dispatch.on(GameOpcode.SMSG_CAST_FAILED, (r) =>
+      handleCastFailed(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELL_FAILURE, (r) =>
+      handleSpellFailure(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_INITIAL_SPELLS, (r) =>
+      handleInitialSpells(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELL_COOLDOWN, (r) =>
+      handleSpellCooldownList(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_COOLDOWN_EVENT, (r) =>
+      handleCooldownEvent(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CLEAR_COOLDOWN, (r) =>
+      handleClearCooldown(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE, (r) =>
+      handleAuraUpdatePacket(conn, r, false),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE_ALL, (r) =>
+      handleAuraUpdatePacket(conn, r, true),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
+      handleLootResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) =>
+      handleItemPushResult(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_MONEY_NOTIFY, (r) =>
+      handleLootMoneyNotify(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_ITEM_QUERY_SINGLE_RESPONSE, (r) =>
+      handleItemQueryResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOG_XPGAIN, (r) => handleXpGain(conn, r));
+    conn.dispatch.on(GameOpcode.SMSG_LEVELUP_INFO, (r) =>
+      handleLevelUp(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELLNONMELEEDAMAGELOG, (r) =>
+      handleSpellDamageLog(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_SPELLHEALLOG, (r) =>
+      handleSpellHealLogPacket(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_HEALTH_UPDATE, (r) =>
+      handleHealthUpdate(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_POWER_UPDATE, (r) =>
+      handlePowerUpdate(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DEATH_RELEASE_LOC, (r) =>
+      handleDeathReleaseLoc(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
+      handleCorpseQueryResponse(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CORPSE_RECLAIM_DELAY, (r) =>
+      handleCorpseReclaimDelay(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
+      handleResurrectRequest(conn, r),
+    );
+
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
       conn.onMessage({
@@ -645,6 +809,13 @@ export function worldSession(
           nav: config.nav,
         },
       );
+      const combat = createCombatEngine(
+        conn,
+        engine,
+        (event) => conn.onCombatEvent?.(event),
+        { tickMs: config.combatTickMs },
+      );
+      conn.onCombatEventInternal = (event) => combat.handleEvent(event);
       const lang = config.language ?? Language.COMMON;
       done = true;
       const handle: WorldHandle = {
@@ -652,6 +823,9 @@ export function worldSession(
         close() {
           clearInterval(pingInterval);
           engine.dispose();
+          combat.dispose();
+          conn.onCombatEvent = undefined;
+          conn.onCombatEventInternal = undefined;
           conn.onMoveEvent = undefined;
           conn.onEntityEvent = undefined;
           conn.onFriendEvent = undefined;
@@ -1037,6 +1211,57 @@ export function worldSession(
         },
         onMoveEvent(cb) {
           conn.onMoveEvent = cb;
+        },
+        targetByName(name) {
+          return combat.target(name);
+        },
+        attackTarget() {
+          return combat.attack();
+        },
+        stopAttack() {
+          combat.stopAttack();
+        },
+        castSpell(spellId, onSelf) {
+          return combat.cast(spellId, onSelf);
+        },
+        lootTarget() {
+          return combat.loot();
+        },
+        hunt(name) {
+          return combat.hunt(name);
+        },
+        releaseSpirit() {
+          combat.releaseSpirit();
+        },
+        reclaimCorpse() {
+          combat.reclaimCorpse();
+        },
+        queryCorpse() {
+          combat.queryCorpse();
+        },
+        acceptResurrect() {
+          combat.acceptResurrect();
+        },
+        sit() {
+          combat.sit();
+        },
+        stand() {
+          combat.stand();
+        },
+        getSpellbook() {
+          return combat.spellbook();
+        },
+        getAuras(unit) {
+          return combat.auras(unit);
+        },
+        getVitals() {
+          return combat.vitals();
+        },
+        getCombatState() {
+          return combat.state();
+        },
+        onCombatEvent(cb) {
+          conn.onCombatEvent = cb;
         },
       };
       resolve(handle);

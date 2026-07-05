@@ -6,6 +6,7 @@ import type {
   GroupEvent,
   DuelEvent,
   MoveEvent,
+  CombatFeedEvent,
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
@@ -21,6 +22,7 @@ export function createMockHandle(): WorldHandle & {
   triggerIgnoreEvent(event: IgnoreEvent): void;
   triggerGuildEvent(event: GuildEvent): void;
   triggerMoveEvent(event: MoveEvent): void;
+  triggerCombatEvent(event: CombatFeedEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
@@ -31,6 +33,7 @@ export function createMockHandle(): WorldHandle & {
   let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
   let guildEventCb: ((event: GuildEvent) => void) | undefined;
   let moveEventCb: ((event: MoveEvent) => void) | undefined;
+  let combatEventCb: ((event: CombatFeedEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -111,6 +114,37 @@ export function createMockHandle(): WorldHandle & {
     follow: jest.fn(() => true),
     face: jest.fn(),
     stopMoving: jest.fn(),
+    targetByName: jest.fn(() => true),
+    attackTarget: jest.fn(() => true),
+    stopAttack: jest.fn(),
+    castSpell: jest.fn(() => true),
+    lootTarget: jest.fn(() => true),
+    hunt: jest.fn(() => true),
+    releaseSpirit: jest.fn(),
+    reclaimCorpse: jest.fn(),
+    queryCorpse: jest.fn(),
+    acceptResurrect: jest.fn(),
+    sit: jest.fn(),
+    stand: jest.fn(),
+    getSpellbook: jest.fn((): number[] => []),
+    getAuras: jest.fn(
+      (): Array<{ spellId: number; remainingMs?: number }> => [],
+    ),
+    getVitals: jest.fn(() => ({
+      health: 187,
+      maxHealth: 187,
+      mana: 472,
+      maxMana: 472,
+      level: 10,
+      dead: false,
+    })),
+    getCombatState: jest.fn(() => "idle"),
+    onCombatEvent(cb) {
+      combatEventCb = cb;
+    },
+    triggerCombatEvent(event) {
+      combatEventCb?.(event);
+    },
     getOwnPosition: jest.fn(() => ({
       mapId: 0,
       x: 0,

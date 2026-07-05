@@ -30,6 +30,7 @@ import type {
   GroupEvent,
   DuelEvent,
   MoveEvent,
+  CombatFeedEvent,
 } from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
@@ -100,6 +101,22 @@ export type IpcCommand =
   | { type: "halt" }
   | { type: "pos" }
   | { type: "pos_json" }
+  | { type: "target"; name: string }
+  | { type: "attack" }
+  | { type: "stop_attack" }
+  | { type: "cast"; spellId: number; self: boolean }
+  | { type: "loot" }
+  | { type: "hunt"; name: string }
+  | { type: "release" }
+  | { type: "reclaim" }
+  | { type: "corpse_query" }
+  | { type: "res_accept" }
+  | { type: "sit" }
+  | { type: "stand" }
+  | { type: "spells" }
+  | { type: "auras"; unit: "self" | "target" }
+  | { type: "vitals" }
+  | { type: "vitals_json" }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -313,6 +330,42 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "pos" };
     case "POS_JSON":
       return { type: "pos_json" };
+    case "TARGET":
+      return rest ? { type: "target", name: rest } : undefined;
+    case "ATTACK":
+      return { type: "attack" };
+    case "STOPATTACK":
+      return { type: "stop_attack" };
+    case "CAST": {
+      const parts = rest.split(" ").filter(Boolean);
+      const spellId = parseInt(parts[0] ?? "", 10);
+      if (!Number.isFinite(spellId)) return undefined;
+      return { type: "cast", spellId, self: parts[1] === "SELF" };
+    }
+    case "LOOT":
+      return { type: "loot" };
+    case "HUNT":
+      return rest ? { type: "hunt", name: rest } : undefined;
+    case "RELEASE":
+      return { type: "release" };
+    case "RECLAIM":
+      return { type: "reclaim" };
+    case "CORPSE":
+      return { type: "corpse_query" };
+    case "RESACCEPT":
+      return { type: "res_accept" };
+    case "SIT":
+      return { type: "sit" };
+    case "STAND":
+      return { type: "stand" };
+    case "SPELLS":
+      return { type: "spells" };
+    case "AURAS":
+      return { type: "auras", unit: rest === "TARGET" ? "target" : "self" };
+    case "VITALS":
+      return { type: "vitals" };
+    case "VITALS_JSON":
+      return { type: "vitals_json" };
     case "MAIL":
       return { type: "unimplemented", feature: "Mail reading" };
     case "ROLL": {
@@ -625,6 +678,100 @@ export async function dispatchCommand(
           orientation: pos.orientation,
           runSpeed: pos.runSpeed,
           state: pos.state,
+        }),
+      ]);
+      return false;
+    }
+    case "target": {
+      const found = handle.targetByName(cmd.name);
+      writeLines(socket, found ? ["OK"] : [`ERR "${cmd.name}" not nearby`]);
+      return false;
+    }
+    case "attack": {
+      const ok = handle.attackTarget();
+      writeLines(socket, ok ? ["OK"] : ["ERR no target"]);
+      return false;
+    }
+    case "stop_attack":
+      handle.stopAttack();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "cast": {
+      const ok = handle.castSpell(cmd.spellId, cmd.self);
+      writeLines(socket, ok ? ["OK"] : ["ERR no target"]);
+      return false;
+    }
+    case "loot": {
+      const ok = handle.lootTarget();
+      writeLines(socket, ok ? ["OK"] : ["ERR no target"]);
+      return false;
+    }
+    case "hunt": {
+      const found = handle.hunt(cmd.name);
+      writeLines(socket, found ? ["OK"] : [`ERR "${cmd.name}" not nearby`]);
+      return false;
+    }
+    case "release":
+      handle.releaseSpirit();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "reclaim":
+      handle.reclaimCorpse();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "corpse_query":
+      handle.queryCorpse();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "res_accept":
+      handle.acceptResurrect();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "sit":
+      handle.sit();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "stand":
+      handle.stand();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "spells": {
+      const spells = handle.getSpellbook();
+      writeLines(socket, [
+        `[spells] ${spells.length} known: ${spells.join(", ")}`,
+      ]);
+      return false;
+    }
+    case "auras": {
+      const auras = handle.getAuras(cmd.unit);
+      if (auras.length === 0) {
+        writeLines(socket, [`[auras] none on ${cmd.unit}`]);
+        return false;
+      }
+      writeLines(
+        socket,
+        auras.map(
+          (a) =>
+            `[auras] ${a.spellId}${a.remainingMs !== undefined ? ` (${(a.remainingMs / 1000).toFixed(0)}s left)` : ""}`,
+        ),
+      );
+      return false;
+    }
+    case "vitals": {
+      const v = handle.getVitals();
+      const state = handle.getCombatState();
+      writeLines(socket, [
+        `[vitals] HP ${v.health}/${v.maxHealth} mana ${v.mana}/${v.maxMana} level ${v.level}${v.dead ? " DEAD" : ""} (${state})`,
+      ]);
+      return false;
+    }
+    case "vitals_json": {
+      const v = handle.getVitals();
+      writeLines(socket, [
+        JSON.stringify({
+          type: "VITALS",
+          ...v,
+          combatState: handle.getCombatState(),
         }),
       ]);
       return false;
@@ -1028,6 +1175,199 @@ export function onMoveEvent(
 ): void {
   const text = formatMoveEvent(event);
   const obj = formatMoveEventObj(event);
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+function formatCombatEvent(event: CombatFeedEvent): string {
+  switch (event.type) {
+    case "aggro":
+      return `[combat] ${event.name} is attacking you!`;
+    case "melee_start":
+      return `[combat] ${event.attacker} attacks ${event.victim}`;
+    case "melee_stop":
+      return event.dead
+        ? `[combat] ${event.victim} dies`
+        : `[combat] ${event.attacker} stops attacking`;
+    case "damage": {
+      const what =
+        event.kind === "spell" ? ` (spell ${event.spellId})` : " (melee)";
+      if (event.miss) return `[combat] ${event.source} misses ${event.target}`;
+      return `[combat] ${event.source} hits ${event.target} for ${event.amount}${event.crit ? " CRIT" : ""}${what}`;
+    }
+    case "heal":
+      return `[combat] ${event.target} healed for ${event.amount}${event.crit ? " CRIT" : ""} (spell ${event.spellId})`;
+    case "cast_started":
+      return `[cast] casting ${event.spellId} (${event.castTimeMs}ms)`;
+    case "cast_go":
+      return `[cast] ${event.spellId} hit ${event.target}${event.powerLeft !== undefined ? ` (${event.powerLeft} mana left)` : ""}`;
+    case "cast_failed":
+      return `[cast] ${event.spellId} FAILED: ${event.resultName}`;
+    case "spellbook":
+      return `[spells] spellbook loaded: ${event.spells.length} spells`;
+    case "aura":
+      return event.applied
+        ? `[aura] ${event.unit} gained ${event.spellId}${event.timeLeftMs !== undefined ? ` (${(event.timeLeftMs / 1000).toFixed(0)}s)` : ""}`
+        : `[aura] ${event.unit} lost ${event.spellId}`;
+    case "loot_window":
+      return `[loot] ${event.gold} copper, ${event.items.length} items: ${event.items.map((i) => i.name ?? i.itemId).join(", ")}`;
+    case "loot_error":
+      return `[loot] failed (error ${event.error})`;
+    case "loot_item":
+      return `[loot] received ${event.count}x ${event.name ?? event.itemId} (${event.total} total)`;
+    case "loot_money":
+      return `[loot] ${event.copper} copper`;
+    case "xp":
+      return `[xp] +${event.amount} XP${event.kill ? " (kill)" : ""}`;
+    case "level_up":
+      return `[xp] LEVEL UP! Now level ${event.level}`;
+    case "died":
+      return "[death] You died";
+    case "release_loc":
+      return `[death] Released — graveyard at (${event.x.toFixed(1)}, ${event.y.toFixed(1)})`;
+    case "corpse_location":
+      return `[death] Corpse at (${event.x.toFixed(1)}, ${event.y.toFixed(1)}, ${event.z.toFixed(1)})`;
+    case "reclaim_delay":
+      return `[death] Reclaim delay ${event.ms}ms`;
+    case "resurrect_offer":
+      return `[death] ${event.from} offers to resurrect you (RESACCEPT to accept)`;
+    case "swing_error":
+      return `[combat] swing error: ${event.error}`;
+    case "hunt_started":
+      return `[hunt] Hunting ${event.name}`;
+    case "hunt_phase":
+      return `[hunt] Phase: ${event.phase}`;
+    case "hunt_complete":
+      return `[hunt] ${event.name} killed and looted (${(event.durationMs / 1000).toFixed(1)}s)`;
+    case "hunt_aborted":
+      return `[hunt] ABORTED: ${event.reason}`;
+  }
+}
+
+function formatCombatEventObj(event: CombatFeedEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "aggro":
+      return { type: "AGGRO", name: event.name };
+    case "melee_start":
+      return {
+        type: "MELEE_START",
+        attacker: event.attacker,
+        victim: event.victim,
+      };
+    case "melee_stop":
+      return {
+        type: "MELEE_STOP",
+        attacker: event.attacker,
+        victim: event.victim,
+        dead: event.dead,
+      };
+    case "damage":
+      return {
+        type: "DAMAGE",
+        kind: event.kind,
+        source: event.source,
+        target: event.target,
+        amount: event.amount,
+        crit: event.crit,
+        miss: event.miss,
+        spellId: event.spellId,
+      };
+    case "heal":
+      return {
+        type: "HEAL",
+        target: event.target,
+        amount: event.amount,
+        crit: event.crit,
+        spellId: event.spellId,
+      };
+    case "cast_started":
+      return {
+        type: "CAST_STARTED",
+        spellId: event.spellId,
+        castTimeMs: event.castTimeMs,
+      };
+    case "cast_go":
+      return {
+        type: "CAST_GO",
+        spellId: event.spellId,
+        target: event.target,
+        powerLeft: event.powerLeft,
+      };
+    case "cast_failed":
+      return {
+        type: "CAST_FAILED",
+        spellId: event.spellId,
+        result: event.result,
+        resultName: event.resultName,
+      };
+    case "spellbook":
+      return { type: "SPELLBOOK_LOADED", spells: event.spells };
+    case "aura":
+      return {
+        type: "AURA",
+        unit: event.unit,
+        spellId: event.spellId,
+        applied: event.applied,
+        timeLeftMs: event.timeLeftMs,
+      };
+    case "loot_window":
+      return { type: "LOOT_WINDOW", gold: event.gold, items: event.items };
+    case "loot_error":
+      return { type: "LOOT_ERROR", error: event.error };
+    case "loot_item":
+      return {
+        type: "LOOT_ITEM",
+        itemId: event.itemId,
+        name: event.name,
+        count: event.count,
+        total: event.total,
+      };
+    case "loot_money":
+      return { type: "LOOT_MONEY", copper: event.copper };
+    case "xp":
+      return { type: "XP_GAIN", amount: event.amount, kill: event.kill };
+    case "level_up":
+      return { type: "LEVEL_UP", level: event.level };
+    case "died":
+      return { type: "DIED" };
+    case "release_loc":
+      return {
+        type: "RELEASED",
+        mapId: event.mapId,
+        x: event.x,
+        y: event.y,
+        z: event.z,
+      };
+    case "corpse_location":
+      return { type: "CORPSE_LOCATION", x: event.x, y: event.y, z: event.z };
+    case "reclaim_delay":
+      return { type: "RECLAIM_DELAY", ms: event.ms };
+    case "resurrect_offer":
+      return { type: "RESURRECT_OFFER", from: event.from };
+    case "swing_error":
+      return { type: "SWING_ERROR", error: event.error };
+    case "hunt_started":
+      return { type: "HUNT_STARTED", name: event.name };
+    case "hunt_phase":
+      return { type: "HUNT_PHASE", phase: event.phase };
+    case "hunt_complete":
+      return {
+        type: "HUNT_COMPLETE",
+        name: event.name,
+        durationMs: event.durationMs,
+      };
+    case "hunt_aborted":
+      return { type: "HUNT_ABORTED", reason: event.reason };
+  }
+}
+
+export function onCombatEvent(
+  event: CombatFeedEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatCombatEvent(event);
+  const obj = formatCombatEventObj(event);
   events.push({ text, json: JSON.stringify(obj) });
   log.append(obj as LogEntry).catch(() => {});
 }

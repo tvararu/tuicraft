@@ -27,6 +27,7 @@ export type UnitEntity = BaseEntity & {
   displayId: number;
   npcFlags: number;
   unitFlags: number;
+  dynamicFlags: number;
   target: bigint;
   race: number;
   class_: number;
@@ -76,6 +77,7 @@ function createUnit(
     displayId: 0,
     npcFlags: 0,
     unitFlags: 0,
+    dynamicFlags: 0,
     target: 0n,
     race: 0,
     class_: 0,

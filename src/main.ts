@@ -180,6 +180,75 @@ async function main() {
       for (const line of lines) console.log(line);
       break;
     }
+    case "target": {
+      await ensureDaemon();
+      for (const line of await sendToSocket(`TARGET ${action.name}`))
+        console.log(line);
+      break;
+    }
+    case "attack": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("ATTACK")) console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "cast": {
+      await ensureDaemon();
+      const cmd = `CAST ${action.spellId}${action.self ? " SELF" : ""}`;
+      for (const line of await sendToSocket(cmd)) console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "loot": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("LOOT")) console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "hunt": {
+      await ensureDaemon();
+      for (const line of await sendToSocket(`HUNT ${action.name}`))
+        console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "release": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("RELEASE")) console.log(line);
+      break;
+    }
+    case "reclaim": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("RECLAIM")) console.log(line);
+      break;
+    }
+    case "spells": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("SPELLS")) console.log(line);
+      break;
+    }
+    case "auras": {
+      await ensureDaemon();
+      const cmd = action.unit === "target" ? "AURAS TARGET" : "AURAS";
+      for (const line of await sendToSocket(cmd)) console.log(line);
+      break;
+    }
+    case "vitals": {
+      await ensureDaemon();
+      const cmd = action.json ? "VITALS_JSON" : "VITALS";
+      for (const line of await sendToSocket(cmd)) console.log(line);
+      break;
+    }
+    case "sit": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("SIT")) console.log(line);
+      break;
+    }
+    case "stand": {
+      await ensureDaemon();
+      for (const line of await sendToSocket("STAND")) console.log(line);
+      break;
+    }
     case "skill": {
       process.stdout.write(skillContent);
       break;

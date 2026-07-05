@@ -26,7 +26,8 @@ const OBJECT_TARGET_FLAGS =
 const ITEM_TARGET_FLAGS = SpellTargetFlag.ITEM | SpellTargetFlag.TRADE_ITEM;
 
 export type SpellTarget =
-  { kind: "self" } | { kind: "unit"; guidLow: number; guidHigh: number };
+  | { kind: "self" }
+  | { kind: "unit"; guidLow: number; guidHigh: number };
 
 export function buildCastSpell(
   castCount: number,

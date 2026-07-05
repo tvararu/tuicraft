@@ -27,6 +27,23 @@ export type CliAction =
   | { mode: "face"; orientation: number }
   | { mode: "halt" }
   | { mode: "pos"; json: boolean }
+  | { mode: "target"; name: string }
+  | { mode: "attack"; wait: number | undefined }
+  | {
+      mode: "cast";
+      spellId: number;
+      self: boolean;
+      wait: number | undefined;
+    }
+  | { mode: "loot"; wait: number | undefined }
+  | { mode: "hunt"; name: string; wait: number | undefined }
+  | { mode: "release" }
+  | { mode: "reclaim" }
+  | { mode: "spells" }
+  | { mode: "auras"; unit: "self" | "target" }
+  | { mode: "vitals"; json: boolean }
+  | { mode: "sit" }
+  | { mode: "stand" }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -45,6 +62,18 @@ const SUBCOMMANDS = new Set([
   "face",
   "halt",
   "pos",
+  "target",
+  "attack",
+  "cast",
+  "loot",
+  "hunt",
+  "release",
+  "reclaim",
+  "spells",
+  "auras",
+  "vitals",
+  "sit",
+  "stand",
   "skill",
 ]);
 
@@ -186,6 +215,39 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseFace(args);
     case "pos":
       return { mode: "pos", json: hasFlag(args.slice(1), "--json") };
+    case "target": {
+      const name = filterFlags(args.slice(1))[0];
+      if (!name) throw new Error("Usage: tuicraft target <name>");
+      return { mode: "target", name };
+    }
+    case "attack":
+      return { mode: "attack", wait: parseWaitFlag(args.slice(1)) };
+    case "cast": {
+      const rest = args.slice(1);
+      const self = rest.includes("--self");
+      const spellId = parseInt(
+        filterFlags(rest.filter((a) => a !== "--self"))[0] ?? "",
+        10,
+      );
+      if (!Number.isFinite(spellId))
+        throw new Error("Usage: tuicraft cast <spellId> [--self]");
+      return { mode: "cast", spellId, self, wait: parseWaitFlag(rest) };
+    }
+    case "loot":
+      return { mode: "loot", wait: parseWaitFlag(args.slice(1)) };
+    case "hunt": {
+      const rest = args.slice(1);
+      const name = filterFlags(rest).join(" ");
+      if (!name) throw new Error("Usage: tuicraft hunt <name>");
+      return { mode: "hunt", name, wait: parseWaitFlag(rest) };
+    }
+    case "auras":
+      return {
+        mode: "auras",
+        unit: args[1] === "target" ? "target" : "self",
+      };
+    case "vitals":
+      return { mode: "vitals", json: hasFlag(args.slice(1), "--json") };
     default:
       return { mode: cmd } as CliAction;
   }

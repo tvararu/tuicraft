@@ -18,6 +18,7 @@ import {
   onGuildEvent,
   onDuelEvent,
   onMoveEvent,
+  onCombatEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
@@ -119,6 +120,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onGuildEvent((event) => onGuildEvent(event, events, log));
   handle.onDuelEvent((event) => onDuelEvent(event, events, log));
   handle.onMoveEvent((event) => onMoveEvent(event, events, log));
+  handle.onCombatEvent((event) => onCombatEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {

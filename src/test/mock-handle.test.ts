@@ -97,6 +97,7 @@ test("triggerEntityEvent forwards to onEntityEvent callback", () => {
       displayId: 0,
       npcFlags: 0,
       unitFlags: 0,
+      dynamicFlags: 0,
       target: 0n,
       race: 0,
       class_: 0,
