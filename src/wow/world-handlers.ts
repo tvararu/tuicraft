@@ -81,11 +81,16 @@ export function sendPacket(
 
 export function handleTimeSync(conn: WorldConn, r: PacketReader): void {
   const counter = r.uint32LE();
-  const elapsed = Date.now() - conn.startTime;
   const w = new PacketWriter();
   w.uint32LE(counter);
-  w.uint32LE(elapsed);
+  w.uint32LE(conn.ticks());
   sendPacket(conn, GameOpcode.CMSG_TIME_SYNC_RESP, w.finish());
+}
+
+export function selfGuid(conn: WorldConn): bigint {
+  return (
+    (BigInt(conn.selfGuidHigh >>> 0) << 32n) | BigInt(conn.selfGuidLow >>> 0)
+  );
 }
 
 export function deliverMessage(
@@ -399,8 +404,21 @@ export function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
   conn.onGroupEvent?.({ type: "invite_declined", name });
 }
 
+function updateOwnState(
+  conn: WorldConn,
+  position: { x: number; y: number; z: number; orientation: number },
+  runSpeed: number | undefined,
+): void {
+  conn.own.x = position.x;
+  conn.own.y = position.y;
+  conn.own.z = position.z;
+  conn.own.orientation = position.orientation;
+  if (runSpeed !== undefined) conn.own.runSpeed = runSpeed;
+}
+
 export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
-  const entries = parseUpdateObject(r);
+  const entries = parseUpdateObject(r, conn.own.mapId);
+  const self = selfGuid(conn);
   for (const entry of entries) {
     switch (entry.type) {
       case "create": {
@@ -433,6 +451,9 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           ...(entry.position ? { position: entry.position } : {}),
           rawFields: new Map(entry.fields),
         } as any);
+        if (entry.guid === self) {
+          updateOwnState(conn, entry.position, entry.runSpeed);
+        }
         if (!cachedName) {
           queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
         }
@@ -469,6 +490,9 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
       }
       case "movement": {
         conn.entityStore.setPosition(entry.guid, entry.position);
+        if (entry.guid === self) {
+          updateOwnState(conn, entry.position, entry.runSpeed);
+        }
         break;
       }
       case "outOfRange": {

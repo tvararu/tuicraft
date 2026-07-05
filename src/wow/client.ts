@@ -58,6 +58,7 @@ import {
   buildGuildMotd,
 } from "wow/protocol/guild";
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
+import { buildSetActiveMover } from "wow/protocol/movement";
 import {
   sendPacket,
   handleTimeSync,
@@ -242,12 +243,24 @@ export type WorldHandle = {
   declineGuildInvite(): void;
 };
 
+export type OwnState = {
+  mapId: number;
+  x: number;
+  y: number;
+  z: number;
+  orientation: number;
+  moveFlags: number;
+  runSpeed: number;
+};
+
 export type WorldConn = {
   socket: Socket;
   dispatch: OpcodeDispatch;
   buf: AccumulatorBuffer;
   arc4?: Arc4;
   startTime: number;
+  ticks: () => number;
+  own: OwnState;
   pendingHeader?: { size: number; opcode: number };
   nameCache: Map<number, string>;
   pendingMessages: Map<number, RawChatMessage[]>;
@@ -359,7 +372,17 @@ async function selectCharacter(
   w.uint32LE(char.guidHigh);
   sendPacket(conn, GameOpcode.CMSG_PLAYER_LOGIN, w.finish());
 
-  await conn.dispatch.expect(GameOpcode.SMSG_LOGIN_VERIFY_WORLD);
+  const verify = await conn.dispatch.expect(GameOpcode.SMSG_LOGIN_VERIFY_WORLD);
+  conn.own.mapId = verify.uint32LE();
+  conn.own.x = verify.floatLE();
+  conn.own.y = verify.floatLE();
+  conn.own.z = verify.floatLE();
+  conn.own.orientation = verify.floatLE();
+  sendPacket(
+    conn,
+    GameOpcode.CMSG_SET_ACTIVE_MOVER,
+    buildSetActiveMover(conn.selfGuidLow, conn.selfGuidHigh),
+  );
 }
 
 function startPingLoop(
@@ -379,11 +402,22 @@ export function worldSession(
   auth: AuthResult,
 ): Promise<WorldHandle> {
   return new Promise((resolve, reject) => {
+    const ticksBase = Bun.nanoseconds();
     const conn: WorldConn = {
       socket: undefined!,
       dispatch: new OpcodeDispatch(),
       buf: new AccumulatorBuffer(),
       startTime: Date.now(),
+      ticks: () => Math.round((Bun.nanoseconds() - ticksBase) / 1e6),
+      own: {
+        mapId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        orientation: 0,
+        moveFlags: 0,
+        runSpeed: 7,
+      },
       nameCache: new Map(),
       pendingMessages: new Map(),
       channels: [],

@@ -114,6 +114,27 @@ describe("world handler tests", () => {
     }
   });
 
+  test("sends CMSG_SET_ACTIVE_MOVER with own guid after login", async () => {
+    const ws = await startMockWorldServer();
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: ws.port },
+        fakeAuth(ws.port),
+      );
+      const packet = await ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.CMSG_SET_ACTIVE_MOVER,
+      );
+      const r = new PacketReader(packet.body);
+      expect(r.uint32LE()).toBe(0x42);
+      expect(r.uint32LE()).toBe(0);
+      expect(r.remaining).toBe(0);
+      handle.close();
+      await handle.closed;
+    } finally {
+      ws.stop();
+    }
+  });
+
   test("sendWhisper with empty target does not poison sticky mode", async () => {
     const ws = await startMockWorldServer();
     try {
