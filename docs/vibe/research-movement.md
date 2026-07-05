@@ -651,10 +651,10 @@ positions straight in; feed `find_path` output straight into MovementInfo.
 
 ### 4.5 RAM/disk/build-time expectations
 
-**Not documented anywhere in either repo** — README has no numbers,
-smoke_tests.py only prints elapsed seconds. Community lore says hours × cores
-per continent to build and low-single-digit GB of nav data per continent —
-treat as unverified; measure on the Expansion01 build (§5). Mesh params
+**Measured on openhubris (12 cores, 2026-07-05):** Expansion01 full build =
+**634 seconds**, 204,800 tiles, 800 ADT .nav files, ~3.7 GB output (incl.
+BVH doodads + Deadmines). The "hours per continent" community lore is
+obsolete on modern hardware. Deadmines (instance): 17 s / 36 MB. Mesh params
 (`Common.hpp` MeshSettings): TileVoxelSize 112, CellHeight 0.25,
 WalkableSlope 50°, AdtSize 533.333. RAM at runtime scales with loaded ADTs
 (DT_POLYREF64 tiles) — per-ADT loading around the bot keeps it small.
