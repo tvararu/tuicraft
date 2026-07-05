@@ -34,10 +34,10 @@ idles out after 30 minutes of inactivity.
 `tuicraft` _message_
 : Send a say message. Auto-starts the daemon if needed.
 
-`tuicraft setup` [*flags*]
+`tuicraft setup` [_flags_]
 : Configure account credentials. With no flags, runs an interactive wizard.
 
-`tuicraft read` [`--wait` *N*] [`--json`]
+`tuicraft read` [`--wait` _N_] [`--json`]
 : Read buffered events. `--wait` polls for _N_ seconds before returning.
 
 `tuicraft tail` [`--json`]
@@ -72,7 +72,7 @@ idles out after 30 minutes of inactivity.
 `-p` _message_
 : Party chat.
 
-`--who` [*filter*]
+`--who` [_filter_]
 : Who query. Optional name/class/level filter.
 
 ## Options
@@ -106,6 +106,78 @@ idles out after 30 minutes of inactivity.
 
 `--port` _PORT_
 : Auth server port. Default: `3724`.
+
+## Movement
+
+`tuicraft goto` _x_ _y_ _z_ [`--wait` _N_]
+: Walk to coordinates on a navmesh path, or a straight line if nav is not
+configured. `--wait` prints events for _N_ seconds after the command starts.
+
+`tuicraft follow` _player_ [`--wait` _N_]
+: Follow a nearby player or NPC by name. Re-paths as the target moves, stops
+within 4 yd, and resumes once the target is 5 yd away.
+
+`tuicraft face` _radians_
+: Face an orientation, in WoW radians (0 = north/+X, counterclockwise).
+
+`tuicraft halt`
+: Stop moving or stop following.
+
+`tuicraft pos` [`--json`]
+: Print your own position: map, x/y/z, orientation, run speed, and movement
+state.
+
+Movement is also available over the daemon's unix socket, using the same IPC
+verbs as other commands:
+
+```sh
+echo "GOTO x y z" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "FOLLOW name" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "FACE radians" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "HALT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "POS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "POS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+```
+
+`--json` events add five movement types:
+
+| Type           | Meaning                                             |
+| -------------- | --------------------------------------------------- |
+| MOVE_STARTED   | Movement began (x, y, z, waypoints)                 |
+| FOLLOW_STARTED | Following a target (name)                           |
+| MOVE_PROGRESS  | Periodic progress while moving (x, y, z, remaining) |
+| MOVE_ARRIVED   | Reached the destination (x, y, z)                   |
+| MOVE_STOPPED   | Movement ended early (reason)                       |
+
+`MOVE_STOPPED`'s `reason` is one of `command`, `root`, `teleport`,
+`target_lost`, or `no_path`.
+
+Teleports also produce `SYSTEM` messages: `Teleported to (x, y, z)` for a
+near teleport, or `Transferring to map N...` followed by `Entered map N at
+(x, y, z)` for a far teleport (map change).
+
+`nav_lib` and `nav_data` in the config file enable navmesh pathfinding for
+`goto` and `follow`:
+
+`nav_lib`
+: Path to `libnamigator.so`.
+
+`nav_data`
+: Path to a MapBuilder output directory.
+
+With both set, movement paths through the navmesh with on-demand ADT
+streaming and ground-height snapping. Without them, movement falls back to
+straight lines.
+
+Navmesh data is generated offline with namigator's MapBuilder from a 3.3.5a
+client `Data` directory:
+
+```sh
+MapBuilder -d <client>/Data -m Expansion01 -o <outdir> -t 12
+```
+
+Map names: `Azeroth` (0), `Kalimdor` (1), `Expansion01` (530), `Northrend`
+(571).
 
 ## Interactive Commands
 

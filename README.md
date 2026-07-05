@@ -112,7 +112,7 @@ tuicraft skill             # print SKILL.md for AI agents
       group roster, member stats
 - [x] 🌍 **0.4 - World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
-- [ ] 🏃 **0.5 - Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
+- [x] 🏃 **0.5 - Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
 - [ ] 🤖 **0.6 - Automation:** Scriptable command sequences and event
       subscriptions
 
@@ -190,7 +190,7 @@ that the official game client does.
 | Feature           | Status |
 | ----------------- | ------ |
 | Object updates    | ✅     |
-| Movement          | ❌     |
+| Movement          | ✅     |
 | Spells / auras    | ❌     |
 | Combat log        | ❌     |
 | Loot              | ❌     |

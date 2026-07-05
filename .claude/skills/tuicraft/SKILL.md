@@ -75,8 +75,16 @@ Add `--json` for structured output. Each JSON line:
 | GUILD_ROSTER_UPDATED  | Guild roster data received                       |
 | GUILD_COMMAND_RESULT  | Guild command error (permissions, not found)     |
 | GUILD_INVITE_RECEIVED | Incoming guild invitation prompt                 |
+| MOVE_STARTED          | Movement began (x, y, z, waypoints)              |
+| FOLLOW_STARTED        | Following a target (name)                        |
+| MOVE_PROGRESS         | Periodic move progress (x, y, z, remaining)      |
+| MOVE_ARRIVED          | Reached the destination (x, y, z)                |
+| MOVE_STOPPED          | Movement ended early (reason)                    |
 
 The `channel` field appears on CHANNEL events only.
+
+`MOVE_STOPPED`'s `reason` is one of `command`, `root`, `teleport`,
+`target_lost`, or `no_path`.
 
 Entity events include `guid`, `objectType`, `name`, and type-specific fields like `level`, `health`, `maxHealth`, `x`, `y`, `z`.
 
@@ -175,6 +183,31 @@ The daemon exposes `NEARBY` and `NEARBY_JSON` IPC verbs for querying tracked ent
     echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 In the TUI, toggle entity event display with `/tuicraft entities on|off`.
+
+## Movement
+
+    tuicraft goto X Y Z            # walk to coordinates
+    tuicraft goto X Y Z --wait 5   # then print events for 5 seconds
+    tuicraft follow PlayerName     # follow a nearby player or NPC
+    tuicraft follow PlayerName --wait 5
+    tuicraft face 1.57             # face an orientation (WoW radians)
+    tuicraft halt                  # stop moving / stop following
+    tuicraft pos                   # show your own position
+    tuicraft pos --json            # position as JSON
+
+`goto` and `follow` walk a straight line unless `nav_lib` and `nav_data` are
+configured, in which case they path through a namigator navmesh. `follow`
+re-paths as the target moves, stops within 4 yd, and resumes once the target
+is 5 yd away.
+
+IPC verbs:
+
+    echo "GOTO x y z" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "FOLLOW PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "FACE radians" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "HALT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "POS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "POS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 ## Openclaw Integration
 
