@@ -60,6 +60,15 @@ import {
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import { buildSetActiveMover } from "wow/protocol/movement";
 import {
+  handleForceSpeedChange,
+  handleTeleportAckRequest,
+  handleTransferPending,
+  handleNewWorld,
+  handleForceMoveRoot,
+  handleForceMoveUnroot,
+  SPEED_CHANGE_ACKS,
+} from "wow/movement-handlers";
+import {
   sendPacket,
   handleTimeSync,
   handleChatMessage,
@@ -567,6 +576,25 @@ export function worldSession(
     );
     conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) =>
       handleGuildInvitePacket(conn, r),
+    );
+
+    for (const { smsg, ack, extraByte, updatesRunSpeed } of SPEED_CHANGE_ACKS) {
+      conn.dispatch.on(smsg, (r) =>
+        handleForceSpeedChange(conn, r, ack, { extraByte, updatesRunSpeed }),
+      );
+    }
+    conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT_ACK, (r) =>
+      handleTeleportAckRequest(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_TRANSFER_PENDING, (r) =>
+      handleTransferPending(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_NEW_WORLD, (r) => handleNewWorld(conn, r));
+    conn.dispatch.on(GameOpcode.SMSG_FORCE_MOVE_ROOT, (r) =>
+      handleForceMoveRoot(conn, r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_FORCE_MOVE_UNROOT, (r) =>
+      handleForceMoveUnroot(conn, r),
     );
 
     registerStubs(conn.dispatch, (msg) => {
