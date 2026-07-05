@@ -5,6 +5,7 @@ import type {
   ChatMode,
   GroupEvent,
   DuelEvent,
+  MoveEvent,
 } from "wow/client";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
@@ -19,6 +20,7 @@ export function createMockHandle(): WorldHandle & {
   triggerFriendEvent(event: FriendEvent): void;
   triggerIgnoreEvent(event: IgnoreEvent): void;
   triggerGuildEvent(event: GuildEvent): void;
+  triggerMoveEvent(event: MoveEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
@@ -28,6 +30,7 @@ export function createMockHandle(): WorldHandle & {
   let friendEventCb: ((event: FriendEvent) => void) | undefined;
   let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
   let guildEventCb: ((event: GuildEvent) => void) | undefined;
+  let moveEventCb: ((event: MoveEvent) => void) | undefined;
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -103,6 +106,26 @@ export function createMockHandle(): WorldHandle & {
     ),
     onGuildEvent(cb) {
       guildEventCb = cb;
+    },
+    moveTo: jest.fn(),
+    follow: jest.fn(() => true),
+    face: jest.fn(),
+    stopMoving: jest.fn(),
+    getOwnPosition: jest.fn(() => ({
+      mapId: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+      orientation: 0,
+      moveFlags: 0,
+      runSpeed: 7,
+      state: { kind: "idle" as const },
+    })),
+    onMoveEvent(cb) {
+      moveEventCb = cb;
+    },
+    triggerMoveEvent(event) {
+      moveEventCb?.(event);
     },
     triggerMessage(msg) {
       messageCb?.(msg);

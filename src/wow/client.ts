@@ -66,8 +66,15 @@ import {
   handleNewWorld,
   handleForceMoveRoot,
   handleForceMoveUnroot,
+  handleObservedMove,
   SPEED_CHANGE_ACKS,
+  OBSERVED_MOVE_OPCODES,
 } from "wow/movement-handlers";
+import {
+  createMovementEngine,
+  type MoveEvent,
+  type MoveState,
+} from "wow/movement-engine";
 import {
   sendPacket,
   handleTimeSync,
@@ -122,6 +129,9 @@ export type ClientConfig = {
   pingIntervalMs?: number;
   language?: number;
   cachedSessionKey?: Uint8Array;
+  moveTickMs?: number;
+  moveHeartbeatMs?: number;
+  moveProgressMs?: number;
 };
 
 import type { AuthResult } from "wow/auth";
@@ -179,6 +189,7 @@ export type DuelEvent =
   | { type: "duel_in_bounds" };
 
 export type { WhoResult };
+export type { MoveEvent, MoveState };
 export type { Entity, EntityEvent };
 export type { FriendEntry, FriendEvent };
 export type { IgnoreEntry, IgnoreEvent };
@@ -250,6 +261,12 @@ export type WorldHandle = {
   guildMotd(motd: string): void;
   acceptGuildInvite(): void;
   declineGuildInvite(): void;
+  moveTo(x: number, y: number, z: number): void;
+  follow(name: string): boolean;
+  face(orientation: number): void;
+  stopMoving(): void;
+  getOwnPosition(): OwnState & { state: MoveState };
+  onMoveEvent(cb: (event: MoveEvent) => void): void;
 };
 
 export type OwnState = {
@@ -297,6 +314,8 @@ export type WorldConn = {
   pendingRequest: "group" | "duel" | null;
   duelArbiter: bigint;
   onDuelEvent?: (event: DuelEvent) => void;
+  onMoveEvent?: (event: MoveEvent) => void;
+  onOwnTeleport?: () => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -596,6 +615,9 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_FORCE_MOVE_UNROOT, (r) =>
       handleForceMoveUnroot(conn, r),
     );
+    for (const opcode of OBSERVED_MOVE_OPCODES) {
+      conn.dispatch.on(opcode, (r) => handleObservedMove(conn, r));
+    }
 
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
@@ -611,12 +633,23 @@ export function worldSession(
       await authenticateWorld(conn, config, auth);
       await selectCharacter(conn, config);
       pingInterval = startPingLoop(conn, config.pingIntervalMs ?? 30_000);
+      const engine = createMovementEngine(
+        conn,
+        (event) => conn.onMoveEvent?.(event),
+        {
+          tickMs: config.moveTickMs,
+          heartbeatMs: config.moveHeartbeatMs,
+          progressMs: config.moveProgressMs,
+        },
+      );
       const lang = config.language ?? Language.COMMON;
       done = true;
       const handle: WorldHandle = {
         closed,
         close() {
           clearInterval(pingInterval);
+          engine.dispose();
+          conn.onMoveEvent = undefined;
           conn.onEntityEvent = undefined;
           conn.onFriendEvent = undefined;
           conn.onIgnoreEvent = undefined;
@@ -983,6 +1016,24 @@ export function worldSession(
         },
         onDuelEvent(cb) {
           conn.onDuelEvent = cb;
+        },
+        moveTo(x, y, z) {
+          engine.moveTo(x, y, z);
+        },
+        follow(name) {
+          return engine.follow(name);
+        },
+        face(orientation) {
+          engine.face(orientation);
+        },
+        stopMoving() {
+          engine.stop();
+        },
+        getOwnPosition() {
+          return { ...conn.own, state: engine.state() };
+        },
+        onMoveEvent(cb) {
+          conn.onMoveEvent = cb;
         },
       };
       resolve(handle);

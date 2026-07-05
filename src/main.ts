@@ -146,6 +146,40 @@ async function main() {
       for (const line of lines) console.log(line);
       break;
     }
+    case "goto": {
+      await ensureDaemon();
+      const lines = await sendToSocket(
+        `GOTO ${action.x} ${action.y} ${action.z}`,
+      );
+      for (const line of lines) console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "follow": {
+      await ensureDaemon();
+      const lines = await sendToSocket(`FOLLOW ${action.target}`);
+      for (const line of lines) console.log(line);
+      await waitForEvents(action.wait, false);
+      break;
+    }
+    case "face": {
+      await ensureDaemon();
+      const lines = await sendToSocket(`FACE ${action.orientation}`);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "halt": {
+      await ensureDaemon();
+      const lines = await sendToSocket("HALT");
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "pos": {
+      await ensureDaemon();
+      const lines = await sendToSocket(action.json ? "POS_JSON" : "POS");
+      for (const line of lines) console.log(line);
+      break;
+    }
     case "skill": {
       process.stdout.write(skillContent);
       break;

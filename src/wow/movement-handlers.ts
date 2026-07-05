@@ -82,6 +82,7 @@ export function handleTeleportAckRequest(
     sender: "",
     message: `Teleported to (${dest.x.toFixed(1)}, ${dest.y.toFixed(1)}, ${dest.z.toFixed(1)})`,
   });
+  conn.onOwnTeleport?.();
 }
 
 export function handleTransferPending(conn: WorldConn, r: PacketReader): void {
@@ -118,6 +119,7 @@ export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
     sender: "",
     message: `Entered map ${mapId} at (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`,
   });
+  conn.onOwnTeleport?.();
 }
 
 export function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
@@ -151,6 +153,38 @@ export function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
     ),
   );
 }
+
+export function handleObservedMove(conn: WorldConn, r: PacketReader): void {
+  const { low, high } = r.packedGuid();
+  const guid = (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0);
+  if (guid === selfGuid(conn)) return;
+  const info = parseMovementInfo(r);
+  conn.entityStore.setPosition(guid, {
+    mapId: conn.own.mapId,
+    x: info.x,
+    y: info.y,
+    z: info.z,
+    orientation: info.orientation,
+  });
+}
+
+export const OBSERVED_MOVE_OPCODES = [
+  GameOpcode.MSG_MOVE_START_FORWARD,
+  GameOpcode.MSG_MOVE_START_BACKWARD,
+  GameOpcode.MSG_MOVE_STOP,
+  GameOpcode.MSG_MOVE_START_STRAFE_LEFT,
+  GameOpcode.MSG_MOVE_START_STRAFE_RIGHT,
+  GameOpcode.MSG_MOVE_STOP_STRAFE,
+  GameOpcode.MSG_MOVE_JUMP,
+  GameOpcode.MSG_MOVE_START_TURN_LEFT,
+  GameOpcode.MSG_MOVE_START_TURN_RIGHT,
+  GameOpcode.MSG_MOVE_STOP_TURN,
+  GameOpcode.MSG_MOVE_FALL_LAND,
+  GameOpcode.MSG_MOVE_START_SWIM,
+  GameOpcode.MSG_MOVE_STOP_SWIM,
+  GameOpcode.MSG_MOVE_SET_FACING,
+  GameOpcode.MSG_MOVE_HEARTBEAT,
+];
 
 export const SPEED_CHANGE_ACKS: Array<{
   smsg: number;

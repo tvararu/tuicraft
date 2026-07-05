@@ -22,6 +22,11 @@ export type CliAction =
       wait: number | undefined;
     }
   | { mode: "who"; filter: string | undefined; json: boolean }
+  | { mode: "goto"; x: number; y: number; z: number; wait: number | undefined }
+  | { mode: "follow"; target: string; wait: number | undefined }
+  | { mode: "face"; orientation: number }
+  | { mode: "halt" }
+  | { mode: "pos"; json: boolean }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -35,6 +40,11 @@ const SUBCOMMANDS = new Set([
   "version",
   "send",
   "who",
+  "goto",
+  "follow",
+  "face",
+  "halt",
+  "pos",
   "skill",
 ]);
 
@@ -129,6 +139,30 @@ function parseSend(args: string[]): CliAction {
   return { mode: "say", message, json, wait };
 }
 
+function parseGoto(args: string[]): CliAction {
+  const rest = args.slice(1);
+  const wait = parseWaitFlag(rest);
+  const coords = filterFlags(rest).map(parseFloat);
+  if (coords.length !== 3 || coords.some((n) => !Number.isFinite(n)))
+    throw new Error("Usage: tuicraft goto <x> <y> <z>");
+  return { mode: "goto", x: coords[0]!, y: coords[1]!, z: coords[2]!, wait };
+}
+
+function parseFollow(args: string[]): CliAction {
+  const rest = args.slice(1);
+  const wait = parseWaitFlag(rest);
+  const target = filterFlags(rest)[0];
+  if (!target) throw new Error("Usage: tuicraft follow <player>");
+  return { mode: "follow", target, wait };
+}
+
+function parseFace(args: string[]): CliAction {
+  const orientation = parseFloat(args[1] ?? "");
+  if (!Number.isFinite(orientation))
+    throw new Error("Usage: tuicraft face <radians>");
+  return { mode: "face", orientation };
+}
+
 function parseSubcommand(args: string[]): CliAction | undefined {
   const cmd = args[0];
   if (!cmd || !SUBCOMMANDS.has(cmd)) return undefined;
@@ -144,6 +178,14 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseSend(args);
     case "who":
       return parseWho(args);
+    case "goto":
+      return parseGoto(args);
+    case "follow":
+      return parseFollow(args);
+    case "face":
+      return parseFace(args);
+    case "pos":
+      return { mode: "pos", json: hasFlag(args.slice(1), "--json") };
     default:
       return { mode: cmd } as CliAction;
   }

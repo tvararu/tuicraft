@@ -29,6 +29,7 @@ import type {
   ChatMessage,
   GroupEvent,
   DuelEvent,
+  MoveEvent,
 } from "wow/client";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
@@ -93,6 +94,12 @@ export type IpcCommand =
   | { type: "guild_motd"; message: string }
   | { type: "guild_accept" }
   | { type: "guild_decline" }
+  | { type: "goto"; x: number; y: number; z: number }
+  | { type: "follow"; target: string }
+  | { type: "face"; orientation: number }
+  | { type: "halt" }
+  | { type: "pos" }
+  | { type: "pos_json" }
   | { type: "unimplemented"; feature: string };
 
 export function parseIpcCommand(line: string): IpcCommand | undefined {
@@ -287,6 +294,25 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "guild_accept" };
     case "GDECLINE":
       return { type: "guild_decline" };
+    case "GOTO": {
+      const parts = rest.split(" ").filter(Boolean).map(parseFloat);
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n)))
+        return undefined;
+      return { type: "goto", x: parts[0]!, y: parts[1]!, z: parts[2]! };
+    }
+    case "FOLLOW":
+      return rest ? { type: "follow", target: rest } : undefined;
+    case "FACE": {
+      const orientation = parseFloat(rest);
+      if (!Number.isFinite(orientation)) return undefined;
+      return { type: "face", orientation };
+    }
+    case "HALT":
+      return { type: "halt" };
+    case "POS":
+      return { type: "pos" };
+    case "POS_JSON":
+      return { type: "pos_json" };
     case "MAIL":
       return { type: "unimplemented", feature: "Mail reading" };
     case "ROLL": {
@@ -565,10 +591,59 @@ export async function dispatchCommand(
       handle.declineGuildInvite();
       writeLines(socket, ["OK"]);
       return false;
+    case "goto":
+      handle.moveTo(cmd.x, cmd.y, cmd.z);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "follow": {
+      const found = handle.follow(cmd.target);
+      writeLines(socket, found ? ["OK"] : [`ERR "${cmd.target}" not nearby`]);
+      return false;
+    }
+    case "face":
+      handle.face(cmd.orientation);
+      writeLines(socket, ["OK"]);
+      return false;
+    case "halt":
+      handle.stopMoving();
+      writeLines(socket, ["OK"]);
+      return false;
+    case "pos": {
+      const pos = handle.getOwnPosition();
+      writeLines(socket, [formatOwnPosition(pos)]);
+      return false;
+    }
+    case "pos_json": {
+      const pos = handle.getOwnPosition();
+      writeLines(socket, [
+        JSON.stringify({
+          type: "POSITION",
+          mapId: pos.mapId,
+          x: pos.x,
+          y: pos.y,
+          z: pos.z,
+          orientation: pos.orientation,
+          runSpeed: pos.runSpeed,
+          state: pos.state,
+        }),
+      ]);
+      return false;
+    }
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
   }
+}
+
+function formatOwnPosition(
+  pos: ReturnType<WorldHandle["getOwnPosition"]>,
+): string {
+  const base = `[pos] map ${pos.mapId} (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}) facing ${pos.orientation.toFixed(2)}`;
+  if (pos.state.kind === "moving")
+    return `${base} — moving to (${pos.state.x.toFixed(2)}, ${pos.state.y.toFixed(2)}, ${pos.state.z.toFixed(2)})`;
+  if (pos.state.kind === "following")
+    return `${base} — following ${pos.state.name}`;
+  return base;
 }
 
 function objectTypeName(type: ObjectType): string {
@@ -908,4 +983,51 @@ export function onDuelEvent(
     events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
   }
+}
+
+function formatMoveEvent(event: MoveEvent): string {
+  switch (event.type) {
+    case "move_started":
+      return `[move] Moving to (${event.x.toFixed(1)}, ${event.y.toFixed(1)}, ${event.z.toFixed(1)})`;
+    case "follow_started":
+      return `[move] Following ${event.name}`;
+    case "progress":
+      return `[move] ${event.remaining.toFixed(1)} yd remaining at (${event.x.toFixed(1)}, ${event.y.toFixed(1)}, ${event.z.toFixed(1)})`;
+    case "arrived":
+      return `[move] Arrived at (${event.x.toFixed(1)}, ${event.y.toFixed(1)}, ${event.z.toFixed(1)})`;
+    case "move_stopped":
+      return `[move] Stopped (${event.reason})`;
+  }
+}
+
+function formatMoveEventObj(event: MoveEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "move_started":
+      return { type: "MOVE_STARTED", x: event.x, y: event.y, z: event.z };
+    case "follow_started":
+      return { type: "FOLLOW_STARTED", name: event.name };
+    case "progress":
+      return {
+        type: "MOVE_PROGRESS",
+        x: event.x,
+        y: event.y,
+        z: event.z,
+        remaining: event.remaining,
+      };
+    case "arrived":
+      return { type: "MOVE_ARRIVED", x: event.x, y: event.y, z: event.z };
+    case "move_stopped":
+      return { type: "MOVE_STOPPED", reason: event.reason };
+  }
+}
+
+export function onMoveEvent(
+  event: MoveEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatMoveEvent(event);
+  const obj = formatMoveEventObj(event);
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
 }
