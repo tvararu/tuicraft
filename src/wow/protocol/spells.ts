@@ -26,8 +26,7 @@ const OBJECT_TARGET_FLAGS =
 const ITEM_TARGET_FLAGS = SpellTargetFlag.ITEM | SpellTargetFlag.TRADE_ITEM;
 
 export type SpellTarget =
-  | { kind: "self" }
-  | { kind: "unit"; guidLow: number; guidHigh: number };
+  { kind: "self" } | { kind: "unit"; guidLow: number; guidHigh: number };
 
 export function buildCastSpell(
   castCount: number,
@@ -274,7 +273,7 @@ export type AuraEntry = {
   timeLeftMs?: number;
 };
 
-const AURA_FLAG_NOT_CASTER = 0x08;
+const AURA_FLAG_CASTER = 0x08;
 const AURA_FLAG_DURATION = 0x20;
 
 function parseAuraEntry(r: PacketReader): AuraEntry {
@@ -287,7 +286,7 @@ function parseAuraEntry(r: PacketReader): AuraEntry {
   r.uint8();
   const stackCount = r.uint8();
   let caster: bigint | undefined;
-  if (flags & AURA_FLAG_NOT_CASTER) caster = readPackedBigint(r);
+  if (!(flags & AURA_FLAG_CASTER)) caster = readPackedBigint(r);
   let durationMs: number | undefined;
   let timeLeftMs: number | undefined;
   if (flags & AURA_FLAG_DURATION) {

@@ -211,7 +211,7 @@ describe("parseAuraUpdate", () => {
     w.packedGuid(0x42, 0);
     w.uint8(3);
     w.uint32LE(139);
-    w.uint8(0x21);
+    w.uint8(0x29);
     w.uint8(10);
     w.uint8(1);
     w.uint32LE(15000);
@@ -245,7 +245,7 @@ describe("parseAuraUpdate", () => {
     w.packedGuid(100, 0);
     w.uint8(0);
     w.uint32LE(589);
-    w.uint8(0x28 | 0x08);
+    w.uint8(0x21);
     w.uint8(10);
     w.uint8(1);
     w.packedGuid(0x42, 0);

@@ -65,7 +65,8 @@ const SPELLS = {
 };
 
 const PULL_RANGE = 26;
-const LOOT_RANGE = 4;
+const LOOT_RANGE = 3;
+const RENEW_LOCKOUT_MS = 14_000;
 const GCD_MS = 1600;
 const FIGHT_TIMEOUT_MS = 60_000;
 const LOOT_TIMEOUT_MS = 6_000;
@@ -105,11 +106,13 @@ export function createCombatEngine(
         name: string;
         startedAt: number;
         lootStartedAt: number;
+        retried: boolean;
       };
 
   let huntState: HuntState = { kind: "idle" };
   let gcdReadyAt = 0;
   let castCounter = 0;
+  let lastRenewAt = 0;
 
   function self(): UnitEntity | undefined {
     const entity = conn.entityStore.get(selfGuid(conn));
@@ -250,7 +253,13 @@ export function createCombatEngine(
 
     if (hpPct < 0.65 && gcdReady()) {
       const renew = bestKnown(SPELLS.RENEW);
-      if (renew && !hasAura(selfGuid(conn), renew) && mana >= 36) {
+      if (
+        renew &&
+        !hasAura(selfGuid(conn), renew) &&
+        now - lastRenewAt > RENEW_LOCKOUT_MS &&
+        mana >= 36
+      ) {
+        lastRenewAt = now;
         sendCast(renew, "self");
         startWand(state.guid);
         return;
@@ -359,6 +368,7 @@ export function createCombatEngine(
           name: state.name,
           startedAt: state.startedAt,
           lootStartedAt: conn.ticks(),
+          retried: false,
         };
         return;
       }
@@ -368,7 +378,17 @@ export function createCombatEngine(
           finishHunt(state);
           return;
         }
-        if (conn.ticks() - state.lootStartedAt > LOOT_TIMEOUT_MS) {
+        const elapsed = conn.ticks() - state.lootStartedAt;
+        if (!state.retried && elapsed > 1500) {
+          state.retried = true;
+          sendPacket(
+            conn,
+            GameOpcode.CMSG_LOOT,
+            buildBigintGuidBody(state.guid),
+          );
+          return;
+        }
+        if (elapsed > LOOT_TIMEOUT_MS) {
           finishHunt(state);
         }
         return;
