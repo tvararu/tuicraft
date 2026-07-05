@@ -501,6 +501,37 @@ describe("movement engine follow", () => {
     }
   });
 
+  test("follow stops on 2D distance even with a large z gap", async () => {
+    const s = await startSession();
+    try {
+      s.ws.inject(
+        GameOpcode.SMSG_UPDATE_OBJECT,
+        buildCreateUnit(101n, 78, 10, 0, 30),
+      );
+      s.ws.inject(
+        GameOpcode.SMSG_CREATURE_QUERY_RESPONSE,
+        creatureName(78, "Bird"),
+      );
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (s.handle.getNearbyEntities().some((e) => e.name === "Bird"))
+            resolve();
+          else setTimeout(check, 5);
+        };
+        check();
+      });
+      s.handle.follow("Bird");
+      const stop = await s.ws.waitForCapture(
+        (p) => p.opcode === GameOpcode.MSG_MOVE_STOP,
+      );
+      const { info } = readMoveBody(stop);
+      expect(info.x).toBeGreaterThan(5.5);
+      expect(info.x).toBeLessThan(7);
+    } finally {
+      await endSession(s);
+    }
+  });
+
   test("observed MSG_MOVE packets update entity positions", async () => {
     const s = await startSession();
     try {

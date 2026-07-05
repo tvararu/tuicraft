@@ -77,6 +77,11 @@ export function createMovementEngine(
       } = { kind: "idle" };
   let lastHeartbeat = 0;
   let lastProgress = 0;
+  let legStart: Target = { x: 0, y: 0, z: 0 };
+
+  function beginLeg(): void {
+    legStart = { x: conn.own.x, y: conn.own.y, z: conn.own.z };
+  }
 
   function routeForCurrentMap(): NavRoute | undefined {
     return opts.nav?.forMap(conn.own.mapId);
@@ -109,6 +114,7 @@ export function createMovementEngine(
   }
 
   function startForward(leg: Target): void {
+    beginLeg();
     conn.own.orientation = normalizeOrientation(
       Math.atan2(leg.y - conn.own.y, leg.x - conn.own.x),
     );
@@ -179,7 +185,10 @@ export function createMovementEngine(
     const scale = step / dist2d;
     conn.own.x += dx * scale;
     conn.own.y += dy * scale;
-    const expectedZ = conn.own.z + (leg.z - conn.own.z) * scale;
+    const legLen = Math.hypot(leg.x - legStart.x, leg.y - legStart.y);
+    const remaining = Math.hypot(leg.x - conn.own.x, leg.y - conn.own.y);
+    const frac = legLen > 0 ? 1 - remaining / legLen : 1;
+    const expectedZ = legStart.z + (leg.z - legStart.z) * frac;
     conn.own.z = route?.ground(conn.own.x, conn.own.y, expectedZ) ?? expectedZ;
 
     const now = conn.ticks();
@@ -198,6 +207,7 @@ export function createMovementEngine(
     if (!leg) return "done";
     if (advance(leg, route)) {
       queue.shift();
+      beginLeg();
       if (queue.length === 0) {
         stopForward();
         return "done";
@@ -233,11 +243,7 @@ export function createMovementEngine(
       return;
     }
     const pos = entity.position;
-    const dist = Math.hypot(
-      pos.x - conn.own.x,
-      pos.y - conn.own.y,
-      pos.z - conn.own.z,
-    );
+    const dist = Math.hypot(pos.x - conn.own.x, pos.y - conn.own.y);
 
     if (!state.walking) {
       if (dist > FOLLOW_RESUME_DISTANCE) {
@@ -260,11 +266,11 @@ export function createMovementEngine(
     const dest = state.pathedDest;
     if (
       dest &&
-      Math.hypot(pos.x - dest.x, pos.y - dest.y, pos.z - dest.z) >
-        FOLLOW_REPATH_DISTANCE
+      Math.hypot(pos.x - dest.x, pos.y - dest.y) > FOLLOW_REPATH_DISTANCE
     ) {
       state.queue = computeQueue(state.route, pos) ?? [pos];
       state.pathedDest = { x: pos.x, y: pos.y, z: pos.z };
+      beginLeg();
     }
 
     if (walkQueue(state.queue, state.route) === "done") {

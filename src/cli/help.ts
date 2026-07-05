@@ -10,6 +10,11 @@ USAGE
   tuicraft send -g "message"  Guild chat
   tuicraft send -p "message"  Party chat
   tuicraft who [filter]       Who query
+  tuicraft goto <x> <y> <z>   Walk to coordinates [--wait N]
+  tuicraft follow <player>    Follow a nearby player or NPC [--wait N]
+  tuicraft face <radians>     Face an orientation
+  tuicraft halt               Stop moving / stop following
+  tuicraft pos [--json]       Show own position
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
   tuicraft status             Show daemon status
