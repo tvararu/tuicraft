@@ -109,3 +109,18 @@ Final acceptance results, all live against t1:
 
 Movement is done end to end: wire → acks → engine → namigator FFI →
 pathed goto/follow, all live-verified with mock tests as the spec.
+
+## 2026-07-05 — goal 2: combat + subagent grind
+
+Goal set by Theo: implement combat and have a subagent grind 10 mobs
+successfully — the acceptance doubles as proof that the CLI/JSONL
+surface is genuinely agent-usable.
+
+Facts at kickoff: Xiara is a level-10 Blood Elf PRIEST (classId 5) —
+wand + Smite/SW:P/Renew kit, which lines up with the v5 healer-bot
+trajectory. Springpaw Stalkers (lvl 6-7, 137 hp) around Fairbreeze are
+the target prey. Research workflow launched over wow_messages /
+AzerothCore / tuicraft / priest-grind domain knowledge, output to
+research-combat.md. Slices: wire → state (spellbook/auras/cooldowns/
+combat log) → engine (engage/loot/death recovery) → live vs Springpaws
+→ subagent grind acceptance.
