@@ -15,6 +15,18 @@ USAGE
   tuicraft face <radians>     Face an orientation
   tuicraft halt               Stop moving / stop following
   tuicraft pos [--json]       Show own position
+  tuicraft target <name>      Select a nearby unit by name
+  tuicraft attack             Auto-attack the current target [--wait N]
+  tuicraft cast <spellId>     Cast a spell at target [--self] [--wait N]
+  tuicraft loot               Loot the current target's corpse [--wait N]
+  tuicraft hunt <name>        Full kill loop: approach, pull, fight, loot [--wait N]
+  tuicraft release            Release spirit to graveyard
+  tuicraft reclaim            Reclaim corpse when in range
+  tuicraft spells             List known spell IDs
+  tuicraft auras [target]     Active auras on self or target
+  tuicraft vitals [--json]    HP/mana/level/dead + combat state
+  tuicraft sit                Sit down (boosts health regen)
+  tuicraft stand              Stand up
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
   tuicraft status             Show daemon status

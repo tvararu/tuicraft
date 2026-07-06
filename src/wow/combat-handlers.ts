@@ -11,6 +11,7 @@ import {
   parseAuraUpdate,
   parseSpellNonMeleeDamage,
   parseSpellHealLog,
+  SPELL_CAST_RESULT,
 } from "wow/protocol/spells";
 import {
   parseAttackStart,
@@ -194,6 +195,14 @@ export function handleSpellStart(conn: WorldConn, r: PacketReader): void {
 export function handleSpellGo(conn: WorldConn, r: PacketReader): void {
   const go = parseSpellGo(r);
   if (go.caster !== selfGuid(conn)) return;
+  if (go.powerLeft !== undefined) {
+    const me = conn.entityStore.get(selfGuid(conn));
+    if (me && "power" in me) {
+      const power = [...me.power];
+      power[0] = go.powerLeft;
+      conn.entityStore.update(selfGuid(conn), { power });
+    }
+  }
   const target = go.hits[0] ?? go.target;
   emit(conn, {
     type: "cast_go",
@@ -220,7 +229,8 @@ export function handleSpellFailure(conn: WorldConn, r: PacketReader): void {
     type: "cast_failed",
     spellId: failure.spellId,
     result: failure.result,
-    resultName: "INTERRUPTED",
+    resultName:
+      SPELL_CAST_RESULT[failure.result] ?? `0x${failure.result.toString(16)}`,
   });
 }
 
@@ -413,6 +423,11 @@ export function handleHealthUpdate(conn: WorldConn, r: PacketReader): void {
 
 export function handlePowerUpdate(conn: WorldConn, r: PacketReader): void {
   const { unit, powerType, amount } = parsePowerUpdate(r);
+  conn.onMessage?.({
+    type: 0,
+    sender: "",
+    message: `[debug] POWER_UPDATE unit=0x${unit.toString(16)} type=${powerType} amount=${amount} known=${conn.entityStore.get(unit) !== undefined}`,
+  });
   const entity = conn.entityStore.get(unit);
   if (entity && "power" in entity) {
     const power = [...entity.power];

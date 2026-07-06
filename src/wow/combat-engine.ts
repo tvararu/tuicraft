@@ -113,6 +113,8 @@ export function createCombatEngine(
   let gcdReadyAt = 0;
   let castCounter = 0;
   let lastRenewAt = 0;
+  let wandPending = false;
+  let lastWandGoAt = 0;
 
   function self(): UnitEntity | undefined {
     const entity = conn.entityStore.get(selfGuid(conn));
@@ -182,17 +184,23 @@ export function createCombatEngine(
 
   function findByName(name: string): UnitEntity | undefined {
     const lower = name.toLowerCase();
-    const candidates = conn.entityStore
+    const units = conn.entityStore
       .all()
       .filter(
         (e): e is UnitEntity =>
           (e.objectType === ObjectType.UNIT ||
             e.objectType === ObjectType.PLAYER) &&
           "health" in e &&
-          e.name?.toLowerCase() === lower &&
-          e.position !== undefined,
-      )
-      .filter((e) => e.health > 0 && (e.unitFlags & UNATTACKABLE_FLAGS) === 0);
+          e.guid !== selfGuid(conn) &&
+          e.name !== undefined &&
+          e.position !== undefined &&
+          e.health > 0 &&
+          (e.unitFlags & UNATTACKABLE_FLAGS) === 0,
+      );
+    const exact = units.filter((e) => e.name!.toLowerCase() === lower);
+    const candidates = exact.length
+      ? exact
+      : units.filter((e) => e.name!.toLowerCase().includes(lower));
     candidates.sort(
       (a, b) => distanceTo(a.position!) - distanceTo(b.position!),
     );
@@ -207,8 +215,25 @@ export function createCombatEngine(
     emit({ type: "hunt_aborted", reason });
   }
 
-  function startWand(guid: bigint): void {
-    if (conn.spellbook.has(SPELLS.SHOOT)) sendCast(SPELLS.SHOOT, guid);
+  function startWand(): void {
+    if (conn.spellbook.has(SPELLS.SHOOT)) wandPending = true;
+  }
+
+  function tickWand(guid: bigint): void {
+    if (!conn.spellbook.has(SPELLS.SHOOT)) return;
+    const now = conn.ticks();
+    if (wandPending) {
+      if (gcdReady()) {
+        wandPending = false;
+        lastWandGoAt = now;
+        sendCast(SPELLS.SHOOT, guid);
+      }
+      return;
+    }
+    if (now - lastWandGoAt > 4000) {
+      lastWandGoAt = now;
+      sendCast(SPELLS.SHOOT, guid);
+    }
   }
 
   function tickFight(state: HuntState & { kind: "fight" }): void {
@@ -246,7 +271,7 @@ export function createCombatEngine(
         mana >= 48
       ) {
         sendCast(shield, "self");
-        startWand(state.guid);
+        startWand();
         return;
       }
     }
@@ -261,21 +286,20 @@ export function createCombatEngine(
       ) {
         lastRenewAt = now;
         sendCast(renew, "self");
-        startWand(state.guid);
+        startWand();
         return;
       }
     }
 
     if (!state.opened) {
+      state.opened = true;
       const opener = bestKnown(SPELLS.SWP);
       if (opener && gcdReady() && mana >= 46) {
         sendCast(opener, state.guid);
-        state.opened = true;
-        startWand(state.guid);
+        startWand();
         return;
       }
-      state.opened = true;
-      startWand(state.guid);
+      startWand();
       if (!conn.spellbook.has(SPELLS.SHOOT)) {
         state.meleeFallback = true;
         sendPacket(
@@ -287,16 +311,25 @@ export function createCombatEngine(
       return;
     }
 
+    const swp = bestKnown(SPELLS.SWP);
+    if (swp && gcdReady() && !hasAura(state.guid, swp) && mana >= 150) {
+      sendCast(swp, state.guid);
+      startWand();
+      return;
+    }
+
     const targetPct =
       target.maxHealth > 0 ? target.health / target.maxHealth : 1;
     if (targetPct < 0.4 && gcdReady()) {
       const mb = bestKnown(SPELLS.MIND_BLAST);
       if (mb && offCooldown(mb) && mana >= 36) {
         sendCast(mb, state.guid);
-        startWand(state.guid);
+        startWand();
         return;
       }
     }
+
+    tickWand(state.guid);
   }
 
   function tick(): void {
@@ -591,7 +624,7 @@ export function createCombatEngine(
             emit({ type: "hunt_phase", phase: "loot" });
             break;
           case "NO_POWER":
-            startWand(state.guid);
+            startWand();
             break;
         }
         return;
