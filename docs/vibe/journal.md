@@ -124,3 +124,30 @@ AzerothCore / tuicraft / priest-grind domain knowledge, output to
 research-combat.md. Slices: wire → state (spellbook/auras/cooldowns/
 combat log) → engine (engage/loot/death recovery) → live vs Springpaws
 → subagent grind acceptance.
+
+## 2026-07-06 — combat landed, live bugs, first kills
+
+Wire (57a94fb), state+engine+verbs (e8eb96b) shipped with mock tests.
+Design: deterministic primitives + one `hunt` macro in the daemon;
+the LLM subagent is the strategist. Live verification found and fixed
+four real bugs:
+
+1. **Aura caster flag inverted** (research doc wrong, AC's AFLAG_CASTER
+   0x08 = self-cast, guid present when ABSENT) — silently broke self
+   aura tracking → Renew recast every GCD → 360 mana torched (hunt 1).
+2. **Wand/GCD collision** (e663291): re-issuing Shoot in the same tick
+   as a hard cast gets SPELL_FAILURE; rotation lost its main damage.
+   Now deferred to post-GCD tick + 4s watchdog.
+3. **Post-death power desync**: after dying in-session, client mana
+   sticks (server regens, store doesn't see it). SPELL_GO powerLeft now
+   resyncs; relog clears. Root cause unknown — investigate later.
+4. **Death detection gap**: client showed 1 HP while server said
+   CASTER_DEAD (killed while idle between test runs — Fairbreeze
+   village edge is NOT safe parking). DIED currently keys on
+   HEALTH_UPDATE=0 only; needs the death opcodes as source too.
+
+Hunts 1 and 4 killed and looted Springpaws live (58.1s / 48.1s,
++108/+80 XP — realm XP rate is ~2-3x). INITIAL_SPELLS parses her real
+70-spell book; open question 7 answered: AC sends SPELL_START (timer 0) for instants. Docs subagent died to the Claude session usage limit
+mid-edit; docs pending. Grind acceptance launched: Sonnet subagent,
+10 kills, CLI-only, GM forbidden.
