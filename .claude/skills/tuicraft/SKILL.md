@@ -45,41 +45,67 @@ Add `--json` for structured output. Each JSON line:
 
 ## Event Types
 
-| Type                  | Meaning                                          |
-| --------------------- | ------------------------------------------------ |
-| SAY                   | Nearby /say chat                                 |
-| YELL                  | /yell chat                                       |
-| PARTY                 | Party member message                             |
-| PARTY_LEADER          | Party leader message                             |
-| GUILD                 | Guild chat                                       |
-| OFFICER               | Officer chat                                     |
-| RAID                  | Raid chat                                        |
-| RAID_LEADER           | Raid leader message                              |
-| RAID_WARNING          | Raid warning                                     |
-| WHISPER               | Incoming whisper                                 |
-| WHISPER_TO            | Outgoing whisper confirmation                    |
-| CHANNEL               | Custom channel message                           |
-| EMOTE                 | Player emote                                     |
-| SYSTEM                | System messages and unimplemented packet notices |
-| ENTITY_APPEAR         | NPC/player/object appeared nearby (--json only)  |
-| ENTITY_DISAPPEAR      | Entity left range (--json only)                  |
-| ENTITY_UPDATE         | Entity field changed (--json only)               |
-| FRIEND_ONLINE         | Friend came online                               |
-| FRIEND_OFFLINE        | Friend went offline                              |
-| FRIEND_ADDED          | Friend added to list                             |
-| FRIEND_REMOVED        | Friend removed from list                         |
-| FRIEND_ERROR          | Friend operation error                           |
-| IGNORE_ADDED          | Player added to ignore list                      |
-| IGNORE_REMOVED        | Player removed from ignore list                  |
-| IGNORE_ERROR          | Ignore operation error                           |
-| GUILD_ROSTER_UPDATED  | Guild roster data received                       |
-| GUILD_COMMAND_RESULT  | Guild command error (permissions, not found)     |
-| GUILD_INVITE_RECEIVED | Incoming guild invitation prompt                 |
-| MOVE_STARTED          | Movement began (x, y, z, waypoints)              |
-| FOLLOW_STARTED        | Following a target (name)                        |
-| MOVE_PROGRESS         | Periodic move progress (x, y, z, remaining)      |
-| MOVE_ARRIVED          | Reached the destination (x, y, z)                |
-| MOVE_STOPPED          | Movement ended early (reason)                    |
+| Type                  | Meaning                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| SAY                   | Nearby /say chat                                                          |
+| YELL                  | /yell chat                                                                |
+| PARTY                 | Party member message                                                      |
+| PARTY_LEADER          | Party leader message                                                      |
+| GUILD                 | Guild chat                                                                |
+| OFFICER               | Officer chat                                                              |
+| RAID                  | Raid chat                                                                 |
+| RAID_LEADER           | Raid leader message                                                       |
+| RAID_WARNING          | Raid warning                                                              |
+| WHISPER               | Incoming whisper                                                          |
+| WHISPER_TO            | Outgoing whisper confirmation                                             |
+| CHANNEL               | Custom channel message                                                    |
+| EMOTE                 | Player emote                                                              |
+| SYSTEM                | System messages and unimplemented packet notices                          |
+| ENTITY_APPEAR         | NPC/player/object appeared nearby (--json only)                           |
+| ENTITY_DISAPPEAR      | Entity left range (--json only)                                           |
+| ENTITY_UPDATE         | Entity field changed (--json only)                                        |
+| FRIEND_ONLINE         | Friend came online                                                        |
+| FRIEND_OFFLINE        | Friend went offline                                                       |
+| FRIEND_ADDED          | Friend added to list                                                      |
+| FRIEND_REMOVED        | Friend removed from list                                                  |
+| FRIEND_ERROR          | Friend operation error                                                    |
+| IGNORE_ADDED          | Player added to ignore list                                               |
+| IGNORE_REMOVED        | Player removed from ignore list                                           |
+| IGNORE_ERROR          | Ignore operation error                                                    |
+| GUILD_ROSTER_UPDATED  | Guild roster data received                                                |
+| GUILD_COMMAND_RESULT  | Guild command error (permissions, not found)                              |
+| GUILD_INVITE_RECEIVED | Incoming guild invitation prompt                                          |
+| MOVE_STARTED          | Movement began (x, y, z, waypoints)                                       |
+| FOLLOW_STARTED        | Following a target (name)                                                 |
+| MOVE_PROGRESS         | Periodic move progress (x, y, z, remaining)                               |
+| MOVE_ARRIVED          | Reached the destination (x, y, z)                                         |
+| MOVE_STOPPED          | Movement ended early (reason)                                             |
+| AGGRO                 | A mob started attacking you (name)                                        |
+| MELEE_START           | Auto-attack began (attacker, victim)                                      |
+| MELEE_STOP            | Auto-attack ended (attacker, victim, dead)                                |
+| DAMAGE                | Damage dealt or taken (kind, source, target, amount, crit, miss, spellId) |
+| HEAL                  | Healing done (target, amount, crit, spellId)                              |
+| CAST_STARTED          | Spell cast began (spellId)                                                |
+| CAST_GO               | Spell cast completed (spellId)                                            |
+| CAST_FAILED           | Spell cast failed (spellId, resultName)                                   |
+| SPELLBOOK_LOADED      | Spellbook received at login (spells)                                      |
+| AURA                  | Aura gained/lost on self or target (unit, spellId, applied, timeLeftMs)   |
+| LOOT_WINDOW           | Loot window opened (items)                                                |
+| LOOT_ITEM             | Item looted (name once resolved)                                          |
+| LOOT_MONEY            | Money looted (copper)                                                     |
+| LOOT_ERROR            | Loot operation error                                                      |
+| XP_GAIN               | Experience gained (amount, kill)                                          |
+| LEVEL_UP              | Character leveled up (level)                                              |
+| DIED                  | Character died                                                            |
+| RELEASED              | Spirit released to the graveyard                                          |
+| CORPSE_LOCATION       | Corpse coordinates, in response to CORPSE query                           |
+| RECLAIM_DELAY         | Corpse cannot be reclaimed yet (time remaining)                           |
+| RESURRECT_OFFER       | Someone offered a resurrect                                               |
+| SWING_ERROR           | Melee swing problem (not_in_range, bad_facing, dead_target, cant_attack)  |
+| HUNT_STARTED          | Hunt macro started (name)                                                 |
+| HUNT_PHASE            | Hunt macro entered a phase (approach, fight, loot)                        |
+| HUNT_COMPLETE         | Hunt macro finished successfully                                          |
+| HUNT_ABORTED          | Hunt macro aborted (reason)                                               |
 
 The `channel` field appears on CHANNEL events only.
 
@@ -208,6 +234,74 @@ IPC verbs:
     echo "HALT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "POS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "POS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
+## Combat
+
+    tuicraft target Wolf            # select a nearby unit by name
+    tuicraft attack                 # auto-attack the current target
+    tuicraft attack --wait 5
+    tuicraft cast 585               # cast a spell at the current target
+    tuicraft cast 585 --self        # cast a spell on yourself
+    tuicraft loot                   # loot the current target's corpse
+    tuicraft loot --wait 5
+    tuicraft hunt Wolf               # full kill loop: approach, pull, fight, loot
+    tuicraft hunt Wolf --wait 60
+    tuicraft release                 # release spirit to the graveyard
+    tuicraft reclaim                 # reclaim corpse once within 39 yd of it
+    tuicraft spells                  # list known spell IDs
+    tuicraft auras                   # active auras on yourself
+    tuicraft auras target            # active auras on the current target
+    tuicraft vitals                  # HP/mana/level/dead + combat engine state
+    tuicraft vitals --json
+    tuicraft sit                     # sit down (boosts health regen)
+    tuicraft stand                   # stand up
+
+`hunt` runs the whole kill loop against a nearby target: it navigates to the
+target on the navmesh, pulls with Shadow Word: Pain, keeps a wand
+auto-repeating, casts Mind Blast to finish, heals or shields itself if health
+drops, then loots the corpse. Watch `HUNT_PHASE` events for progress.
+
+IPC verbs:
+
+    echo "TARGET name" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "ATTACK" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "STOPATTACK" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "CAST id" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "CAST id SELF" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "LOOT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "HUNT name" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "RELEASE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "RECLAIM" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "CORPSE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "RESACCEPT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "SIT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "STAND" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "SPELLS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "AURAS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "AURAS TARGET" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "VITALS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "VITALS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+
+### Grinding Workflow
+
+Complete example: find a nearby target, hunt it, watch events, and sit to
+regen mana between kills. Repeat while mana holds up; recover from death with
+`release` → `goto` the corpse → `reclaim`.
+
+    name=$(echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock \
+      | jq -r '.[] | select(.objectType == "Unit") | .name' | head -1)
+    tuicraft hunt "$name" --wait 60
+    tuicraft read --json | jq -c 'select(.type | startswith("HUNT_"))'
+    tuicraft vitals --json | jq '.mana < .maxMana / 2' \
+      && tuicraft sit && sleep 10 && tuicraft stand
+
+On `DIED`, recover before hunting again:
+
+    tuicraft release
+    coords=$(echo "CORPSE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock \
+      | jq -r 'select(.type == "CORPSE_LOCATION") | "\(.x) \(.y) \(.z)"')
+    tuicraft goto $coords --wait 30
+    tuicraft reclaim
 
 ## Openclaw Integration
 

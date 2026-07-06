@@ -113,8 +113,12 @@ tuicraft skill             # print SKILL.md for AI agents
 - [x] 🌍 **0.4 - World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
       entities
 - [x] 🏃 **0.5 - Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
-- [ ] 🤖 **0.6 - Automation:** Scriptable command sequences and event
-      subscriptions
+- [x] ⚔️ **0.6 - Combat:** Targeting, spell casting, auto-attack and wand,
+      loot, XP, death recovery, autonomous hunt loop
+- [ ] 📜 **0.7 - Quests & Inventory:** Gossip, quest accept/turn-in, bags,
+      vendors
+- [ ] 🤖 **0.8 - Autonomy:** The v5 healer bot — utility-scored decisions on
+      the combat layer
 
 ## Feature coverage
 
@@ -191,9 +195,9 @@ that the official game client does.
 | ----------------- | ------ |
 | Object updates    | ✅     |
 | Movement          | ✅     |
-| Spells / auras    | ❌     |
-| Combat log        | ❌     |
-| Loot              | ❌     |
+| Spells / auras    | ✅     |
+| Combat log        | ✅     |
+| Loot              | ✅     |
 | Items / inventory | ❌     |
 
 ### 📜 PvE

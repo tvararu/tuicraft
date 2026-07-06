@@ -179,6 +179,113 @@ MapBuilder -d <client>/Data -m Expansion01 -o <outdir> -t 12
 Map names: `Azeroth` (0), `Kalimdor` (1), `Expansion01` (530), `Northrend`
 (571).
 
+## Combat
+
+`tuicraft target` _name_
+: Select a nearby unit by name. Matches the nearest unit whose name contains
+_name_.
+
+`tuicraft attack` [`--wait` _N_]
+: Auto-attack the current target with melee or wand, whichever is active.
+
+`tuicraft cast` _spellId_ [`--self`] [`--wait` _N_]
+: Cast a spell at the current target. With `--self`, cast on yourself
+instead.
+
+`tuicraft loot` [`--wait` _N_]
+: Loot the current target's corpse.
+
+`tuicraft hunt` _name_ [`--wait` _N_]
+: Full kill loop: approach the target on the navmesh, pull with Shadow Word:
+Pain, wand auto-repeat, Mind Blast to execute, Renew/Shield for
+self-preservation, then loot the corpse.
+
+`tuicraft release`
+: Release spirit to the graveyard after dying.
+
+`tuicraft reclaim`
+: Reclaim your corpse once within 39 yd of it.
+
+`tuicraft spells`
+: List known spell IDs, from `SMSG_INITIAL_SPELLS`.
+
+`tuicraft auras` [_target_]
+: Active auras on yourself, or on the current target with `target`, with
+remaining time.
+
+`tuicraft vitals` [`--json`]
+: HP, mana, level, dead state, and combat engine state.
+
+`tuicraft sit` / `tuicraft stand`
+: Toggle sitting. Sitting boosts health regeneration.
+
+Combat is also available over the daemon's unix socket:
+
+```sh
+echo "TARGET name" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "ATTACK" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "STOPATTACK" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "CAST id" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "CAST id SELF" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "LOOT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "HUNT name" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "RELEASE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "RECLAIM" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "CORPSE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "RESACCEPT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "SIT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "STAND" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "SPELLS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "AURAS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "AURAS TARGET" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "VITALS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+echo "VITALS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+```
+
+`--json` events add combat, spell, loot, and death types:
+
+| Type             | Meaning                                                                          |
+| ---------------- | -------------------------------------------------------------------------------- |
+| AGGRO            | A mob started attacking you (name)                                               |
+| MELEE_START      | Auto-attack began (attacker, victim)                                             |
+| MELEE_STOP       | Auto-attack ended (attacker, victim, dead)                                       |
+| DAMAGE           | Damage dealt or taken (kind, source, target, amount, crit, miss, spellId)        |
+| HEAL             | Healing done (target, amount, crit, spellId)                                     |
+| CAST_STARTED     | Spell cast began (spellId)                                                       |
+| CAST_GO          | Spell cast completed (spellId)                                                   |
+| CAST_FAILED      | Spell cast failed (spellId, resultName, e.g. `OUT_OF_RANGE`)                     |
+| SPELLBOOK_LOADED | Spellbook received at login (spells)                                             |
+| AURA             | Aura gained or lost on self or target (unit, spellId, applied, timeLeftMs)       |
+| LOOT_WINDOW      | Loot window opened (items)                                                       |
+| LOOT_ITEM        | Item looted (name once resolved)                                                 |
+| LOOT_MONEY       | Money looted (copper)                                                            |
+| LOOT_ERROR       | Loot operation error                                                             |
+| XP_GAIN          | Experience gained (amount, kill)                                                 |
+| LEVEL_UP         | Character leveled up (level)                                                     |
+| DIED             | Character died                                                                   |
+| RELEASED         | Spirit released to the graveyard                                                 |
+| CORPSE_LOCATION  | Corpse coordinates, in response to a `CORPSE` query                              |
+| RECLAIM_DELAY    | Corpse cannot be reclaimed yet (time remaining)                                  |
+| RESURRECT_OFFER  | Someone offered a resurrect                                                      |
+| SWING_ERROR      | Melee swing problem (`not_in_range`, `bad_facing`, `dead_target`, `cant_attack`) |
+| HUNT_STARTED     | Hunt macro started (name)                                                        |
+| HUNT_PHASE       | Hunt macro entered a phase (`approach`, `fight`, `loot`)                         |
+| HUNT_COMPLETE    | Hunt macro finished successfully                                                 |
+| HUNT_ABORTED     | Hunt macro aborted (reason)                                                      |
+
+### Grinding
+
+`tuicraft hunt` _name_ runs a full kill loop against a nearby target: it
+navigates to the target, pulls with Shadow Word: Pain, keeps a wand
+auto-repeating, casts Mind Blast to finish the kill, heals or shields itself
+if health drops, and loots the corpse once the target dies. Watch progress
+with `HUNT_PHASE` events.
+
+If the character dies mid-hunt, recover with `tuicraft release` to send the
+spirit to the graveyard, walk back to the corpse (`tuicraft goto` to the
+coordinates from a `CORPSE` query's `CORPSE_LOCATION` response), then
+`tuicraft reclaim` once within 39 yd.
+
 ## Interactive Commands
 
 When running in TUI mode, the following slash commands are available:

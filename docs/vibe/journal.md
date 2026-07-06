@@ -151,3 +151,27 @@ Hunts 1 and 4 killed and looted Springpaws live (58.1s / 48.1s,
 70-spell book; open question 7 answered: AC sends SPELL_START (timer 0) for instants. Docs subagent died to the Claude session usage limit
 mid-edit; docs pending. Grind acceptance launched: Sonnet subagent,
 10 kills, CLI-only, GM forbidden.
+
+## 2026-07-06 — combat acceptance PASSED
+
+A Sonnet subagent, driving ONLY the tuicraft CLI (GM forbidden), killed
+and looted 10 Springpaw Stalkers in ~35-40 min wall time (fight times
+9-105s, ~940 XP, zero deaths, zero aborts, no manual primitives needed
+— the hunt macro carried every kill). The monitor counted 13
+HUNT_COMPLETEs; the agent's own ledger missed a few in its read
+windows — event delivery across mixed read forms is lossy for a
+single consumer.
+
+The agent's usability report (the real payoff) filed six findings for
+follow-up: (1) silent loot-phase failures at one steep-terrain corpse
+spot — likely 2D loot range vs the server's 5.5 yd 3D check; (2)
+no_path retry spam in approach with no abort reason; (3) `halt` does
+not stop hunts (movement engine only); (4) no way to target a corpse
+for a manual loot retry; (5) loot CONTENTS never surfaced —
+LOOT_WINDOW/LOOT_ITEM events did not fire on any kill, so the loot
+protocol likely still fails silently and mobs die unlooted-but-
+counted; (6) synchronized cluster respawns make cluster rotation the
+optimal strategy.
+
+Goal 2 complete: combat implemented, ten mobs ground by a subagent.
+Both vibe goals (movement, combat) now pass their acceptance tests.
