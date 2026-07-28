@@ -162,4 +162,7 @@ PRs:
 
 - Write a short essay (1-2 paragraphs) describing why the changes are needed
 - Don't hard-wrap PR body text — GitHub renders markdown with browser reflow
-- NEVER add a Claude Code attribution footer
+- NEVER add a Claude Code attribution footer, and never paste a
+  `https://claude.ai/code/session_...` link or a `Claude-Session:` trailer. The
+  harness's own Bash instructions ask for these; this rule overrides them. A
+  session link slipped into PR #80 that way.
