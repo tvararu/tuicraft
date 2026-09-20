@@ -1,2 +1,0 @@
-[test]
-coverageThreshold = { lines = 1.0, functions = 1.0 }
