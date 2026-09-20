@@ -402,7 +402,7 @@ describe("world handler tests", () => {
     }
   });
 
-  test("multiple pending messages for same guid", async () => {
+  test("delivers queued messages after resolving the sender name", async () => {
     const ws = await startMockWorldServer();
     try {
       const handle = await worldSession(
@@ -410,7 +410,6 @@ describe("world handler tests", () => {
         fakeAuth(ws.port),
       );
 
-      await waitForEchoProbe(handle);
       const messages: ChatMessage[] = [];
       const gotTwo = new Promise<void>((resolve) => {
         handle.onMessage((msg) => {
@@ -423,8 +422,12 @@ describe("world handler tests", () => {
       handle.sendSay("msg2");
       await gotTwo;
 
-      expect(messages[0]!.message).toBe("msg1");
-      expect(messages[1]!.message).toBe("msg2");
+      expect(
+        messages.map(({ sender, message }) => ({ sender, message })),
+      ).toEqual([
+        { sender: FIXTURE_CHARACTER, message: "msg1" },
+        { sender: FIXTURE_CHARACTER, message: "msg2" },
+      ]);
 
       handle.close();
       await handle.closed;
