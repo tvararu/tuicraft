@@ -10,4 +10,5 @@ if ! command -v mise &>/dev/null; then
 fi
 
 mise trust --yes
+mise install
 mise bundle

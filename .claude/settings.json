@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs bunx prettier --write 2\u003e/dev/null || true"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in src/*.ts|*/src/*.ts) [ -f \"$fp\" ] || exit 0; mise exec -- biome format --write \"$fp\";; esac"
           }
         ]
       },
@@ -21,18 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(jq -r '.tool_input.file_path'); tf=\"${fp%.ts}\"; tf=\"${tf%.test}.test.ts\"; [ -f \"$tf\" ] \u0026\u0026 bun test \"$tf\" --bail || true"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.command' | grep -q 'git commit' \u0026\u0026 [ \"$(git branch --show-current)\" = \"main\" ] \u0026\u0026 echo 'BLOCK: Do not commit to main. Create a feature branch first.' \u0026\u0026 exit 2 || exit 0"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in src/*.ts|*/src/*.ts) tf=\"${fp%.ts}\"; tf=\"${tf%.test}.test.ts\"; [ -f \"$tf\" ] || exit 0; mise test \"$tf\" --bail;; esac"
           }
         ]
       }
@@ -53,12 +42,6 @@
     "allow": [
       "Bash(./dist/tuicraft:*)",
       "Bash(gh issue list:*)",
-      "Bash(gh pr checks:*)",
-      "Bash(gh pr create:*)",
-      "Bash(gh pr diff:*)",
-      "Bash(gh pr edit:*)",
-      "Bash(gh pr list:*)",
-      "Bash(gh pr view:*)",
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
       "Bash(gh repo view:*)",
