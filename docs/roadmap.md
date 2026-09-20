@@ -2,8 +2,8 @@
 
 Date: 2026-09-20
 
-Status: direction reviewed. This captures the intended ambition, not an
-implementation plan or a claim that the capabilities below already exist.
+Status: the active goal spans all six milestones. Work lands in independently
+reviewed, verified increments; the capabilities below are not all implemented.
 
 ## The ambition
 
@@ -252,6 +252,32 @@ milestone. Conversely, a complete combat system, every class, and general route
 planning are not required. Explicitly stopping on an unsupported outcome is
 acceptable here if that boundary is part of the agreed scenario.
 
+The first encounter increment will record at least five completed encounters in
+the selected Eversong area, including server-confirmed kill credit or experience.
+Use at least two standing instructions and retain observations, offered actions,
+Jev choices, execution outcomes, and measured request latency. The supervising
+agent may select encounters, but must not supply tactical commands during them.
+Failed attempts and interventions remain part of the record.
+
+Before those encounters, verify the learned spellbook, actual casts, resource
+changes, and server rejections. Client spell metadata is not evidence that a
+spell is learned or currently usable. Moving creatures need current movement
+observations; their initial spawn positions are not sufficient.
+
+A narrow mesh-backed approach capability is pulled forward from milestone 3 to
+reach the first encounter safely. Independent data review identified the existing
+Expansion01 mesh and native path/height APIs. The decision is to load relevant
+ADTs on demand and follow a checked ground corridor, not to complete general
+navigation first. Reject the suggested endpoint-Z interpolation fallback: two
+observed endpoints do not establish intermediate terrain or obstacle clearance.
+
+This prerequisite must first pass a native-library/data smoke check and a short
+live approach with immediate interruption and server-position confirmation.
+Missing paths, ambiguous floors, unsupported movement, or corrections must stop
+the approach with a reason. No invented ground heights, bulk ADT loading, GM
+shortcuts, or silent retry loop. Following, general route robustness, and the
+remaining navigation evidence stay in milestone 3.
+
 ### 3. Reliable local navigation
 
 Extend basic movement with route planning, obstacle handling, arrival/failure
@@ -337,10 +363,47 @@ user-facing scope, not implementation choices the agent can resolve. Never
 quietly weaken behavioral acceptance criteria. Passing tests, model confidence,
 and agent agreement are not substitutes for demonstrated gameplay.
 
-The next gameplay goal is milestone 1. Select its concrete first scenario and
-inspect the current implementation before deciding which changes it needs.
+The active goal continues through all six milestones without routine approval
+gates. Direct control is the first landing checkpoint; combat and Jev integration
+follow it. Material changes to the plan require independent advice, a recorded
+decision, and concrete live-verifiable acceptance criteria.
 
 ## Existing work and present evidence
+
+The current direct-control scenario uses Xiara, level 10, in Fairbreeze on
+protocol map 530. Live checks exercised finite movement leases, explicit HALT,
+facing, requested versus observed target selection, target clearing, and
+same-socket READ_WAIT cancellation with coalesced and split command delivery.
+Health remained 187/187.
+
+Ordinary relogin confirmed server position
+`8713.5126953125, -6669.2939453125, 70.33599853515625` and orientation
+`0.5465620160102844`. The last predicted XY position differed by approximately
+`0.000081` yards. Prediction and server observation remain separate: ordinary
+movement did not echo the player's new position back to that same client.
+Local command/response records are in `tmp/xiara-m1b-report.json`,
+`tmp/xiara-m1b-evidence.json`, and `tmp/xiara-m1b-relogin.json`.
+
+An isolated IPC-server smoke check exercised the actual CLI's nonzero exit on a
+daemon `ERR` response. It did not establish that Xiara was rooted. Forced
+movement, transport, flight, and held remote-query cancellation use protocol or
+daemon regressions; the ordinary live walk does not prove those fault paths.
+Independent review found and resolved cancellation and movement-envelope defects.
+Final local checks passed 1306 tests, type checking, formatting, and the binary
+build. The final rebuilt CLI also preserved STATUS after same-socket HALT and
+confirmed target selection/clearing without displacement; evidence is in
+`tmp/xiara-m1-final-report.json` and `tmp/xiara-m1-final-smoke.json`.
+
+The required two-account live suite was run and failed authentication with
+status `0x4`; its dedicated `WOW_*` account credentials are absent. The working
+normal Xiara session is separate evidence, not a passing substitute for that
+suite. Dependent two-account scenarios remain blocked.
+
+Actual build-12340 spell tables were extracted with client MPQ patch precedence
+and recorded in `tmp/gameplay-data/provenance.json`. The matching Expansion01
+navigation data and native library are present, but their presence alone does
+not prove navigation. Combat codecs, a lazy spell catalog, and a Jev transport
+adapter are being prepared separately; they do not yet establish a combat loop.
 
 The unmerged `vibe` branch contains movement, namigator navigation, combat, and
 priest-hunting work, along with research notes and live-run journals. It is
@@ -361,10 +424,11 @@ scenario evaluation remain necessary.
 
 ## What this document does not authorize
 
-No bulk merge of `vibe` or commitment to a natural-language planner, generic task
-framework, or exact rendering implementation. Process policy and milestone
-order are agreed; detailed capability contracts and acceptance scenarios still
-need to be defined as each goal begins.
+No bulk merge of `vibe`, server-data modifications, or commitment to a
+natural-language planner, generic task framework, or exact rendering
+implementation. The active goal permits useful capability additions and
+sequencing changes after independent consultation and a recorded decision.
+Detailed capability contracts and acceptance scenarios remain required.
 
 The README remains the concise public overview. This document holds the expanded
 ambition while it is being aligned and refined.
