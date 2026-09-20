@@ -1,5 +1,7 @@
 # Server Broadcast Messages Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Problem
 
 SMSG_CHAT_SERVER_MESSAGE (0x291) and SMSG_NOTIFICATION (0x1CB) are stubbed

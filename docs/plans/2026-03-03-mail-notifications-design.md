@@ -1,5 +1,7 @@
 # Mail Notifications Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Summary
 
 Handle the SMSG_RECEIVED_MAIL opcode (0x0285) to display a `[mail] You have new mail.` system message in chat. Receive-only — no mailbox reading or sending.

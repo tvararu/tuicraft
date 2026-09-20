@@ -1,5 +1,7 @@
 # Emotes Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Branch C of the v0.3 feature set. Builds on Branch B (party management) by
 extending the GroupEvent union and onGroupEvent callback.
 

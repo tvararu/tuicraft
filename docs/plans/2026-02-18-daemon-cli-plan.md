@@ -1,6 +1,6 @@
 # Daemon CLI Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Replace pipe mode with a daemon+CLI architecture and compile to a single binary.
 

@@ -1,6 +1,6 @@
 # Tail/Read Conflict Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Eliminate event contention between `tail`, `read`, and `--wait` by making `READ_WAIT` non-destructive.
 

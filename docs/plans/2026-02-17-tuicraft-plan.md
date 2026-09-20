@@ -1,6 +1,6 @@
 # tuicraft 0.1 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Authenticate with AzerothCore 3.3.5a via SRP-6, enter the world as a character, and stay connected via keepalive.
 

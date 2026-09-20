@@ -1,7 +1,9 @@
 # v5 Design Exploration: Client-Side Priest Healer Bot
 
 **Date**: 2026-02-18
-**Status**: Early exploration — captures research and directional thinking
+**Status**: Historical exploration — not current execution instructions
+
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 ## What This Is
 

@@ -1,6 +1,6 @@
 # Opcode Stubs Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Add every known 3.3.5a world opcode to the codebase with stub handlers that surface "not yet implemented" feedback to users.
 

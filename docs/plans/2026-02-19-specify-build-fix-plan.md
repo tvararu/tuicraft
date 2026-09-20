@@ -1,6 +1,6 @@
 # SPECIFY_BUILD Byte Skip Fix Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Fix `parseRealmList` to skip 5 bytes (not 4) when the SPECIFY_BUILD flag is set, and correct the test fixture to match the real wire format.
 

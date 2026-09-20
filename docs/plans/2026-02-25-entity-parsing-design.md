@@ -1,7 +1,9 @@
 # Entity Parsing Design (v0.4)
 
 **Date**: 2026-02-25
-**Status**: Approved design
+**Status**: Historical reference — not current execution instructions
+
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 ## What This Is
 
@@ -222,4 +224,4 @@ alongside chat and group events.
   correct name/race/class. Disconnect Yia, verify disappear event.
 - Verify entity positions have reasonable coordinates (not zero/NaN)
 
-**Coverage target:** 100% of new code.
+**Tests:** Cover new parsers, store lifecycle, and live two-character appear/disappear.

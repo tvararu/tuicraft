@@ -62,13 +62,19 @@ page](https://github.com/tvararu/tuicraft/releases).
 
 ## Development
 
-Requires [mise](https://mise.jdx.dev), automatically installs `bun`:
+Requires [mise](https://mise.jdx.dev), which installs `bun`:
 
 ```
 mise trust -y
 mise bundle
 mise build
 ```
+
+Agents own engineering, review, and integration. Verified changes land on
+`main`; pull requests, force-pushes, hook bypass, and releases are not used.
+Frameworks such as Superpowers are optional. Keep typecheck, format, and
+meaningful tests; coverage is diagnostic, not a percentage gate. Repository
+rules are in [AGENTS.md](AGENTS.md).
 
 ## Testing
 
@@ -104,17 +110,8 @@ tuicraft skill             # print SKILL.md for AI agents
 
 ## Roadmap
 
-- [x] 🔐 **0.1 - Auth & Connect:** SRP-6 auth, Arc4-encrypted world session,
-      character select, keepalive
-- [x] 💬 **0.2 - Chat:** Send/receive whispers, say, guild chat. TUI with
-      interactive and pipe modes
-- [x] 👥 **0.3 - Party Management:** Invite, kick, leave, leader transfer,
-      group roster, member stats
-- [x] 🌍 **0.4 - World State:** Parse `SMSG_UPDATE_OBJECT` to track nearby
-      entities
-- [ ] 🏃 **0.5 - Movement:** Send `CMSG_MOVE_*` opcodes, pathfinding via mmaps
-- [ ] 🤖 **0.6 - Automation:** Scriptable command sequences and event
-      subscriptions
+See [docs/roadmap.md](docs/roadmap.md) for current direction. That document is
+ambition, not a claim that those capabilities already exist.
 
 ## Feature coverage
 

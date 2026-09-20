@@ -1,6 +1,6 @@
 # File Split Refactoring Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Split `src/wow/client.ts` and `src/ui/tui.ts` into smaller single-responsibility modules without behavioral changes.
 

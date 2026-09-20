@@ -1,5 +1,7 @@
 # Guild Events Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Handle SMSG_GUILD_EVENT (0x0092) — a read-only opcode that broadcasts guild
 activity notifications (promotions, sign-ons, MOTD changes, etc.) to online
 guild members.

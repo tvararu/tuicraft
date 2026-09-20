@@ -1,5 +1,7 @@
 # Design: Fix SPECIFY_BUILD byte skip in realm parsing
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Problem
 
 When a realm entry has flag `0x04` (SPECIFY_BUILD) set, `parseRealmList` in

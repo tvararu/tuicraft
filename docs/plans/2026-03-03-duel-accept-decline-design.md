@@ -1,5 +1,7 @@
 # Duel Accept/Decline — Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Summary
 
 Handle incoming duel requests and let users accept or decline them. This covers

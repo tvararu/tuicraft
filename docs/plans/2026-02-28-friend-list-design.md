@@ -1,5 +1,7 @@
 # Friend List Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Goal
 
 Parse SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS, store friend entries in a

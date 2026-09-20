@@ -1,5 +1,7 @@
 # Guild Management Commands Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Overview
 
 Implement 9 guild management commands as fire-and-forget CMSG packets, plus 2 incoming SMSG handlers for error reporting and guild invite prompts.

@@ -1,6 +1,6 @@
 # Ignore List Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Server-side ignore list using WoW's native protocol, mirroring the friend system pattern.
 

@@ -1,5 +1,7 @@
 # Comprehensive Opcode Stub System
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Problem
 
 tuicraft handles ~35 opcodes but the 3.3.5a protocol has hundreds. Unhandled

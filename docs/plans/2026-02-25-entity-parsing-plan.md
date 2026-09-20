@@ -1,6 +1,6 @@
 # Entity Parsing (v0.4) Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Parse SMSG_UPDATE_OBJECT to build an in-memory entity store of nearby NPCs, players, game objects, and other entities, with TUI display and daemon IPC access.
 

@@ -1,6 +1,6 @@
 # Guild Events Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Handle SMSG_GUILD_EVENT (0x0092) to display guild activity notifications as system messages.
 

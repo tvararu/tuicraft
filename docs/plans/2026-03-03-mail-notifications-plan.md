@@ -1,6 +1,6 @@
 # Mail Notifications Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Display a `[mail] You have new mail.` notification when the server sends SMSG_RECEIVED_MAIL, and update the `/mail` command stub wording.
 
@@ -318,7 +318,7 @@ git commit -m "feat: Update /mail stub to say 'Mail reading'"
 
 ---
 
-### Task 5: Full test suite + coverage verification
+### Task 5: Full test suite verification
 
 **Step 1: Run the full test suite**
 
@@ -335,13 +335,11 @@ Expected: No errors.
 Run: `mise format`
 Expected: All files formatted. If not, run `mise format:fix` and amend.
 
-**Step 4: Verify coverage**
+**Step 4: Confirm new handler tests**
 
-Check that the new handler and format branches have 100% coverage. Run:
+Run: `mise test`
 
-Run: `mise test --coverage`
-
-Verify `handleReceivedMail` and the new format branches show full line/branch/function coverage.
+Confirm `handleReceivedMail` and the new format branches are exercised.
 
 **Step 5: Run live server tests**
 

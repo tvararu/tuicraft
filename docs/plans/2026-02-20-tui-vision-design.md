@@ -1,7 +1,9 @@
 # TUI Vision Design
 
 **Date**: 2026-02-20
-**Status**: Vision document — captures direction, not implementation specifics
+**Status**: Historical vision reference — not current execution instructions
+
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 ## What This Is
 
@@ -167,12 +169,15 @@ Layer 2 adds a high-frequency map viewport. Layer 3 adds a cursor overlay and
 status line content. The renderer doesn't know about WoW — it knows about
 cells, colors, and regions.
 
-## Dependencies and Sequencing
+## Dependencies (historical)
 
-**Layer 1** has no protocol or external dependencies. It's a presentation
-rewrite over the existing `WorldHandle` contract. Actionable now.
+Layer dependencies below are reference notes, not an implementation sequence.
+Current direction: [../roadmap.md](../roadmap.md).
 
-**Layer 2** is blocked on two large pieces of work: `SMSG_UPDATE_OBJECT`
+**Layer 1** has no protocol or external dependencies. It is a presentation
+rewrite over the existing `WorldHandle` contract.
+
+**Layer 2** depends on two large pieces of work: `SMSG_UPDATE_OBJECT`
 parsing (protocol) and namigator FFI (external C++ integration). These are
 independent of each other and independent of layer 1. The map renderer itself
 is independent of the chat TUI — they're separate panels that compose in the
@@ -182,9 +187,8 @@ same terminal.
 lift than namigator integration but still requires reading WoW client data
 files. The LLM annotation pipeline is trivially parallelizable and cacheable.
 
-Each layer is independently valuable. Layer 1 alone makes tuicraft a usable
-chat client. Layer 2 makes it a spatial awareness tool. Layer 3 makes the
-world legible to someone who's never seen it rendered in 3D.
+Each layer is independently valuable as a product idea: layer 1 as a usable
+chat client, layer 2 as spatial awareness, layer 3 as named world annotation.
 
 ## What This Isn't
 
@@ -193,5 +197,5 @@ remains the programmatic interface for LLMs, scripts, and other non-human
 consumers. The `WorldHandle` contract serves both sides without either knowing
 about the other.
 
-This is also not an implementation plan. Each layer will get its own design
-and plan documents when its dependencies are in place.
+This is not an implementation plan and does not authorize a layer-by-layer
+build order.

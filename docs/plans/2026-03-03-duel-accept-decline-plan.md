@@ -1,6 +1,6 @@
 # Duel Accept/Decline Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Handle all 6 incoming SMSG*DUEL*\* packets and wire context-aware `/accept` / `/decline` dispatch for duels vs group invites.
 

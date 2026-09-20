@@ -1,6 +1,6 @@
 # Friend List Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Parse SMSG_CONTACT_LIST and SMSG_FRIEND_STATUS, store friend entries in a FriendStore, and expose them through `/friends`, `/friend add|remove` commands, and IPC verbs.
 

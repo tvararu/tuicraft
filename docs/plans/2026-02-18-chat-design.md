@@ -2,6 +2,8 @@
 
 **Date**: 2026-02-18
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Goal
 
 Add chat messaging to tuicraft. Send and receive all chat types (whisper, say,

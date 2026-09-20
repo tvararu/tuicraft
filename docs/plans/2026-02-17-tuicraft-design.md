@@ -2,6 +2,8 @@
 
 **Date**: 2026-02-17
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## What It Is
 
 tuicraft is a headless WoW 3.3.5a client written in Bun/TypeScript that connects to an AzerothCore private server as a real player character. It presents the game as a text interface — a MUD-like experience layered on top of a graphical MMO.
@@ -224,7 +226,10 @@ No prompt, no formatting. Raw lines in (commands) and out (events). For LLM/scri
 - **mod-ollama-bot-buddy** — AzerothCore module that shows what game state can be extracted server-side.
 - **namigator** / **AmeisenNavigation** — Client-side pathfinding libraries for WoW. Relevant for future movement support.
 
-## Future Extensions (not 0.1)
+## Future Extensions (historical 0.x sketch)
+
+The 0.2–0.6 milestone sketch below is historical. Current direction:
+[../roadmap.md](../roadmap.md).
 
 **0.2 — Chat:** Send/receive whispers, say, guild chat. TUI layer with interactive and pipe modes. Session layer with `TuicraftClient` API.
 

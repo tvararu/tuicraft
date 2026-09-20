@@ -2,6 +2,8 @@
 
 **Date**: 2026-02-18
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Problem
 
 Pipe mode works for one-shot commands (`echo '/s hello' | tuicraft`) but

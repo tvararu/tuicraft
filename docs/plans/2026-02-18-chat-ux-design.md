@@ -1,5 +1,7 @@
 # Chat UX Fixes Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Branch A of the v0.3 feature set. Independent of party management and emotes.
 
 ## Sticky Chat Mode

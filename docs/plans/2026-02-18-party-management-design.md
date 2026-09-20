@@ -1,5 +1,7 @@
 # Party Management Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Branch B of the v0.3 feature set. Depends on nothing. Branch C (emotes) builds
 on this by sharing the GroupEvent union and onGroupEvent callback.
 

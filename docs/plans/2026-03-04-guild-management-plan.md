@@ -1,6 +1,6 @@
 # Guild Management Commands Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Implement 9 guild management slash commands (/ginvite, /gkick, /gleave, /gpromote, /gdemote, /gleader, /gmotd, /gaccept, /gdecline) as fire-and-forget packets, plus handle SMSG_GUILD_COMMAND_RESULT and SMSG_GUILD_INVITE from the server.
 

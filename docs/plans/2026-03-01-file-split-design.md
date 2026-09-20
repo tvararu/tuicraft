@@ -1,8 +1,10 @@
 # File Split Refactoring Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Split `src/wow/client.ts` (1,390 lines) and `src/ui/tui.ts` (728 lines) into
-smaller, single-responsibility modules. 100% test coverage gives us confidence
-to move code without behavioral changes.
+smaller, single-responsibility modules. Existing tests give confidence to
+move code without behavioral changes.
 
 ## client.ts → 3 files
 
@@ -95,4 +97,4 @@ Tests mirror the source split:
   `tui.test.ts`
 
 No tests deleted. Every existing test case moves to the file matching its source
-module. Coverage stays at 100%.
+module.

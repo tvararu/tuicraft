@@ -1,5 +1,7 @@
 # Ignore List Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 Server-side ignore list using WoW's native protocol, mirroring the friend
 system pattern. Flat WoW-native command syntax. Silently drops messages from
 ignored players with no session log entry.
@@ -82,7 +84,7 @@ or error messages.
 
 ## Documentation
 
-Update all four locations per CLAUDE.md: `src/cli/help.ts`, `docs/manual.md`,
+Update all four locations per AGENTS.md: `src/cli/help.ts`, `docs/manual.md`,
 `.claude/skills/tuicraft/SKILL.md`, and `README.md`.
 
 ## Testing

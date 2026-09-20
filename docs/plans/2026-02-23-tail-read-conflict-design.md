@@ -1,5 +1,7 @@
 # Tail/Read Conflict Design
 
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
+
 ## Problem
 
 `tuicraft tail` polls with `READ_WAIT`, which drains the same shared ring

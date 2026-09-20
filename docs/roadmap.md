@@ -29,6 +29,27 @@ capabilities needed to actually play. These are not merely opcode checkboxes.
 They must work together, against the real server, to a standard worth merging
 into tuicraft.
 
+## Current priorities and ownership
+
+The user delegates implementation, engineering decisions, code review, and
+integration to agents. Success means the client can actually play WoW and
+respects the protocol, not that the user has read and approved the code.
+
+Agent-playable capabilities come first. Human-facing usability and the spatial
+TUI remain worthwhile directions, to refine after user feedback rather than
+requiring them before the first gameplay loop.
+
+Keep sensible conventions and meaningful tests, but do not chase 100% coverage
+or undertake cosmetic refactors at the expense of working gameplay. Coverage
+is diagnostic information, not a percentage gate. Protocol correctness and
+observed server outcomes remain essential.
+
+Play as soon as a useful capability exists; finishing every milestone is not a
+prerequisite. Use real gameplay to expose gaps, improve the client, and continue
+normal play and leveling on the user's server within the active goal. If the
+coordinator lacks CLI access, delegate execution to a capable agent. Only one
+agent should control a given character at a time.
+
 ## The new ingredient: TypeSafe and Jev
 
 TypeSafe's Jev provides fast, typed judgments over application state rather than
@@ -145,20 +166,19 @@ choosing correctly.
 The project slowed down largely because human review time was scarce. Producing
 another large branch of plausible agent-written code would not solve that.
 
-Shipping policy is now [direct-to-main](workflow.md): independent agents use
+Shipping is direct-to-main: independent agents use
 local or Orca worktrees; one integration owner verifies the combined tree, then
 commits and pushes to `main`. Agents may commit and push automatically after
 that verification. Increments stay small and reviewable. Releases are paused.
 
-We still need a repeatable, potentially factory-style development process that
-lets agents implement substantial capabilities while producing evidence a
-maintainer can efficiently inspect and trust. The goal is to reduce review
-burden, not to remove the maintainer's control over scope or quality.
+The development process must let agents implement and verify capabilities
+without requiring the user to inspect code. Produce compact, inspectable
+gameplay evidence and retain the user's control over objectives and priorities.
 
 Each increment should provide:
 
 - A bounded behavior contract grounded in protocol definitions and server code.
-- An implementation that follows the existing project conventions.
+- An implementation that uses existing conventions without gratuitous refactors.
 - Focused regression coverage for meaningful behavior and failure cases, plus
   the project's type-checking, formatting, and test gates.
 - Live-server verification of the claimed behavior, with inspectable evidence.
@@ -197,17 +217,18 @@ control loop.
 
 Establish repeatable live scenarios and a compact record of what was verified.
 Build reliable player/entity observations, basic movement and facing, target
-selection, and immediate cancellation. Expose equivalent capabilities to human
-controls and the programmatic interface, with a minimal spatial display.
+selection, and immediate cancellation through the programmatic interface.
+Retain a way to inspect state and stop actions; a new spatial display and
+polished human controls are not required.
 
 Confirm early that compatible game, ability, and navigation data can be obtained
 and used reproducibly for the chosen scenarios. Full terrain rendering and
 general pathfinding are not prerequisites here.
 
-**Exit evidence:** a person and an agent can move through a small known area,
-select entities, stop, and confirm the resulting state. Demonstrate who owns
-control, how manual override works, and how action outcomes are established.
-Local checks, live evidence, and independent review remain distinct.
+**Exit evidence:** an agent can move through a small known area, select entities,
+stop, and confirm the resulting state. Demonstrate who owns control, how an
+external stop overrides it, and how action outcomes are established. Local
+checks, live evidence, and independent review remain distinct.
 
 Missing two-account test credentials block scenarios needing those accounts, not
 unrelated single-character capabilities. Never substitute a normal login for
@@ -270,8 +291,8 @@ every quest chain or building a general-purpose planner.
 ### 6. Sustained supervised play
 
 Combine the capabilities into longer sessions where an agent can inspect
-progress, change objectives, intervene, and resume. Make the same session
-understandable to a person through the TUI.
+progress, change objectives, intervene, and resume. Human-facing presentation can
+be refined separately after user feedback.
 
 **Exit evidence:** varied sessions across enemies, routes, abilities, and
 interruptions, without developer repairs between encounters. Report attempts as
@@ -279,15 +300,21 @@ well as successes: completions, blocked runs, recoveries, human interventions,
 stale-action handling, and observed latency. Failures must be reconstructable
 from observations, questions, decisions, actions, and outcomes.
 
-The spatial TUI develops alongside these milestones. It is neither a giant
-rendering prerequisite nor an afterthought. Opcode coverage grows through the
-capabilities that need it.
+The spatial TUI can develop alongside these milestones when it helps gameplay
+or user feedback calls for it; it does not gate agent-playable capabilities.
+Opcode coverage grows through the capabilities that need it.
 
 ## Working through the milestones
 
-The proposed execution mode is a multi-agent `/vibe` session, with a bounded
-`/goal` for a milestone or a smaller independently verifiable slice. Avoid one
-unbounded goal to finish the whole client.
+Use whichever tools and process best deliver the active goal. A multi-agent
+`/vibe` session is one option, not a requirement. Superpowers and other
+frameworks are optional aids, not mandatory execution sequences.
+
+Milestones are progress and evidence checkpoints. A `/goal` can cover a single
+milestone or an explicitly bounded objective spanning several. If the goal spans
+milestones, continue through them without waiting for routine human approval.
+Keep concrete completion criteria and verified increments rather than treating
+an unbounded feature list as a definition of done.
 
 For each goal:
 
@@ -299,15 +326,16 @@ For each goal:
 - Verify the actual changed surface: terminal interaction, server behavior, and
   Jev decisions where applicable. Review independently against the contract.
 - Commit and push verified increments to `main` automatically, without PRs or
-  releases. Follow [the development workflow](workflow.md).
+  releases. Repository rules live in [AGENTS.md](../AGENTS.md).
 - Leave a concise completion record: landed commits, commands/scenarios and
   outcomes, known limits, blockers, and the next actionable slice.
 
 A milestone gate is an evidence requirement, not a requirement for the user to
-read every line of code. Continue autonomously within the agreed scope; escalate
-material design choices, missing prerequisites, or changes in scope rather than
-quietly weakening acceptance criteria. Passing tests, model confidence, and
-agent agreement are not substitutes for demonstrated behavior.
+read code. Agents own routine engineering decisions and continue autonomously
+within the active goal. Escalate missing prerequisites or materially different
+user-facing scope, not implementation choices the agent can resolve. Never
+quietly weaken behavioral acceptance criteria. Passing tests, model confidence,
+and agent agreement are not substitutes for demonstrated gameplay.
 
 The next gameplay goal is milestone 1. Select its concrete first scenario and
 inspect the current implementation before deciding which changes it needs.
@@ -343,7 +371,6 @@ ambition while it is being aligned and refined.
 
 ## References
 
-- [Existing AI development workflow](workflow.md)
 - [Earlier spatial TUI vision](plans/2026-02-20-tui-vision-design.md)
 - [TypeSafe announcement and Doom discussion](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe programming model](https://docs.typesafe.ai/concepts/how-to-build-with-system-one)

@@ -1,6 +1,6 @@
 # Server Broadcast Messages Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> Historical reference only — not current execution instructions. Current direction: [../roadmap.md](../roadmap.md).
 
 **Goal:** Handle SMSG_CHAT_SERVER_MESSAGE and SMSG_NOTIFICATION opcodes so server broadcasts display in TUI as `[server]` and emit typed JSON events in daemon mode.
 
