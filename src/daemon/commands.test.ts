@@ -1,5 +1,5 @@
 import { test, expect, describe, jest, afterEach } from "bun:test";
-import { unlink } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import {
   parseIpcCommand,
   dispatchCommand,
@@ -10,6 +10,7 @@ import {
   onIgnoreEvent,
   onGuildEvent,
   onDuelEvent,
+  onControlEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -26,6 +27,7 @@ import type {
 } from "wow/entity-store";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
+import type { ControlEvent, ControlState } from "wow/control";
 
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
@@ -45,6 +47,142 @@ function createMockSocket(): {
     written() {
       return chunks.join("");
     },
+  };
+}
+
+async function sendRawCommands(
+  path: string,
+  chunks: string[],
+  gapMs = 0,
+): Promise<string[]> {
+  let buffer = "";
+  return new Promise<string[]>((resolve, reject) => {
+    Bun.connect({
+      unix: path,
+      socket: {
+        async open(socket) {
+          for (const [i, chunk] of chunks.entries()) {
+            if (i > 0 && gapMs > 0) await Bun.sleep(gapMs);
+            socket.write(chunk);
+            socket.flush();
+          }
+        },
+        data(socket, data) {
+          buffer += Buffer.from(data).toString();
+          if (buffer.endsWith("\n\n") || buffer === "\n") {
+            socket.end();
+            resolve(buffer.split("\n").filter((line) => line !== ""));
+          }
+        },
+        close() {
+          resolve(buffer.split("\n").filter((line) => line !== ""));
+        },
+        error(_socket, err) {
+          reject(err);
+        },
+      },
+    }).catch(reject);
+  });
+}
+
+async function sendRawUntilClose(
+  path: string,
+  chunks: string[],
+  gapMs = 0,
+): Promise<string[]> {
+  let buffer = "";
+  return new Promise<string[]>((resolve, reject) => {
+    Bun.connect({
+      unix: path,
+      socket: {
+        async open(socket) {
+          for (const [i, chunk] of chunks.entries()) {
+            if (i > 0 && gapMs > 0) await Bun.sleep(gapMs);
+            socket.write(chunk);
+            socket.flush();
+          }
+        },
+        data(_socket, data) {
+          buffer += Buffer.from(data).toString();
+        },
+        close() {
+          resolve(buffer.split("\n").filter((line) => line !== ""));
+        },
+        error(_socket, err) {
+          reject(err);
+        },
+      },
+    }).catch(reject);
+  });
+}
+
+type ControlMock = ReturnType<typeof createMockHandle> & {
+  getControlState: ReturnType<typeof jest.fn>;
+  move: ReturnType<typeof jest.fn>;
+  face: ReturnType<typeof jest.fn>;
+  selectTarget: ReturnType<typeof jest.fn>;
+  halt: ReturnType<typeof jest.fn>;
+  onControlEvent: ReturnType<typeof jest.fn>;
+};
+
+function attachControl(
+  handle: ReturnType<typeof createMockHandle>,
+): ControlMock {
+  Object.assign(handle, {
+    getControlState: jest.fn(
+      (): ControlState => ({
+        selfGuid: 1n,
+        pose: undefined,
+        serverPose: undefined,
+        target: undefined,
+        requestedTarget: undefined,
+        moving: false,
+        direction: undefined,
+        movementAllowed: true,
+        blockedReason: undefined,
+        speed: 0,
+        owner: "none",
+      }),
+    ),
+    move: jest.fn(),
+    face: jest.fn(),
+    selectTarget: jest.fn(),
+    halt: jest.fn(),
+    onControlEvent: jest.fn(),
+  });
+  return handle as ControlMock;
+}
+
+function sampleState(overrides: Partial<ControlState> = {}): ControlState {
+  return {
+    selfGuid: 0xabcden,
+    pose: {
+      mapId: 530,
+      x: 8709.46,
+      y: -6671.76,
+      z: 70.34,
+      orientation: 1.5,
+      source: "predicted",
+      updatedAt: 1000,
+    },
+    serverPose: {
+      mapId: 530,
+      x: 8709.46,
+      y: -6671.76,
+      z: 70.34,
+      orientation: 1.57,
+      source: "server",
+      updatedAt: 900,
+    },
+    target: 0xan,
+    requestedTarget: 0xan,
+    moving: true,
+    direction: "forward",
+    movementAllowed: true,
+    blockedReason: undefined,
+    speed: 7,
+    owner: "manual",
+    ...overrides,
   };
 }
 
@@ -251,6 +389,99 @@ describe("parseIpcCommand", () => {
 
   test("NEARBY_JSON", () => {
     expect(parseIpcCommand("NEARBY_JSON")).toEqual({ type: "nearby_json" });
+  });
+
+  test("CONTROL and CONTROL_JSON", () => {
+    expect(parseIpcCommand("CONTROL")).toEqual({ type: "control" });
+    expect(parseIpcCommand("CONTROL_JSON")).toEqual({ type: "control_json" });
+  });
+
+  test("MOVE defaults to 1000ms", () => {
+    expect(parseIpcCommand("MOVE forward")).toEqual({
+      type: "move",
+      direction: "forward",
+      durationMs: 1000,
+    });
+  });
+
+  test("MOVE accepts duration bounds", () => {
+    expect(parseIpcCommand("MOVE backward 1")).toEqual({
+      type: "move",
+      direction: "backward",
+      durationMs: 1,
+    });
+    expect(parseIpcCommand("MOVE left 10000")).toEqual({
+      type: "move",
+      direction: "left",
+      durationMs: 10000,
+    });
+  });
+
+  test("MOVE rejects malformed and out-of-range args", () => {
+    expect(parseIpcCommand("MOVE")).toEqual({
+      type: "invalid",
+      reason: "invalid move",
+    });
+    expect(parseIpcCommand("MOVE up")).toEqual({
+      type: "invalid",
+      reason: "invalid direction",
+    });
+    expect(parseIpcCommand("MOVE forward 0")).toEqual({
+      type: "invalid",
+      reason: "invalid duration",
+    });
+    expect(parseIpcCommand("MOVE forward 10001")).toEqual({
+      type: "invalid",
+      reason: "invalid duration",
+    });
+    expect(parseIpcCommand("MOVE forward 1.5")).toEqual({
+      type: "invalid",
+      reason: "invalid duration",
+    });
+    expect(parseIpcCommand("MOVE forward Infinity")).toEqual({
+      type: "invalid",
+      reason: "invalid duration",
+    });
+  });
+
+  test("FACE accepts finite radians", () => {
+    expect(parseIpcCommand("FACE 1.57")).toEqual({
+      type: "face",
+      orientation: 1.57,
+    });
+    expect(parseIpcCommand("FACE 0")).toEqual({
+      type: "face",
+      orientation: 0,
+    });
+  });
+
+  test("FACE rejects nonfinite and missing", () => {
+    expect(parseIpcCommand("FACE")?.type).toBe("invalid");
+    expect(parseIpcCommand("FACE NaN")?.type).toBe("invalid");
+    expect(parseIpcCommand("FACE Infinity")?.type).toBe("invalid");
+    expect(parseIpcCommand("FACE 1 2")?.type).toBe("invalid");
+  });
+
+  test("TARGET accepts hex and decimal uint64", () => {
+    expect(parseIpcCommand("TARGET 0x1")).toEqual({ type: "target", guid: 1n });
+    expect(parseIpcCommand("TARGET 0")).toEqual({ type: "target", guid: 0n });
+    expect(parseIpcCommand("TARGET 18446744073709551615")).toEqual({
+      type: "target",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+  });
+
+  test("TARGET rejects malformed guid", () => {
+    expect(parseIpcCommand("TARGET")?.type).toBe("invalid");
+    expect(parseIpcCommand("TARGET -1")?.type).toBe("invalid");
+    expect(parseIpcCommand("TARGET 0x")?.type).toBe("invalid");
+    expect(parseIpcCommand("TARGET 18446744073709551616")?.type).toBe(
+      "invalid",
+    );
+  });
+
+  test("HALT", () => {
+    expect(parseIpcCommand("HALT")).toEqual({ type: "halt" });
   });
 
   test("slash /accept maps to accept", () => {
@@ -1322,7 +1553,7 @@ describe("dispatchCommand", () => {
   });
 
   test("nearby_json returns JSONL entity list", async () => {
-    const handle = createMockHandle();
+    const handle = attachControl(createMockHandle());
     const testUnit: UnitEntity = {
       guid: 1n,
       objectType: ObjectType.UNIT,
@@ -1448,7 +1679,7 @@ describe("dispatchCommand", () => {
   });
 
   test("nearby_json formats player and gameobject types", async () => {
-    const handle = createMockHandle();
+    const handle = attachControl(createMockHandle());
     const testPlayer: UnitEntity = {
       guid: 1n,
       objectType: ObjectType.PLAYER,
@@ -2029,6 +2260,226 @@ describe("dispatchCommand", () => {
     );
 
     expect(socket.written()).toBe("OK CHANNEL General\n\n");
+  });
+
+  test("move calls handle and writes OK", async () => {
+    const handle = attachControl(createMockHandle());
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+    const result = await dispatchCommand(
+      { type: "move", direction: "forward", durationMs: 1000 },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+    expect(result).toBe(false);
+    expect(handle.move).toHaveBeenCalledWith("forward", 1000);
+    expect(socket.written()).toBe("OK\n\n");
+    expect(cleanup).not.toHaveBeenCalled();
+  });
+
+  test("malformed move does not call handle", async () => {
+    const handle = attachControl(createMockHandle());
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "invalid", reason: "invalid direction" },
+      handle,
+      events,
+      socket,
+      jest.fn(),
+    );
+    expect(handle.move).not.toHaveBeenCalled();
+    expect(handle.face).not.toHaveBeenCalled();
+    expect(handle.selectTarget).not.toHaveBeenCalled();
+    expect(handle.halt).not.toHaveBeenCalled();
+    expect(socket.written().startsWith("ERR ")).toBe(true);
+  });
+
+  test("move runtime errors surface as ERR without success", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.move.mockImplementation(() => {
+      throw new Error("rooted");
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "move", direction: "forward", durationMs: 500 },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(handle.move).toHaveBeenCalled();
+    expect(socket.written()).toBe("ERR rooted\n\n");
+  });
+
+  test("control json uses hex guids and pose source", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(sampleState());
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "control_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const parsed = JSON.parse(socket.written().trim());
+    expect(parsed.selfGuid).toBe("0xabcde");
+    expect(parsed.target).toBe("0xa");
+    expect(parsed.requestedTarget).toBe("0xa");
+    expect(parsed.pose.source).toBe("predicted");
+    expect(parsed.serverPose.source).toBe("server");
+    expect(parsed.moving).toBe(true);
+    expect(parsed.direction).toBe("forward");
+    expect(parsed.owner).toBe("manual");
+  });
+
+  test("control text distinguishes predicted from server pose", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(sampleState());
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "control" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const output = socket.written();
+    expect(output).toContain("predicted");
+    expect(output).toContain("server");
+    expect(output).toContain("0xabcde");
+    expect(output).not.toContain("authoritative");
+  });
+
+  test("nearby json includes targeting fields", async () => {
+    const handle = attachControl(createMockHandle());
+    const testUnit: UnitEntity = {
+      guid: 0x11n,
+      objectType: ObjectType.UNIT,
+      name: "Lynx",
+      level: 8,
+      health: 100,
+      maxHealth: 120,
+      entry: 15652,
+      scale: 1,
+      position: {
+        mapId: 530,
+        x: 1,
+        y: 2,
+        z: 3,
+        orientation: 0.5,
+      },
+      rawFields: new Map(),
+      factionTemplate: 7,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0x2n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      testUnit,
+    ]);
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const parsed = JSON.parse(socket.written().trim());
+    expect(parsed.guid).toBe("0x11");
+    expect(parsed.entry).toBe(15652);
+    expect(parsed.mapId).toBe(530);
+    expect(parsed.orientation).toBe(0.5);
+    expect(parsed.target).toBe("0x2");
+    expect(parsed.unitFlags).toBe(0);
+    expect(parsed.self).toBe(false);
+  });
+
+  test("nearby json marks only the observed self guid", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(sampleState({ selfGuid: 0x10n }));
+    const selfPlayer: UnitEntity = {
+      guid: 0x10n,
+      objectType: ObjectType.PLAYER,
+      name: "Xiara",
+      level: 10,
+      health: 187,
+      maxHealth: 187,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      factionTemplate: 0,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const otherPlayer: UnitEntity = {
+      ...selfPlayer,
+      guid: 0x11n,
+      name: "Landra",
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      selfPlayer,
+      otherPlayer,
+    ]);
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const rows = socket
+      .written()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows[0]!.self).toBe(true);
+    expect(rows[1]!.self).toBe(false);
+  });
+
+  test("halt does not teardown while stop does", async () => {
+    const handle = attachControl(createMockHandle());
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const cleanup = jest.fn();
+    const halted = await dispatchCommand(
+      { type: "halt" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+    expect(halted).toBe(false);
+    expect(cleanup).not.toHaveBeenCalled();
+    const stopped = await dispatchCommand(
+      { type: "stop" },
+      handle,
+      events,
+      socket,
+      cleanup,
+    );
+    expect(stopped).toBe(true);
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -2742,13 +3193,13 @@ describe("onGuildEvent", () => {
 describe("IPC round-trip", () => {
   let sockCounter = 0;
   let sockPath: string;
-  let handle: ReturnType<typeof createMockHandle>;
+  let handle: ControlMock;
   let result: ReturnType<typeof startDaemonServer>;
   let exitSpy: ReturnType<typeof jest.fn>;
 
   function startTestServer(opts?: { onActivity?: () => void }) {
     sockPath = `./tmp/test-daemon-${++sockCounter}-${Date.now()}.sock`;
-    handle = createMockHandle();
+    handle = attachControl(createMockHandle());
     const log = new SessionLog(`./tmp/test-daemon-${sockCounter}.jsonl`);
     exitSpy = jest
       .spyOn(process, "exit")
@@ -2875,6 +3326,214 @@ describe("IPC round-trip", () => {
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
+  test("HALT stays connected while STOP exits", async () => {
+    startTestServer();
+    const haltLines = await sendToSocket("HALT", sockPath);
+    expect(haltLines).toEqual(["OK"]);
+    expect(handle.halt).toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+    const status = await sendToSocket("STATUS", sockPath);
+    expect(status).toEqual(["CONNECTED"]);
+    const stopLines = await sendToSocket("STOP", sockPath);
+    expect(stopLines).toEqual(["OK"]);
+    await Bun.sleep(0);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  test("malformed MOVE does not start movement", async () => {
+    startTestServer();
+    const lines = await sendToSocket("MOVE up", sockPath);
+    expect(lines[0]?.startsWith("ERR")).toBe(true);
+    expect(handle.move).not.toHaveBeenCalled();
+  });
+
+  test("HALT preempts coalesced READ_WAIT and drops older MOVE", async () => {
+    startTestServer();
+    await sendToSocket("MOVE forward 10000", sockPath);
+    handle.move.mockClear();
+    const started = Date.now();
+    const lines = await sendRawCommands(sockPath, [
+      "READ_WAIT 8000\nMOVE left 1000\nHALT\n",
+    ]);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(handle.halt).toHaveBeenCalled();
+    expect(handle.move).not.toHaveBeenCalled();
+    expect(lines).toContain("OK");
+  });
+
+  test("HALT preempts READ_WAIT arriving in a later chunk", async () => {
+    startTestServer();
+    await sendToSocket("MOVE forward 10000", sockPath);
+    const started = Date.now();
+    const lines = await sendRawCommands(
+      sockPath,
+      ["READ_WAIT 8000\n", "HALT\n"],
+      20,
+    );
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(handle.halt).toHaveBeenCalled();
+    expect(lines).toContain("OK");
+  });
+
+  test("HALT stops control before an unresolved WHO resolves", async () => {
+    startTestServer();
+    await sendToSocket("MOVE forward 10000", sockPath);
+    handle.move.mockClear();
+    const halted = Promise.withResolvers<void>();
+    handle.halt.mockImplementation(() => {
+      halted.resolve();
+    });
+    const pendingWho = Promise.withResolvers<never[]>();
+    (handle.who as ReturnType<typeof jest.fn>).mockImplementation(
+      () => pendingWho.promise,
+    );
+    const started = Date.now();
+    const linesPromise = sendRawCommands(
+      sockPath,
+      ["WHO\n", "MOVE left 1000\nHALT\n"],
+      20,
+    );
+    await Promise.race([
+      halted.promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("halt not observed")), 2000);
+      }),
+    ]);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(handle.move).not.toHaveBeenCalled();
+    pendingWho.resolve([]);
+    const lines = await linesPromise;
+    expect(lines).toContain("OK");
+    expect(handle.move).not.toHaveBeenCalled();
+  });
+
+  test("HALT keeps STATUS after held WHO without ERR internal", async () => {
+    startTestServer();
+    await sendToSocket("MOVE forward 10000", sockPath);
+    handle.move.mockClear();
+    const halted = Promise.withResolvers<void>();
+    handle.halt.mockImplementation(() => {
+      halted.resolve();
+    });
+    const pendingWho = Promise.withResolvers<never[]>();
+    (handle.who as ReturnType<typeof jest.fn>).mockImplementation(
+      () => pendingWho.promise,
+    );
+    const linesPromise = sendRawUntilClose(
+      sockPath,
+      ["WHO\n", "MOVE left 1000\nHALT\nSTATUS\n"],
+      20,
+    );
+    await Promise.race([
+      halted.promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("halt not observed")), 2000);
+      }),
+    ]);
+    expect(handle.move).not.toHaveBeenCalled();
+    pendingWho.resolve([]);
+    const lines = await linesPromise;
+    expect(lines).toContain("OK");
+    expect(lines).toContain("CONNECTED");
+    expect(lines.some((line) => line.includes("ERR internal"))).toBe(false);
+    expect(handle.move).not.toHaveBeenCalled();
+  });
+
+  test("HALT keeps a newer FACE after held WHO", async () => {
+    startTestServer();
+    await sendToSocket("MOVE forward 10000", sockPath);
+    handle.move.mockClear();
+    const halted = Promise.withResolvers<void>();
+    handle.halt.mockImplementation(() => {
+      halted.resolve();
+    });
+    const pendingWho = Promise.withResolvers<never[]>();
+    (handle.who as ReturnType<typeof jest.fn>).mockImplementation(
+      () => pendingWho.promise,
+    );
+    const linesPromise = sendRawUntilClose(
+      sockPath,
+      ["WHO\n", "MOVE left 1000\nHALT\nSTATUS\nFACE 1\n"],
+      20,
+    );
+    await Promise.race([
+      halted.promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("halt not observed")), 2000);
+      }),
+    ]);
+    pendingWho.resolve([]);
+    const lines = await linesPromise;
+    expect(lines).toContain("CONNECTED");
+    expect(lines.some((line) => line.includes("ERR internal"))).toBe(false);
+    expect(handle.face).toHaveBeenCalledWith(1);
+    expect(handle.move).not.toHaveBeenCalled();
+  });
+
+  test("MOVE ERR exits nonzero from src/main.ts", async () => {
+    const xdg = `${process.cwd()}/tmp/cli-main-${Date.now()}`;
+    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    sockPath = `${xdg}/tuicraft/sock`;
+    handle = attachControl(createMockHandle());
+    handle.move.mockImplementation(() => {
+      throw new Error("rooted");
+    });
+    const log = new SessionLog(`${xdg}/session.jsonl`);
+    exitSpy = jest
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    result = startDaemonServer({ handle, sock: sockPath, log });
+    const proc = Bun.spawn({
+      cmd: [
+        process.execPath,
+        `${import.meta.dir}/../main.ts`,
+        "move",
+        "forward",
+      ],
+      cwd: `${import.meta.dir}/../..`,
+      env: { ...process.env, XDG_RUNTIME_DIR: xdg },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const code = await proc.exited;
+    const out = await new Response(proc.stdout).text();
+    expect(code).toBe(1);
+    expect(out).toContain("ERR rooted");
+  });
+
+  test("MOVE FACE TARGET round-trip call handle", async () => {
+    startTestServer();
+    expect(await sendToSocket("MOVE right 2000", sockPath)).toEqual(["OK"]);
+    expect(handle.move).toHaveBeenCalledWith("right", 2000);
+    expect(await sendToSocket("FACE 0.25", sockPath)).toEqual(["OK"]);
+    expect(handle.face).toHaveBeenCalledWith(0.25);
+    expect(await sendToSocket("TARGET 0xa", sockPath)).toEqual(["OK"]);
+    expect(handle.selectTarget).toHaveBeenCalledWith(0xan);
+  });
+
+  test("CONTROL_JSON round-trip keeps pose provenance", async () => {
+    startTestServer();
+    handle.getControlState.mockReturnValue(sampleState());
+    const lines = await sendToSocket("CONTROL_JSON", sockPath);
+    const parsed = JSON.parse(lines[0]!);
+    expect(parsed.pose.source).toBe("predicted");
+    expect(parsed.serverPose.source).toBe("server");
+    expect(parsed.selfGuid).toBe("0xabcde");
+  });
+
+  test("control events reach the ring buffer", async () => {
+    startTestServer();
+    const cb = handle.onControlEvent.mock.calls[0]![0] as (
+      event: ControlEvent,
+    ) => void;
+    cb({ type: "movement_started", state: sampleState() });
+    const jsonLines = await sendToSocket("READ_JSON", sockPath);
+    const parsed = JSON.parse(jsonLines[0]!);
+    expect(parsed.type).toBe("CONTROL");
+    expect(parsed.event).toBe("movement_started");
+    expect(parsed.pose.source).toBe("predicted");
+  });
+
   test("buffers split command chunks before parsing", async () => {
     const origListen = Bun.listen;
     let capturedData:
@@ -2895,7 +3554,7 @@ describe("IPC round-trip", () => {
     }) as unknown as typeof Bun.listen;
 
     try {
-      const handle = createMockHandle();
+      const handle = attachControl(createMockHandle());
       const log = new SessionLog(`./tmp/test-daemon-split-${Date.now()}.jsonl`);
       const { cleanup } = startDaemonServer({
         handle,
@@ -2909,6 +3568,52 @@ describe("IPC round-trip", () => {
       await Promise.resolve();
 
       expect(socket.written()).toBe("CONNECTED\n\n");
+
+      cleanup();
+      expect(stopFn).toHaveBeenCalled();
+    } finally {
+      Bun.listen = origListen;
+    }
+  });
+
+  test("keeps a split next command after a completed command", async () => {
+    const origListen = Bun.listen;
+    let capturedData:
+      | ((
+          socket: {
+            write(data: string | Uint8Array): number;
+            end(): void;
+          },
+          data: ArrayBuffer | ArrayBufferView,
+        ) => void | Promise<void>)
+      | undefined;
+    let stopFn: ReturnType<typeof jest.fn> | undefined;
+
+    Bun.listen = jest.fn((opts: { socket: { data: typeof capturedData } }) => {
+      capturedData = opts.socket.data;
+      stopFn = jest.fn();
+      return { stop: stopFn } as unknown as ReturnType<typeof Bun.listen>;
+    }) as unknown as typeof Bun.listen;
+
+    try {
+      const handle = attachControl(createMockHandle());
+      const log = new SessionLog(
+        `./tmp/test-daemon-split-next-${Date.now()}.jsonl`,
+      );
+      const { cleanup } = startDaemonServer({
+        handle,
+        sock: `./tmp/test-daemon-split-next-${Date.now()}.sock`,
+        log,
+      });
+      const socket = createMockSocket();
+
+      capturedData!(socket, Buffer.from("STATUS\nSTA"));
+      await Bun.sleep(0);
+      expect(socket.written()).toBe("CONNECTED\n\n");
+
+      capturedData!(socket, Buffer.from("TUS\n"));
+      await Bun.sleep(0);
+      expect(socket.written()).toBe("CONNECTED\n\nCONNECTED\n\n");
 
       cleanup();
       expect(stopFn).toHaveBeenCalled();
@@ -2937,7 +3642,7 @@ describe("IPC round-trip", () => {
     }) as unknown as typeof Bun.listen;
 
     try {
-      const handle = createMockHandle();
+      const handle = attachControl(createMockHandle());
       const log = new SessionLog(`./tmp/test-daemon-multi-${Date.now()}.jsonl`);
       const { cleanup } = startDaemonServer({
         handle,
@@ -3333,5 +4038,52 @@ describe("onDuelEvent", () => {
       winner: "A",
       loser: "B",
     });
+  });
+});
+
+describe("onControlEvent", () => {
+  test("pushes event to ring and session log with hex ids", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const append = jest.fn(() => Promise.resolve());
+    const log = { append } as unknown as SessionLog;
+    onControlEvent(
+      { type: "target_requested", state: sampleState(), reason: "select" },
+      events,
+      log,
+    );
+    const drained = events.drain();
+    expect(drained).toHaveLength(1);
+    expect(drained[0]!.text).toContain("[control]");
+    expect(drained[0]!.text).toContain("predicted");
+    const json = JSON.parse(drained[0]!.json);
+    expect(json.type).toBe("CONTROL");
+    expect(json.event).toBe("target_requested");
+    expect(json.selfGuid).toBe("0xabcde");
+    expect(json.target).toBe("0xa");
+    expect(json.pose.source).toBe("predicted");
+    expect(json.serverPose.source).toBe("server");
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  test("server correction keeps server pose labelled server", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    const state = sampleState({
+      pose: {
+        mapId: 530,
+        x: 1,
+        y: 2,
+        z: 3,
+        orientation: 0,
+        source: "server",
+        updatedAt: 5,
+      },
+    });
+    onControlEvent({ type: "server_correction", state }, events, log);
+    const entry = events.drain()[0]!;
+    expect(JSON.parse(entry.json).pose.source).toBe("server");
+    expect(entry.text).toContain("server");
   });
 });

@@ -94,6 +94,12 @@ function makeMockClient(): {
         guildMotd: jest.fn(),
         acceptGuildInvite: jest.fn(),
         declineGuildInvite: jest.fn(),
+        getControlState: jest.fn(),
+        move: jest.fn(),
+        face: jest.fn(),
+        selectTarget: jest.fn(),
+        halt: jest.fn(),
+        onControlEvent: jest.fn(),
       }),
     ),
     mockHandleClose,
@@ -278,6 +284,23 @@ describe("startDaemon", () => {
       await Bun.sleep(1);
     }
     expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
+
+    closedResolve();
+    await promise;
+  });
+
+  test("HALT does not disconnect the daemon", async () => {
+    await writeTestConfig();
+    const client = makeMockClient();
+    const promise = startDaemon(client);
+    await waitForSetup();
+
+    const haltLines = await sendToSocket("HALT", `${rtDir}/sock`);
+    expect(haltLines).toEqual(["OK"]);
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    const status = await sendToSocket("STATUS", `${rtDir}/sock`);
+    expect(status).toEqual(["CONNECTED"]);
 
     closedResolve();
     await promise;

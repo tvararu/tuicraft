@@ -12,7 +12,8 @@ tuicraft [--who [filter]] [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME]
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
-tuicraft status | stop | logs | skill | help
+tuicraft control [--json] | nearby [--json]
+tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 ```
 
 ## Description
@@ -47,10 +48,37 @@ idles out after 30 minutes of inactivity.
 : Print daemon connection status (`CONNECTED` or error).
 
 `tuicraft stop`
-: Graceful daemon shutdown.
+:: Graceful daemon shutdown. Disconnects the session.
+
+`tuicraft control` [`--json`]
+:: Print control state. `pose.source` is `predicted` or `server`. `serverPose`
+is the last server-observed pose. `target` is the last server-observed self
+target. `requestedTarget` is the last GUID this client sent. Predicted pose is
+not server confirmation. Relog to read the pose the server accepted.
+
+`tuicraft nearby` [`--json`]
+:: List nearby entities. GUIDs are hexadecimal (`0x…`). JSON includes `self`
+true only for the observed self GUID.
+
+`tuicraft move` _direction_ [*ms*]
+:: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.
+`left`/`right` strafe. *ms* is an integer 1–10000. Default 1000. The walk
+ends when the duration ends. Repeating the same direction renews the duration.
+
+`tuicraft face` _radians_
+:: Set facing. The value is a finite number in radians. Empty input is rejected.
+
+`tuicraft target` _guid_
+:: Select a unit. *guid* is an unsigned 64-bit integer in `0x` hex or decimal.
+`0` clears the target and does not attack.
+
+`tuicraft halt`
+:: Stop current motion. The daemon stays connected. HALT on a connection
+cancels a pending read or query on that socket and does not run older queued
+MOVE/FACE/TARGET lines.
 
 `tuicraft logs`
-: Print the JSONL session log to stdout.
+:: Print the JSONL session log to stdout.
 
 `tuicraft skill`
 : Print a SKILL.md reference for AI agents. Includes command usage, event types, and integration examples.
@@ -78,8 +106,8 @@ idles out after 30 minutes of inactivity.
 ## Options
 
 `--json`
-: Output events as JSONL instead of human-readable format. Works with `read`,
-`tail`, `--who`, and chat commands.
+:: JSON output. Works with `read`, `tail`, `who`, `control`, `nearby`, and chat
+commands.
 
 `--wait` _N_
 : Wait _N_ seconds for events before returning. For use with `read`.
@@ -225,3 +253,12 @@ set `language = 7` in the config file.
 
 The daemon buffers up to 1000 events. The idle timeout is configurable via
 `timeout_minutes` in the config file.
+
+`tuicraft stop` disconnects the daemon. `tuicraft halt` only stops motion.
+
+Direct control does not include combat, pathfinding, or autonomous play.
+The server does not echo your own movement. Treat `pose.source=predicted` as a
+local estimate. After `stop` and a new login, `control` shows the last
+server-accepted pose.
+
+MOVE, FACE, TARGET, and HALT print daemon `ERR` lines and exit with status 1.

@@ -1,6 +1,6 @@
 ---
 name: tuicraft
-description: Use when interacting with a WoW 3.3.5a game world — sending chat messages, reading events, querying players, or managing groups via the tuicraft CLI
+description: Use when interacting with a WoW 3.3.5a game world — sending chat, reading events, querying players, managing groups, or issuing bounded walk, face, and target commands via the tuicraft CLI
 ---
 
 # tuicraft
@@ -12,6 +12,62 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
     tuicraft status
 
 Returns CONNECTED or an error. Check this before other commands.
+
+## Direct control
+
+These commands move, face, or select. They do not fight, pathfind, or play the character for you.
+
+    tuicraft control              # human text
+    tuicraft control --json       # structured state
+    tuicraft nearby               # nearby units and objects
+    tuicraft nearby --json
+    tuicraft move forward         # 1000ms default
+    tuicraft move left 400        # strafe 400ms
+    tuicraft face 1.57            # radians
+    tuicraft target 0xf130003f520009e5
+    tuicraft target 0             # clear target, do not attack
+    tuicraft halt                 # stop motion, stay connected
+    tuicraft stop                 # disconnect the daemon
+
+Rules:
+
+- `move` direction is exactly `forward`, `backward`, `left`, or `right`. `left` and `right` strafe.
+- Duration is an integer millisecond value from 1 through 10000. Omit it to use 1000. Values outside that range are rejected and send no packets.
+- `face` takes one finite radian number.
+- `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
+- Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
+- `halt` stops walking. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET.
+- Daemon `ERR` replies for MOVE, FACE, TARGET, and HALT exit the CLI with status 1.
+
+`control --json` fields you must not mix up:
+
+| Field | Meaning |
+| ----- | ------- |
+| `pose` | Current pose used for control. Read `pose.source`. |
+| `pose.source` | `predicted` is a local estimate. `server` is a server observation. Predicted is not server confirmation. |
+| `serverPose` | Last pose the server reported. Unchanged during your own walk until a server correction or a new login. |
+| `target` | Last server-observed self target GUID (`0x…`), or null. |
+| `requestedTarget` | Last GUID this client sent with `target`. Can differ from `target` until the server observes the change. |
+| `moving` | Whether a timed walk is active. |
+| `direction` | `forward` / `backward` / `left` / `right`, or null. |
+| `owner` | `manual` while a client walk is in effect. `none` when idle. |
+
+Self movement is not echoed by the server. After a walk, `pose` is predicted. Relog (`stop`, then connect again) and read `control` to see the server-accepted position.
+
+IPC verbs on the daemon socket:
+
+    CONTROL
+    CONTROL_JSON
+    MOVE <forward|backward|left|right> [milliseconds]
+    FACE <radians>
+    TARGET <guid>
+    HALT
+    NEARBY
+    NEARBY_JSON
+    STOP
+    STATUS
+
+Control events appear in `read` / `tail` with JSON `type` `CONTROL`. The `event` field is one of `movement_started`, `movement_stopped`, `facing_changed`, `target_requested`, `target_observed`, `server_correction`, `control_changed`, `control_error`. The payload includes the same state fields as `control --json`.
 
 ## Sending Messages
 
@@ -64,6 +120,7 @@ Add `--json` for structured output. Each JSON line:
 | ENTITY_APPEAR         | NPC/player/object appeared nearby (--json only)  |
 | ENTITY_DISAPPEAR      | Entity left range (--json only)                  |
 | ENTITY_UPDATE         | Entity field changed (--json only)               |
+| CONTROL               | Movement, facing, target, or control-state change |
 | FRIEND_ONLINE         | Friend came online                               |
 | FRIEND_OFFLINE        | Friend went offline                              |
 | FRIEND_ADDED          | Friend added to list                             |
@@ -167,14 +224,19 @@ IPC verbs:
     echo "GACCEPT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "GDECLINE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
-## Entity Queries
+## Nearby entities
 
-The daemon exposes `NEARBY` and `NEARBY_JSON` IPC verbs for querying tracked entities:
+    tuicraft nearby
+    tuicraft nearby --json
+
+JSON objects include `guid` (hex `0x…`), `self` (true only for the observed self GUID), `type`, `name`, `entry`, position (`x`, `y`, `z`, `mapId`, `orientation`), and for units `level`, `health`, `maxHealth`, `target`, `unitFlags`. Use `guid` with `tuicraft target`.
+
+TUI: `/tuicraft entities on|off` toggles entity event display.
+
+IPC:
 
     echo "NEARBY" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-
-In the TUI, toggle entity event display with `/tuicraft entities on|off`.
 
 ## Openclaw Integration
 

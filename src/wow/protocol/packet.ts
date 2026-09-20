@@ -162,6 +162,21 @@ export class PacketWriter {
     this.uint8(0);
   }
 
+  packedGuid(low: number, high: number) {
+    let mask = 0;
+    const bytes: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      const byte =
+        i < 4 ? (low >>> (i * 8)) & 0xff : (high >>> ((i - 4) * 8)) & 0xff;
+      if (byte !== 0) {
+        mask |= 1 << i;
+        bytes.push(byte);
+      }
+    }
+    this.uint8(mask);
+    for (const b of bytes) this.uint8(b);
+  }
+
   finish(): Uint8Array {
     return this.buf.slice(0, this.pos);
   }

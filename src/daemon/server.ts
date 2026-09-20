@@ -16,12 +16,19 @@ import {
   onIgnoreEvent,
   onGuildEvent,
   onDuelEvent,
+  onControlEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
 } from "daemon/commands";
 
-type SocketState = { buffer: string; processing: boolean; ended: boolean };
+type SocketState = {
+  buffer: string;
+  queue: string[];
+  processing: boolean;
+  ended: boolean;
+  abort: AbortController | undefined;
+};
 
 type ServerCtx = {
   handle: WorldHandle;
@@ -55,29 +62,71 @@ const socketStates = new WeakMap<IpcSocket, SocketState>();
 function getSocketState(socket: IpcSocket): SocketState {
   const existing = socketStates.get(socket);
   if (existing) return existing;
-  const state: SocketState = { buffer: "", processing: false, ended: false };
+  const state: SocketState = {
+    buffer: "",
+    queue: [],
+    processing: false,
+    ended: false,
+    abort: undefined,
+  };
   socketStates.set(socket, state);
   return state;
 }
 
-function drainNextLine(ctx: ServerCtx, socket: IpcSocket): void {
+function enqueueCompleteLines(state: SocketState): void {
+  while (true) {
+    const breakIdx = state.buffer.indexOf("\n");
+    if (breakIdx === -1) return;
+    const line = state.buffer.slice(0, breakIdx).trim();
+    state.buffer = state.buffer.slice(breakIdx + 1);
+    state.queue.push(line);
+  }
+}
+
+function queuedType(line: string): string | undefined {
+  return parseIpcCommand(line)?.type;
+}
+
+function isStaleControl(type: string | undefined): boolean {
+  return (
+    type === "move" ||
+    type === "face" ||
+    type === "target" ||
+    type === "read_wait" ||
+    type === "read_wait_json"
+  );
+}
+
+function promoteHalt(state: SocketState): void {
+  const haltIdx = state.queue.findIndex((line) => queuedType(line) === "halt");
+  if (haltIdx === -1) return;
+  const halt = state.queue[haltIdx]!;
+  const before = state.queue.slice(0, haltIdx);
+  const after = state.queue.slice(haltIdx + 1);
+  const retained = before.filter((line) => !isStaleControl(queuedType(line)));
+  state.queue = [halt, ...retained, ...after];
+  state.abort?.abort();
+}
+
+function drainQueue(ctx: ServerCtx, socket: IpcSocket): void {
   const state = getSocketState(socket);
   state.processing = false;
   if (state.ended) return;
-  const nextBreak = state.buffer.indexOf("\n");
-  if (nextBreak !== -1) {
-    const next = state.buffer.slice(0, nextBreak).trim();
-    state.buffer = state.buffer.slice(nextBreak + 1);
+  enqueueCompleteLines(state);
+  promoteHalt(state);
+  const next = state.queue.shift();
+  if (next !== undefined) {
     processLine(ctx, socket, next);
     return;
   }
+  if (state.buffer.length > 0) return;
   state.ended = true;
   socket.end();
 }
 
 function processLine(ctx: ServerCtx, socket: IpcSocket, line: string): void {
   const state = getSocketState(socket);
-  if (state.processing || state.ended) return;
+  if (state.ended) return;
   state.processing = true;
   ctx.onActivity?.();
   const cmd = parseIpcCommand(line);
@@ -88,22 +137,44 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, line: string): void {
     socket.end();
     return;
   }
-  dispatchCommand(cmd, ctx.handle, ctx.events, socket, ctx.cleanup)
+  const abort = new AbortController();
+  state.abort = abort;
+  let settled = false;
+  function finish(shouldExit: boolean): void {
+    if (settled) return;
+    settled = true;
+    if (state.abort === abort) state.abort = undefined;
+    if (shouldExit) (ctx.onStop ?? (() => process.exit(0)))();
+    drainQueue(ctx, socket);
+  }
+  const gated: IpcSocket = {
+    write(data) {
+      if (abort.signal.aborted) return 0;
+      return socket.write(data);
+    },
+    end() {
+      if (!abort.signal.aborted) socket.end();
+    },
+  };
+  abort.signal.addEventListener("abort", () => finish(false), { once: true });
+  dispatchCommand(cmd, ctx.handle, ctx.events, gated, ctx.cleanup, abort.signal)
     .then((shouldExit) => {
-      if (shouldExit) (ctx.onStop ?? (() => process.exit(0)))();
+      finish(shouldExit);
     })
-    .catch(() => writeLines(socket, ["ERR internal"]))
-    .finally(() => drainNextLine(ctx, socket));
+    .catch(() => {
+      if (!abort.signal.aborted) writeLines(socket, ["ERR internal"]);
+      finish(false);
+    });
 }
 
 function onSocketData(ctx: ServerCtx, socket: IpcSocket, data: Buffer): void {
   const state = getSocketState(socket);
+  if (state.ended) return;
   state.buffer += Buffer.from(data).toString();
-  const breakIdx = state.buffer.indexOf("\n");
-  if (breakIdx === -1) return;
-  const line = state.buffer.slice(0, breakIdx).trim();
-  state.buffer = state.buffer.slice(breakIdx + 1);
-  processLine(ctx, socket, line);
+  enqueueCompleteLines(state);
+  promoteHalt(state);
+  if (state.processing || state.queue.length === 0) return;
+  drainQueue(ctx, socket);
 }
 
 export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
@@ -116,11 +187,13 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onIgnoreEvent((event) => onIgnoreEvent(event, events, log));
   handle.onGuildEvent((event) => onGuildEvent(event, events, log));
   handle.onDuelEvent((event) => onDuelEvent(event, events, log));
+  handle.onControlEvent((event) => onControlEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
     if (cleaned) return;
     cleaned = true;
+    handle.onControlEvent(undefined);
     handle.close();
     server.stop();
     unlink(sock).catch(() => {});

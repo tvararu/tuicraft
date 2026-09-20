@@ -13,6 +13,12 @@ USAGE
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
   tuicraft status             Show daemon status
+  tuicraft control [--json]  Show control state
+  tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
+  tuicraft face <radians>    Set facing in radians
+  tuicraft target <guid>     Select target (0 clears)
+  tuicraft halt              Stop movement without disconnect
+  tuicraft nearby [--json]   List nearby entities
   tuicraft stop               Stop the daemon
   tuicraft logs               Print session log
   tuicraft skill              Print SKILL.md for AI agents
@@ -22,7 +28,7 @@ USAGE
 FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
-  --json          Output events as JSONL (for read, tail, chat, who)
+  --json          Output as JSON (read, tail, chat, who, control, nearby)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
 

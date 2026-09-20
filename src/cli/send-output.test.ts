@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatSendOutput } from "cli/send-output";
+import { formatSendOutput, daemonCommandFailed } from "cli/send-output";
 
 describe("formatSendOutput", () => {
   test("non-json returns daemon lines", () => {
@@ -20,5 +20,15 @@ describe("formatSendOutput", () => {
         true,
       ),
     ).toEqual(['{"type":"WHO","count":1}', "UNIMPLEMENTED Mail"]);
+  });
+});
+
+describe("daemonCommandFailed", () => {
+  test("OK is success", () => {
+    expect(daemonCommandFailed(["OK"])).toBe(false);
+  });
+
+  test("ERR fails the consumer", () => {
+    expect(daemonCommandFailed(["ERR rooted"])).toBe(true);
   });
 });

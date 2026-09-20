@@ -11,13 +11,25 @@ export type UpdateEntry =
       objectType: number;
       position: Position;
       fields: Map<number, number>;
+      updateFlags: number;
+      movementFlags?: number;
+      runSpeed?: number;
+      runBackSpeed?: number;
     }
   | { type: "values"; guid: bigint; fields: Map<number, number> }
-  | { type: "movement"; guid: bigint; position: Position }
+  | {
+      type: "movement";
+      guid: bigint;
+      position: Position;
+      updateFlags: number;
+      movementFlags?: number;
+      runSpeed?: number;
+      runBackSpeed?: number;
+    }
   | { type: "outOfRange"; guids: bigint[] }
   | { type: "nearObjects"; guids: bigint[] };
 
-export function parseUpdateObject(r: PacketReader): UpdateEntry[] {
+export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
   const count = r.uint32LE();
   const entries: UpdateEntry[] = [];
   for (let i = 0; i < count; i++) {
@@ -37,12 +49,16 @@ export function parseUpdateObject(r: PacketReader): UpdateEntry[] {
             type: "movement",
             guid,
             position: {
-              mapId: 0,
+              mapId,
               x: movement.x,
               y: movement.y,
               z: movement.z,
               orientation: movement.orientation,
             },
+            updateFlags: movement.updateFlags,
+            movementFlags: movement.movementFlags,
+            runSpeed: movement.runSpeed,
+            runBackSpeed: movement.runBackSpeed,
           });
           break;
         }
@@ -53,13 +69,23 @@ export function parseUpdateObject(r: PacketReader): UpdateEntry[] {
           const movement = parseMovementBlock(r);
           const fields = parseUpdateMask(r);
           const position: Position = {
-            mapId: 0,
+            mapId,
             x: movement.x,
             y: movement.y,
             z: movement.z,
             orientation: movement.orientation,
           };
-          entries.push({ type: "create", guid, objectType, position, fields });
+          entries.push({
+            type: "create",
+            guid,
+            objectType,
+            position,
+            fields,
+            updateFlags: movement.updateFlags,
+            movementFlags: movement.movementFlags,
+            runSpeed: movement.runSpeed,
+            runBackSpeed: movement.runBackSpeed,
+          });
           break;
         }
         case UpdateType.OUT_OF_RANGE: {

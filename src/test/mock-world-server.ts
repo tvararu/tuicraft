@@ -2,6 +2,7 @@ import type { Socket, TCPSocketListener } from "bun";
 import { createHmac, createCipheriv, createDecipheriv } from "node:crypto";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { GameOpcode, ChatType, ChannelNotify } from "wow/protocol/opcodes";
+import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
 import { sessionKey, serverSeed, FIXTURE_CHARACTER } from "test/fixtures";
 
 const ENCRYPT_KEY = "C2B3723CC6AED9B5343C53EE2F4367CE";
@@ -11,6 +12,8 @@ type ConnState = {
   buf: Uint8Array;
   arc4?: ServerArc4;
   pendingHeader?: { size: number; opcode: number };
+  loginMapId: number;
+  coalesceSelfCreate: boolean;
 };
 
 class ServerArc4 {
@@ -133,17 +136,56 @@ function buildChannelNotifyJoined(channel: string): Uint8Array {
   return w.finish();
 }
 
+function buildSelfCreateUpdate(): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(1);
+  w.uint8(UpdateType.CREATE_OBJECT2);
+  w.packedGuid(0x42, 0);
+  w.uint8(ObjectType.PLAYER);
+  w.uint16LE(UpdateFlag.LIVING | UpdateFlag.SELF);
+  w.uint32LE(0);
+  w.uint16LE(0);
+  w.uint32LE(0);
+  w.floatLE(1);
+  w.floatLE(2);
+  w.floatLE(3);
+  w.floatLE(0);
+  w.floatLE(0);
+  for (let i = 0; i < 9; i++) w.floatLE(0);
+  w.uint8(0);
+  return w.finish();
+}
+
 function handlePlayerLogin(
   socket: Socket<ConnState>,
   sendTimeSync: boolean,
 ): void {
-  const w = new PacketWriter();
-  w.uint32LE(0);
-  w.floatLE(0);
-  w.floatLE(0);
-  w.floatLE(0);
-  w.floatLE(0);
-  send(socket, GameOpcode.SMSG_LOGIN_VERIFY_WORLD, w.finish());
+  const verify = new PacketWriter();
+  verify.uint32LE(socket.data.loginMapId);
+  verify.floatLE(8709.46);
+  verify.floatLE(-6671.76);
+  verify.floatLE(70.34);
+  verify.floatLE(0.5);
+  const verifyPkt = buildServerPacket(
+    GameOpcode.SMSG_LOGIN_VERIFY_WORLD,
+    verify.finish(),
+    socket.data.arc4,
+  );
+  if (socket.data.coalesceSelfCreate) {
+    const updatePkt = buildServerPacket(
+      GameOpcode.SMSG_UPDATE_OBJECT,
+      buildSelfCreateUpdate(),
+      socket.data.arc4,
+    );
+    const combined = new Uint8Array(
+      verifyPkt.byteLength + updatePkt.byteLength,
+    );
+    combined.set(verifyPkt);
+    combined.set(updatePkt, verifyPkt.byteLength);
+    socket.write(combined);
+  } else {
+    socket.write(verifyPkt);
+  }
 
   send(
     socket,
@@ -314,6 +356,8 @@ export function startMockWorldServer(opts?: {
   authStatus?: number;
   sendTimeSyncAfterLogin?: boolean;
   guildId?: number;
+  loginMapId?: number;
+  coalesceSelfCreate?: boolean;
 }): Promise<{
   port: number;
   stop(): void;
@@ -326,6 +370,8 @@ export function startMockWorldServer(opts?: {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;
   const guildId = opts?.guildId ?? 0;
+  const loginMapId = opts?.loginMapId ?? 0;
+  const coalesceSelfCreate = opts?.coalesceSelfCreate ?? false;
   let activeSocket: Socket<ConnState> | undefined;
   const captured: CapturedPacket[] = [];
   const captureListeners: CaptureListener[] = [];
@@ -334,7 +380,11 @@ export function startMockWorldServer(opts?: {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
       hostname: "127.0.0.1",
       port: 0,
-      data: { buf: new Uint8Array(0) },
+      data: {
+        buf: new Uint8Array(0),
+        loginMapId,
+        coalesceSelfCreate,
+      },
       socket: {
         open(socket) {
           activeSocket = socket;

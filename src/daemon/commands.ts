@@ -30,6 +30,12 @@ import type {
   GroupEvent,
   DuelEvent,
 } from "wow/client";
+import type {
+  ControlEvent,
+  ControlPose,
+  ControlState,
+  MovementDirection,
+} from "wow/control";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
   Entity,
@@ -73,6 +79,13 @@ export type IpcCommand =
   | { type: "decline" }
   | { type: "nearby" }
   | { type: "nearby_json" }
+  | { type: "control" }
+  | { type: "control_json" }
+  | { type: "move"; direction: MovementDirection; durationMs: number }
+  | { type: "face"; orientation: number }
+  | { type: "target"; guid: bigint }
+  | { type: "halt" }
+  | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }
   | { type: "add_friend"; target: string }
@@ -244,6 +257,18 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "nearby" };
     case "NEARBY_JSON":
       return { type: "nearby_json" };
+    case "CONTROL":
+      return { type: "control" };
+    case "CONTROL_JSON":
+      return { type: "control_json" };
+    case "MOVE":
+      return parseMoveCommand(rest);
+    case "FACE":
+      return parseFaceCommand(rest);
+    case "TARGET":
+      return parseTargetCommand(rest);
+    case "HALT":
+      return { type: "halt" };
     case "FRIENDS":
       return { type: "friends" };
     case "FRIENDS_JSON":
@@ -329,12 +354,28 @@ function sliceJson(events: RingBuffer<EventEntry>, from: number): string[] {
   return events.slice(from).map((e) => e.json);
 }
 
+function waitUnlessAborted(ms: number, abort?: AbortSignal): Promise<boolean> {
+  if (abort?.aborted) return Promise.resolve(true);
+  const { promise, resolve } = Promise.withResolvers<boolean>();
+  const timer = setTimeout(() => resolve(false), ms);
+  abort?.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      resolve(true);
+    },
+    { once: true },
+  );
+  return promise;
+}
+
 export async function dispatchCommand(
   cmd: IpcCommand,
   handle: WorldHandle,
   events: RingBuffer<EventEntry>,
   socket: IpcSocket,
   cleanup: () => void,
+  abort?: AbortSignal,
 ): Promise<boolean> {
   switch (cmd.type) {
     case "chat": {
@@ -393,22 +434,16 @@ export async function dispatchCommand(
       return false;
     case "read_wait": {
       const start = events.writePos;
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          writeLines(socket, sliceText(events, start));
-          resolve();
-        }, cmd.ms);
-      });
+      const aborted = await waitUnlessAborted(cmd.ms, abort);
+      if (aborted) return false;
+      writeLines(socket, sliceText(events, start));
       return false;
     }
     case "read_wait_json": {
       const start = events.writePos;
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          writeLines(socket, sliceJson(events, start));
-          resolve();
-        }, cmd.ms);
-      });
+      const aborted = await waitUnlessAborted(cmd.ms, abort);
+      if (aborted) return false;
+      writeLines(socket, sliceJson(events, start));
       return false;
     }
     case "stop":
@@ -458,10 +493,11 @@ export async function dispatchCommand(
       return false;
     }
     case "nearby_json": {
+      const selfGuid = handle.getControlState().selfGuid;
       const entities = handle.getNearbyEntities();
       writeLines(
         socket,
-        entities.map((e) => JSON.stringify(formatNearbyObj(e))),
+        entities.map((e) => JSON.stringify(formatNearbyObj(e, selfGuid))),
       );
       return false;
     }
@@ -565,6 +601,29 @@ export async function dispatchCommand(
       handle.declineGuildInvite();
       writeLines(socket, ["OK"]);
       return false;
+    case "control":
+      return writeControlState(handle, socket, false);
+    case "control_json":
+      return writeControlState(handle, socket, true);
+    case "move":
+      return runControlAction(socket, () => {
+        handle.move(cmd.direction, cmd.durationMs);
+      });
+    case "face":
+      return runControlAction(socket, () => {
+        handle.face(cmd.orientation);
+      });
+    case "target":
+      return runControlAction(socket, () => {
+        handle.selectTarget(cmd.guid);
+      });
+    case "halt":
+      return runControlAction(socket, () => {
+        handle.halt();
+      });
+    case "invalid":
+      writeLines(socket, [`ERR ${cmd.reason}`]);
+      return false;
     case "unimplemented":
       writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
       return false;
@@ -620,11 +679,16 @@ function objectTypeString(type: ObjectType): string {
   }
 }
 
-function formatNearbyObj(entity: Entity): Record<string, unknown> {
+function formatNearbyObj(
+  entity: Entity,
+  selfGuid: bigint,
+): Record<string, unknown> {
   const obj: Record<string, unknown> = {
     guid: `0x${entity.guid.toString(16)}`,
     type: objectTypeString(entity.objectType),
     name: entity.name,
+    entry: entity.entry,
+    self: entity.guid === selfGuid,
   };
   if (
     entity.objectType === ObjectType.UNIT ||
@@ -634,6 +698,10 @@ function formatNearbyObj(entity: Entity): Record<string, unknown> {
     obj["level"] = unit.level;
     obj["health"] = unit.health;
     obj["maxHealth"] = unit.maxHealth;
+    obj["target"] = `0x${unit.target.toString(16)}`;
+    obj["unitFlags"] = unit.unitFlags;
+    obj["npcFlags"] = unit.npcFlags;
+    obj["factionTemplate"] = unit.factionTemplate;
   }
   if (entity.objectType === ObjectType.GAMEOBJECT) {
     obj["gameObjectType"] = (entity as GameObjectEntity).gameObjectType;
@@ -642,6 +710,8 @@ function formatNearbyObj(entity: Entity): Record<string, unknown> {
     obj["x"] = entity.position.x;
     obj["y"] = entity.position.y;
     obj["z"] = entity.position.z;
+    obj["mapId"] = entity.position.mapId;
+    obj["orientation"] = entity.position.orientation;
   }
   return obj;
 }
@@ -908,4 +978,188 @@ export function onDuelEvent(
     events.push({ text, json: JSON.stringify(obj) });
     log.append(obj as LogEntry).catch(() => {});
   }
+}
+
+export function onControlEvent(
+  event: ControlEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj = formatControlEventObj(event);
+  events.push({
+    text: formatControlEvent(event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+const DIRECTIONS: readonly MovementDirection[] = [
+  "forward",
+  "backward",
+  "left",
+  "right",
+];
+const DEFAULT_MOVE_MS = 1000;
+const MIN_MOVE_MS = 1;
+const MAX_MOVE_MS = 10_000;
+const MAX_GUID = 0xffff_ffff_ffff_ffffn;
+
+function parseDirection(
+  raw: string | undefined,
+): MovementDirection | undefined {
+  if (!raw) return undefined;
+  const value = raw.toLowerCase() as MovementDirection;
+  return DIRECTIONS.includes(value) ? value : undefined;
+}
+
+function parseDuration(raw: string | undefined): number | undefined {
+  if (raw === undefined) return DEFAULT_MOVE_MS;
+  if (!/^[0-9]+$/.test(raw)) return undefined;
+  const ms = Number(raw);
+  if (ms < MIN_MOVE_MS || ms > MAX_MOVE_MS) return undefined;
+  return ms;
+}
+
+function parseGuid(raw: string): bigint | undefined {
+  if (!/^0[xX][0-9a-fA-F]+$/.test(raw) && !/^[0-9]+$/.test(raw)) {
+    return undefined;
+  }
+  try {
+    const guid = BigInt(raw);
+    if (guid <= MAX_GUID) return guid;
+  } catch {}
+  return undefined;
+}
+
+function parseMoveCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length < 1 || parts.length > 2) {
+    return { type: "invalid", reason: "invalid move" };
+  }
+  const direction = parseDirection(parts[0]);
+  if (!direction) return { type: "invalid", reason: "invalid direction" };
+  const durationMs = parseDuration(parts[1]);
+  if (durationMs === undefined) {
+    return { type: "invalid", reason: "invalid duration" };
+  }
+  return { type: "move", direction, durationMs };
+}
+
+function parseFaceCommand(rest: string): IpcCommand {
+  const token = rest.trim();
+  if (!token || token.split(/\s+/).length !== 1) {
+    return { type: "invalid", reason: "invalid facing" };
+  }
+  const orientation = Number(token);
+  if (!Number.isFinite(orientation)) {
+    return { type: "invalid", reason: "invalid facing" };
+  }
+  return { type: "face", orientation };
+}
+
+function parseTargetCommand(rest: string): IpcCommand {
+  const token = rest.trim();
+  if (!token || token.split(/\s+/).length !== 1) {
+    return { type: "invalid", reason: "invalid guid" };
+  }
+  const guid = parseGuid(token);
+  if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
+  return { type: "target", guid };
+}
+
+function runControlAction(socket: IpcSocket, action: () => void): boolean {
+  try {
+    action();
+    writeLines(socket, ["OK"]);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "internal";
+    writeLines(socket, [`ERR ${reason}`]);
+  }
+  return false;
+}
+
+function writeControlState(
+  handle: Pick<WorldHandle, "getControlState">,
+  socket: IpcSocket,
+  json: boolean,
+): boolean {
+  try {
+    const state = handle.getControlState();
+    if (json) {
+      writeLines(socket, [JSON.stringify(formatControlStateObj(state))]);
+    } else {
+      writeLines(socket, formatControlState(state).split("\n"));
+    }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "internal";
+    writeLines(socket, [`ERR ${reason}`]);
+  }
+  return false;
+}
+
+function formatPoseObj(pose: ControlPose): Record<string, unknown> {
+  return {
+    mapId: pose.mapId,
+    x: pose.x,
+    y: pose.y,
+    z: pose.z,
+    orientation: pose.orientation,
+    source: pose.source,
+    updatedAt: pose.updatedAt,
+  };
+}
+
+function formatControlStateObj(state: ControlState): Record<string, unknown> {
+  return {
+    selfGuid: `0x${state.selfGuid.toString(16)}`,
+    pose: state.pose ? formatPoseObj(state.pose) : null,
+    serverPose: state.serverPose ? formatPoseObj(state.serverPose) : null,
+    target:
+      state.target === undefined ? null : `0x${state.target.toString(16)}`,
+    requestedTarget:
+      state.requestedTarget === undefined
+        ? null
+        : `0x${state.requestedTarget.toString(16)}`,
+    moving: state.moving,
+    direction: state.direction ?? null,
+    movementAllowed: state.movementAllowed,
+    blockedReason: state.blockedReason ?? null,
+    speed: state.speed,
+    owner: state.owner,
+  };
+}
+
+function formatPoseLine(label: string, pose: ControlPose | undefined): string {
+  if (!pose) return `${label} unknown`;
+  const pos = `${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
+  return `${label} ${pose.source} ${pos} map=${pose.mapId} facing=${pose.orientation}`;
+}
+
+function formatControlState(state: ControlState): string {
+  const moving = state.moving ? `moving ${state.direction ?? "yes"}` : "idle";
+  const allowed = state.movementAllowed ? "allowed" : "rooted";
+  const blocked = state.blockedReason ? ` blocked=${state.blockedReason}` : "";
+  const observed =
+    state.target === undefined ? "none" : `0x${state.target.toString(16)}`;
+  const requested =
+    state.requestedTarget === undefined
+      ? "none"
+      : `0x${state.requestedTarget.toString(16)}`;
+  const header = `self 0x${state.selfGuid.toString(16)} owner=${state.owner} ${moving} speed=${state.speed} ${allowed}${blocked}`;
+  return `${header}\n${formatPoseLine("pose", state.pose)}\n${formatPoseLine("serverPose", state.serverPose)}\ntarget observed=${observed} requested=${requested}`;
+}
+
+function formatControlEvent(event: ControlEvent): string {
+  const origin = event.state.pose?.source ?? "unknown";
+  const reason = event.reason ? ` ${event.reason}` : "";
+  return `[control] ${event.type} ${origin}${reason}`;
+}
+
+function formatControlEventObj(event: ControlEvent): Record<string, unknown> {
+  return {
+    type: "CONTROL",
+    event: event.type,
+    reason: event.reason,
+    ...formatControlStateObj(event.state),
+  };
 }

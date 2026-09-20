@@ -1,6 +1,6 @@
 import { parseArgs } from "cli/args";
 import { sendToSocket, ensureDaemon } from "cli/ipc";
-import { formatSendOutput } from "cli/send-output";
+import { formatSendOutput, daemonCommandFailed } from "cli/send-output";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
 };
@@ -15,6 +15,11 @@ async function waitForEvents(
   const cmd = json ? "READ_WAIT_JSON" : "READ_WAIT";
   const lines = await sendToSocket(`${cmd} ${wait * 1000}`);
   for (const line of lines) console.log(line);
+}
+
+function printControlReply(lines: string[]): void {
+  for (const line of lines) console.log(line);
+  if (daemonCommandFailed(lines)) process.exit(1);
 }
 
 async function main() {
@@ -142,6 +147,44 @@ async function main() {
       await ensureDaemon();
       const verb = action.json ? "WHO_JSON" : "WHO";
       const cmd = action.filter ? `${verb} ${action.filter}` : verb;
+      const lines = await sendToSocket(cmd);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "control": {
+      await ensureDaemon();
+      const cmd = action.json ? "CONTROL_JSON" : "CONTROL";
+      const lines = await sendToSocket(cmd);
+      for (const line of lines) console.log(line);
+      break;
+    }
+    case "move": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`MOVE ${action.direction} ${action.durationMs}`),
+      );
+      break;
+    }
+    case "face": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(`FACE ${action.orientation}`));
+      break;
+    }
+    case "target": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`TARGET 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
+    case "halt": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket("HALT"));
+      break;
+    }
+    case "nearby": {
+      await ensureDaemon();
+      const cmd = action.json ? "NEARBY_JSON" : "NEARBY";
       const lines = await sendToSocket(cmd);
       for (const line of lines) console.log(line);
       break;

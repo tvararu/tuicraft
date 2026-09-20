@@ -353,4 +353,102 @@ describe("parseArgs", () => {
   test("bare message without send throws", () => {
     expect(() => parseArgs(["hello world"])).toThrow("Unknown command");
   });
+
+  test("control subcommand", () => {
+    expect(parseArgs(["control"])).toEqual({ mode: "control", json: false });
+  });
+
+  test("control --json", () => {
+    expect(parseArgs(["control", "--json"])).toEqual({
+      mode: "control",
+      json: true,
+    });
+  });
+
+  test("nearby subcommand", () => {
+    expect(parseArgs(["nearby"])).toEqual({ mode: "nearby", json: false });
+  });
+
+  test("nearby --json", () => {
+    expect(parseArgs(["nearby", "--json"])).toEqual({
+      mode: "nearby",
+      json: true,
+    });
+  });
+
+  test("move defaults to 1000ms", () => {
+    expect(parseArgs(["move", "forward"])).toEqual({
+      mode: "move",
+      direction: "forward",
+      durationMs: 1000,
+    });
+  });
+
+  test("move accepts duration in range", () => {
+    expect(parseArgs(["move", "left", "2500"])).toEqual({
+      mode: "move",
+      direction: "left",
+      durationMs: 2500,
+    });
+  });
+
+  test("move rejects unknown direction without sending", () => {
+    expect(() => parseArgs(["move", "up"])).toThrow("Invalid move direction");
+  });
+
+  test("move rejects nonfinite duration", () => {
+    expect(() => parseArgs(["move", "forward", "1.5"])).toThrow(
+      "Invalid move duration",
+    );
+  });
+
+  test("move rejects duration below 1", () => {
+    expect(() => parseArgs(["move", "forward", "0"])).toThrow(
+      "Invalid move duration",
+    );
+  });
+
+  test("move rejects duration above 10000", () => {
+    expect(() => parseArgs(["move", "forward", "10001"])).toThrow(
+      "Invalid move duration",
+    );
+  });
+
+  test("face parses radians", () => {
+    expect(parseArgs(["face", "1.57"])).toEqual({
+      mode: "face",
+      orientation: 1.57,
+    });
+  });
+
+  test("face rejects nonfinite", () => {
+    expect(() => parseArgs(["face", "NaN"])).toThrow("Invalid facing");
+    expect(() => parseArgs(["face", "Infinity"])).toThrow("Invalid facing");
+  });
+
+  test("face rejects empty and whitespace before IPC", () => {
+    expect(() => parseArgs(["face", ""])).toThrow("Invalid face arguments");
+    expect(() => parseArgs(["face", "   "])).toThrow("Invalid face arguments");
+  });
+
+  test("target accepts hex and decimal uint64", () => {
+    expect(parseArgs(["target", "0x1"])).toEqual({ mode: "target", guid: 1n });
+    expect(parseArgs(["target", "0"])).toEqual({ mode: "target", guid: 0n });
+    expect(parseArgs(["target", "18446744073709551615"])).toEqual({
+      mode: "target",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+  });
+
+  test("target rejects malformed guid", () => {
+    expect(() => parseArgs(["target", "-1"])).toThrow("Invalid target guid");
+    expect(() => parseArgs(["target", "0x"])).toThrow("Invalid target guid");
+    expect(() => parseArgs(["target", "18446744073709551616"])).toThrow(
+      "Invalid target guid",
+    );
+  });
+
+  test("halt subcommand", () => {
+    expect(parseArgs(["halt"])).toEqual({ mode: "halt" });
+  });
 });

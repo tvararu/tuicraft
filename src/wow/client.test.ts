@@ -131,4 +131,24 @@ describe("session lifecycle", () => {
       ws.stop();
     }
   });
+
+  test("coalesced login verify stamps map on the self create", async () => {
+    const worldServer = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: worldServer.port },
+        fakeAuth(worldServer.port),
+      );
+      expect(handle.getControlState().pose?.mapId).toBe(530);
+      const self = handle.getNearbyEntities().find((e) => e.guid === 0x42n);
+      expect(self?.position?.mapId).toBe(530);
+      handle.close();
+      await handle.closed;
+    } finally {
+      worldServer.stop();
+    }
+  });
 });

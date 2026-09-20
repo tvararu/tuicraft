@@ -59,6 +59,12 @@ import {
 } from "wow/protocol/guild";
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
+  ControlRuntime,
+  type ControlEvent,
+  type ControlState,
+  type MovementDirection,
+} from "wow/control";
+import {
   sendPacket,
   handleTimeSync,
   handleChatMessage,
@@ -99,6 +105,8 @@ import {
   handleDuelInBounds,
   handleGuildCommandResult,
   handleGuildInvitePacket,
+  registerMovementHandlers,
+  selfGuid,
 } from "wow/world-handlers";
 
 export type ClientConfig = {
@@ -240,6 +248,12 @@ export type WorldHandle = {
   guildMotd(motd: string): void;
   acceptGuildInvite(): void;
   declineGuildInvite(): void;
+  getControlState(): ControlState;
+  move(direction: MovementDirection, durationMs: number): void;
+  face(orientation: number): void;
+  selectTarget(guid: bigint): void;
+  halt(): void;
+  onControlEvent(cb: ((event: ControlEvent) => void) | undefined): void;
 };
 
 export type WorldConn = {
@@ -275,6 +289,7 @@ export type WorldConn = {
   pendingRequest: "group" | "duel" | null;
   duelArbiter: bigint;
   onDuelEvent?: (event: DuelEvent) => void;
+  control?: ControlRuntime;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -358,8 +373,8 @@ async function selectCharacter(
   w.uint32LE(char.guidLow);
   w.uint32LE(char.guidHigh);
   sendPacket(conn, GameOpcode.CMSG_PLAYER_LOGIN, w.finish());
-
-  await conn.dispatch.expect(GameOpcode.SMSG_LOGIN_VERIFY_WORLD);
+  if (!conn.control) throw new Error("no_control");
+  await conn.control.waitLogin();
 }
 
 function startPingLoop(
@@ -407,6 +422,15 @@ export function worldSession(
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
     conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
     conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
+    conn.control = new ControlRuntime({
+      send: (opcode, body) =>
+        sendPacket(conn, opcode, body ?? new Uint8Array()),
+      ticks: () => Date.now() - conn.startTime,
+      now: () => Date.now(),
+      guidLow: () => conn.selfGuidLow,
+      guidHigh: () => conn.selfGuidHigh,
+      selfGuid: () => selfGuid(conn),
+    });
 
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -535,6 +559,8 @@ export function worldSession(
       handleGuildInvitePacket(conn, r),
     );
 
+    registerMovementHandlers(conn);
+
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
       conn.onMessage({
@@ -555,6 +581,7 @@ export function worldSession(
         closed,
         close() {
           clearInterval(pingInterval);
+          conn.control?.dispose();
           conn.onEntityEvent = undefined;
           conn.onFriendEvent = undefined;
           conn.onIgnoreEvent = undefined;
@@ -922,6 +949,42 @@ export function worldSession(
         onDuelEvent(cb) {
           conn.onDuelEvent = cb;
         },
+        getControlState() {
+          return (
+            conn.control?.snapshot() ?? {
+              selfGuid: selfGuid(conn),
+              pose: undefined,
+              serverPose: undefined,
+              target: undefined,
+              requestedTarget: undefined,
+              moving: false,
+              direction: undefined,
+              movementAllowed: false,
+              blockedReason: "no_control",
+              speed: 0,
+              owner: "none",
+            }
+          );
+        },
+        move(direction, durationMs) {
+          if (!conn.control) throw new Error("no_control");
+          conn.control.move(direction, durationMs);
+        },
+        face(orientation) {
+          if (!conn.control) throw new Error("no_control");
+          conn.control.face(orientation);
+        },
+        selectTarget(guid) {
+          if (!conn.control) throw new Error("no_control");
+          conn.control.selectTarget(guid);
+        },
+        halt() {
+          if (!conn.control) throw new Error("no_control");
+          conn.control.halt();
+        },
+        onControlEvent(cb) {
+          conn.control?.onEvent(cb);
+        },
       };
       resolve(handle);
     }
@@ -946,6 +1009,7 @@ export function worldSession(
         },
         close() {
           clearInterval(pingInterval);
+          conn.control?.dispose();
           conn.entityStore.clear();
           if (!done) reject(new Error("World connection closed"));
           closedResolve();

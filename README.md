@@ -33,6 +33,10 @@ switching
 🤖 **CLI & Daemon** - Background daemon, pipe mode, and JSONL output for
 scripting
 
+**Direct control** - Bounded walk, face, target, and halt through the CLI.
+Ordinary walking is predicted locally; control state keeps the last server pose
+separate. Not combat, pathfinding, or autonomous play.
+
 📝 **Session Logging** - Persistent session log with `tuicraft logs` playback
 
 ⚡ **Zero Dependencies** - Pure TypeScript on Bun, compiles to a single binary
@@ -103,6 +107,12 @@ tuicraft send -g "lfm"     # guild chat
 tuicraft who               # who query
 tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
+tuicraft control [--json]  # predicted pose vs last server pose, targets
+tuicraft nearby [--json]   # nearby entities (hex GUIDs)
+tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
+tuicraft face 1.57         # facing in radians
+tuicraft target 0xabc      # select (0 clears); uint64 hex or decimal
+tuicraft halt              # stop motion; daemon stays connected
 tuicraft status            # daemon status
 tuicraft stop              # stop daemon
 tuicraft skill             # print SKILL.md for AI agents
@@ -186,8 +196,8 @@ that the official game client does.
 
 | Feature           | Status |
 | ----------------- | ------ |
-| Object updates    | ✅     |
-| Movement          | ❌     |
+| Bounded walk / face / target | ✅     |
+| Pathfinding / navigation     | ❌     |
 | Spells / auras    | ❌     |
 | Combat log        | ❌     |
 | Loot              | ❌     |

@@ -1,3 +1,5 @@
+import type { MovementDirection } from "wow/control";
+
 export type CliAction =
   | { mode: "interactive" }
   | { mode: "daemon" }
@@ -22,6 +24,12 @@ export type CliAction =
       wait: number | undefined;
     }
   | { mode: "who"; filter: string | undefined; json: boolean }
+  | { mode: "control"; json: boolean }
+  | { mode: "move"; direction: MovementDirection; durationMs: number }
+  | { mode: "face"; orientation: number }
+  | { mode: "target"; guid: bigint }
+  | { mode: "halt" }
+  | { mode: "nearby"; json: boolean }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -36,6 +44,12 @@ const SUBCOMMANDS = new Set([
   "send",
   "who",
   "skill",
+  "control",
+  "move",
+  "face",
+  "target",
+  "halt",
+  "nearby",
 ]);
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -144,6 +158,24 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseSend(args);
     case "who":
       return parseWho(args);
+    case "control":
+      return {
+        mode: "control",
+        json: hasFlag(args.slice(1), "--json"),
+      };
+    case "nearby":
+      return {
+        mode: "nearby",
+        json: hasFlag(args.slice(1), "--json"),
+      };
+    case "move":
+      return parseMove(args);
+    case "face":
+      return parseFace(args);
+    case "target":
+      return parseTarget(args);
+    case "halt":
+      return { mode: "halt" };
     default:
       return { mode: cmd } as CliAction;
   }
@@ -228,4 +260,78 @@ export function parseArgs(args: string[]): CliAction {
   throw new Error(
     `Unknown command: ${args.join(" ")}\nRun tuicraft --help for usage.`,
   );
+}
+
+const DIRECTIONS: readonly MovementDirection[] = [
+  "forward",
+  "backward",
+  "left",
+  "right",
+];
+const DEFAULT_MOVE_MS = 1000;
+const MIN_MOVE_MS = 1;
+const MAX_MOVE_MS = 10_000;
+const MAX_GUID = 0xffff_ffff_ffff_ffffn;
+
+function parseDirection(
+  raw: string | undefined,
+): MovementDirection | undefined {
+  if (!raw) return undefined;
+  const value = raw.toLowerCase() as MovementDirection;
+  return DIRECTIONS.includes(value) ? value : undefined;
+}
+
+function parseDuration(raw: string | undefined): number | undefined {
+  if (raw === undefined) return DEFAULT_MOVE_MS;
+  if (!/^[0-9]+$/.test(raw)) return undefined;
+  const ms = Number(raw);
+  if (ms < MIN_MOVE_MS || ms > MAX_MOVE_MS) return undefined;
+  return ms;
+}
+
+function parseGuid(raw: string): bigint | undefined {
+  if (!/^0[xX][0-9a-fA-F]+$/.test(raw) && !/^[0-9]+$/.test(raw)) {
+    return undefined;
+  }
+  try {
+    const guid = BigInt(raw);
+    if (guid <= MAX_GUID) return guid;
+  } catch {}
+  return undefined;
+}
+
+function parseMove(args: string[]): CliAction {
+  const rest = args.slice(1);
+  const direction = parseDirection(rest[0]);
+  if (!direction) {
+    throw new Error(`Invalid move direction: ${rest[0] ?? ""}`);
+  }
+  if (rest.length > 2) throw new Error("Invalid move arguments");
+  const durationMs = parseDuration(rest[1]);
+  if (durationMs === undefined) {
+    throw new Error(`Invalid move duration: ${rest[1]}`);
+  }
+  return { mode: "move", direction, durationMs };
+}
+
+function parseFace(args: string[]): CliAction {
+  const raw = args[1];
+  if (raw === undefined || args.length !== 2 || raw.trim() === "") {
+    throw new Error("Invalid face arguments");
+  }
+  const orientation = Number(raw);
+  if (!Number.isFinite(orientation)) {
+    throw new Error(`Invalid facing: ${raw}`);
+  }
+  return { mode: "face", orientation };
+}
+
+function parseTarget(args: string[]): CliAction {
+  const raw = args[1];
+  if (raw === undefined || args.length !== 2) {
+    throw new Error("Invalid target arguments");
+  }
+  const guid = parseGuid(raw);
+  if (guid === undefined) throw new Error(`Invalid target guid: ${raw}`);
+  return { mode: "target", guid };
 }

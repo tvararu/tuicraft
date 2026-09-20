@@ -10,6 +10,7 @@ import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { GuildRoster, GuildEvent } from "wow/guild-store";
+import type { ControlEvent, ControlState } from "wow/control";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage(msg: ChatMessage): void;
@@ -19,6 +20,7 @@ export function createMockHandle(): WorldHandle & {
   triggerFriendEvent(event: FriendEvent): void;
   triggerIgnoreEvent(event: IgnoreEvent): void;
   triggerGuildEvent(event: GuildEvent): void;
+  triggerControlEvent(event: ControlEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
@@ -28,6 +30,20 @@ export function createMockHandle(): WorldHandle & {
   let friendEventCb: ((event: FriendEvent) => void) | undefined;
   let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
   let guildEventCb: ((event: GuildEvent) => void) | undefined;
+  let controlEventCb: ((event: ControlEvent) => void) | undefined;
+  const controlState: ControlState = {
+    selfGuid: 0n,
+    pose: undefined,
+    serverPose: undefined,
+    target: undefined,
+    requestedTarget: undefined,
+    moving: false,
+    direction: undefined,
+    movementAllowed: true,
+    blockedReason: undefined,
+    speed: 0,
+    owner: "none",
+  };
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -104,6 +120,14 @@ export function createMockHandle(): WorldHandle & {
     onGuildEvent(cb) {
       guildEventCb = cb;
     },
+    getControlState: jest.fn((): ControlState => controlState),
+    move: jest.fn(),
+    face: jest.fn(),
+    selectTarget: jest.fn(),
+    halt: jest.fn(),
+    onControlEvent(cb) {
+      controlEventCb = cb;
+    },
     triggerMessage(msg) {
       messageCb?.(msg);
     },
@@ -124,6 +148,9 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerGuildEvent(event) {
       guildEventCb?.(event);
+    },
+    triggerControlEvent(event) {
+      controlEventCb?.(event);
     },
     resolveClosed() {
       closeResolve();

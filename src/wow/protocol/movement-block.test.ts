@@ -14,6 +14,7 @@ function buildLivingBlock(
     orientation?: number;
     walkSpeed?: number;
     runSpeed?: number;
+    runBackSpeed?: number;
   } = {},
 ): PacketWriter {
   const w = new PacketWriter();
@@ -26,7 +27,17 @@ function buildLivingBlock(
   w.floatLE(opts.z ?? 0);
   w.floatLE(opts.orientation ?? 0);
   w.floatLE(0);
-  const speeds = [opts.walkSpeed ?? 0, opts.runSpeed ?? 0, 0, 0, 0, 0, 0, 0, 0];
+  const speeds = [
+    opts.walkSpeed ?? 0,
+    opts.runSpeed ?? 0,
+    opts.runBackSpeed ?? 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ];
   for (const s of speeds) w.floatLE(s);
   return w;
 }
@@ -50,6 +61,8 @@ describe("parseMovementBlock", () => {
     expect(m.orientation).toBeCloseTo(0.5);
     expect(m.walkSpeed).toBeCloseTo(2.5);
     expect(m.runSpeed).toBeCloseTo(7.0);
+    expect(m.runBackSpeed).toBeCloseTo(0);
+    expect(m.movementFlags).toBe(0);
     expect(r.remaining).toBe(0);
   });
 

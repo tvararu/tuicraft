@@ -9,6 +9,8 @@ export type MovementData = {
   orientation: number;
   walkSpeed?: number;
   runSpeed?: number;
+  runBackSpeed?: number;
+  movementFlags?: number;
 };
 
 export function parseMovementBlock(r: PacketReader): MovementData {
@@ -19,9 +21,12 @@ export function parseMovementBlock(r: PacketReader): MovementData {
   let orientation = 0;
   let walkSpeed: number | undefined;
   let runSpeed: number | undefined;
+  let runBackSpeed: number | undefined;
+  let movementFlags: number | undefined;
 
   if (updateFlags & UpdateFlag.LIVING) {
-    const movementFlags = r.uint32LE();
+    const flags = r.uint32LE();
+    movementFlags = flags;
     const movementFlagsExtra = r.uint16LE();
     r.skip(4);
     x = r.floatLE();
@@ -29,7 +34,7 @@ export function parseMovementBlock(r: PacketReader): MovementData {
     z = r.floatLE();
     orientation = r.floatLE();
 
-    if (movementFlags & MovementFlag.ON_TRANSPORT) {
+    if (flags & MovementFlag.ON_TRANSPORT) {
       r.packedGuid();
       r.skip(16);
       r.skip(4);
@@ -40,7 +45,7 @@ export function parseMovementBlock(r: PacketReader): MovementData {
     }
 
     if (
-      movementFlags & (MovementFlag.SWIMMING | MovementFlag.FLYING) ||
+      flags & (MovementFlag.SWIMMING | MovementFlag.FLYING) ||
       movementFlagsExtra & MovementFlagExtra.ALWAYS_ALLOW_PITCHING
     ) {
       r.skip(4);
@@ -48,19 +53,20 @@ export function parseMovementBlock(r: PacketReader): MovementData {
 
     r.skip(4);
 
-    if (movementFlags & MovementFlag.FALLING) {
+    if (flags & MovementFlag.FALLING) {
       r.skip(16);
     }
 
-    if (movementFlags & MovementFlag.SPLINE_ELEVATION) {
+    if (flags & MovementFlag.SPLINE_ELEVATION) {
       r.skip(4);
     }
 
     walkSpeed = r.floatLE();
     runSpeed = r.floatLE();
-    for (let i = 0; i < 7; i++) r.skip(4);
+    runBackSpeed = r.floatLE();
+    for (let i = 0; i < 6; i++) r.skip(4);
 
-    if (movementFlags & MovementFlag.SPLINE_ENABLED) {
+    if (flags & MovementFlag.SPLINE_ENABLED) {
       const splineFlags = r.uint32LE();
       if (splineFlags & 0x00008000) {
         r.skip(12);
@@ -116,5 +122,15 @@ export function parseMovementBlock(r: PacketReader): MovementData {
     r.skip(8);
   }
 
-  return { updateFlags, x, y, z, orientation, walkSpeed, runSpeed };
+  return {
+    updateFlags,
+    x,
+    y,
+    z,
+    orientation,
+    walkSpeed,
+    runSpeed,
+    runBackSpeed,
+    movementFlags,
+  };
 }

@@ -27,11 +27,13 @@ import {
   parsePartyMemberStats,
 } from "wow/protocol/group";
 import { parseUpdateObject } from "wow/protocol/update-object";
-import { ObjectType } from "wow/protocol/entity-fields";
+import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
   extractUnitFields,
   extractGameObjectFields,
+  type UnitFieldsResult,
+  type GameObjectFieldsResult,
 } from "wow/protocol/extract-fields";
 import {
   buildCreatureQuery,
@@ -77,6 +79,12 @@ export function sendPacket(
   body: Uint8Array = new Uint8Array(0),
 ): void {
   conn.socket.write(buildOutgoingPacket(opcode, body, conn.arc4));
+}
+
+export function selfGuid(conn: WorldConn): bigint {
+  return (
+    (BigInt(conn.selfGuidHigh >>> 0) << 32n) | BigInt(conn.selfGuidLow >>> 0)
+  );
 }
 
 export function handleTimeSync(conn: WorldConn, r: PacketReader): void {
@@ -400,14 +408,17 @@ export function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
 }
 
 export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
-  const entries = parseUpdateObject(r);
+  const mapId = conn.control?.currentMapId() ?? 0;
+  const entries = parseUpdateObject(r, mapId);
+  const self = selfGuid(conn);
   for (const entry of entries) {
     switch (entry.type) {
       case "create": {
         const { _changed: _co, ...objFields } = extractObjectFields(
           entry.fields,
         );
-        let extraFields: Record<string, unknown> = {};
+        let extraFields: Partial<UnitFieldsResult> &
+          Partial<GameObjectFieldsResult> = {};
         if (
           entry.objectType === ObjectType.UNIT ||
           entry.objectType === ObjectType.PLAYER
@@ -433,8 +444,20 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           ...(entry.position ? { position: entry.position } : {}),
           rawFields: new Map(entry.fields),
         } as any);
-        if (!cachedName) {
+        if (!cachedName)
           queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
+        if (
+          entry.guid === self ||
+          (entry.updateFlags & UpdateFlag.SELF) !== 0
+        ) {
+          conn.control?.observeSelf({
+            position: entry.position,
+            movementFlags: entry.movementFlags,
+            runSpeed: entry.runSpeed,
+            runBackSpeed: entry.runBackSpeed,
+            target: extraFields.target as bigint | undefined,
+            unitFlags: extraFields.unitFlags as number | undefined,
+          });
         }
         break;
       }
@@ -442,7 +465,8 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
         const entity = conn.entityStore.get(entry.guid);
         if (!entity) break;
         const objFields = extractObjectFields(entry.fields, entity.rawFields);
-        let extraFields: Record<string, unknown> = {};
+        let extraFields: Partial<UnitFieldsResult> &
+          Partial<GameObjectFieldsResult> = {};
         if (
           entity.objectType === ObjectType.UNIT ||
           entity.objectType === ObjectType.PLAYER
@@ -465,10 +489,24 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           const existing = conn.entityStore.get(entry.guid);
           if (existing) existing.rawFields.set(k, v);
         }
+        if (entry.guid === self) {
+          conn.control?.observeSelf({
+            target: extraFields.target as bigint | undefined,
+            unitFlags: extraFields.unitFlags as number | undefined,
+          });
+        }
         break;
       }
       case "movement": {
         conn.entityStore.setPosition(entry.guid, entry.position);
+        if (entry.guid === self) {
+          conn.control?.observeSelf({
+            position: entry.position,
+            movementFlags: entry.movementFlags,
+            runSpeed: entry.runSpeed,
+            runBackSpeed: entry.runBackSpeed,
+          });
+        }
         break;
       }
       case "outOfRange": {
@@ -805,4 +843,93 @@ export function handleGuildInvitePacket(
     inviter: packet.inviterName,
     guildName: packet.guildName,
   });
+}
+
+export function handleTeleportAckRequest(
+  conn: WorldConn,
+  r: PacketReader,
+): void {
+  conn.control?.handleTeleportAck(r);
+}
+
+export function handleTransferPending(conn: WorldConn): void {
+  conn.control?.handleTransferPending();
+}
+
+export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
+  conn.control?.handleNewWorld(r);
+  conn.entityStore.clear();
+}
+
+export function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
+  r.packedGuid();
+  conn.control?.forceRoot(r.uint32LE());
+}
+
+export function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
+  r.packedGuid();
+  conn.control?.forceUnroot(r.uint32LE());
+}
+
+export function handleMoveKnockBack(conn: WorldConn, r: PacketReader): void {
+  conn.control?.handleKnockBack(r);
+}
+
+export function handleClientControlUpdate(
+  conn: WorldConn,
+  r: PacketReader,
+): void {
+  conn.control?.handleClientControl(r);
+}
+
+export function handleForceSpeedChange(
+  conn: WorldConn,
+  r: PacketReader,
+  opcode: number,
+): void {
+  conn.control?.handleForceSpeed(r, opcode);
+}
+
+export function registerMovementHandlers(conn: WorldConn): void {
+  conn.dispatch.on(GameOpcode.SMSG_LOGIN_VERIFY_WORLD, (r) => {
+    conn.control?.applyLoginVerify(r);
+  });
+  conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT_ACK, (r) =>
+    handleTeleportAckRequest(conn, r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_TRANSFER_PENDING, () =>
+    handleTransferPending(conn),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_NEW_WORLD, (r) => handleNewWorld(conn, r));
+  conn.dispatch.on(GameOpcode.SMSG_FORCE_MOVE_ROOT, (r) =>
+    handleForceMoveRoot(conn, r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_FORCE_MOVE_UNROOT, (r) =>
+    handleForceMoveUnroot(conn, r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_MOVE_KNOCK_BACK, (r) =>
+    handleMoveKnockBack(conn, r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_CLIENT_CONTROL_UPDATE, (r) =>
+    handleClientControlUpdate(conn, r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_MOVE_SET_CAN_FLY, (r) => {
+    conn.control?.handleCanFly(r, true);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_MOVE_UNSET_CAN_FLY, (r) => {
+    conn.control?.handleCanFly(r, false);
+  });
+  const speedOpcodes = [
+    GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_RUN_BACK_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_WALK_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_SWIM_BACK_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_TURN_RATE_CHANGE,
+    GameOpcode.SMSG_FORCE_FLIGHT_SPEED_CHANGE,
+    GameOpcode.SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE,
+  ];
+  for (const opcode of speedOpcodes) {
+    conn.dispatch.on(opcode, (r) => handleForceSpeedChange(conn, r, opcode));
+  }
 }

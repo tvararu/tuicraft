@@ -116,6 +116,22 @@ describe("parseUpdateObject", () => {
     expect(e.fields.size).toBe(6);
   });
 
+  test("create stamps the supplied map id", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint8(3);
+    writePackedGuid(w, 8n);
+    w.uint8(4);
+    writeLivingSelfMovementBlock(w, 8709.46, -6671.76, 70.34, 0.5);
+    writeUpdateMask(w, new Map([[0, 8]]));
+    const entries = parseUpdateObject(new PacketReader(w.finish()), 530);
+    const e = entries[0]!;
+    expect(e.type).toBe("create");
+    if (e.type !== "create") throw new Error("wrong type");
+    expect(e.position.mapId).toBe(530);
+    expect(e.updateFlags & UpdateFlag.SELF).toBe(UpdateFlag.SELF);
+  });
+
   test("VALUES update", () => {
     const w = new PacketWriter();
     w.uint32LE(1);
