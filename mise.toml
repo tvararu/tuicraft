@@ -2,13 +2,20 @@
 "npm:@biomejs/biome" = "latest"
 bun = "latest"
 gh = "latest"
+hk = "2.0.1"
+pkl = "0.32.1"
+jq = "1.8.1"
 
 [settings]
 npm.package_manager = "bun"
 
 [tasks.bundle]
-description = "Install dependencies"
-run = "bun install"
+description = "Install dependencies and local Git hooks"
+run = '''
+set -e
+bun install
+hk install --mise
+'''
 
 [tasks.build]
 description = "Compile single binary"
@@ -56,9 +63,8 @@ sed -n 's/.*<testcase name="\([^"]*\)".* time="\([^"]*\)".*/\2\t\1/p' \
 '''
 
 [tasks.ci]
-description = "Run all CI checks in parallel"
-depends = ["typecheck", "test", "format"]
-run = "gh signoff ci 2>/dev/null || true"
+description = "Run local typecheck, coverage tests, and format checks"
+depends = ["typecheck", "test:coverage", "format"]
 
 [tasks.typecheck]
 description = "Type-check with tsc"
@@ -92,10 +98,12 @@ echo "Worktree ready: $DIR"
 [tasks."worktree:clean"]
 description = "Remove a worktree"
 usage = 'arg "<branch>"'
-run = """
-git worktree remove --force .worktrees/$usage_branch
-git branch -D $usage_branch
-"""
+run = '''
+set -e
+ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+git worktree remove "$ROOT/.worktrees/$usage_branch"
+git branch -d "$usage_branch"
+'''
 
 [tasks.deploy]
 description = "Build and symlink to /usr/local/bin"
@@ -103,27 +111,9 @@ depends = ["build"]
 run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 
 [tasks.main]
-description = "Switch to main, pull, and clean up merged branches"
+description = "Switch to main and fast-forward"
 run = '''
 set -e
-git checkout main
-git pull --rebase
-git fetch --prune
-
-cleaned=0
-for branch in $(git branch -vv | grep ': gone]' | sed 's/^[*+] /  /' | awk '{print $1}'); do
-  if [ -d ".worktrees/${branch}" ]; then
-    git worktree remove --force ".worktrees/${branch}" 2>/dev/null || true
-  fi
-  git branch -D "$branch"
-  cleaned=$((cleaned + 1))
-done
-
-git worktree prune
-
-if [ "$cleaned" -gt 0 ]; then
-  echo "Cleaned up ${cleaned} merged branch(es)"
-else
-  echo "No stale branches to clean up"
-fi
+git switch main
+git pull --ff-only
 '''

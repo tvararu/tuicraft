@@ -1,0 +1,52 @@
+amends "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Builtins.pkl"
+
+hooks {
+  ["commit-msg"] {
+    fix = true
+    steps {
+      ["wrap-body"] {
+        stage = List()
+        fix = #"""
+          file="{{commit_msg_file}}"
+          subject=$(sed -n '1p' "$file")
+          body=$(sed -n '3,$p' "$file" | sed '/^#/d')
+          if [ -n "$body" ]; then
+            wrapped=$(printf '%s\n' "$body" | fmt -w 72)
+            printf '%s\n\n%s\n' "$subject" "$wrapped" > "$file"
+          fi
+          """#
+      }
+      ["conventional-commit"] = (Builtins.check_conventional_commit) {
+        depends = List("wrap-body")
+      }
+      ["subject-length"] {
+        depends = List("wrap-body")
+        check = #"""
+          subject=$(sed -n '1p' "{{commit_msg_file}}")
+          len=$(printf '%s' "$subject" | wc -c)
+          if [ "$len" -gt 50 ]; then
+            printf 'Commit subject exceeds 50 characters: %s\n' "$subject" >&2
+            exit 1
+          fi
+          """#
+      }
+    }
+  }
+  ["pre-push"] {
+    steps {
+      ["clean-worktree"] {
+        check = #"""
+          if [ -n "$(git status --porcelain)" ]; then
+            printf 'Commit or set aside outstanding changes before pushing. CI must check the committed tree.\n' >&2
+            exit 1
+          fi
+          """#
+      }
+      ["ci"] {
+        depends = List("clean-worktree")
+        check = "mise ci"
+      }
+    }
+  }
+}
