@@ -1,92 +1,58 @@
 # AI development workflow
 
-Date: 2026-02-18
+Updated: 2026-09-20
 
-Author: Theodor Vararu
-
-This document is entirely human-written.
-
-It outlines my current approach for leveraging LLMs in developing `tuicraft`.
+Originally written 2026-02-18 by Theodor Vararu as a human-authored sketch of
+Claude Code usage. This revision records the current direct-to-main workflow.
 
 ## Developing
 
-I use `claude` from the CLI with the plugins specified in
-[.claude/settings.json](../.claude/settings.json). I have a $200/mo Max
-subscription and use the default model (currently: Opus 4.6), on the default
-effort setting (currently: High).
+Use the current coding harness. [.claude/settings.json](../.claude/settings.json)
+is Claude-specific convenience. Shared `AGENTS.md` and Git hooks apply across
+agents. Superpowers still applies: brainstorm, write a plan, then execute in
+isolated work.
 
-A typical feature build follows this rough workflow:
+Independent agents work in local or Orca worktrees. One integration owner lands
+the combined tree. Keep increments small and reviewable. Do not mix unrelated
+work into the same change.
 
-```sh
-$ claude
-> /superpowers:using-superpowers
-> (Describe the task)
-> /superpowers:brainstorming
-> (Answer questions)
-> /superpowers:write-plan
-> /superpowers:execute-plan
-```
+After verification, agents may `git add` the intended files, then `git commit`
+as a separate step, then push to `main`. No pull requests. Do not force-push or
+delete branches without permission.
 
-[Superpowers](https://github.com/obra/superpowers) lets you use either git worktrees or simple feature branch + subagents to carry out the tasks.
+## Verification before push
 
-If the work involves widescale refactor, I've had good results using [the new
-agent teams feature in Claude
-Code](https://code.claude.com/docs/en/agent-teams).
+Unit, type, format, and coverage checks are local. They are not live-behavior
+evidence.
 
-At the end, I ask Claude to open the branch as a PR.
+- `mise bundle` installs dependencies and git hooks (`hk install --mise`).
+- `mise ci` runs `typecheck`, `test:coverage` (100% line/function threshold),
+  and Biome `format`. It does not run `gh signoff` or remote CI.
+- Pre-push runs a dirty-worktree guard, then `mise ci`, so CI sees the committed
+  tree.
+- After protocol or daemon changes, also run `mise test:live`. That suite needs
+  two dedicated test accounts with their `WOW_*` credentials configured. Ordinary
+  client config is not enough. Do not treat a missing second account, missing
+  env vars, or an auth failure as a passing live run.
 
-## Reviewing
+Local hooks are not server-side guarantees. They can be bypassed; do not bypass
+them or force-push without permission. GitHub required PR and status checks are
+already disabled. Do not change repository rulesets.
 
-- [ ] `claude` 3x in parallel: `/security-review`, `/review`, `/simplify`
-- [ ] `mise ci` must pass
-- [ ] `mise test:live` must pass
-- [ ] `mise test:coverage`, must still be 100%
-- [ ] `sentry-bot` comments resolved
-- [ ] Human manual end to end testing, trying the TUI myself
-- [ ] Human review on GitHub, reading the full output after all LLM reviews
-- [ ] Final sense-check and merge
+Review still matters: security, correctness, and simplification passes, plus
+actual TUI verification when the surface changed. Agents can perform that
+check; it is not a mandatory human test gate. Review is local, not a GitHub
+PR step.
 
-## Safeguards and improving
+If the same agent mistake keeps happening, revise `CLAUDE.md` (the `AGENTS.md`
+symlink shares it). Prefer `mise` tasks over raw `bun`, `bun run`, or `mise run`.
 
-If I notice Claude making the same mistake over and over again, that's a good
-time to revise the prompt. I've had good results with this skill:
+## Releases and Pages
 
-```sh
-> /claude-md-management:revise-claude-md
-```
+Releases are paused. Do not run release-please or publish new versions. Existing
+published versions and git history stay.
 
-I have a hook that filters all commands Claude runs. It's a smarter version of
-the default command denylist; it doesn't just block a command, but also guides
-Claude to use more appropriate commands.
-
-It looks like this currently:
-
-```sh
-#!/bin/bash
-INPUT=$(cat)
-CMD=$(echo "$INPUT" | jq -r '.tool_input.command')
-
-block() {
-  echo "$1" >&2
-  exit 2
-}
-
-[[ "$CMD" =~ ^mise\ run\  ]] && block 'Use "mise TASK" not "mise run TASK"'
-[[ "$CMD" =~ git\ .*-[cC]\  ]] && block 'Use "git" directly, cd if you must'
-[[ "$CMD" =~ ^grep ]] && block 'Use the Grep tool instead of the grep command'
-[[ "$CMD" =~ ^find ]] && block 'Use the Glob tool instead of the find command'
-[[ "$CMD" =~ ^cat ]] && block 'Use the Read/Write/Edit tools instead of cat'
-[[ "$CMD" =~ ^bun\ run\  ]] && block 'Use mise to run package.json scripts instead of bun run'
-[[ "$CMD" =~ ^bunx\  ]] && block 'Use mise to run package.json scripts instead of bunx'
-[[ "$CMD" =~ ^python3\ -c ]] && block 'Write scripts to tmp and run via uv instead'
-[[ "$CMD" =~ ^node\ -e ]] && block 'Write scripts to tmp and run via node'
-[[ "$CMD" =~ ^bun\ -e ]] && block 'Write scripts to tmp and run via bun'
-[[ "$CMD" =~ ^bun\ test ]] && block 'Use mise test instead'
-[[ "$CMD" =~ ^npx ]] && block 'Use mise to run package.json scripts instead of npx'
-[[ "$CMD" =~ ^git\ worktree ]] && block 'Use mise worktree instead'
-
-exit 0
-```
-
-In a nutshell, I don't like Claude using `python3`, or bypassing my `mise`
-tasks. If you like the idea, ask Claude to write one for you and set it up.
+GitHub Pages still deploys on push to `main`. If a Pages run fails, inspect the
+exact failed run and distinguish config issues from infrastructure failures.
+Retry only when that is appropriate. Do not change Pages settings without
+authorization.

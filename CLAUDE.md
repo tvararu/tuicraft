@@ -4,17 +4,23 @@
 
 Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
+- `mise bundle` — install dependencies and git hooks (`bun install`, then `hk install --mise`)
 - `mise test` — run all tests (`bun test`)
+- `mise test:coverage` — tests with 100% line/function coverage threshold
 - `mise typecheck` — type-check (`tsc --noEmit`)
 - `mise format` — check formatting (`biome format`)
 - `mise format:fix` — fix formatting (`biome format --write`)
-- `mise bundle` — install dependencies (`bun install`)
-- `mise ci` — run typecheck, test, and format; then `gh signoff ci`
-- `mise test:live` — run live server tests (`bun test ./src/test/live.ts`)
+- `mise ci` — `typecheck`, `test:coverage` (100% lines/functions), and `format` (no `gh signoff`, no remote CI)
+- `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
 - `mise worktree <branch>` — create a feature worktree under `.worktrees/`
 - `mise worktree:clean <branch>` — remove a worktree and delete the branch
+
+## Skills
+
+- Follow `/typescript-style` for structure and taste decisions
+- When designing or integrating Jev, read `.claude/skills/typesafe-ai` first. Keep the TypeSafe API key private.
 
 ## Code Style
 
@@ -38,9 +44,12 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Always trend towards 100% test coverage — every new function, branch, and
   edge case should have a corresponding test
 - **Always run `mise test:live` yourself after protocol or
-  daemon changes.** The live server is always available. Do not ask the user to
-  run it — run it. If it fails for infrastructure reasons (server down, env vars
-  missing), then defer to the user.
+  daemon changes.** Do not ask the user to run it. Live tests need two
+  dedicated test accounts with their `WOW_*` credentials; ordinary client
+  config is not enough. Unit, type, format, and coverage checks are not live
+  evidence. Do not claim the live suite is passing without a successful run.
+  If it fails for infrastructure reasons (server down, missing test accounts
+  or env vars), defer to the user.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
@@ -80,6 +89,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - Design docs and implementation plans live in
   `docs/plans/YYYY-MM-DD-<topic>-{design,plan}.md`
+- Approved gameplay sequence: [docs/roadmap.md](docs/roadmap.md)
 - Use the `/entire` skill and the `entire` CLI to investigate why past changes
   were made — it recovers full agent session context (prompts, decisions,
   trade-offs) from checkpoints linked to commits
@@ -158,8 +168,12 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 - Check `git log -n 5` first to match existing style
 - Never use `--oneline` — commit bodies carry important context
 
-PRs:
+Shipping:
 
-- Write a short essay (1-2 paragraphs) describing why the changes are needed
-- Don't hard-wrap PR body text — GitHub renders markdown with browser reflow
+- After verification, one integration owner commits and pushes to `main`. No PRs.
+- `git add` the intended files, then `git commit` as a separate step. Do not
+  stage unrelated work. Independent agents use local or Orca worktrees; land
+  the combined tree only after final verification.
+- Do not force-push, delete branches, or bypass hooks without permission.
+- Releases are paused; do not run release-please or publish versions.
 - NEVER add a Claude Code attribution footer
