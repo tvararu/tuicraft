@@ -43,3 +43,12 @@ tmp
 
 # Test coverage
 coverage
+
+# Local agent/skill installer metadata
+/.pi/
+/skills-lock.json
+/.agents/skills/
+
+# hk local overrides
+hk.local.pkl
+.config/hk.local.pkl
