@@ -15,7 +15,7 @@ Returns CONNECTED or an error. Check this before other commands.
 
 ## Direct control
 
-These commands move, face, or select. They do not fight, pathfind, or play the character for you.
+These commands move, face, or select.
 
     tuicraft control              # human text
     tuicraft control --json       # structured state
@@ -36,8 +36,8 @@ Rules:
 - `face` takes one finite radian number.
 - `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
-- `halt` stops walking. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET.
-- Daemon `ERR` replies for MOVE, FACE, TARGET, and HALT exit the CLI with status 1.
+- `halt` stops walking, casting, auto-attack, tactics, navigation, and follow. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Readonly corpse queries remain queued. HALT cannot undo a request already sent.
+- Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1.
 
 `control --json` fields you must not mix up:
 
@@ -50,7 +50,7 @@ Rules:
 | `requestedTarget` | Last GUID this client sent with `target`. Can differ from `target` until the server observes the change. |
 | `moving` | Whether a timed walk is active. |
 | `direction` | `forward` / `backward` / `left` / `right`, or null. |
-| `owner` | `manual` while a client walk is in effect. `none` when idle. |
+| `owner` | `manual` for direct movement. `follow` or `jev` while that runtime owns control, including stationary waits. `none` when unowned. |
 
 Self movement is not echoed by the server. After a walk, `pose` is predicted. Relog (`stop`, then connect again) and read `control` to see the server-accepted position.
 
@@ -68,6 +68,161 @@ IPC verbs on the daemon socket:
     STATUS
 
 Control events appear in `read` / `tail` with JSON `type` `CONTROL`. The `event` field is one of `movement_started`, `movement_stopped`, `facing_changed`, `target_requested`, `target_observed`, `server_correction`, `control_changed`, `control_error`. The payload includes the same state fields as `control --json`.
+
+## Combat and tactics
+
+These commands inspect or act. They do not invent a spell rotation.
+
+    tuicraft combat [--json]
+    tuicraft spells [--json]
+    tuicraft cast <learned-spell-id> <observed-target-guid>
+    tuicraft attack <observed-hostile-guid>
+    tuicraft cancel-cast
+    tuicraft stop-attack
+    tuicraft fight <observed-hostile-guid>
+    tuicraft fight <observed-hostile-guid> conserve mana and stay alive
+    tuicraft tactics [--json]
+    tuicraft goto <grounded-x> <grounded-y> <grounded-z>
+    tuicraft navigation [--json]
+
+Rules:
+
+- `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none.
+- `fight` requires a GUID. Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
+- Use a current observed PvE opponent, not a GUID copied from an example or an old spawn position.
+- The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Other forms are unsupported.
+- A structurally unsupported kit ends with `no_supported_combat_actions`. Cooldown and server-response waits are not that failure. Supported melee and facing remain available.
+- For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
+- This increment cannot chase or kite. Approach with a checked ground route before `fight`; never copy a flying creature's Z as ground height.
+- The fight instruction must be one line. CR or LF is rejected before IPC.
+- `goto` takes three finite coordinates. It is not a named-place planner.
+- JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
+- `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded.
+- Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
+
+IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
+
+## Bounded ground follow
+
+    tuicraft follow <observed-guid> [distance]
+    tuicraft following [--json]
+    tuicraft halt
+
+Rules:
+
+- Use a nonzero uint64 GUID in decimal or `0x` hex. Do not reuse an old spawn GUID.
+- Distance is 1–20 yards along the horizontal ground route behind the target. The default is 3 yards.
+- Follow requires supported, recently observed target motion, compatible native navigation data, and map 530.
+- Ground height must be unambiguous. Do not substitute the target altitude or retry with nudged coordinates.
+- Each request lasts at most 30 seconds and uses at most 32 native planning calls.
+- Target separation is limited to 100 yards. Planned routes are limited to 150 yards.
+- Replans require meaningful displacement and at least 500ms between plans. The runtime stops current motion before sampling the next origin.
+- Receive age must not exceed 5 seconds. A quiet stationary target can expire. Predictions do not refresh receive age.
+- Loss, unsupported motion, correction, unsafe control, or failed planning stops follow without retries. Manual commands and `halt` also stop follow.
+- `OK` acknowledges intent only. `following.status=holding` means predicted standoff, not server-confirmed arrival.
+- Inspect `following.reason` after stopping. Compare `targetPose.source`, original `observedAt`, and `control.serverPose` before claiming arrival.
+- `following.separation` is 3D pose distance, not the requested horizontal route distance. GUIDs use hex in JSON.
+- FOLLOW and FOLLOWING inspection errors print `ERR` and make the CLI exit with status 1.
+
+IPC: FOLLOW <guid> [distance], FOLLOWING, FOLLOWING_JSON.
+
+## Ordinary death recovery
+
+    tuicraft recovery [--json]
+    tuicraft query-corpse
+    tuicraft release-spirit
+    tuicraft reclaim-corpse
+    tuicraft resurrect accept
+    tuicraft resurrect decline
+
+Rules:
+
+- Read observed life first. Positive ghost health does not mean alive. Release intent and graveyard markers do not establish ghost state.
+- `release-spirit` requires authoritative dead state. Do not issue it when the state already says ghost.
+- `query-corpse` is readonly for control ownership. Only one unanswered query is allowed.
+- Unknown corpse information is not an absent corpse. A stale query or old offer cannot authorize a new death.
+- `reclaim-corpse` takes no GUID. It requires observed ghost state, a freshly queried found corpse, and matching actual/displayed/pose maps.
+- Corpse `mapId` is the displayed map. `corpseMapId` is the actual map. An instance entrance is not the corpse location.
+- Reclaim distance must be at most 39 yards in three dimensions. Inspect `reclaim.pose.source` before treating its position as observed.
+- A known future delay blocks reclaim. Missing `remainingMs` is unknown, never zero.
+- With other guards satisfied, one explicit reclaim request can use unknown timing. `readiness=unverified` does not mean ready.
+- `resurrect accept|decline` answers the current offer once. A known offer delay blocks accept but does not block decline.
+- Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations but cannot reverse a sent request.
+- `OK` is request intent, not ghost/alive confirmation. Inspect subsequent authoritative life and ghost flags for the outcome.
+- Do not retry unanswered actions automatically. Command and inspection errors print `ERR` and exit with status 1.
+
+IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, RESURRECT accept|decline.
+
+## Offered quest interactions
+
+    tuicraft quests [--json]
+    tuicraft talk <observed-giver-guid>
+    tuicraft query-quest <quest-id>
+    tuicraft select-option <offered-option-id> [code]
+    tuicraft select-quest <offered-quest-id>
+    tuicraft accept-quest
+    tuicraft complete-quest <offered-quest-id>
+    tuicraft request-reward
+    tuicraft choose-reward <index>
+    tuicraft abandon-quest <slot>
+    tuicraft cancel-interaction
+
+Rules:
+
+- Inspect the current dialog and giver before each mutation. Metadata and old menus do not authorize actions.
+- `talk` requires a nonzero uint64 GUID in hex or decimal. Quest IDs are positive decimal uint32 values.
+- Gossip option IDs are decimal uint32 values and can be zero. Use the offered ID, not a guessed row number.
+- A coded option needs exactly one code argument. Quote spaces. Omitted code and empty code differ. Embedded NUL and extra arguments are rejected.
+- IPC uses `SELECT_OPTION <id> <JSON-string-or-null>`. Null or absence means no code. `""` means empty code.
+- JSON escapes prevent code text, including line breaks, from injecting another IPC command. Do not send raw unencoded code text.
+- Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` is not permission to retry.
+- `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
+- Log flags/counters are server quest facts, not inferred inventory item counts. Initial/recreated log state does not fabricate acceptance.
+- Unanswered query metadata stays unknown, not missing. Querying does not select a quest or permit mutation.
+- Reward indices are zero-based, at most 5, and must exist in the current offer. Use 0 when there are no selectable choices.
+- A server quest-complete reward notification establishes a reward fact. It does not prove that a requested inventory item was gained.
+- Abandonment slots are zero-based 0–24. An unknown or empty slot cannot authorize abandonment. The log must later show removal.
+- `cancel-interaction` revokes current authorization and requests close. The old pending intent remains uncertain.
+- Pending cancel blocks another mutation until observed close or a confirmed world reset. A late error/menu is not sufficient.
+- HALT drops older queued conversational mutations, abandonment and cancellation. It retains quest metadata queries and newer requests.
+- HALT cannot undo an already-sent request and is not proof of dialog closure.
+- `OK` always means intent, never accepted/completed/rewarded/removed state. Inspect actual log and server notifications for those facts.
+- Quest action and inspection errors print `ERR` and exit with status 1.
+
+IPC: QUESTS, QUESTS_JSON, TALK, QUERY_QUEST, SELECT_OPTION, SELECT_QUEST, ACCEPT_QUEST, COMPLETE_QUEST, REQUEST_REWARD, CHOOSE_REWARD, ABANDON_QUEST, CANCEL_INTERACTION.
+
+## Observed inventory and creature loot
+
+    tuicraft inventory [--json]
+    tuicraft loot [--json]
+    tuicraft open-loot <observed-lootable-corpse-guid>
+    tuicraft take-loot <offered-slot>
+    tuicraft take-money
+    tuicraft release-loot
+
+Rules:
+
+- Inventory scope is carried equipment, equipped bags, backpack, keyring and currency. Bank and buyback are excluded.
+- Unknown counts, ownership, GUID halves, or capacity stay unknown. Item identity does not imply count 1.
+- `freeSlots` counts physical empty backpack/bag cells, not bag-family eligibility, stacking space, or guaranteed storage.
+- Open requires authoritative alive self and an observed lootable UNIT corpse. Use a nonzero uint64 GUID in decimal or hex.
+- A sent open request is not a loot offer. Wait for a matching full successful response before taking items or money.
+- Loot slots are decimal uint8 values 0–255. Use an actually offered allow/owner slot, not a guessed row index.
+- Only one take/money request can be unanswered. Errors do not authorize another automatic attempt.
+- `OK` is intent. Slot removal only removes an offer. Money clearance only clears the window amount.
+- Confirm stored gain with actual raw slot/count or stack-count changes. Confirm money gain with actual coinage changes.
+- Item/money notices are separate evidence. An item-push slot of `0xFFFFFFFF` is a stacking sentinel, not a physical inventory address.
+- Inventory-full/bag-full errors retain their raw result/details. They do not prove that a particular pending take resolved.
+- `release-loot` requests close of an open window and can replace an unanswered take with close intent. Wait for observed release before replacement.
+- A release-only notification during opening does not prove denial or closure. `loot.phase` stays opening and `pending.status` stays unanswered.
+- That release can precede a valid full response. Do not take, replace, timeout-reset, or automatically retry while opening remains unanswered.
+- If no full response follows, explicitly reconnect with `tuicraft stop`, then `tuicraft inventory --json`. This is ordinary reconnect recovery, not completed denial/retry support.
+- `release-loot` cannot close an unanswered opening. Reconnect does not prove the previous request outcome.
+- HALT drops older queued loot mutations but retains inspections and newer requests. It cannot undo an already-sent request.
+- Mutations stop prior control ownership through the manual override path. Inspections are readonly.
+- Action and inspection errors print `ERR` and exit with status 1.
+
+IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONEY, RELEASE_LOOT.
 
 ## Sending Messages
 
