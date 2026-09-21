@@ -6,6 +6,7 @@ import {
   type GroupEvent,
   type EntityEvent,
 } from "wow/client";
+import type { ControlEvent } from "wow/control";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
@@ -114,6 +115,8 @@ describe("two-client chat", () => {
     const handle2 = await worldSession(config2, auth2);
 
     await Bun.sleep(1000);
+    handle1.sendWhisper(config1.character, `.appear ${config2.character}`);
+    await Bun.sleep(2500);
 
     const received: ChatMessage[] = [];
     handle2.onMessage((msg) => received.push(msg));
@@ -129,6 +132,222 @@ describe("two-client chat", () => {
     const sayMsg = received.find((m) => m.message === "hello from say test");
     expect(sayMsg).toBeDefined();
   }, 30_000);
+});
+
+type GpsFix = { map: number; x: number; y: number; z: number };
+
+function parseGps(messages: ChatMessage[]): GpsFix | undefined {
+  let map: number | undefined;
+  let pos: { x: number; y: number; z: number } | undefined;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]!.message;
+    if (!pos) {
+      const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
+      if (posMatch) {
+        pos = {
+          x: parseFloat(posMatch[1]!),
+          y: parseFloat(posMatch[2]!),
+          z: parseFloat(posMatch[3]!),
+        };
+      }
+    }
+    if (map === undefined) {
+      const mapMatch = msg.match(/^Map: (\d+)/);
+      if (mapMatch) map = parseInt(mapMatch[1]!, 10);
+    }
+    if (map !== undefined && pos !== undefined) break;
+  }
+  if (map === undefined || pos === undefined) return undefined;
+  return { map, ...pos };
+}
+
+function dist2d(a: GpsFix, b: GpsFix): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+async function daemonSock(
+  handle: Awaited<ReturnType<typeof worldSession>>,
+  tag: string,
+): Promise<{ sock: string; log: string; close: () => Promise<void> }> {
+  const sockPath = join("./tmp", `test-fault-${tag}-${Date.now()}.sock`);
+  const logFile = join("./tmp", `test-fault-${tag}-${Date.now()}.log`);
+  const log = new SessionLog(logFile);
+  const { server } = startDaemonServer({ handle, sock: sockPath, log });
+  return {
+    sock: sockPath,
+    log: logFile,
+    close: async () => {
+      server.stop(true);
+      await unlink(sockPath).catch(() => {});
+      await unlink(logFile).catch(() => {});
+    },
+  };
+}
+
+describe("fault paths", () => {
+  test("forced teleport relocates and recovers", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+    const daemon = await daemonSock(handle1, "teleport");
+    const chat: ChatMessage[] = [];
+    const control: ControlEvent[] = [];
+    handle1.onMessage((m) => chat.push(m));
+    handle1.onControlEvent((e) => control.push(e));
+
+    let before: GpsFix | undefined;
+    try {
+      await Bun.sleep(2000);
+      const hpA = handle1.getCombatState().self.health;
+      await Bun.sleep(5000);
+      const stateA = handle1.getCombatState();
+      expect(stateA.attacking).toBe(false);
+      expect(stateA.self.health).toBe(hpA);
+
+      chat.length = 0;
+      handle1.sendWhisper(config1.character, ".gps");
+      await Bun.sleep(2500);
+      before = parseGps(chat);
+      expect(before).toBeDefined();
+
+      handle1.sendWhisper(config1.character, ".tele FairbreezeVillage");
+      await Bun.sleep(8000);
+
+      chat.length = 0;
+      handle1.sendWhisper(config1.character, ".gps");
+      await Bun.sleep(2500);
+      const after = parseGps(chat);
+      expect(after).toBeDefined();
+      expect(dist2d(before!, after!)).toBeGreaterThan(100);
+
+      expect(control.some((e) => e.type === "control_error")).toBe(false);
+
+      const status = await sendToSocket("STATUS", daemon.sock);
+      expect(status).toEqual(["CONNECTED"]);
+      const move = await sendToSocket("MOVE forward 500", daemon.sock);
+      expect(move).toEqual(["OK"]);
+    } finally {
+      if (before) {
+        handle1.sendWhisper(
+          config1.character,
+          `.go xyz ${before.x} ${before.y} ${before.z} ${before.map}`,
+        );
+        await Bun.sleep(2500);
+      }
+      await daemon.close();
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 90_000);
+
+  test("freeze denies movement then releases", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+    const daemon = await daemonSock(handle1, "freeze");
+    const chat: ChatMessage[] = [];
+    const control: ControlEvent[] = [];
+    handle1.onMessage((m) => chat.push(m));
+    handle1.onControlEvent((e) => control.push(e));
+
+    try {
+      await Bun.sleep(2000);
+      const vitals = handle1.getCombatState().self;
+      expect(vitals.health).toBe(vitals.maxHealth);
+
+      chat.length = 0;
+      handle1.sendWhisper(config1.character, ".freeze");
+      await Bun.sleep(2500);
+      expect(chat.some((m) => /froze player/.test(m.message))).toBe(true);
+
+      chat.length = 0;
+      handle1.sendWhisper(config1.character, ".gps");
+      await Bun.sleep(2500);
+      const held = parseGps(chat);
+      expect(held).toBeDefined();
+      const moveHeld = await sendToSocket("MOVE forward 500", daemon.sock);
+      expect(moveHeld[0]).not.toMatch(/^ERR internal/);
+      await Bun.sleep(1000);
+      chat.length = 0;
+      handle1.sendWhisper(config1.character, ".gps");
+      await Bun.sleep(2500);
+      const heldAfter = parseGps(chat);
+      expect(heldAfter).toBeDefined();
+      expect(dist2d(held!, heldAfter!)).toBeLessThan(1.5);
+
+      handle1.sendWhisper(config1.character, ".unfreeze");
+      await Bun.sleep(2500);
+      const moveFree = await sendToSocket("MOVE forward 500", daemon.sock);
+      expect(moveFree).toEqual(["OK"]);
+
+      expect(control.some((e) => e.type === "control_error")).toBe(false);
+      const status = await sendToSocket("STATUS", daemon.sock);
+      expect(status).toEqual(["CONNECTED"]);
+    } finally {
+      await daemon.close();
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 90_000);
+
+  test("held WHO meets HALT without error", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+    const daemon = await daemonSock(handle1, "heldquery");
+
+    try {
+      await Bun.sleep(1000);
+      const lines = await new Promise<string[]>((resolve, reject) => {
+        const split = (buffer: string): string[] =>
+          buffer
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+        let buffer = "";
+        let done = false;
+        const finish = (socket: { end: () => void }) => {
+          if (done) return;
+          done = true;
+          socket.end();
+          resolve(split(buffer));
+        };
+        Bun.connect({
+          unix: daemon.sock,
+          socket: {
+            open(socket) {
+              socket.write("WHO_JSON\nHALT\n");
+              socket.flush();
+            },
+            data(socket, data) {
+              buffer += Buffer.from(data).toString();
+              if (split(buffer).length >= 2) finish(socket);
+            },
+            close() {
+              if (!done) {
+                done = true;
+                resolve(split(buffer));
+              }
+            },
+            error(_socket, err) {
+              reject(err);
+            },
+          },
+        });
+      });
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect(lines).toContain("OK");
+      const whoLine = lines.find((l) => l !== "OK");
+      expect(whoLine).toBeDefined();
+      expect(() => JSON.parse(whoLine!)).not.toThrow();
+
+      const status = await sendToSocket("STATUS", daemon.sock);
+      expect(status).toEqual(["CONNECTED"]);
+      const say = await sendToSocket("SAY hello after held query", daemon.sock);
+      expect(say).toEqual(["OK"]);
+    } finally {
+      await daemon.close();
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 60_000);
 });
 
 function waitForGroupEvent<T extends GroupEvent["type"]>(
@@ -279,6 +498,8 @@ describe("entity tracking", () => {
 
     try {
       await Bun.sleep(2000);
+      handle1.sendWhisper(config1.character, `.appear ${config2.character}`);
+      await Bun.sleep(2500);
 
       const events: EntityEvent[] = [];
       handle1.onEntityEvent((e) => events.push(e));
