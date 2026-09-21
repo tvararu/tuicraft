@@ -13,39 +13,58 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
     tuicraft status               # show connection status
     tuicraft stop                 # disconnect and stop daemon
 
-- `start` connects the daemon explicitly and reports outcome (`CONNECTED` on fresh start, `Daemon is already running.` if already running, exit 1 on failure).
-- `status` returns `CONNECTED` or `Daemon is not running.` Check this before issuing game commands.
+- `start` starts the background daemon and connects its IPC socket. If already running, prints `Daemon is already running.` and exits with status 0. On fresh start, prints `CONNECTED` and exits with status 0. Note that `CONNECTED` confirms only that the daemon socket answered the probe; it does not verify that the server-side world session is healthy. On failure, prints the error and exits with status 1.
+- `status` returns `CONNECTED` (socket answered) or `Daemon is not running.`
 - `stop` gracefully disconnects the session and terminates the daemon.
 
-## JSON output shapes
+## JSON parsing rules
 
-Commands supporting `--json` emit one of two structural shapes. Do not assume all `--json` commands emit a single JSON document.
+Commands supporting `--json` require different parsing strategies. Do not assume all `--json` output can be parsed with a single `JSON.parse` call.
 
-### 1. JSONL (newline-delimited JSON objects, one per line)
-- `tuicraft nearby --json`: Local spatial scan. Emits one JSON object per nearby entity line, or 0 lines if no entities are in range.
-- `tuicraft read [--wait N] --json`: Buffered event stream. Emits one JSON object per event, or 0 lines if empty.
-- `tuicraft tail --json`: Continuous live event stream. Emits one JSON object per line.
+### How to parse each command
 
-Parsing JSONL output directly with `JSON.parse` or `json.loads` on the complete stdout will fail with `JSONDecodeError: Extra data: line 2 column 1`. Parse line-by-line:
-```python
-lines = [json.loads(line) for line in stdout.splitlines() if line.strip()]
-```
+| Command | Parsing strategy | Top-level type | Notes |
+|---|---|---|---|
+| `control` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `combat` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `spells` | Single document | Array | Parse full stdout with `JSON.parse` / `json.loads` |
+| `tactics` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `navigation` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `following` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `recovery` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `quests` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `inventory` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `loot` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `who` | Single document | Object | Envelope `{"type":"WHO","count":N,"results":[...]}` |
+| `nearby` | Line-by-line (JSONL) | Object per line | 0 lines if empty. Parsing full stdout as single document fails with `Extra data` |
+| `read` | Line-by-line (JSONL) | Object per line | 0 lines if empty. Emits pure JSONL even when `--wait N` is passed |
+| `tail` | Line-by-line (JSONL) | Object per line | Continuous event stream |
+| `send` (no `--wait`) | Single document | Object | Emits `{"status":"ok"}` (also applies to `-w`, `-y`, `-g`, `-p`) |
+| `send --wait N` | Mixed (Ack + JSONL) | Object + Objects | **TRAP**: Line 1 is `{"status":"ok"}`, lines 2+ are event objects |
 
-### 2. Single JSON document (single line payload)
-- **Single JSON object (`{...}`):**
-  - `tuicraft control --json`: Subsystem control state (`pose`, `serverPose`, `target`, `requestedTarget`, `moving`, `direction`, `owner`).
-  - `tuicraft combat --json`: Combat snapshot (`self`, target vitals).
-  - `tuicraft tactics --json`: Tactics state and terminal observations.
-  - `tuicraft navigation --json`: Navigation state.
-  - `tuicraft following --json`: Follow state, provenance, and stop reason.
-  - `tuicraft recovery --json`: Life, corpse, delay, and pending intent.
-  - `tuicraft quests --json`: Offered dialog, quest log, and pending intent.
-  - `tuicraft inventory --json`: Observed carried items and coinage.
-  - `tuicraft loot --json`: Loot offer, pending intent, and notices.
-  - `tuicraft who [filter] --json`: Structured player query envelope (`{"type":"WHO","count":N,"results":[...]}`).
-  - `tuicraft send <message> --json` (and `-w`, `-y`, `-g`, `-p`): Action acknowledgment (`{"status":"ok"}`). If `--wait N` is used, events received during wait are emitted as subsequent JSONL lines.
-- **Single JSON array (`[...]`):**
-  - `tuicraft spells --json`: Learned spellbook catalog (`[{"spellId":...,"name":...},...]`).
+### Parsing methods
+
+1. **Single document commands (`control`, `combat`, `spells`, `tactics`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who`, and `send` without `--wait`):**
+   Parse the complete stdout at once:
+   ```python
+   data = json.loads(stdout)  # Returns dict, or list for spells
+   ```
+
+2. **Line-by-line / JSONL commands (`nearby`, `read`, `tail`):**
+   Read line-by-line. Never parse the full string as one document. Note that `read --wait N` emits pure JSONL (no acknowledgment header).
+   ```python
+   events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+   ```
+
+3. **Mixed shape trap (`send --wait N --json`, `-w`, `-y`, `-g`, `-p`):**
+   `send --wait N --json` prints an acknowledgment object `{"status":"ok"}` on line 1, and then streams any events received during the wait window on subsequent lines as JSONL.
+   If zero events arrive during wait, stdout is 1 line (`{"status":"ok"}`), and `json.loads(stdout)` appears to work. But as soon as any event occurs, stdout has 2+ lines and `json.loads(stdout)` crashes with `JSONDecodeError: Extra data: line 2 column 1`.
+   When `--wait` is passed to `send` or chat flags, parse line-by-line:
+   ```python
+   lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+   ack = json.loads(lines[0]) if lines else None
+   events = [json.loads(line) for line in lines[1:]]
+   ```
 
 ## Direct control
 

@@ -69,9 +69,9 @@ manual casting by learned spell ID do not require these data paths or a Jev key.
 : Configure account credentials. With no flags, runs an interactive wizard.
 
 `tuicraft start`
-:: Start the background daemon explicitly and connect to the WoW server.
-If the daemon is already running and connected, prints `Daemon is already running.` and exits with status 0.
-On a successful new connection, prints `CONNECTED` and exits with status 0.
+:: Start the background daemon explicitly.
+If the daemon is already running, prints `Daemon is already running.` and exits with status 0.
+On a successful new daemon start, prints `CONNECTED` and exits with status 0. Note that `CONNECTED` verifies only that the daemon IPC socket answered the STATUS probe, not that the server-side world session is healthy.
 If the daemon fails to connect (missing configuration, invalid credentials, unreachable server, or startup timeout), prints the error and exits with status 1.
 
 `tuicraft read` [`--wait` *N*] [`--json`]
@@ -331,16 +331,15 @@ All acknowledgements are intent only. Action and inspection errors print `ERR` a
 ## Options
 
 `--json`
-:: Output as structured JSON. Commands emit one of two shapes:
+:: Output as structured JSON. Commands require different parsing strategies:
 
-- **JSONL (newline-delimited JSON, one object per line):**
-  `read`, `tail`, and `nearby`. Each emitted line is a standalone JSON object.
-  Parsing full output as a single JSON document will fail with `Extra data`.
-  Parse line-by-line.
-- **Single JSON document (single line payload):**
-  `control`, `combat`, `tactics`, `navigation`, `following`, `recovery`, `quests`,
-  `inventory`, `loot`, `who` (all emit a single JSON object `{...}`),
-  `chat` / `send` (emits `{"status":"ok"}`), and `spells` (emits a single JSON array `[...]`).
+- **Single document (parse full stdout with `JSON.parse` / `json.loads`):**
+  - Object: `control`, `combat`, `tactics`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who` (`{"type":"WHO","count":N,"results":[...]}`), and `chat` / `send` without `--wait` (`{"status":"ok"}`).
+  - Array: `spells` (`[{"spellId":...,"name":...},...]`).
+- **Line-by-line / JSONL (parse line-by-line):**
+  `nearby`, `read`, and `tail`. Each line is a separate JSON object (or 0 lines if empty). `read --wait N` emits pure JSONL without an acknowledgment line. Parsing full output as a single JSON document will fail with `Extra data`.
+- **Mixed shape trap (`send --wait N --json`, `-w`, `-y`, `-g`, `-p`):**
+  Emits an acknowledgment object `{"status":"ok"}` on line 1, followed by 0 or more JSONL event lines received during the wait window. Parsing full stdout as a single document fails if any event arrives during the wait. Parse line-by-line: line 1 is the acknowledgment object, and lines 2+ are event objects.
 
 `--wait` _N_
 : Wait _N_ seconds for events before returning. For use with `read`.
