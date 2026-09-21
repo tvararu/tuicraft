@@ -1,0 +1,140 @@
+# M2 encounter context and working plan
+
+Date: 2026-09-21
+
+Output of a brainstorming session with Theo, then revised after independent
+advice. This records decisions, their reasons, and the running checklist. It
+avoids code specifics deliberately; those belong to the work itself.
+
+## What M2 still needs
+
+Milestone 2 wants five completed autonomous encounters plus four robustness
+exercises: cancellation, delayed responses, obsolete decisions, and model
+unavailability. Only cancellation is close to done.
+
+Three of those four cannot be produced by farming. No number of killed creatures
+creates a late response, a stale decision, or an unavailable provider. They need
+constructed faults at the Jev boundary during a real session against the real
+server. A unit test does not satisfy the gate.
+
+## Order of work
+
+Approach planning does not gate the encounters. The tactics loop takes a target
+GUID and never consults navigation; reaching a creature uses movement already
+proven in milestone 1. So the encounters run first, because Jev behaviour is the
+real unknown, and the native height verification is the work most likely to
+consume a day without producing gameplay.
+
+1. Evidence format, decided and committed before the first fight.
+2. Live cancellation re-proof after the correlated-failure repair.
+3. Five encounters.
+4. The three constructed fault exercises.
+5. Route planner verification and the short live approach with interruption.
+6. Roadmap correction.
+
+## Decisions
+
+**Evaluate prompt variants live, not offline.** An offline replay harness was
+considered and rejected. It would score variants against frozen decision points,
+which measures agreement with the coordinator's judgement rather than what wins
+fights. Farm live and improve as we go. No fixture corpus, no replay tool.
+
+**Five encounters after the renormalisation fix, not four.** Attempt05 predates
+`3e1f3aa` and is treated as history rather than as evidence one of five. At its
+fifteen second pace a fifth encounter costs almost nothing and removes a
+question a reviewer would otherwise be right to raise.
+
+**Let the character level, and say plainly what that costs.** Farming produces
+experience, so level, mana pool and spell kit all move during the run. Encounter
+twenty is not comparable to encounter three. The prompt-engineering work
+therefore yields an informed opinion, not controlled evidence, and no report may
+describe a variant as measured better.
+
+Two consequences follow. Client spell metadata is not evidence that a spell is
+learned or usable, so the learned spellbook is re-verified after every level-up
+rather than once at the start. And creatures are chosen to keep the fight
+contested: a much stronger character removing a weak creature in one action
+produces an encounter where the choice did not matter, which is weak evidence
+for a genuine encounter.
+
+**One carve-out inside the uncontrolled farm.** M2 requires a demonstration that
+changing the instruction changes behaviour. That comparison runs the two
+standing instructions back to back, at the same level, against comparable
+creatures. Everything else stays uncontrolled.
+
+**Frame the situation minimally at first.** Jev is told it is a level 10 priest
+in WoW 3.3.5a fighting a hostile creature, and nothing more; the observation and
+candidate descriptions carry the rest. This is the cheapest framing and the
+baseline the longer variants are judged against. It depends on Jev holding
+useful WoW knowledge, which is unverified, and Jev is a judgment model rather
+than a frontier chat model, so those priors may be thin. That is settled by
+watching the first fights. If its choices look uninformed, the next rung states
+the mechanics that matter without relying on the game being recognised.
+
+**The coordinator selects targets. Jev owns everything inside the fight.** No
+autonomous target selection is built. This keeps M2 inside its stated boundary
+and keeps the record clear about who decided what. Letting Jev choose what to
+engage is a wanted future mode and is deferred.
+
+**A death is a recorded failure plus a manual recovery.** Milestone 4 is not
+pulled forward.
+
+**Cadence is measured, not derived.** Decisions per second actually achieved,
+including execution time, instrumented from the first encounter. The round-trip
+latency of a single request is a different number and must not be presented as
+cadence.
+
+## Evidence
+
+Retained artifacts currently live only in `tmp/`, which is gitignored and pushed
+nowhere. That is the failure mode AGENTS.md already flags for the worktree
+archive, and M2's gate is an evidence requirement a reader must be able to
+inspect. A compact per-encounter record is therefore committed, holding the
+observation, the offered actions, the Jev choice, the execution outcome, the
+measured latency and cadence, the character level and the creature level. Raw
+dumps stay in `tmp/` as backing detail.
+
+## Prompt variation
+
+Theo asked for real prompt engineering rather than one text: shorter and longer
+forms, and tuning of the content supplied. Minimal framing is rung one. Later
+rungs add mechanical context, adjust how unavailable-action reasons are
+presented, and vary how much recent outcome history is included. Each variant is
+tried live and its record names the encounters that ran under it.
+
+## Checklist
+
+- [ ] Decide and commit the per-encounter evidence format
+- [ ] Re-prove live cancellation after the correlated-failure repair
+- [ ] Encounter 1 of 5, with cadence instrumented
+- [ ] Encounters 2 to 5
+- [ ] Standing-instruction contrast pair, same level, comparable creatures
+- [ ] Prompt variant ladder beyond minimal framing
+- [ ] Constructed fault: delayed response past the bound
+- [ ] Constructed fault: obsolete decision
+- [ ] Constructed fault: model unavailable
+- [ ] Route planner verification on the 20-yard case
+- [ ] Short live approach with interruption and server-position confirmation
+- [ ] Roadmap correction: stale tolerance paragraph
+- [ ] Roadmap: record M2 outcomes and remaining limits
+- [ ] `mise ci` and `mise test:live` run by the integrating agent
+
+## Open items
+
+- Both standing-instruction texts exist only as a constant in two files and as
+  one ad-hoc command line preserved in a retained request. Pinning them as
+  shared named constants is undecided.
+- `DEFAULT_FIGHT_INSTRUCTION` is duplicated verbatim in two source files. They
+  agree today and nothing prevents drift.
+- The instruction rejects line breaks but has no length limit, so an overlong
+  one reaches the request unbounded.
+- The `party management` 30 second timeout from the M1 suite stays open and
+  unexplained. It does not touch the encounter path.
+
+## Constraints carried in
+
+Workers are `agy` and the local qwen, with Sonnet 5 as escalation. Planner and
+native geometry verification is a poor fit for `agy` and stays with the
+coordinator or a Sonnet 5 escalation. Roadmap editing and the constant de-dup
+are good worker tasks. Jev spend is roughly $4.89 of $5 and is not a practical
+limit. Nobody else is playing the character.
