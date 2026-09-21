@@ -363,46 +363,63 @@ in `c406db9`. Attempt05 is treated as history rather than as evidence because it
 predates the first of those. The records are in `docs/evidence/m2/`, one file
 per encounter, distilled from the session log by `mise evidence:encounter`.
 
-Cadence is recorded as two separate numbers, because quoting one overstates the
-other. The loop rate is 3.76 to 3.88 decisions per second, at request latency
-256 to 264 ms. The tactical decision rate is roughly 0.6 to 1.0 per second:
-between 78 and 86 per cent of decisions offered only `wait` and `cancel`,
-because a cast was in flight or the global cooldown was running, and Jev
-correctly answered `wait`. Both numbers are in the evidence README. No report
-may present the loop rate alone as the decision cadence.
+Cadence is recorded as two numbers together, because quoting one overstates the
+other. The loop rate is 3.76 to 3.88 requests per second, at average request
+latency 256 to 264 ms. The tactical decision rate counts only decisions whose
+offered set included a spell, attack, or face option: 0.49 to 0.67 per second
+across the five encounters. Between 64 and 86 per cent of decisions offered
+only `wait` and `cancel`, because a cast was in flight or the global cooldown
+was running, and Jev answered `wait` on those turns; whether waiting was the
+right call in each case is not in the records. Both numbers are in the
+evidence README with per-encounter figures recomputed from the JSON. No
+report may present the loop rate alone as the decision cadence.
 
-The instruction contrast is demonstrated by encounters 04 and 05, run back to
-back at one character level against creatures of the same level under the two
-texts now pinned in `src/wow/standing-instructions.ts`. Under the conserving
-instruction Jev stopped choosing Mind Blast and Power Word: Shield entirely and
-relied on the cheapest damage rank plus melee. No code differed between the
-runs. That comparison is the one controlled measurement; the rest of the farm
-is uncontrolled and the prompt work yields an informed opinion, not evidence.
+The instruction contrast is a suggestive unreplicated pair, not a
+demonstration. Encounters 04 and 05 ran back to back at one character level
+against creatures of the same level under the two texts now pinned in
+`src/wow/standing-instructions.ts`. Under the conserving instruction Jev
+chose neither Mind Blast nor Power Word: Shield and used the cheapest damage
+rank plus melee more often — but the whole difference is one Mind Blast
+choice and one shield choice, a noise-shaped margin for a stochastic judge
+over a single run per condition against different creature individuals. The
+operator reports no code differed between the runs; the records cannot
+verify that. Replication is still needed before the behaviour change
+milestone 2 asks for can be called demonstrated; the rest of the farm is
+uncontrolled and the prompt work yields an informed opinion, not evidence.
 
-Cancellation is proven live. The remaining three robustness exercises, delayed
-responses, obsolete decisions and model unavailability, are not yet run.
-Injection tooling for them is committed and an operator runbook is at
-`docs/evidence/m2/fault-runbook.md`. They cannot be produced by farming and must
-be constructed at the Jev boundary in a real session.
+Cancellation is proven live. Five items remain, not three: the robustness
+exercises for delayed responses, obsolete decisions and model unavailability
+are not yet run, and neither are the route planner verification on the
+20-yard case nor the short live approach with interruption and
+server-position confirmation. Injection tooling for the three faults is
+committed and an operator runbook is at
+`docs/evidence/m2/fault-runbook.md`. The faults cannot be produced by farming
+and must be constructed at the Jev boundary in a real session.
 
 Limits found live and not yet resolved. The client never chases, so a creature
 that leashes home cannot be finished; one was driven to 2 health and reset. It
 has no collision sensing, so walking into a structure is indistinguishable from
 a failed height query, and every approach and corpse run this session was
 steered by hand. Route planning is unusable in the tested area: `goto` to the
-server's own reported corpse position fails with `UNKNOWN_HEIGHT`, because
-Detour's `dtPointInPolygon` rejects points lying exactly on a polygon boundary
-and the corridor corners returned by `findPath` are polygon vertices. That is an
-upstream defect in `namigator`, not a data gap; the tile is present and the
-column query returns one unambiguous height.
+server's own reported corpse position fails with `UNKNOWN_HEIGHT`. The working
+hypothesis, consistent with the observations, is an upstream defect in
+`namigator` rather than a data gap: Detour's `dtPointInPolygon` rejecting
+points lying exactly on a polygon boundary, with the corridor corners returned
+by `findPath` being polygon vertices, the tile present, and the column query
+returning one unambiguous height. That is a diagnosis from these observations,
+not an upstream-confirmed fact.
 
 One protocol defect was found and fixed. The client discarded every
 `SMSG_ATTACKSTART` in which it was not the attacker, so it never observed that
-a creature had begun attacking it. A neutral-faction creature killed the
-character four times while `fight` refused it. Defending against an observed
+a creature had begun attacking it. A creature of faction template 7, which the
+loaded data does not mark hostile, killed the character four times while
+`fight` refused it with `unverified_hostile_relation`. Whether template 7 is
+genuinely neutral to all here is unverified — the faction data may simply not
+mark the relation hostile — so the record calls the creature unfightable
+under the current verification, not neutral. Defending against an observed
 incoming attacker is now permitted; faction hostility is not forced, because
-template 7 covers creatures neutral to all and forcing it would attack
-bystanders.
+forcing it risks attacking bystanders, a judgement about the untried fix
+rather than an observed outcome.
 
 ### 3. Reliable local navigation
 

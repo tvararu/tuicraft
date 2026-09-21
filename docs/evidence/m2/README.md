@@ -10,52 +10,68 @@ encounters run after it.
 Five completed, all with server kill credit, all after the renormalisation fix
 in `3e1f3aa` and the ground-height repair in `c406db9`.
 
-| # | Result | Char vs creature | Decisions | Cadence /s | Avg latency | Instruction |
-|---|--------|------------------|-----------|------------|-------------|-------------|
-| [01](encounter-01.json) | kill credit | 10 v 7 | 54 | 3.817 | 260 ms | default |
-| [02](encounter-02.json) | kill credit | 10 v 7 | 50 | 3.764 | 264 ms | default |
-| [03](encounter-03.json) | kill credit | 10 v 7 | 54 | 3.834 | 259 ms | default |
-| [04](encounter-04.json) | kill credit | 10 v 6 | 51 | 3.817 | 260 ms | default |
-| [05](encounter-05.json) | kill credit | 10 v 6 | 65 | 3.879 | 256 ms | conserve mana |
+| # | Result | Char vs creature | Decisions | Loop /s | Tactical /s | Avg latency | Instruction |
+|---|--------|------------------|-----------|------------|-------------|-------------|-------------|
+| [01](encounter-01.json) | kill credit | 10 v 7 | 54 | 3.817 | 0.49 | 260 ms | default |
+| [02](encounter-02.json) | kill credit | 10 v 7 | 50 | 3.764 | 0.60 | 264 ms | default |
+| [03](encounter-03.json) | kill credit | 10 v 7 | 54 | 3.834 | 0.64 | 259 ms | default |
+| [04](encounter-04.json) | kill credit | 10 v 6 | 51 | 3.817 | 0.67 | 260 ms | default |
+| [05](encounter-05.json) | kill credit | 10 v 6 | 65 | 3.879 | 0.54 | 256 ms | conserve mana |
 
-Encounter 03 was run live in front of the user, who was grouped with the
-character and watching in their own client.
+The loop column is requests per second over wall-clock time. The tactical
+column counts only decisions where the offered set included a spell, attack,
+or face option, per elapsed second. Neither column alone is the decision
+cadence; both are reported together every time a cadence figure appears.
 
-Measured cadence sits between 3.76 and 3.88 decisions per second across all
-five, inside the 1 to 5 Hz ambition. Request latency is stable at 256 to 264
-ms. No tactical command was given during any encounter; the supervising agent
-only selected and approached the creature.
+Encounter 03 was run live while the user watched in their own client, as
+reported by the operator; the record itself cannot show who was watching.
+
+Measured loop rate sits between 3.76 and 3.88 requests per second across all
+five, inside the 1 to 5 Hz ambition. Request latency averages 256 to 264
+ms. The operator reports that no tactical command was given during any
+encounter and the supervising agent only selected and approached the
+creature; the records cannot show a negative, so this rests on the
+operator's account, not on the JSON.
 
 ### Loop rate is not tactical decision rate
 
-The cadence column above is the loop rate: how often a decision was requested
+The loop column above is the loop rate: how often a decision was requested
 and applied. It is real, but it counts turns where the client offered no
 genuine choice. While a cast is in flight or the global cooldown is running,
-the candidate set collapses to `wait` and `cancel`, and Jev correctly answers
-`wait`.
+the candidate set collapses to `wait` and `cancel`, and Jev answers `wait`.
+Whether that answer is correct in each case is an inference; the records
+show only that it was chosen, not that waiting was the right call.
 
-Counted from the records:
+Definitions, applied uniformly to all five records. A decision is forced
+when the offered set is exactly `wait` and `cancel`. A decision is full-kit
+genuine when the offered set includes a spell, attack, or face option. Rows
+offering only `wait` and `stop_attack` are neither: stopping melee is a
+minor choice, so they are listed separately rather than folded into either
+column. Every row falls in exactly one of the three buckets, recomputed
+from the JSON:
 
-| # | Decisions | Offered only wait/cancel | Genuine choices |
-|---|-----------|--------------------------|-----------------|
-| 01 | 54 | 47 | 12 |
-| 04 | 51 | 42 | 14 |
-| 05 | 65 | 56 | 9 |
+| # | Decisions | Forced (wait/cancel) | wait/stop_attack only | Full-kit genuine |
+|---|-----------|----------------------|-----------------------|------------------|
+| 01 | 54 | 42 (77.8%) | 5 | 7 |
+| 02 | 50 | 32 (64.0%) | 10 | 8 |
+| 03 | 54 | 38 (70.4%) | 7 | 9 |
+| 04 | 51 | 37 (72.5%) | 5 | 9 |
+| 05 | 65 | 56 (86.2%) | 0 | 9 |
 
-So 78 to 86 per cent of decisions are forced, and the tactical decision rate is
-roughly 0.6 to 1.0 per second rather than 3.8. Both numbers are worth keeping,
-but a report that quotes only the loop rate overstates how much judgement is
-being exercised. Milestone 2 asks for the actual cadence rather than an assumed
-5 Hz, and this table is that number.
+So 64 to 86 per cent of decisions are forced, and the tactical decision
+rate (full-kit genuine decisions per elapsed second) is 0.49 to 0.67 per
+second rather than 3.8. Both numbers are worth keeping, but a report that
+quotes only the loop rate overstates how much judgement is being exercised.
+Milestone 2 asks for the actual cadence rather than an assumed 5 Hz, and
+these two numbers together are that answer.
 
 The genuine choices are where the instruction contrast below appears.
 
-### The standing-instruction contrast
+### The standing-instruction contrast (suggestive single pair, unreplicated)
 
 Encounters 04 and 05 ran back to back, at the same character level, against
 creatures of the same level, under the two pinned instructions in
-`src/wow/standing-instructions.ts`. This is the one controlled comparison in an
-otherwise uncontrolled farm.
+`src/wow/standing-instructions.ts`.
 
 | Action | 04, default | 05, conserve mana |
 |--------|-------------|-------------------|
@@ -64,10 +80,17 @@ otherwise uncontrolled farm.
 | Smite Rank 1, 585, cheapest | 5 | 7 |
 | Melee attack | 1 | 1 |
 
-Under the conserving instruction Jev stopped choosing both costly spells and
-relied on the cheapest damage rank plus melee. Nothing in the code changed
-between the two runs; only the instruction text differed. This is the
-behaviour change milestone 2 asks to be demonstrated.
+Under the conserving instruction Jev chose neither costly spell and used the
+cheapest damage rank plus melee more often. The operator reports that nothing
+in the code changed between the two runs and only the instruction text
+differed; the records cannot verify that, they show only the choices.
+
+This is one run per condition against different creature individuals with a
+stochastic judge, and the whole difference is a single Mind Blast choice and
+a single Power Word: Shield choice. That shape is consistent with noise, so
+this pair is suggestive, not a demonstration of instruction-driven behaviour.
+Replication (further runs per instruction) is still needed before the
+behaviour change milestone 2 asks for can be called demonstrated.
 
 ## Robustness exercises
 
@@ -81,6 +104,15 @@ behaviour change milestone 2 asks to be demonstrated.
 The three outstanding faults cannot be produced by farming. Each one is
 constructed at the Jev boundary during a real session against the real server.
 A unit test does not satisfy the gate.
+
+## Further outstanding milestone 2 prerequisites
+
+Beyond the three fault exercises, milestone 2 requires two more items, both
+not run: route planner verification on the observed 20-yard case, and the
+short live approach with immediate interruption and server-position
+confirmation. The planner currently refuses the server's own reported corpse
+position (see below), so both are blocked on usable pathfinding rather than
+on encounter farming. Five items remain in total, not three.
 
 ## Cancellation re-proof, 2026-09-21
 
@@ -146,9 +178,12 @@ unreachable target must stop the run with a concrete reason; instead it burns
 Jev requests indefinitely.
 
 **[failed-02-leash-reset.json](failed-02-leash-reset.json)** — 161 decisions
-over 79.4 seconds, a measured 2.03 decisions per second at an average request
-latency of 261 ms. This is the strongest cadence evidence so far and it sits
-inside the 1 to 5 Hz ambition. Jev chose twenty real offensive casts. The
+over 79.4 seconds, a loop rate of 2.03 requests per second at an average
+request latency of 261 ms. The tactical rate on the same run is 0.26 full-kit
+decisions per second (21 of 161 offers included a spell, attack, or face
+option), the lowest of any recorded run: the loop count is inflated by 140
+`wait` answers, so the 2.03 figure must not be read as decision cadence. Jev
+chose twenty real offensive casts. The
 creature fell from 137 health to 2, then reset to full, because the client
 cannot follow it and the server leashed it home. Xiara's own health never moved
 from 217, so the creature was never engaging her in melee. Mana ran out at 13 of
@@ -157,9 +192,11 @@ from 217, so the creature was never engaging her in melee. Mana ran out at 13 of
 **[failed-03-not-infront.json](failed-03-not-infront.json)** — 3 decisions,
 stopped with `server_action_rejected:134`. That code is
 `SPELL_FAILED_UNIT_NOT_INFRONT` in `SharedDefines.h`: the server refused the
-Smite because Xiara was not facing the creature, although the operator had
-faced her at it immediately before engaging. One facing rejection ends the whole
-run rather than re-facing and retrying.
+Smite because, on the reconstructed positions, Xiara was not facing the
+creature, although the operator had faced her at it immediately before
+engaging. Whether the refusal was correct depends on that reconstruction;
+the code is observed, the correctness is inferred. One facing rejection ends
+the whole run rather than re-facing and retrying.
 
 ### The confirmed cause
 
@@ -169,8 +206,8 @@ At the moment of the third rejection the character and the creature were
 **0.0004 yards apart horizontally and 6.17 yards apart vertically**. She was
 standing directly above the creature. An angle between two points at the same x
 and y is numerical noise, so the `face` action the loop itself chose produced a
-meaningless orientation and the server correctly answered
-`SPELL_FAILED_UNIT_NOT_INFRONT`.
+meaningless orientation and the server answered
+`SPELL_FAILED_UNIT_NOT_INFRONT`, consistent with that reconstruction.
 
 Position drift was ruled out by measurement. A relogin taken immediately
 afterwards returned an authoritative server pose matching the predicted pose
@@ -210,9 +247,10 @@ See [../README.md](../README.md).
 The character levels during the farming run, so her spell kit, mana pool and the
 relative difficulty of creatures all change. Encounters are therefore not
 controlled comparisons, and no prompt variant may be described as measured
-better on this evidence. The single exception is the standing-instruction
-contrast pair, which runs back to back at one level against comparable
-creatures.
+better on this evidence. The standing-instruction contrast pair runs back to
+back at one level against comparable creatures, which makes it the closest to
+a controlled comparison in the set, but it is still one unreplicated pair and
+carries the same restriction.
 
 ## A creature that kills the character but cannot be fought, 2026-09-21
 
