@@ -540,24 +540,36 @@ build. The final rebuilt CLI also preserved STATUS after same-socket HALT and
 confirmed target selection/clearing without displacement; evidence is in
 `tmp/xiara-m1-final-report.json` and `tmp/xiara-m1-final-smoke.json`.
 
-The two-account credentials now work: the earlier `0x4` authentication failure
-is resolved and both accounts log in. Dependent scenarios are no longer blocked
-on credentials.
+The `0x4` authentication failure recorded above was never a missing-credentials
+problem. It was a client defect in `src/wow/crypto/srp.ts`, fixed by
+`fix: Serialise SRP values at fixed byte width`. Salt, A, B and S were
+serialised with a variable-width big-endian helper that drops leading zero
+bytes, so whenever one of those random 256-bit values had a zero top byte the
+client sent a 31-byte field. The server then computed a different proof and
+answered `WOW_FAIL_UNKNOWN_ACCOUNT` (0x4), which reads as a bad account rather
+than as a malformed packet. For A the short encoding also shortened the logon
+proof packet itself, shifting every field after it. At roughly one in fifty
+handshakes this failed about a third of full suite runs, and the misreading of
+0x4 is what caused two-account scenarios to be recorded as blocked on absent
+credentials. They were never blocked.
 
-The suite as a whole is not yet reliable evidence, and this is an open M1
-defect. Three consecutive full runs on 2026-09-21 gave 12/12, then 11/12 with
-`party management > invite, accept, leader transfer, leave` timing out at 30s,
-then 11/12 with `two-client chat > say message received by nearby client`
-failing in 15ms. A different test failed each time, so the two-account
-scenarios are flaky rather than broken, and no single run can be quoted as
-proof. The fast 15ms failure is not a timeout and is the more informative
-signature to chase. Do not cite a green run here without saying how many runs
-it was drawn from.
+The suite is now stable: six consecutive clean 12/12 runs on 2026-09-21, four
+from the investigating agent and two run directly by the integrating agent,
+plus 1000 isolated auth handshakes with zero rejections. A regression test
+pins the degenerate case by choosing an ephemeral exponent that makes A equal
+the one-byte value 7, which the old encoder truncated.
+
+One issue stays open and must not be read as fixed. An earlier run failed
+`party management > invite, accept, leader transfer, leave` with a 30 second
+timeout and no auth error, which is a different signature from the sub-second
+0x4 rejections. The SRP fix touched only the auth path, so it cannot explain
+that timeout, and six clean runs do not prove a rare fault absent. Treat it as
+unexplained.
 
 Three fault paths were proven live on 2026-09-21 and are committed as
-`test: Prove fault paths on the live server`. They passed in all three full
-runs above, including both runs where another test failed, so they are the
-part of the suite that does hold. A forced `.tele` relocated the
+`test: Prove fault paths on the live server`. They passed in every full run
+made that day, including the runs where the auth defect above failed another
+test, so they were never implicated in it. A forced `.tele` relocated the
 character over 100 yards and the client recovered with no control error, a
 clean STATUS and a working MOVE. A `.freeze` denied movement with under 1.5
 yards of drift and `.unfreeze` restored it. A WHO pipelined with HALT on one
