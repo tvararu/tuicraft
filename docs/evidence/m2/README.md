@@ -244,3 +244,16 @@ A second observation from the same sequence. Reclaiming a corpse returns the
 character to the spot where she died, at partial health, next to whatever killed
 her. With an unfightable attacker present this is a recovery loop rather than a
 recovery, and it is what produced deaths three and four.
+
+## Live suite after the protocol change, 2026-09-21
+
+`mise test:live` was run by the integrating agent on the tree containing
+`65bb5dc`, which changes `SMSG_ATTACKSTART` handling and is therefore a
+protocol change requiring a live run rather than unit evidence.
+
+Result: 12 pass, 0 fail, 252 assertions, 67.88 seconds.
+
+`party management > invite, accept, leader transfer, leave` passed in this run.
+That test carries the unexplained 30 second timeout recorded in the roadmap,
+seen once and never reproduced. One clean run does not establish that a rare
+fault is absent, so it stays open.
