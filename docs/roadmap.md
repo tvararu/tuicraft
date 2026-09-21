@@ -540,14 +540,24 @@ build. The final rebuilt CLI also preserved STATUS after same-socket HALT and
 confirmed target selection/clearing without displacement; evidence is in
 `tmp/xiara-m1-final-report.json` and `tmp/xiara-m1-final-smoke.json`.
 
-The required two-account live suite now passes in full: 12 of 12 tests against
-the live server, including the two-client chat, party management and entity
-tracking scenarios that need both accounts. The earlier `0x4` authentication
-failure is resolved and its credentials are present. Dependent two-account
-scenarios are no longer blocked.
+The two-account credentials now work: the earlier `0x4` authentication failure
+is resolved and both accounts log in. Dependent scenarios are no longer blocked
+on credentials.
+
+The suite as a whole is not yet reliable evidence, and this is an open M1
+defect. Three consecutive full runs on 2026-09-21 gave 12/12, then 11/12 with
+`party management > invite, accept, leader transfer, leave` timing out at 30s,
+then 11/12 with `two-client chat > say message received by nearby client`
+failing in 15ms. A different test failed each time, so the two-account
+scenarios are flaky rather than broken, and no single run can be quoted as
+proof. The fast 15ms failure is not a timeout and is the more informative
+signature to chase. Do not cite a green run here without saying how many runs
+it was drawn from.
 
 Three fault paths were proven live on 2026-09-21 and are committed as
-`test: Prove fault paths on the live server`. A forced `.tele` relocated the
+`test: Prove fault paths on the live server`. They passed in all three full
+runs above, including both runs where another test failed, so they are the
+part of the suite that does hold. A forced `.tele` relocated the
 character over 100 yards and the client recovered with no control error, a
 clean STATUS and a working MOVE. A `.freeze` denied movement with under 1.5
 yards of drift and `.unfreeze` restored it. A WHO pipelined with HALT on one
