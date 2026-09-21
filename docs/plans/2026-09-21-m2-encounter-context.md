@@ -104,32 +104,46 @@ tried live and its record names the encounters that ran under it.
 
 ## Checklist
 
-- [ ] Decide and commit the per-encounter evidence format
-- [ ] Re-prove live cancellation after the correlated-failure repair
-- [ ] Encounter 1 of 5, with cadence instrumented
-- [ ] Encounters 2 to 5
-- [ ] Standing-instruction contrast pair, same level, comparable creatures
-- [ ] Prompt variant ladder beyond minimal framing
+- [x] Decide and commit the per-encounter evidence format
+- [x] Re-prove live cancellation after the correlated-failure repair
+- [x] Encounter 1 of 5, with cadence instrumented
+- [x] Encounters 2 to 5
+- [x] Standing-instruction contrast pair, same level, comparable creatures
+- [x] Roadmap correction: stale tolerance paragraph
+- [x] Record loop rate separately from tactical decision rate
 - [ ] Constructed fault: delayed response past the bound
 - [ ] Constructed fault: obsolete decision
 - [ ] Constructed fault: model unavailable
+- [ ] Prompt variant ladder beyond minimal framing
 - [ ] Route planner verification on the 20-yard case
 - [ ] Short live approach with interruption and server-position confirmation
-- [ ] Roadmap correction: stale tolerance paragraph
 - [ ] Roadmap: record M2 outcomes and remaining limits
 - [ ] `mise ci` and `mise test:live` run by the integrating agent
 
 ## Open items
 
-- Both standing-instruction texts exist only as a constant in two files and as
-  one ad-hoc command line preserved in a retained request. Pinning them as
-  shared named constants is undecided.
-- `DEFAULT_FIGHT_INSTRUCTION` is duplicated verbatim in two source files. They
-  agree today and nothing prevents drift.
+Resolved since this was written:
+
+- Both standing instructions are now pinned in `src/wow/standing-instructions.ts`
+  and the duplicated default is gone.
+- A ground-height query now runs during free movement, and an obstruction is
+  reported as `blockedReason: "obstructed"` rather than a fatal error.
+- The tactics loop stops with `target_unreachable` instead of spinning on an
+  unreachable creature.
+- Situation framing is selectable, defaulting to today's behaviour.
+- Jev faults are injectable through `JEV_FAULT` and `JEV_DELAY_MS`.
+
+Still open:
+
 - The instruction rejects line breaks but has no length limit, so an overlong
   one reaches the request unbounded.
 - The `party management` 30 second timeout from the M1 suite stays open and
   unexplained. It does not touch the encounter path.
+- The client has no collision sensing. An obstruction is now reported honestly
+  but nothing routes around it; the operator steers by hand.
+- The client never chases, so a creature that leashes home cannot be finished.
+- `serverPose` does not update for the character's own movement, so the
+  `distance` column in `nearby` is stale after any walk.
 
 ## Constraints carried in
 
