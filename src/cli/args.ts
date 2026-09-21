@@ -30,7 +30,7 @@ export type CliAction =
   | { mode: "face"; orientation: number }
   | { mode: "target"; guid: bigint }
   | { mode: "halt" }
-  | { mode: "nearby"; json: boolean }
+  | { mode: "nearby"; json: boolean; all?: boolean }
   | { mode: "combat"; json: boolean }
   | { mode: "spells"; json: boolean }
   | { mode: "cast"; spellId: number; guid: bigint }
@@ -235,11 +235,14 @@ function parseSubcommand(args: string[]): CliAction | undefined {
         mode: "control",
         json: hasFlag(args.slice(1), "--json"),
       };
-    case "nearby":
+    case "nearby": {
+      const all = hasFlag(args.slice(1), "--all");
       return {
         mode: "nearby",
         json: hasFlag(args.slice(1), "--json"),
+        ...(all ? { all: true } : {}),
       };
+    }
     case "move":
       return parseMove(args);
     case "face":

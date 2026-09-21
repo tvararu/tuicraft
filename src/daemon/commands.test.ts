@@ -416,6 +416,17 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("NEARBY_JSON")).toEqual({ type: "nearby_json" });
   });
 
+  test("NEARBY all and NEARBY_JSON all", () => {
+    expect(parseIpcCommand("NEARBY all")).toEqual({
+      type: "nearby",
+      all: true,
+    });
+    expect(parseIpcCommand("NEARBY_JSON all")).toEqual({
+      type: "nearby_json",
+      all: true,
+    });
+  });
+
   test("CONTROL and CONTROL_JSON", () => {
     expect(parseIpcCommand("CONTROL")).toEqual({ type: "control" });
     expect(parseIpcCommand("CONTROL_JSON")).toEqual({ type: "control_json" });
@@ -1812,6 +1823,294 @@ describe("dispatchCommand", () => {
     expect(go.type).toBe("gameobject");
     expect(go.gameObjectType).toBe(3);
     expect(corpse.type).toBe("object");
+  });
+
+  test("nearby_json computes distance and orders nearest first", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(
+      sampleState({
+        selfGuid: 0x1n,
+        pose: {
+          mapId: 530,
+          x: 10,
+          y: 10,
+          z: 10,
+          orientation: 0,
+          source: "predicted",
+          updatedAt: 1000,
+        },
+      }),
+    );
+    const selfEntity: UnitEntity = {
+      guid: 0x1n,
+      objectType: ObjectType.PLAYER,
+      name: "PlayerOne",
+      entry: 0,
+      scale: 1,
+      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+      health: 100,
+      maxHealth: 100,
+      level: 70,
+      factionTemplate: 1,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 1,
+      class_: 1,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const near1: UnitEntity = {
+      ...selfEntity,
+      guid: 0x2n,
+      name: "NearUnit",
+      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+    };
+    const near2: GameObjectEntity = {
+      guid: 0x3n,
+      objectType: ObjectType.GAMEOBJECT,
+      name: "NearChest",
+      entry: 100,
+      scale: 1,
+      position: { mapId: 530, x: 20, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+      displayId: 0,
+      flags: 0,
+      gameObjectType: 3,
+      bytes1: 0,
+    };
+    const distant: GameObjectEntity = {
+      ...near2,
+      guid: 0x4n,
+      name: "DistantElevator",
+      gameObjectType: 11,
+      position: { mapId: 530, x: 200, y: 10, z: 10, orientation: 0 },
+    };
+    const offMap: UnitEntity = {
+      ...selfEntity,
+      guid: 0x5n,
+      name: "OffMapUnit",
+      position: { mapId: 0, x: 10, y: 10, z: 10, orientation: 0 },
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      distant,
+      near2,
+      selfEntity,
+      offMap,
+      near1,
+    ]);
+
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+
+    const rows = socket
+      .written()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows).toHaveLength(3);
+    expect(rows[0]!.guid).toBe("0x1");
+    expect(rows[0]!.self).toBe(true);
+    expect(rows[0]!.distance).toBe(0);
+    expect(rows[1]!.guid).toBe("0x2");
+    expect(rows[1]!.distance).toBe(5);
+    expect(rows[2]!.guid).toBe("0x3");
+    expect(rows[2]!.distance).toBe(10);
+  });
+
+  test("nearby_json with all returns distant and off-map entities", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(
+      sampleState({
+        selfGuid: 0x1n,
+        pose: {
+          mapId: 530,
+          x: 10,
+          y: 10,
+          z: 10,
+          orientation: 0,
+          source: "predicted",
+          updatedAt: 1000,
+        },
+      }),
+    );
+    const selfEntity: UnitEntity = {
+      guid: 0x1n,
+      objectType: ObjectType.PLAYER,
+      name: "PlayerOne",
+      entry: 0,
+      scale: 1,
+      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+      health: 100,
+      maxHealth: 100,
+      level: 70,
+      factionTemplate: 1,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 1,
+      class_: 1,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const near: UnitEntity = {
+      ...selfEntity,
+      guid: 0x2n,
+      name: "NearUnit",
+      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+    };
+    const distant: GameObjectEntity = {
+      guid: 0x4n,
+      objectType: ObjectType.GAMEOBJECT,
+      name: "DistantElevator",
+      entry: 100,
+      scale: 1,
+      displayId: 0,
+      flags: 0,
+      gameObjectType: 11,
+      bytes1: 0,
+      position: { mapId: 530, x: 210, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+    };
+    const offMap: UnitEntity = {
+      ...selfEntity,
+      guid: 0x5n,
+      name: "OffMapUnit",
+      position: { mapId: 0, x: 10, y: 10, z: 10, orientation: 0 },
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      distant,
+      offMap,
+      selfEntity,
+      near,
+    ]);
+
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby_json", all: true },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+
+    const rows = socket
+      .written()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows).toHaveLength(4);
+    expect(rows[0]!.guid).toBe("0x1");
+    expect(rows[0]!.distance).toBe(0);
+    expect(rows[1]!.guid).toBe("0x2");
+    expect(rows[1]!.distance).toBe(5);
+    expect(rows[2]!.guid).toBe("0x4");
+    expect(rows[2]!.distance).toBe(200);
+    expect(rows[3]!.guid).toBe("0x5");
+    expect(rows[3]!.distance).toBeNull();
+  });
+
+  test("nearby plain text filters by range and supports all", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(
+      sampleState({
+        selfGuid: 0x1n,
+        pose: {
+          mapId: 530,
+          x: 10,
+          y: 10,
+          z: 10,
+          orientation: 0,
+          source: "predicted",
+          updatedAt: 1000,
+        },
+      }),
+    );
+    const selfEntity: UnitEntity = {
+      guid: 0x1n,
+      objectType: ObjectType.PLAYER,
+      name: "PlayerOne",
+      entry: 0,
+      scale: 1,
+      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+      health: 100,
+      maxHealth: 100,
+      level: 70,
+      factionTemplate: 1,
+      displayId: 0,
+      npcFlags: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 1,
+      class_: 1,
+      gender: 0,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+    };
+    const near: UnitEntity = {
+      ...selfEntity,
+      guid: 0x2n,
+      name: "NearUnit",
+      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+    };
+    const distant: GameObjectEntity = {
+      guid: 0x4n,
+      objectType: ObjectType.GAMEOBJECT,
+      name: "DistantElevator",
+      entry: 100,
+      scale: 1,
+      displayId: 0,
+      flags: 0,
+      gameObjectType: 11,
+      bytes1: 0,
+      position: { mapId: 530, x: 210, y: 10, z: 10, orientation: 0 },
+      rawFields: new Map(),
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      distant,
+      near,
+      selfEntity,
+    ]);
+
+    const socket1 = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket1,
+      jest.fn(),
+    );
+    const lines1 = socket1.written().trim().split("\n");
+    expect(lines1).toHaveLength(2);
+    expect(lines1[0]).toContain("PlayerOne");
+    expect(lines1[1]).toContain("NearUnit");
+
+    const socket2 = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby", all: true },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket2,
+      jest.fn(),
+    );
+    const lines2 = socket2.written().trim().split("\n");
+    expect(lines2).toHaveLength(3);
+    expect(lines2[0]).toContain("PlayerOne");
+    expect(lines2[1]).toContain("NearUnit");
+    expect(lines2[2]).toContain("DistantElevator");
   });
 
   test("friends calls getFriends and writes friend list", async () => {

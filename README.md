@@ -108,7 +108,7 @@ tuicraft who               # who query
 tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # predicted pose vs last server pose, targets
-tuicraft nearby [--json]   # nearby entities (hex GUIDs)
+tuicraft nearby [--all] [--json] # nearby entities, nearest first (within 100yd, or --all)
 tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
 tuicraft face 1.57         # facing in radians
 tuicraft target 0xabc      # select (0 clears); uint64 hex or decimal

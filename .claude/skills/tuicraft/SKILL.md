@@ -72,8 +72,8 @@ These commands move, face, or select.
 
     tuicraft control              # human text
     tuicraft control --json       # structured state
-    tuicraft nearby               # nearby units and objects
-    tuicraft nearby --json
+    tuicraft nearby [--all]       # nearby units and objects (nearest first, or --all)
+    tuicraft nearby [--all] --json
     tuicraft move forward         # 1000ms default
     tuicraft move left 400        # strafe 400ms
     tuicraft face 1.57            # radians
@@ -115,8 +115,8 @@ IPC verbs on the daemon socket:
     FACE <radians>
     TARGET <guid>
     HALT
-    NEARBY
-    NEARBY_JSON
+    NEARBY [all]
+    NEARBY_JSON [all]
     STOP
     STATUS
 
@@ -434,17 +434,43 @@ IPC verbs:
 
 ## Nearby entities
 
-    tuicraft nearby
-    tuicraft nearby --json
+    tuicraft nearby [--all]
+    tuicraft nearby [--all] --json
 
-JSON objects include `guid` (hex `0x…`), `self` (true only for the observed self GUID), `type`, `name`, `entry`, position (`x`, `y`, `z`, `mapId`, `orientation`), and for units `level`, `health`, `maxHealth`, `target`, `unitFlags`. Use `guid` with `tuicraft target`.
+Rules:
+
+- Output is ordered nearest first.
+- The `self` row is included at distance `0`.
+- By default, entities beyond 100 yards or on a different map are filtered out when player position is known.
+- Pass `--all` to output all tracked entities without distance or map filtering.
+- When player position is unestablished, distance filtering is suspended.
+- Use `guid` with `tuicraft target`.
+
+`nearby --json` fields:
+
+| Field | Meaning |
+| ----- | ------- |
+| `guid` | Hexadecimal entity GUID (`0x…`). |
+| `type` | Entity category: `unit`, `player`, `gameobject`, or `object`. |
+| `name` | Entity name, or null if unobserved. |
+| `entry` | Database template ID. |
+| `self` | `true` only for the observed player character entity, `false` otherwise. |
+| `distance` | 3D distance in yards from the player, rounded to 2 decimal places. `0` for self, `null` if off-map or player position is unestablished. |
+| `x` | World X coordinate in yards. |
+| `y` | World Y coordinate in yards. |
+| `z` | World Z coordinate in yards. |
+| `mapId` | Continent or instance map ID (e.g. 0 Eastern Kingdoms, 1 Kalimdor, 530 Outland, 571 Northrend). |
+| `orientation` | Facing angle in radians. |
+| `gameObjectType` | Numeric GameObject type (e.g. 11 transport, 19 mailbox), present on gameobjects. |
 
 TUI: `/tuicraft entities on|off` toggles entity event display.
 
 IPC:
 
     echo "NEARBY" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "NEARBY all" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
     echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "NEARBY_JSON all" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
 
 ## Openclaw Integration
 

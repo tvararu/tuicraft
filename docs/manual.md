@@ -13,7 +13,7 @@ tuicraft setup [--account NAME] [--password PASS] [--character NAME]
 tuicraft start | status | stop
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
-tuicraft control [--json] | nearby [--json]
+tuicraft control [--json] | nearby [--all] [--json]
 tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--json]
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight <guid> [instruction...] | goto <x> <y> <z>
@@ -92,9 +92,15 @@ is the last server-observed pose. `target` is the last server-observed self
 target. `requestedTarget` is the last GUID this client sent. Predicted pose is
 not server confirmation. Relog to read the pose the server accepted.
 
-`tuicraft nearby` [`--json`]
-:: List nearby entities. With `--json`, emits JSONL (one JSON object per nearby entity line, or empty). GUIDs are hexadecimal (`0x…`). JSON includes `self`
-true only for the observed self GUID.
+`tuicraft nearby` [`--all`] [`--json`]
+:: List nearby entities ordered nearest first. By default, entities beyond 100
+yards or on a different map are filtered when player position is known; pass `--all`
+to list all tracked entities, including transports the server sends map-wide.
+With `--json`, emits JSONL (one JSON object per nearby entity line, or empty).
+GUIDs are hexadecimal (`0x…`). JSON includes 3D
+`distance` in yards (`0` for self, `null` if off-map or unestablished) and `self`
+true only for the observed self GUID. `mapId` is the map this client was on when
+the entity was parsed, not a property the server states per entity.
 
 `tuicraft move` _direction_ [*ms*]
 :: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.

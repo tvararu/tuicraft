@@ -380,6 +380,22 @@ describe("parseArgs", () => {
     });
   });
 
+  test("nearby --all", () => {
+    expect(parseArgs(["nearby", "--all"])).toEqual({
+      mode: "nearby",
+      json: false,
+      all: true,
+    });
+  });
+
+  test("nearby --all --json", () => {
+    expect(parseArgs(["nearby", "--all", "--json"])).toEqual({
+      mode: "nearby",
+      json: true,
+      all: true,
+    });
+  });
+
   test("move defaults to 1000ms", () => {
     expect(parseArgs(["move", "forward"])).toEqual({
       mode: "move",

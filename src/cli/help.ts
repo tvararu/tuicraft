@@ -19,7 +19,7 @@ USAGE
   tuicraft face <radians>    Set facing in radians
   tuicraft target <guid>     Select target (0 clears)
   tuicraft halt              Cancel motion, casting, attack, tactics and follow
-  tuicraft nearby [--json]   List nearby entities
+  tuicraft nearby [--all] [--json]  List nearby entities (nearest first; --all disables distance filter)
   tuicraft combat [--json]   Combat state
   tuicraft spells [--json]   Learned spellbook
   tuicraft cast <id> <guid>  Cast a learned spell
@@ -70,6 +70,7 @@ FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
   --json          Output as JSON (read, tail, chat, who, control, nearby, combat, spells, tactics, navigation, following, recovery, quests, inventory, loot)
+  --all           Output all tracked entities without distance filter (nearby)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
 

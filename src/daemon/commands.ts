@@ -83,8 +83,8 @@ export type IpcCommand =
   | { type: "leader"; target: string }
   | { type: "accept" }
   | { type: "decline" }
-  | { type: "nearby" }
-  | { type: "nearby_json" }
+  | { type: "nearby"; all?: boolean }
+  | { type: "nearby_json"; all?: boolean }
   | { type: "control" }
   | { type: "control_json" }
   | { type: "move"; direction: MovementDirection; durationMs: number }
@@ -303,9 +303,13 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
     case "DECLINE":
       return { type: "decline" };
     case "NEARBY":
-      return { type: "nearby" };
+      return rest.trim().toLowerCase() === "all"
+        ? { type: "nearby", all: true }
+        : { type: "nearby" };
     case "NEARBY_JSON":
-      return { type: "nearby_json" };
+      return rest.trim().toLowerCase() === "all"
+        ? { type: "nearby_json", all: true }
+        : { type: "nearby_json" };
     case "CONTROL":
       return { type: "control" };
     case "CONTROL_JSON":
@@ -663,16 +667,21 @@ export async function dispatchCommand(
       writeLines(socket, ["OK"]);
       return false;
     case "nearby": {
-      const entities = handle.getNearbyEntities();
-      writeLines(socket, entities.map(formatNearbyLine));
+      const items = prepareNearbyEntities(handle, cmd.all);
+      writeLines(
+        socket,
+        items.map((p) => formatNearbyLine(p.entity)),
+      );
       return false;
     }
     case "nearby_json": {
       const selfGuid = handle.getControlState().selfGuid;
-      const entities = handle.getNearbyEntities();
+      const items = prepareNearbyEntities(handle, cmd.all);
       writeLines(
         socket,
-        entities.map((e) => JSON.stringify(formatNearbyObj(e, selfGuid))),
+        items.map((p) =>
+          JSON.stringify(formatNearbyObj(p.entity, selfGuid, p.distance)),
+        ),
       );
       return false;
     }
@@ -994,9 +1003,79 @@ function objectTypeString(type: ObjectType): string {
   }
 }
 
+const NEARBY_DEFAULT_RANGE = 100;
+
+type PreparedNearbyEntity = {
+  entity: Entity;
+  distance: number | null;
+  self: boolean;
+};
+
+function prepareNearbyEntities(
+  handle: WorldHandle,
+  all = false,
+): PreparedNearbyEntity[] {
+  const controlState = handle.getControlState();
+  const selfGuid = controlState.selfGuid;
+  const entities = handle.getNearbyEntities();
+  const selfEntity = entities.find((e) => e.guid === selfGuid);
+  const selfPos = selfEntity?.position ?? controlState.pose;
+
+  const prepared: PreparedNearbyEntity[] = entities.map((entity) => {
+    const isSelf = entity.guid === selfGuid;
+    let distance: number | null = null;
+    if (isSelf) {
+      distance = 0;
+    } else if (
+      selfPos &&
+      entity.position &&
+      selfPos.mapId === entity.position.mapId
+    ) {
+      const dx = entity.position.x - selfPos.x;
+      const dy = entity.position.y - selfPos.y;
+      const dz = entity.position.z - selfPos.z;
+      distance = Math.round(Math.hypot(dx, dy, dz) * 100) / 100;
+    }
+    return { entity, distance, self: isSelf };
+  });
+
+  prepared.sort((a, b) => {
+    if (a.self && !b.self) return -1;
+    if (!a.self && b.self) return 1;
+    if (a.distance !== null && b.distance !== null) {
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return a.entity.guid < b.entity.guid
+        ? -1
+        : a.entity.guid > b.entity.guid
+          ? 1
+          : 0;
+    }
+    if (a.distance !== null && b.distance === null) return -1;
+    if (a.distance === null && b.distance !== null) return 1;
+    return a.entity.guid < b.entity.guid
+      ? -1
+      : a.entity.guid > b.entity.guid
+        ? 1
+        : 0;
+  });
+
+  if (!all && selfPos) {
+    return prepared.filter((p) => {
+      if (p.self) return true;
+      if (p.distance !== null) return p.distance <= NEARBY_DEFAULT_RANGE;
+      if (p.entity.position && p.entity.position.mapId !== selfPos.mapId)
+        return false;
+      return true;
+    });
+  }
+
+  return prepared;
+}
+
 function formatNearbyObj(
   entity: Entity,
   selfGuid: bigint,
+  distance: number | null,
 ): Record<string, unknown> {
   const obj: Record<string, unknown> = {
     guid: `0x${entity.guid.toString(16)}`,
@@ -1004,6 +1083,7 @@ function formatNearbyObj(
     name: entity.name,
     entry: entity.entry,
     self: entity.guid === selfGuid,
+    distance,
   };
   if (
     entity.objectType === ObjectType.UNIT ||

@@ -201,7 +201,8 @@ async function main() {
     }
     case "nearby": {
       await ensureDaemon();
-      const cmd = action.json ? "NEARBY_JSON" : "NEARBY";
+      const base = action.json ? "NEARBY_JSON" : "NEARBY";
+      const cmd = action.all ? `${base} all` : base;
       const lines = await sendToSocket(cmd);
       for (const line of lines) console.log(line);
       break;
