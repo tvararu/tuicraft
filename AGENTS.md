@@ -114,6 +114,35 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   were made — it recovers full agent session context (prompts, decisions,
   trade-offs) from checkpoints linked to commits
 
+## Branches and archives
+
+- The `vibe` branch is **reference only and must never be merged**. Theo's
+  ruling, 2026-09-21: Fable created it around June 2026, it was never
+  reviewed, and unreviewed code must not enter `main` disguised as progress.
+  Keep it, never delete it, read it freely for implementation patterns
+  (protocol serialisation, the `bun:ffi` namigator bridge, movement maths).
+  Its acceptance and live-verification journals are **not** roadmap evidence,
+  because nobody reviewed them. Never merge, rebase or cherry-pick it without
+  Theo saying so.
+- `main` has a GitHub `required_linear_history` rule, so **merge commits are
+  rejected at push time**. Local merges, hooks and `mise ci` all pass first,
+  and the push then fails with `GH013: Repository rule violations found`
+  naming only a commit hash, which reads as an auth or branch-protection
+  fault rather than a history-shape one. Integrate worker branches by
+  cherry-picking their commits in order, not by merging. Note that
+  `git cherry-pick --continue` opens an editor, so pass `-c core.editor=true`.
+- The ten `gameplay-*` worktrees from the Astra run were removed on
+  2026-09-21, but their uncommitted work was archived first, to
+  `tmp/worktree-archive-2026-09-21/`. `tmp/` is gitignored, so **that archive
+  exists on disk only and is pushed nowhere**. It holds ten `<name>.patch`
+  files plus `MANIFEST.txt` giving each one's base commit (`903c3a3` or
+  `1e73c0b`). Some of it exists in no commit at all —
+  `src/wow/remote-motion.test.ts`, 338 lines, lives only inside
+  `gameplay-quests.patch`. Restore one with:
+
+      git worktree add --detach <dir> <base-sha-from-manifest>
+      git -C <dir> apply --binary tmp/worktree-archive-2026-09-21/<name>.patch
+
 ## Reference Codebases
 
 - `../wow-chat-client` — Node.js WoW chat client, primary protocol reference
