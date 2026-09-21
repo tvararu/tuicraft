@@ -1,4 +1,5 @@
 import type { Socket } from "bun";
+import type { FramingVariant } from "wow/framing";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { Arc4 } from "wow/crypto/arc4";
 import { GameOpcode, ChatType, Language } from "wow/protocol/opcodes";
@@ -154,6 +155,8 @@ export type ClientConfig = {
   navigationDataDir?: string;
   navigationLibrary?: string;
   jevApiKey?: string;
+  framing?: FramingVariant;
+  characterClass?: string;
 };
 
 import type { AuthResult } from "wow/auth";
@@ -298,6 +301,7 @@ export type WorldHandle = {
     targetGuid: bigint,
     instruction: string,
     signal?: AbortSignal,
+    framing?: FramingVariant,
   ): Promise<void>;
   getTacticsState(): TacticsState;
   goTo(x: number, y: number, z: number): void;
@@ -583,6 +587,8 @@ export function worldSession(
     }
     const tactics = new TacticsLoop({
       apiKey: config.jevApiKey,
+      framing: config.framing,
+      characterClass: config.characterClass,
       async prepare(_context, signal) {
         signal.throwIfAborted();
         await prepareCatalog();
@@ -1279,12 +1285,12 @@ export function worldSession(
           tactics.stop("manual_override");
           combat.stopAttack();
         },
-        startTactics(targetGuid, instruction, signal) {
+        startTactics(targetGuid, instruction, signal, framing) {
           follow.stop("tactics");
           const life = recovery.snapshot().life;
           if (life === "dead" || life === "ghost")
             throw new Error("self_not_alive");
-          return tactics.start({ targetGuid, instruction }, signal);
+          return tactics.start({ targetGuid, instruction, framing }, signal);
         },
         getTacticsState() {
           return tactics.snapshot();

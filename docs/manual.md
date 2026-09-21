@@ -16,7 +16,7 @@ tuicraft tail [--json]
 tuicraft control [--json] | nearby [--all] [--json]
 tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--json]
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
-tuicraft fight <guid> [instruction...] | goto <x> <y> <z>
+tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
 tuicraft follow <guid> [distance] | following [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft resurrect accept|decline
@@ -142,9 +142,12 @@ decimal. `0` is self/none.
 `tuicraft stop-attack`
 :: Stop auto-attack.
 
-`tuicraft fight` _guid_ [_instruction_...]
+`tuicraft fight` [`--framing` _none_|_minimal_|_mechanics_] _guid_ [_instruction_...]
 :: Start Jev tactics. Default instruction is to defeat the selected target while
-keeping the character alive. Missing Jev key fails with `ERR`.
+keeping the character alive. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
+`minimal` frames the game, class and observed level; `mechanics` adds non-refilling
+resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
+fails with `ERR`.
 The instruction must be a single line. Daemon `ERR` replies, including inspection
 failures, make the CLI exit with status 1.
 The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`).

@@ -589,3 +589,83 @@ test("a replacement waits for the old provider to settle before dispatching", as
     second.resolve(judgment());
   }
 });
+
+test("default framing variant is none and records in request event and lastRequest", async () => {
+  let capturedFraming: string | undefined;
+  const f = fixture({
+    select: async (req) => {
+      capturedFraming = req.framing;
+      return judgment();
+    },
+  });
+  let eventFraming: string | undefined;
+  f.tactics.onEvent((event) => {
+    if (event.type === "request") eventFraming = event.framing;
+  });
+  try {
+    await f.tactics.start(context);
+    expect(capturedFraming).toBe("none");
+    expect(eventFraming).toBe("none");
+    expect(f.tactics.snapshot().lastRequest?.framing).toBe("none");
+  } finally {
+    f.tactics.dispose();
+  }
+});
+
+test("minimal framing variant records in request event and propagates to select", async () => {
+  let capturedFraming: string | undefined;
+  const f = fixture({
+    select: async (req) => {
+      capturedFraming = req.framing;
+      return judgment();
+    },
+  });
+  let eventFraming: string | undefined;
+  f.tactics.onEvent((event) => {
+    if (event.type === "request") eventFraming = event.framing;
+  });
+  try {
+    await f.tactics.start({ ...context, framing: "minimal" });
+    expect(capturedFraming).toBe("minimal");
+    expect(eventFraming).toBe("minimal");
+    expect(f.tactics.snapshot().lastRequest?.framing).toBe("minimal");
+  } finally {
+    f.tactics.dispose();
+  }
+});
+
+test("mechanics framing variant records in request event and propagates to select", async () => {
+  let capturedFraming: string | undefined;
+  const f = fixture({
+    select: async (req) => {
+      capturedFraming = req.framing;
+      return judgment();
+    },
+  });
+  let eventFraming: string | undefined;
+  f.tactics.onEvent((event) => {
+    if (event.type === "request") eventFraming = event.framing;
+  });
+  try {
+    await f.tactics.start({ ...context, framing: "mechanics" });
+    expect(capturedFraming).toBe("mechanics");
+    expect(eventFraming).toBe("mechanics");
+    expect(f.tactics.snapshot().lastRequest?.framing).toBe("mechanics");
+  } finally {
+    f.tactics.dispose();
+  }
+});
+
+test("unknown framing variant rejects start with clear error", async () => {
+  const f = fixture();
+  try {
+    await expect(
+      f.tactics.start({ ...context, framing: "invalid" as any }),
+    ).rejects.toThrow(
+      'Unknown framing variant: "invalid". Must be one of: none, minimal, mechanics',
+    );
+    expect(f.tactics.snapshot().status).toBe("idle");
+  } finally {
+    f.tactics.dispose();
+  }
+});

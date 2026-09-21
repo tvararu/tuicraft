@@ -109,4 +109,20 @@ describe("distil-encounter", () => {
       "No tactics events",
     );
   });
+
+  test("extracts framing from request event into promptVariant", () => {
+    const customLog = [
+      line(1000, { type: "started", runId: "r2", targetGuid: "0xf13" }),
+      line(1100, {
+        type: "request",
+        runId: "r2",
+        instruction: "kill it",
+        framing: "mechanics",
+        candidates: [{ id: "wait" }],
+        observation: { self: { level: 10 } },
+      }),
+    ].join("\n");
+    const rec = distil(parseLog(customLog), "r2", "unrecorded");
+    expect(rec.promptVariant).toBe("mechanics");
+  });
 });

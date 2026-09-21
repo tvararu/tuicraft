@@ -4,6 +4,7 @@ import {
   type JevActionRequest,
   type JevActionResult,
 } from "wow/jev";
+import { parseFramingVariant, type FramingVariant } from "wow/framing";
 
 const WAIT = { id: "wait", description: "Do not start a new action" } as const;
 const DEFAULT_MAX_AGE_MS = 2000;
@@ -13,6 +14,8 @@ const DEFAULT_TIMEOUT_MS = 5000;
 export type TacticsContext = {
   targetGuid: bigint;
   instruction: string;
+  framing?: FramingVariant;
+  characterClass?: string;
 };
 
 export type TacticsCandidate = {
@@ -49,6 +52,8 @@ export type TacticsDeps = {
   maxResultAgeMs?: number;
   minIntervalMs?: number;
   requestTimeoutMs?: number;
+  framing?: FramingVariant;
+  characterClass?: string;
 };
 
 export type TacticsState = {
@@ -56,6 +61,8 @@ export type TacticsState = {
   runId: string | undefined;
   targetGuid: bigint | undefined;
   instruction: string;
+  framing?: FramingVariant;
+  characterClass?: string;
   ownerEpoch: number;
   instructionEpoch: number;
   targetIntentEpoch: number;
@@ -65,6 +72,7 @@ export type TacticsState = {
         candidates: readonly TacticsCandidate[];
         instruction: string;
         sentAtMs: number;
+        framing: FramingVariant;
       }
     | undefined;
   lastResult: JevActionResult | undefined;
@@ -88,6 +96,7 @@ export type TacticsEvent =
       ownerEpoch: number;
       instructionEpoch: number;
       targetIntentEpoch: number;
+      framing?: FramingVariant;
     }
   | { type: "activated"; runId: string }
   | {
@@ -97,6 +106,7 @@ export type TacticsEvent =
       observation: Readonly<Record<string, unknown>>;
       candidates: readonly TacticsCandidate[];
       sentAtMs: number;
+      framing: FramingVariant;
     }
   | ({ type: "result"; runId: string } & JevActionResult)
   | { type: "applied"; runId: string; actionId: string; ageMs: number }
@@ -111,6 +121,8 @@ type Run = {
   context: TacticsContext;
   abort: AbortController;
   detach: () => void;
+  framing: FramingVariant;
+  characterClass: string | undefined;
 };
 
 type Decision = {
@@ -158,6 +170,7 @@ export class TacticsLoop {
     this.stop("replaced");
     if (!this.deps.apiKey) throw new Error("missing_jev_key");
     if (signal?.aborted) throw abortReason(signal);
+    parseFramingVariant(context.framing ?? this.deps.framing);
     const run = this.begin(context, signal);
     try {
       if (!this.live(run)) return;
@@ -219,12 +232,16 @@ export class TacticsLoop {
   }
 
   private begin(context: TacticsContext, external?: AbortSignal): Run {
+    const framing = parseFramingVariant(context.framing ?? this.deps.framing);
+    const characterClass = context.characterClass ?? this.deps.characterClass;
     const run: Run = {
       generation: ++this.generation,
       runId: crypto.randomUUID(),
-      context: { ...context },
+      context: { ...context, framing, characterClass },
       abort: new AbortController(),
       detach: () => external?.removeEventListener("abort", onExternal),
+      framing,
+      characterClass,
     };
     const onExternal = () => {
       if (this.live(run)) this.stop("aborted");
@@ -237,6 +254,8 @@ export class TacticsLoop {
       runId: run.runId,
       targetGuid: context.targetGuid,
       instruction: context.instruction,
+      framing,
+      characterClass,
       ownerEpoch: this.state.ownerEpoch + 1,
       instructionEpoch: this.state.instructionEpoch + 1,
       targetIntentEpoch: this.state.targetIntentEpoch + 1,
@@ -253,6 +272,7 @@ export class TacticsLoop {
       runId: run.runId,
       targetGuid: `0x${context.targetGuid.toString(16)}`,
       instruction: context.instruction,
+      framing,
       ownerEpoch: this.state.ownerEpoch,
       instructionEpoch: this.state.instructionEpoch,
       targetIntentEpoch: this.state.targetIntentEpoch,
@@ -327,8 +347,16 @@ export class TacticsLoop {
       candidates: frame.candidates,
       instruction: run.context.instruction,
       sentAtMs,
+      framing: run.framing,
+      characterClass: run.characterClass,
     });
-    this.state.lastRequest = request;
+    this.state.lastRequest = {
+      observation: request.observation,
+      candidates: request.candidates,
+      instruction: request.instruction,
+      sentAtMs: request.sentAtMs,
+      framing: run.framing,
+    };
     this.emit({ type: "request", runId: run.runId, ...request });
     if (!this.live(run)) throw abortReason(run.abort.signal);
     const abort = new AbortController();

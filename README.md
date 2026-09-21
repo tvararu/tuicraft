@@ -116,7 +116,7 @@ tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
-tuicraft fight 0xabc       # Jev tactics; default stay alive and defeat target
+tuicraft fight 0xabc       # Jev tactics; optional --framing none|minimal|mechanics
 tuicraft goto 1 2 3        # ground route
 tuicraft follow 0xabc 3    # bounded follow of an observed unit
 tuicraft following --json # follow state and terminal reason

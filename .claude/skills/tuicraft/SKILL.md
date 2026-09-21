@@ -131,8 +131,7 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft cast <learned-spell-id> <observed-target-guid>
     tuicraft attack <observed-hostile-guid>
     tuicraft cancel-cast
-    tuicraft stop-attack
-    tuicraft fight <observed-hostile-guid>
+    tuicraft fight [--framing none|minimal|mechanics] <observed-hostile-guid>
     tuicraft fight <observed-hostile-guid> conserve mana and stay alive
     tuicraft tactics [--json]
     tuicraft goto <grounded-x> <grounded-y> <grounded-z>
@@ -141,7 +140,7 @@ These commands inspect or act. They do not invent a spell rotation.
 Rules:
 
 - `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none.
-- `fight` requires a GUID. Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
+- `fight` requires a GUID. Optional `--framing` accepts `none`, `minimal`, or `mechanics` (default `none` or `WOW_JEV_FRAMING`). Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
 - Use a current observed PvE opponent, not a GUID copied from an example or an old spawn position.
 - The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Other forms are unsupported.
 - A structurally unsupported kit ends with `no_supported_combat_actions`. Cooldown and server-response waits are not that failure. Supported melee and facing remain available.

@@ -483,7 +483,29 @@ describe("parseArgs", () => {
       guid: 0xan,
       instruction:
         "defeat the selected target while keeping the character alive",
+      framing: "none",
     });
+    expect(parseArgs(["fight", "--framing", "minimal", "0xa"])).toEqual({
+      mode: "fight",
+      guid: 0xan,
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      framing: "minimal",
+    });
+    expect(
+      parseArgs(["fight", "--framing=mechanics", "0xa", "hold threat"]),
+    ).toEqual({
+      mode: "fight",
+      guid: 0xan,
+      instruction: "hold threat",
+      framing: "mechanics",
+    });
+    expect(() => parseArgs(["fight", "--framing", "bogus", "0xa"])).toThrow(
+      'Unknown framing variant: "bogus". Must be one of: none, minimal, mechanics',
+    );
+    expect(() => parseArgs(["fight", "--framing"])).toThrow(
+      "Missing value for --framing",
+    );
     expect(parseArgs(["goto", "1.5", "2", "3"])).toEqual({
       mode: "goto",
       x: 1.5,

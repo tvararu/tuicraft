@@ -106,6 +106,8 @@ export function distil(
     }
     if (event.type === "request") {
       instruction = str(event["instruction"]) ?? instruction;
+      const framing = str(event["framing"]);
+      if (framing) promptVariant = framing;
       const candidates = Array.isArray(event["candidates"])
         ? event["candidates"]
         : [];

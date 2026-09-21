@@ -541,6 +541,25 @@ describe("parseIpcCommand", () => {
       guid: 0xan,
       instruction: "hold threat",
     });
+    expect(parseIpcCommand("FIGHT --framing minimal 0xa")).toEqual({
+      type: "fight",
+      guid: 0xan,
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      framing: "minimal",
+    });
+    expect(
+      parseIpcCommand("FIGHT --framing=mechanics 0xa conserve mana"),
+    ).toEqual({
+      type: "fight",
+      guid: 0xan,
+      instruction: "conserve mana",
+      framing: "mechanics",
+    });
+    expect(parseIpcCommand("FIGHT --framing invalid 0xa")?.type).toBe(
+      "invalid",
+    );
+    expect(parseIpcCommand("FIGHT --framing")?.type).toBe("invalid");
     expect(parseIpcCommand("GOTO 1 2 3")).toEqual({
       type: "goto",
       x: 1,

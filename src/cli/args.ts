@@ -1,5 +1,6 @@
 import type { MovementDirection } from "wow/control";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
+import { parseFramingVariant, type FramingVariant } from "wow/framing";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -38,7 +39,12 @@ export type CliAction =
   | { mode: "attack"; guid: bigint }
   | { mode: "cancel_cast" }
   | { mode: "stop_attack" }
-  | { mode: "fight"; guid: bigint; instruction: string }
+  | {
+      mode: "fight";
+      guid: bigint;
+      instruction: string;
+      framing?: FramingVariant;
+    }
   | { mode: "tactics"; json: boolean }
   | { mode: "goto"; x: number; y: number; z: number }
   | { mode: "navigation"; json: boolean }
@@ -544,15 +550,34 @@ function parseAttack(args: string[]): CliAction {
 }
 
 function parseFight(args: string[]): CliAction {
-  const raw = args[1];
+  const rest = args.slice(1);
+  if (rest.length === 0) throw new Error("Invalid fight arguments");
+  let framing: FramingVariant | undefined;
+  const filtered: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    const part = rest[i]!;
+    if (part === "--framing") {
+      const next = rest[i + 1];
+      if (!next) throw new Error("Missing value for --framing");
+      framing = parseFramingVariant(next);
+      i++;
+    } else if (part.startsWith("--framing=")) {
+      const val = part.slice("--framing=".length);
+      framing = parseFramingVariant(val);
+    } else {
+      filtered.push(part);
+    }
+  }
+  framing ??= parseFramingVariant(process.env["WOW_JEV_FRAMING"]);
+  const raw = filtered[0];
   if (raw === undefined) throw new Error("Invalid fight arguments");
   const guid = parseGuid(raw);
   if (guid === undefined) throw new Error(`Invalid target guid: ${raw}`);
-  const instruction = args.slice(2).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
+  const instruction = filtered.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
   if (/[\r\n]/.test(instruction)) {
     throw new Error("Fight instruction must not contain line breaks");
   }
-  return { mode: "fight", guid, instruction };
+  return { mode: "fight", guid, instruction, framing };
 }
 
 function parseGoto(args: string[]): CliAction {

@@ -39,6 +39,7 @@ import type {
 import type { CombatEvent } from "wow/combat";
 import type { TacticsEvent } from "wow/tactics";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
+import { parseFramingVariant, type FramingVariant } from "wow/framing";
 import type { FollowEvent } from "wow/follow";
 import type { RecoveryEvent } from "wow/recovery";
 import type { QuestEvent } from "wow/quests";
@@ -100,7 +101,12 @@ export type IpcCommand =
   | { type: "attack"; guid: bigint }
   | { type: "cancel_cast" }
   | { type: "stop_attack" }
-  | { type: "fight"; guid: bigint; instruction: string }
+  | {
+      type: "fight";
+      guid: bigint;
+      instruction: string;
+      framing?: FramingVariant;
+    }
   | { type: "tactics" }
   | { type: "tactics_json" }
   | { type: "goto"; x: number; y: number; z: number }
@@ -836,7 +842,7 @@ export async function dispatchCommand(
       });
     case "fight":
       return runControlActionAsync(socket, () =>
-        handle.startTactics(cmd.guid, cmd.instruction, abort),
+        handle.startTactics(cmd.guid, cmd.instruction, abort, cmd.framing),
       );
     case "tactics":
       return writeInspect(socket, () => handle.getTacticsState(), false);
@@ -1538,10 +1544,41 @@ function parseAttackCommand(rest: string): IpcCommand {
 function parseFightCommand(rest: string): IpcCommand {
   const parts = rest.split(" ").filter(Boolean);
   if (parts.length < 1) return { type: "invalid", reason: "invalid fight" };
-  const guid = parseGuid(parts[0]!);
+  let framing: FramingVariant | undefined;
+  const filtered: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
+    if (part === "--framing") {
+      const next = parts[i + 1];
+      if (!next) return { type: "invalid", reason: "missing framing variant" };
+      try {
+        framing = parseFramingVariant(next);
+      } catch (e) {
+        return {
+          type: "invalid",
+          reason: e instanceof Error ? e.message : "invalid framing",
+        };
+      }
+      i++;
+    } else if (part.startsWith("--framing=")) {
+      const val = part.slice("--framing=".length);
+      try {
+        framing = parseFramingVariant(val);
+      } catch (e) {
+        return {
+          type: "invalid",
+          reason: e instanceof Error ? e.message : "invalid framing",
+        };
+      }
+    } else {
+      filtered.push(part);
+    }
+  }
+  if (filtered.length < 1) return { type: "invalid", reason: "invalid fight" };
+  const guid = parseGuid(filtered[0]!);
   if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
-  const instruction = parts.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
-  return { type: "fight", guid, instruction };
+  const instruction = filtered.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
+  return { type: "fight", guid, instruction, framing };
 }
 
 function parseGotoCommand(rest: string): IpcCommand {

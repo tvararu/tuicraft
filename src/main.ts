@@ -250,9 +250,13 @@ async function main() {
     }
     case "fight": {
       await ensureDaemon();
+      const framingPart =
+        action.framing && action.framing !== "none"
+          ? `--framing ${action.framing} `
+          : "";
       printControlReply(
         await sendToSocket(
-          `FIGHT 0x${action.guid.toString(16)} ${action.instruction}`,
+          `FIGHT ${framingPart}0x${action.guid.toString(16)} ${action.instruction}`,
         ),
       );
       break;

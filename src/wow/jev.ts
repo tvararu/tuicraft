@@ -1,3 +1,9 @@
+import {
+  buildFraming,
+  parseFramingVariant,
+  type FramingVariant,
+} from "wow/framing";
+
 const SYSTEMONE_URL = "https://api.typesafe.ai/v1/systemone";
 const DEFAULT_MODEL = "jev-latest";
 
@@ -10,6 +16,8 @@ export type JevActionRequest = {
   instruction: string;
   observation: Readonly<Record<string, unknown>>;
   candidates: readonly JevCandidate[];
+  framing?: FramingVariant;
+  characterClass?: string;
 };
 
 export type JevActionOptions = {
@@ -37,6 +45,7 @@ export async function selectJevAction(
 ): Promise<JevActionResult> {
   if (!options.apiKey) throw new Error("Missing TypeSafe API key");
   if (options.signal.aborted) throw abortError(options.signal);
+  if (request.framing !== undefined) parseFramingVariant(request.framing);
   const allowed = new Set(request.candidates.map((candidate) => candidate.id));
   if (allowed.size === 0) throw new Error("No TypeSafe Choice candidates");
   const started = performance.now();
@@ -56,8 +65,23 @@ async function postSystemOne(
       candidate.description,
     ]),
   );
+  const framingText =
+    request.framing && request.framing !== "none"
+      ? buildFraming(
+          request.framing,
+          request.observation,
+          request.characterClass,
+        )
+      : undefined;
+  const state: Record<string, unknown> = {
+    ...request.observation,
+    standingInstruction: request.instruction,
+  };
+  if (framingText !== undefined) {
+    state["framing"] = framingText;
+  }
   const body = JSON.stringify({
-    state: { ...request.observation, standingInstruction: request.instruction },
+    state,
     model: options.model ?? DEFAULT_MODEL,
     questions: {
       action: {

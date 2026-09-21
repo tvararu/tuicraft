@@ -26,7 +26,7 @@ USAGE
   tuicraft attack <guid>     Start auto-attack
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack
-  tuicraft fight <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
+  tuicraft fight [--framing <variant>] <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
                             Spell kit: observed normal form; no chase or kite
   tuicraft tactics [--json]  Tactics state and terminal observations
   tuicraft goto <x> <y> <z>  Walk a ground route
