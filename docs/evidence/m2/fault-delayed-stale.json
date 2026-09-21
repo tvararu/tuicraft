@@ -1,0 +1,88 @@
+{
+  "runId": "b1665b04-9464-425b-b070-09cd60fa18aa",
+  "recordedAt": "2026-09-21T19:53:12.576Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "none",
+  "character": {
+    "level": 10,
+    "maxPower": 532,
+    "maxHealth": 187
+  },
+  "target": {
+    "guid": "0xf130003d2301f50b",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [
+    {
+      "n": 1,
+      "offered": [
+        "wait",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:139:self",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "face"
+      ],
+      "choice": "face",
+      "confidence": 0.61,
+      "probabilities": {
+        "spell:1243:self": 0.02,
+        "face": 0.65,
+        "wait": 0.05,
+        "spell:139:self": 0.05,
+        "spell:2053:self": 0.02,
+        "spell:2050:self": 0.02,
+        "spell:17:self": 0.17,
+        "spell:2052:self": 0.02
+      },
+      "latencyMs": 2499.8961680000066,
+      "applied": false
+    },
+    {
+      "n": 2,
+      "offered": [
+        "wait",
+        "spell:1243:self",
+        "spell:17:self",
+        "face"
+      ],
+      "choice": "face",
+      "confidence": 0.47,
+      "probabilities": {
+        "spell:1243:self": 0.06,
+        "face": 0.6,
+        "wait": 0.02,
+        "spell:17:self": 0.32
+      },
+      "latencyMs": 2499.576480000018,
+      "applied": false
+    }
+  ],
+  "discarded": [
+    {
+      "reason": "stale_age",
+      "actionId": "face"
+    },
+    {
+      "reason": "stale_age",
+      "actionId": "face"
+    }
+  ],
+  "transportErrors": [],
+  "cadence": {
+    "decisions": 2,
+    "elapsedMs": 5032,
+    "perSecond": 0.397
+  },
+  "outcome": {
+    "status": "blocked",
+    "reason": "target_unreachable"
+  },
+  "model": "jev-1.13.0",
+  "fault": "delay:2500ms",
+  "rawLines": 10
+}

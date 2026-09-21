@@ -1,0 +1,54 @@
+{
+  "runId": "f148305a-58f0-40da-b3da-403e299c0b41",
+  "recordedAt": "2026-09-21T19:54:32.292Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "none",
+  "character": {
+    "level": 10,
+    "maxPower": 532,
+    "maxHealth": 187
+  },
+  "target": {
+    "guid": "0xf130003d2301f50b",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [
+    {
+      "n": 1,
+      "offered": [
+        "wait",
+        "spell:1243:self",
+        "spell:17:self",
+        "face"
+      ],
+      "choice": "face",
+      "confidence": 0.7,
+      "probabilities": {
+        "face": 0.78,
+        "spell:1243:self": 0.04,
+        "spell:17:self": 0.16,
+        "wait": 0.02
+      },
+      "latencyMs": 1026.5791599999993,
+      "applied": false
+    }
+  ],
+  "discarded": [
+    {
+      "reason": "aborted",
+      "actionId": "face"
+    }
+  ],
+  "transportErrors": [],
+  "cadence": {
+    "decisions": 1,
+    "elapsedMs": 1047,
+    "perSecond": 0.955
+  },
+  "outcome": {},
+  "model": "jev-1.13.0",
+  "fault": "delay:2500ms",
+  "rawLines": 6
+}

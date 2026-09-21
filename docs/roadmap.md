@@ -387,14 +387,16 @@ verify that. Replication is still needed before the behaviour change
 milestone 2 asks for can be called demonstrated; the rest of the farm is
 uncontrolled and the prompt work yields an informed opinion, not evidence.
 
-Cancellation is proven live. Five items remain, not three: the robustness
-exercises for delayed responses, obsolete decisions and model unavailability
-are not yet run, and neither are the route planner verification on the
-20-yard case nor the short live approach with interruption and
-server-position confirmation. Injection tooling for the three faults is
-committed and an operator runbook is at
-`docs/evidence/m2/fault-runbook.md`. The faults cannot be produced by farming
-and must be constructed at the Jev boundary in a real session.
+Cancellation is proven live. The five outstanding items ran live on 2026-09-21:
+delayed responses past the age bound (`stale_age` discards) and past the
+request timeout (`jev_timeout`), an obsolete decision discarded as `aborted`,
+model unavailability as both `TypeSafe HTTP 503` and `fetch failed`, a 62-yard
+planned route walked to completion with wrong-floor (`ambiguous ground
+column`) and obstructed (`UNKNOWN_HEIGHT`) rejections stopping with reasons,
+and a short live approach halted mid-route with the halt pose confirmed
+against the server relogin position to 0.0005 yards. Records are in
+`docs/evidence/m2/fault-*.json`; injection tooling and the operator runbook
+remain at `docs/evidence/m2/fault-runbook.md`.
 
 Limits found live and not yet resolved. The client never chases, so a creature
 that leashes home cannot be finished; one was driven to 2 health and reset. It

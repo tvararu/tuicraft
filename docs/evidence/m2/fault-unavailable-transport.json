@@ -1,0 +1,33 @@
+{
+  "runId": "f63b1de9-db2d-4f01-9b8d-c856764d1d6e",
+  "recordedAt": "2026-09-21T19:55:28.488Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "none",
+  "character": {
+    "level": 10,
+    "maxPower": 532,
+    "maxHealth": 187
+  },
+  "target": {
+    "guid": "0xf130003d2301f50b",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [],
+  "discarded": [],
+  "transportErrors": [
+    "fetch failed"
+  ],
+  "cadence": {
+    "decisions": 0,
+    "elapsedMs": 21,
+    "perSecond": 0
+  },
+  "outcome": {
+    "status": "failed",
+    "reason": "fetch failed"
+  },
+  "fault": "transport:network",
+  "rawLines": 6
+}

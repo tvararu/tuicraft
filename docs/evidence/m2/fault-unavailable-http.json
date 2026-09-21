@@ -1,0 +1,33 @@
+{
+  "runId": "24376ef4-09fd-4fe9-a8af-f0f10e9d781f",
+  "recordedAt": "2026-09-21T19:55:03.697Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "none",
+  "character": {
+    "level": 10,
+    "maxPower": 532,
+    "maxHealth": 187
+  },
+  "target": {
+    "guid": "0xf130003d2301f50b",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [],
+  "discarded": [],
+  "transportErrors": [
+    "TypeSafe HTTP 503"
+  ],
+  "cadence": {
+    "decisions": 0,
+    "elapsedMs": 22,
+    "perSecond": 0
+  },
+  "outcome": {
+    "status": "failed",
+    "reason": "TypeSafe HTTP 503"
+  },
+  "fault": "http:503",
+  "rawLines": 6
+}

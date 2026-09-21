@@ -94,25 +94,57 @@ behaviour change milestone 2 asks for can be called demonstrated.
 
 ## Robustness exercises
 
-| Exercise | Status | Record |
-|----------|--------|--------|
-| Cancellation after the correlated-failure repair | passed | [cancellation-reproof.json](cancellation-reproof.json) |
-| Delayed response past the bound | not run | |
-| Obsolete decision | not run | |
-| Model unavailable | not run | |
+All four run live against the real server; no kill was needed or sought.
+Proof field per exercise is named in the last column.
 
-The three outstanding faults cannot be produced by farming. Each one is
-constructed at the Jev boundary during a real session against the real server.
-A unit test does not satisfy the gate.
+| Exercise | Status | Record | Proof |
+|----------|--------|--------|-------|
+| Cancellation after the correlated-failure repair | passed | [cancellation-reproof.json](cancellation-reproof.json) | `halt` reported `status: idle`, `lastStopReason: halt` |
+| Delayed response past the age bound | passed | [fault-delayed-stale.json](fault-delayed-stale.json) | `discarded` holds two `{reason: stale_age}`, `fault: delay:2500ms` |
+| Delayed response past the request timeout | passed | [fault-delayed-timeout.json](fault-delayed-timeout.json) | `transportErrors: [jev_timeout]`, `outcome: failed/jev_timeout`, `fault: delay:6000ms` |
+| Obsolete decision | passed | [fault-obsolete.json](fault-obsolete.json) | `discarded` holds `{reason: aborted}`, `fault: delay:2500ms` |
+| Model unavailable, HTTP status | passed | [fault-unavailable-http.json](fault-unavailable-http.json) | `transportErrors: [TypeSafe HTTP 503]`, `outcome: failed`, `fault: http:503` |
+| Model unavailable, transport | passed | [fault-unavailable-transport.json](fault-unavailable-transport.json) | `transportErrors: [fetch failed]`, `outcome: failed`, `fault: transport:network` |
 
-## Further outstanding milestone 2 prerequisites
+Each fault was constructed at the Jev boundary during a real session via
+`JEV_FAULT`, with a daemon restart per fault, against template-38 Springpaw
+Stalkers near (8731, -6568). A unit test does not satisfy the gate, and none
+is offered here.
 
-Beyond the three fault exercises, milestone 2 requires two more items, both
-not run: route planner verification on the observed 20-yard case, and the
-short live approach with immediate interruption and server-position
-confirmation. The planner currently refuses the server's own reported corpse
-position (see below), so both are blocked on usable pathfinding rather than
-on encounter farming. Five items remain in total, not three.
+## Route planner verification and short live approach, 2026-09-21
+
+Both outstanding navigation prerequisites ran live the same day, on ground
+near (8758, -6528) to (8758, -6590), with native column queries from
+`findHeights` confirming each endpoint before commanding it.
+
+A 62-yard planned route from (8758, -6528) to (8758, -6590) was accepted and
+walked to completion: `navigation` reported `remaining` falling 47.979
+through 33.965, 19.951 and 5.237 to 0 with `active: false` at the end.
+Independent column queries along the corridor show one continuous surface
+from 57.8 to 64.7, consistent with the accepted plan; the planner's own
+per-step forward and reverse height checks and collision rays are enforced
+in code (`src/wow/navigation.ts`, `groundPoint`), and no divergence was
+observed. Start preservation is enforced by `rejectSnap` on the native path
+endpoints in the same file; both live plans began at the observed start
+with no snap error.
+
+Rejections stop with a reason and walk nothing. A destination rounded to
+64.4 over a true column of 64.656 (difference 0.256 against the 0.25
+`GROUND_ERROR` gate) was refused with `position disagrees with ground
+height` — the operator's rounding error, and the gate working as designed.
+A four-floor column at (8713.8, -6625.3) was refused with `ambiguous ground
+column` at `pick_destination`. A route across a double-floor span toward
+(8742.7, -6608.5) stopped with `pathfind_find_height failed
+(UNKNOWN_HEIGHT)` at stage `stop`. No silent retry in any case.
+
+The short live approach with interruption ran on the same ground: `goto`
+(8758, -6550) from (8758, -6590), halted mid-route. Navigation reported the
+stop with `blockedReason: halt`, `remaining: 3.57`, and the predicted pose
+at halt was (8758.567, -6553.524, 61.396). A daemon restart (relogin) then
+returned the authoritative server pose as (8758.566, -6553.524, 61.396), a
+difference of about 0.0005 yards. Server position came from the relogin,
+not from the predicted pose, because ordinary movement does not echo the
+character's own position back to the same client.
 
 ## Cancellation re-proof, 2026-09-21
 
