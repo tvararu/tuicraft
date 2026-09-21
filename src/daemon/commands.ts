@@ -36,6 +36,12 @@ import type {
   ControlState,
   MovementDirection,
 } from "wow/control";
+import type { CombatEvent } from "wow/combat";
+import type { TacticsEvent } from "wow/tactics";
+import type { FollowEvent } from "wow/follow";
+import type { RecoveryEvent } from "wow/recovery";
+import type { QuestEvent } from "wow/quests";
+import type { RewardsEvent } from "wow/rewards";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type {
   Entity,
@@ -85,6 +91,49 @@ export type IpcCommand =
   | { type: "face"; orientation: number }
   | { type: "target"; guid: bigint }
   | { type: "halt" }
+  | { type: "combat" }
+  | { type: "combat_json" }
+  | { type: "spells" }
+  | { type: "spells_json" }
+  | { type: "cast"; spellId: number; guid: bigint }
+  | { type: "attack"; guid: bigint }
+  | { type: "cancel_cast" }
+  | { type: "stop_attack" }
+  | { type: "fight"; guid: bigint; instruction: string }
+  | { type: "tactics" }
+  | { type: "tactics_json" }
+  | { type: "goto"; x: number; y: number; z: number }
+  | { type: "navigation" }
+  | { type: "navigation_json" }
+  | { type: "follow"; guid: bigint; distance?: number }
+  | { type: "following" }
+  | { type: "following_json" }
+  | { type: "recovery" }
+  | { type: "recovery_json" }
+  | { type: "query_corpse" }
+  | { type: "release_spirit" }
+  | { type: "reclaim_corpse" }
+  | { type: "resurrect"; accept: boolean }
+  | { type: "quests" }
+  | { type: "quests_json" }
+  | { type: "talk"; guid: bigint }
+  | { type: "query_quest"; questId: number }
+  | { type: "select_option"; optionId: number; code?: string }
+  | { type: "select_quest"; questId: number }
+  | { type: "accept_quest" }
+  | { type: "complete_quest"; questId: number }
+  | { type: "request_reward" }
+  | { type: "choose_reward"; index: number }
+  | { type: "abandon_quest"; slot: number }
+  | { type: "cancel_interaction" }
+  | { type: "inventory" }
+  | { type: "inventory_json" }
+  | { type: "loot" }
+  | { type: "loot_json" }
+  | { type: "open_loot"; guid: bigint }
+  | { type: "take_loot"; slot: number }
+  | { type: "take_money" }
+  | { type: "release_loot" }
   | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }
@@ -269,6 +318,132 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return parseTargetCommand(rest);
     case "HALT":
       return { type: "halt" };
+    case "COMBAT":
+      return { type: "combat" };
+    case "COMBAT_JSON":
+      return { type: "combat_json" };
+    case "SPELLS":
+      return { type: "spells" };
+    case "SPELLS_JSON":
+      return { type: "spells_json" };
+    case "CAST":
+      return parseCastCommand(rest);
+    case "ATTACK":
+      return parseAttackCommand(rest);
+    case "CANCEL_CAST":
+      return { type: "cancel_cast" };
+    case "STOP_ATTACK":
+      return { type: "stop_attack" };
+    case "FIGHT":
+      return parseFightCommand(rest);
+    case "TACTICS":
+      return { type: "tactics" };
+    case "TACTICS_JSON":
+      return { type: "tactics_json" };
+    case "GOTO":
+      return parseGotoCommand(rest);
+    case "NAVIGATION":
+      return { type: "navigation" };
+    case "NAVIGATION_JSON":
+      return { type: "navigation_json" };
+    case "FOLLOW":
+      return parseFollowCommand(rest);
+    case "FOLLOWING":
+      return { type: "following" };
+    case "FOLLOWING_JSON":
+      return { type: "following_json" };
+    case "RECOVERY":
+      return { type: "recovery" };
+    case "RECOVERY_JSON":
+      return { type: "recovery_json" };
+    case "QUERY_CORPSE":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid query-corpse" }
+        : { type: "query_corpse" };
+    case "RELEASE_SPIRIT":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid release-spirit" }
+        : { type: "release_spirit" };
+    case "RECLAIM_CORPSE":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid reclaim-corpse" }
+        : { type: "reclaim_corpse" };
+    case "RESURRECT": {
+      const decision = rest.trim();
+      if (decision !== "accept" && decision !== "decline")
+        return { type: "invalid", reason: "invalid resurrect" };
+      return { type: "resurrect", accept: decision === "accept" };
+    }
+    case "QUESTS":
+      return { type: "quests" };
+    case "QUESTS_JSON":
+      return { type: "quests_json" };
+    case "TALK": {
+      const guid = parseGuid(rest.trim());
+      if (guid === undefined || guid === 0n)
+        return { type: "invalid", reason: "invalid guid" };
+      return { type: "talk", guid };
+    }
+    case "QUERY_QUEST":
+      return parseQuestIdCommand(rest, "query_quest");
+    case "SELECT_QUEST":
+      return parseQuestIdCommand(rest, "select_quest");
+    case "COMPLETE_QUEST":
+      return parseQuestIdCommand(rest, "complete_quest");
+    case "SELECT_OPTION":
+      return parseSelectOptionCommand(rest);
+    case "ACCEPT_QUEST":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid accept-quest" }
+        : { type: "accept_quest" };
+    case "REQUEST_REWARD":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid request-reward" }
+        : { type: "request_reward" };
+    case "CANCEL_INTERACTION":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid cancel-interaction" }
+        : { type: "cancel_interaction" };
+    case "CHOOSE_REWARD": {
+      const index = parseBoundedInteger(rest, 0, 5);
+      return index === undefined
+        ? { type: "invalid", reason: "invalid reward index" }
+        : { type: "choose_reward", index };
+    }
+    case "ABANDON_QUEST": {
+      const slot = parseBoundedInteger(rest, 0, 24);
+      return slot === undefined
+        ? { type: "invalid", reason: "invalid quest slot" }
+        : { type: "abandon_quest", slot };
+    }
+    case "INVENTORY":
+      return { type: "inventory" };
+    case "INVENTORY_JSON":
+      return { type: "inventory_json" };
+    case "LOOT":
+      return { type: "loot" };
+    case "LOOT_JSON":
+      return { type: "loot_json" };
+    case "OPEN_LOOT": {
+      const guid = parseGuid(rest.trim());
+      if (guid === undefined || guid === 0n)
+        return { type: "invalid", reason: "invalid guid" };
+      return { type: "open_loot", guid };
+    }
+    case "TAKE_LOOT": {
+      const slot = parseBoundedInteger(rest, 0, 255);
+      return slot === undefined
+        ? { type: "invalid", reason: "invalid loot slot" }
+        : { type: "take_loot", slot };
+    }
+    case "TAKE_MONEY":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid take-money" }
+        : { type: "take_money" };
+    case "RELEASE_LOOT":
+      return rest.trim()
+        ? { type: "invalid", reason: "invalid release-loot" }
+        : { type: "release_loot" };
     case "FRIENDS":
       return { type: "friends" };
     case "FRIENDS_JSON":
@@ -620,6 +795,146 @@ export async function dispatchCommand(
     case "halt":
       return runControlAction(socket, () => {
         handle.halt();
+      });
+    case "combat":
+      return writeInspect(socket, () => handle.getCombatState(), false);
+    case "combat_json":
+      return writeInspect(socket, () => handle.getCombatState(), true);
+    case "spells":
+      return await writeInspectAsync(
+        socket,
+        () => handle.getSpellbook(),
+        false,
+      );
+    case "spells_json":
+      return await writeInspectAsync(socket, () => handle.getSpellbook(), true);
+    case "cast":
+      return runControlAction(socket, () => {
+        handle.cast(cmd.spellId, cmd.guid);
+      });
+    case "attack":
+      return runControlAction(socket, () => {
+        handle.attack(cmd.guid);
+      });
+    case "cancel_cast":
+      return runControlAction(socket, () => {
+        handle.cancelCast();
+      });
+    case "stop_attack":
+      return runControlAction(socket, () => {
+        handle.stopAttack();
+      });
+    case "fight":
+      return runControlActionAsync(socket, () =>
+        handle.startTactics(cmd.guid, cmd.instruction, abort),
+      );
+    case "tactics":
+      return writeInspect(socket, () => handle.getTacticsState(), false);
+    case "tactics_json":
+      return writeInspect(socket, () => handle.getTacticsState(), true);
+    case "goto":
+      return runControlAction(socket, () => {
+        handle.goTo(cmd.x, cmd.y, cmd.z);
+      });
+    case "navigation":
+      return writeInspect(socket, () => handle.getNavigationState(), false);
+    case "navigation_json":
+      return writeInspect(socket, () => handle.getNavigationState(), true);
+    case "follow":
+      return runControlAction(socket, () => {
+        handle.follow(cmd.guid, cmd.distance);
+      });
+    case "following":
+      return writeInspect(socket, () => handle.getFollowState(), false);
+    case "following_json":
+      return writeInspect(socket, () => handle.getFollowState(), true);
+    case "recovery":
+      return writeInspect(socket, () => handle.getRecoveryState(), false);
+    case "recovery_json":
+      return writeInspect(socket, () => handle.getRecoveryState(), true);
+    case "query_corpse":
+      return runControlAction(socket, () => {
+        handle.queryCorpse();
+      });
+    case "release_spirit":
+      return runControlAction(socket, () => {
+        handle.releaseSpirit();
+      });
+    case "reclaim_corpse":
+      return runControlAction(socket, () => {
+        handle.reclaimCorpse();
+      });
+    case "resurrect":
+      return runControlAction(socket, () => {
+        handle.respondResurrection(cmd.accept);
+      });
+    case "quests":
+      return writeInspect(socket, () => handle.getQuestState(), false);
+    case "quests_json":
+      return writeInspect(socket, () => handle.getQuestState(), true);
+    case "talk":
+      return runControlAction(socket, () => {
+        handle.talk(cmd.guid);
+      });
+    case "query_quest":
+      return runControlAction(socket, () => {
+        handle.queryQuest(cmd.questId);
+      });
+    case "select_option":
+      return runControlAction(socket, () => {
+        handle.selectGossipOption(cmd.optionId, cmd.code);
+      });
+    case "select_quest":
+      return runControlAction(socket, () => {
+        handle.selectQuest(cmd.questId);
+      });
+    case "accept_quest":
+      return runControlAction(socket, () => {
+        handle.acceptQuest();
+      });
+    case "complete_quest":
+      return runControlAction(socket, () => {
+        handle.completeQuest(cmd.questId);
+      });
+    case "request_reward":
+      return runControlAction(socket, () => {
+        handle.requestQuestReward();
+      });
+    case "choose_reward":
+      return runControlAction(socket, () => {
+        handle.chooseQuestReward(cmd.index);
+      });
+    case "abandon_quest":
+      return runControlAction(socket, () => {
+        handle.abandonQuest(cmd.slot);
+      });
+    case "cancel_interaction":
+      return runControlAction(socket, () => {
+        handle.cancelInteraction();
+      });
+    case "inventory":
+      return writeInspect(socket, () => handle.getInventoryState(), false);
+    case "inventory_json":
+      return writeInspect(socket, () => handle.getInventoryState(), true);
+    case "loot":
+      return writeInspect(socket, () => handle.getRewardsState(), false);
+    case "loot_json":
+      return writeInspect(socket, () => handle.getRewardsState(), true);
+    case "open_loot":
+      return runControlAction(socket, () => {
+        handle.openLoot(cmd.guid);
+      });
+    case "take_loot":
+      return runControlAction(socket, () => {
+        handle.takeLoot(cmd.slot);
+      });
+    case "take_money":
+      return runControlAction(socket, () => {
+        handle.takeLootMoney();
+      });
+    case "release_loot":
+      return runControlAction(socket, () => {
+        handle.releaseLoot();
       });
     case "invalid":
       writeLines(socket, [`ERR ${cmd.reason}`]);
@@ -991,6 +1306,285 @@ export function onControlEvent(
     json: JSON.stringify(obj),
   });
   log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onCombatEvent(
+  event: CombatEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "COMBAT",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("combat", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onTacticsEvent(
+  event: TacticsEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "TACTICS",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("tactics", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onFollowEvent(
+  event: FollowEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "FOLLOW",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("follow", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onRecoveryEvent(
+  event: RecoveryEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "RECOVERY",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("recovery", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onQuestEvent(
+  event: QuestEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = { type: "QUEST", data: jsonSafe(event) };
+  events.push({
+    text: formatDomainEvent("quest", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onRewardsEvent(
+  event: RewardsEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "REWARDS",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("rewards", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+const DEFAULT_FIGHT_INSTRUCTION =
+  "defeat the selected target while keeping the character alive";
+const MAX_SPELL_ID = 0xffff_ffff;
+
+function jsonSafe(value: unknown): unknown {
+  if (typeof value === "bigint") return `0x${value.toString(16)}`;
+  if (Array.isArray(value)) return value.map(jsonSafe);
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      out[key] = jsonSafe(entry);
+    }
+    return out;
+  }
+  return value;
+}
+
+function formatDomainEvent(kind: string, event: { type: string }): string {
+  return `[${kind}] ${event.type}`;
+}
+
+function parseSpellId(raw: string): number | undefined {
+  if (!/^[0-9]+$/.test(raw)) return undefined;
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id < 1 || id > MAX_SPELL_ID) return undefined;
+  return id;
+}
+
+function parseFiniteNumber(raw: string): number | undefined {
+  const value = Number(raw);
+  if (raw.trim() === "" || !Number.isFinite(value)) return undefined;
+  return value;
+}
+
+function parseCastCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length !== 2) return { type: "invalid", reason: "invalid cast" };
+  const spellId = parseSpellId(parts[0]!);
+  const guid = parseGuid(parts[1]!);
+  if (spellId === undefined)
+    return { type: "invalid", reason: "invalid spell" };
+  if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
+  return { type: "cast", spellId, guid };
+}
+
+function parseAttackCommand(rest: string): IpcCommand {
+  const token = rest.trim();
+  if (!token || token.split(/\s+/).length !== 1) {
+    return { type: "invalid", reason: "invalid guid" };
+  }
+  const guid = parseGuid(token);
+  if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
+  return { type: "attack", guid };
+}
+
+function parseFightCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length < 1) return { type: "invalid", reason: "invalid fight" };
+  const guid = parseGuid(parts[0]!);
+  if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
+  const instruction = parts.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
+  return { type: "fight", guid, instruction };
+}
+
+function parseGotoCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length !== 3) return { type: "invalid", reason: "invalid goto" };
+  const x = parseFiniteNumber(parts[0]!);
+  const y = parseFiniteNumber(parts[1]!);
+  const z = parseFiniteNumber(parts[2]!);
+  if (x === undefined || y === undefined || z === undefined) {
+    return { type: "invalid", reason: "invalid goto" };
+  }
+  return { type: "goto", x, y, z };
+}
+
+function parseFollowCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length < 1 || parts.length > 2)
+    return { type: "invalid", reason: "invalid follow" };
+  const guid = parseGuid(parts[0]!);
+  if (guid === undefined || guid === 0n)
+    return { type: "invalid", reason: "invalid guid" };
+  const raw = parts[1];
+  const distance = raw === undefined ? undefined : parseFiniteNumber(raw);
+  if (
+    raw !== undefined &&
+    (distance === undefined || distance < 1 || distance > 20)
+  )
+    return { type: "invalid", reason: "invalid follow distance" };
+  return { type: "follow", guid, distance };
+}
+
+function parseBoundedInteger(
+  raw: string,
+  min: number,
+  max: number,
+): number | undefined {
+  const token = raw.trim();
+  if (!/^[0-9]+$/.test(token)) return undefined;
+  const value = Number(token);
+  return Number.isInteger(value) && value >= min && value <= max
+    ? value
+    : undefined;
+}
+
+function parseQuestIdCommand(
+  rest: string,
+  type: "query_quest" | "select_quest" | "complete_quest",
+): IpcCommand {
+  const questId = parseBoundedInteger(rest, 1, 0xffff_ffff);
+  return questId === undefined
+    ? { type: "invalid", reason: "invalid quest id" }
+    : { type, questId };
+}
+
+function parseSelectOptionCommand(rest: string): IpcCommand {
+  const value = rest.trim();
+  const space = value.indexOf(" ");
+  const rawId = space === -1 ? value : value.slice(0, space);
+  const optionId = parseBoundedInteger(rawId, 0, 0xffff_ffff);
+  if (optionId === undefined)
+    return { type: "invalid", reason: "invalid gossip option id" };
+  let code: unknown = null;
+  try {
+    if (space !== -1) code = JSON.parse(value.slice(space + 1));
+  } catch {
+    return { type: "invalid", reason: "invalid gossip code JSON" };
+  }
+  if (code !== null && typeof code !== "string")
+    return { type: "invalid", reason: "invalid gossip code" };
+  if (typeof code === "string" && code.includes("\0"))
+    return { type: "invalid", reason: "invalid gossip code" };
+  return {
+    type: "select_option",
+    optionId,
+    code: code === null ? undefined : code,
+  };
+}
+
+function writeInspect(
+  socket: IpcSocket,
+  read: () => unknown,
+  json: boolean,
+): boolean {
+  try {
+    const encoded = jsonSafe(read());
+    if (json) writeLines(socket, [JSON.stringify(encoded)]);
+    else writeLines(socket, JSON.stringify(encoded, null, 2).split("\n"));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "internal";
+    writeLines(socket, [`ERR ${reason}`]);
+  }
+  return false;
+}
+
+async function writeInspectAsync(
+  socket: IpcSocket,
+  read: () => Promise<unknown>,
+  json: boolean,
+): Promise<boolean> {
+  try {
+    const encoded = jsonSafe(await read());
+    if (json) writeLines(socket, [JSON.stringify(encoded)]);
+    else writeLines(socket, JSON.stringify(encoded, null, 2).split("\n"));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "internal";
+    writeLines(socket, [`ERR ${reason}`]);
+  }
+  return false;
+}
+
+async function runControlActionAsync(
+  socket: IpcSocket,
+  action: () => Promise<void>,
+): Promise<boolean> {
+  try {
+    await action();
+    writeLines(socket, ["OK"]);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "internal";
+    writeLines(socket, [`ERR ${reason}`]);
+  }
+  return false;
 }
 
 const DIRECTIONS: readonly MovementDirection[] = [

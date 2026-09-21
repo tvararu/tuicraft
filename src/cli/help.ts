@@ -17,8 +17,48 @@ USAGE
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
   tuicraft face <radians>    Set facing in radians
   tuicraft target <guid>     Select target (0 clears)
-  tuicraft halt              Stop movement without disconnect
+  tuicraft halt              Cancel motion, casting, attack, tactics and follow
   tuicraft nearby [--json]   List nearby entities
+  tuicraft combat [--json]   Combat state
+  tuicraft spells [--json]   Learned spellbook
+  tuicraft cast <id> <guid>  Cast a learned spell
+  tuicraft attack <guid>     Start auto-attack
+  tuicraft cancel-cast       Interrupt current cast
+  tuicraft stop-attack       Stop auto-attack
+  tuicraft fight <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
+                            Spell kit: observed normal form; no chase or kite
+  tuicraft tactics [--json]  Tactics state and terminal observations
+  tuicraft goto <x> <y> <z>  Walk a ground route
+  tuicraft navigation [--json]  Navigation state
+  tuicraft follow <guid> [distance]  Bounded ground follow (1-20 yards, default 3)
+                            Map 530; maximum 30s; OK is intent, not arrival
+  tuicraft following [--json]  Follow state, provenance and stop reason
+  tuicraft recovery [--json]  Observed life, corpse, delay and request state
+  tuicraft query-corpse       Request current corpse information
+  tuicraft release-spirit     Request release from observed dead state
+  tuicraft reclaim-corpse     Request guarded corpse reclaim
+  tuicraft resurrect accept|decline  Answer the current resurrection offer
+                            OK is request intent, not confirmed recovery
+  tuicraft quests [--json]    Offered dialog, quest log and pending intent
+  tuicraft talk <guid>        Request a conversation with an observed giver
+  tuicraft query-quest <id>   Request quest metadata (not authorization)
+  tuicraft select-option <id> [code]  Choose an offered gossip option
+  tuicraft select-quest <id>  Choose a quest from the offered menu
+  tuicraft accept-quest      Request acceptance of offered details
+  tuicraft complete-quest <id>  Request offered quest completion
+  tuicraft request-reward    Request the current quest reward offer
+  tuicraft choose-reward <index>  Choose offered reward (zero-based 0-5)
+  tuicraft abandon-quest <slot>  Request log-slot abandonment (zero-based 0-24)
+  tuicraft cancel-interaction  Request close; wait for observed close
+                            OK is intent, not accepted/completed/rewarded state
+  tuicraft inventory [--json]  Observed carried items, coinage and unknown fields
+  tuicraft loot [--json]      Loot offer, pending intent and inventory evidence
+  tuicraft open-loot <guid>  Request loot from an observed lootable corpse
+  tuicraft take-loot <slot>  Request an offered uint8 loot slot (0-255)
+  tuicraft take-money        Request money from the current offer
+  tuicraft release-loot      Request close of the open loot window
+                            OK/slot removal is not stored gain
+                            Release-only opening stays unanswered; reconnect explicitly
   tuicraft stop               Stop the daemon
   tuicraft logs               Print session log
   tuicraft skill              Print SKILL.md for AI agents
@@ -28,7 +68,7 @@ USAGE
 FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
-  --json          Output as JSON (read, tail, chat, who, control, nearby)
+  --json          Output as JSON (read, tail, chat, who, control, nearby, combat, spells, tactics, navigation, following, recovery, quests, inventory, loot)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
 
@@ -79,6 +119,13 @@ DAEMON
   The daemon starts automatically when needed and stays running
   for 30 minutes of inactivity. It maintains the WoW connection
   and buffers events for CLI clients.
+
+GAMEPLAY DATA
+  spell_data_dir            Build-12340 DBC directory in account config
+  navigation_data_dir       Compatible Namigator data root (map 530)
+  navigation_library        Compatible Namigator shared library
+  TYPESAFE_API_KEY           Jev key in daemon environment, never config
+  Restart the daemon after configuration changes. See docs/manual.md.
 
 FILES
   ~/.config/tuicraft/config.toml  Account config

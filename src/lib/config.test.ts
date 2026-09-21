@@ -181,3 +181,14 @@ describe("writeConfig", () => {
     expect(st.mode & 0o777).toBe(0o600);
   });
 });
+
+test("optional capability paths reject empty or numeric values without requiring capability data for chat", () => {
+  const base = 'account = "a"\npassword = "b"\ncharacter = "c"';
+  expect(parseConfig(base).spell_data_dir).toBeUndefined();
+  expect(() => parseConfig(`${base}\nspell_data_dir = "  "`)).toThrow();
+  expect(() => parseConfig(`${base}\nnavigation_library = 123`)).toThrow();
+  const config = parseConfig(
+    `${base}\nspell_data_dir = "data/raw"\nnavigation_data_dir = "data/nav"\nnavigation_library = "libnav.so"`,
+  );
+  expect(parseConfig(serializeConfig(config))).toEqual(config);
+});

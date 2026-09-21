@@ -17,6 +17,12 @@ import {
   onGuildEvent,
   onDuelEvent,
   onControlEvent,
+  onCombatEvent,
+  onTacticsEvent,
+  onFollowEvent,
+  onRecoveryEvent,
+  onQuestEvent,
+  onRewardsEvent,
   writeLines,
   type EventEntry,
   type IpcSocket,
@@ -92,6 +98,29 @@ function isStaleControl(type: string | undefined): boolean {
     type === "move" ||
     type === "face" ||
     type === "target" ||
+    type === "cast" ||
+    type === "attack" ||
+    type === "cancel_cast" ||
+    type === "stop_attack" ||
+    type === "fight" ||
+    type === "goto" ||
+    type === "follow" ||
+    type === "release_spirit" ||
+    type === "reclaim_corpse" ||
+    type === "resurrect" ||
+    type === "talk" ||
+    type === "select_option" ||
+    type === "select_quest" ||
+    type === "accept_quest" ||
+    type === "complete_quest" ||
+    type === "request_reward" ||
+    type === "choose_reward" ||
+    type === "abandon_quest" ||
+    type === "cancel_interaction" ||
+    type === "open_loot" ||
+    type === "take_loot" ||
+    type === "take_money" ||
+    type === "release_loot" ||
     type === "read_wait" ||
     type === "read_wait_json"
   );
@@ -188,12 +217,24 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onGuildEvent((event) => onGuildEvent(event, events, log));
   handle.onDuelEvent((event) => onDuelEvent(event, events, log));
   handle.onControlEvent((event) => onControlEvent(event, events, log));
+  handle.onCombatEvent((event) => onCombatEvent(event, events, log));
+  handle.onTacticsEvent((event) => onTacticsEvent(event, events, log));
+  handle.onFollowEvent((event) => onFollowEvent(event, events, log));
+  handle.onRecoveryEvent((event) => onRecoveryEvent(event, events, log));
+  handle.onQuestEvent((event) => onQuestEvent(event, events, log));
+  handle.onRewardsEvent((event) => onRewardsEvent(event, events, log));
 
   let cleaned = false;
   function cleanup(): void {
     if (cleaned) return;
     cleaned = true;
     handle.onControlEvent(undefined);
+    handle.onCombatEvent(undefined);
+    handle.onTacticsEvent(undefined);
+    handle.onFollowEvent(undefined);
+    handle.onRecoveryEvent(undefined);
+    handle.onQuestEvent(undefined);
+    handle.onRewardsEvent(undefined);
     handle.close();
     server.stop();
     unlink(sock).catch(() => {});
@@ -216,6 +257,10 @@ function buildClientConfig(cfg: Awaited<ReturnType<typeof readConfig>>) {
     password: cfg.password.toUpperCase(),
     character: cfg.character,
     language: cfg.language,
+    spellDataDir: cfg.spell_data_dir,
+    navigationDataDir: cfg.navigation_data_dir,
+    navigationLibrary: cfg.navigation_library,
+    jevApiKey: process.env["TYPESAFE_API_KEY"],
   };
 }
 

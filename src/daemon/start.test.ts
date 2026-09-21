@@ -1,3 +1,4 @@
+import { createMockHandle } from "test/mock-handle";
 import { mock, jest, test, expect, describe, afterEach } from "bun:test";
 import { access, rm, mkdir, unlink } from "node:fs/promises";
 import { serializeConfig } from "lib/config";
@@ -43,6 +44,7 @@ function makeMockClient(): {
     ),
     worldSession: jest.fn(
       async (): Promise<WorldHandle> => ({
+        ...createMockHandle(),
         closed,
         close: mockHandleClose,
         onMessage: jest.fn(),
@@ -100,6 +102,29 @@ function makeMockClient(): {
         selectTarget: jest.fn(),
         halt: jest.fn(),
         onControlEvent: jest.fn(),
+        follow: jest.fn(),
+        onFollowEvent: jest.fn(),
+        queryCorpse: jest.fn(),
+        releaseSpirit: jest.fn(),
+        reclaimCorpse: jest.fn(),
+        respondResurrection: jest.fn(),
+        onRecoveryEvent: jest.fn(),
+        talk: jest.fn(),
+        queryQuest: jest.fn(),
+        selectGossipOption: jest.fn(),
+        selectQuest: jest.fn(),
+        acceptQuest: jest.fn(),
+        completeQuest: jest.fn(),
+        requestQuestReward: jest.fn(),
+        chooseQuestReward: jest.fn(),
+        abandonQuest: jest.fn(),
+        cancelInteraction: jest.fn(),
+        onQuestEvent: jest.fn(),
+        openLoot: jest.fn(),
+        takeLoot: jest.fn(),
+        takeLootMoney: jest.fn(),
+        releaseLoot: jest.fn(),
+        onRewardsEvent: jest.fn(),
       }),
     ),
     mockHandleClose,

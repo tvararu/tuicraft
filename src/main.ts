@@ -48,6 +48,10 @@ async function main() {
         password: cfg.password.toUpperCase(),
         character: cfg.character,
         language: cfg.language,
+        spellDataDir: cfg.spell_data_dir,
+        navigationDataDir: cfg.navigation_data_dir,
+        navigationLibrary: cfg.navigation_library,
+        jevApiKey: process.env["TYPESAFE_API_KEY"],
       };
       const auth = await authWithRetry(clientCfg);
       const handle = await worldSession(clientCfg, auth);
@@ -187,6 +191,145 @@ async function main() {
       const cmd = action.json ? "NEARBY_JSON" : "NEARBY";
       const lines = await sendToSocket(cmd);
       for (const line of lines) console.log(line);
+      break;
+    }
+    case "combat":
+    case "spells":
+    case "tactics":
+    case "navigation":
+    case "following":
+    case "recovery":
+    case "quests":
+    case "inventory":
+    case "loot": {
+      await ensureDaemon();
+      const verb = `${action.mode.toUpperCase()}${action.json ? "_JSON" : ""}`;
+      const lines = await sendToSocket(verb);
+      printControlReply(lines);
+      break;
+    }
+    case "cast": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(
+          `CAST ${action.spellId} 0x${action.guid.toString(16)}`,
+        ),
+      );
+      break;
+    }
+    case "attack": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`ATTACK 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
+    case "cancel_cast": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket("CANCEL_CAST"));
+      break;
+    }
+    case "stop_attack": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket("STOP_ATTACK"));
+      break;
+    }
+    case "fight": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(
+          `FIGHT 0x${action.guid.toString(16)} ${action.instruction}`,
+        ),
+      );
+      break;
+    }
+    case "open_loot": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`OPEN_LOOT 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
+    case "take_loot": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(`TAKE_LOOT ${action.slot}`));
+      break;
+    }
+    case "take_money":
+    case "release_loot": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(action.mode.toUpperCase()));
+      break;
+    }
+    case "talk": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`TALK 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
+    case "query_quest":
+    case "select_quest":
+    case "complete_quest": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`${action.mode.toUpperCase()} ${action.questId}`),
+      );
+      break;
+    }
+    case "select_option": {
+      await ensureDaemon();
+      const code = JSON.stringify(action.code ?? null);
+      printControlReply(
+        await sendToSocket(`SELECT_OPTION ${action.optionId} ${code}`),
+      );
+      break;
+    }
+    case "choose_reward": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(`CHOOSE_REWARD ${action.index}`));
+      break;
+    }
+    case "abandon_quest": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(`ABANDON_QUEST ${action.slot}`));
+      break;
+    }
+    case "accept_quest":
+    case "request_reward":
+    case "cancel_interaction": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(action.mode.toUpperCase()));
+      break;
+    }
+    case "query_corpse":
+    case "release_spirit":
+    case "reclaim_corpse": {
+      await ensureDaemon();
+      printControlReply(await sendToSocket(action.mode.toUpperCase()));
+      break;
+    }
+    case "resurrect": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`RESURRECT ${action.accept ? "accept" : "decline"}`),
+      );
+      break;
+    }
+    case "follow": {
+      await ensureDaemon();
+      const distance =
+        action.distance === undefined ? "" : ` ${action.distance}`;
+      printControlReply(
+        await sendToSocket(`FOLLOW 0x${action.guid.toString(16)}${distance}`),
+      );
+      break;
+    }
+    case "goto": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`GOTO ${action.x} ${action.y} ${action.z}`),
+      );
       break;
     }
     case "skill": {

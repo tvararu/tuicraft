@@ -451,4 +451,201 @@ describe("parseArgs", () => {
   test("halt subcommand", () => {
     expect(parseArgs(["halt"])).toEqual({ mode: "halt" });
   });
+
+  test("cast attack fight goto parse and reject", () => {
+    expect(parseArgs(["cast", "585", "0xa"])).toEqual({
+      mode: "cast",
+      spellId: 585,
+      guid: 0xan,
+    });
+    expect(parseArgs(["fight", "0xa"])).toEqual({
+      mode: "fight",
+      guid: 0xan,
+      instruction:
+        "defeat the selected target while keeping the character alive",
+    });
+    expect(parseArgs(["goto", "1.5", "2", "3"])).toEqual({
+      mode: "goto",
+      x: 1.5,
+      y: 2,
+      z: 3,
+    });
+    expect(() => parseArgs(["cast", "585"])).toThrow("Invalid cast arguments");
+    expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow(
+      "Invalid goto arguments",
+    );
+    expect(() => parseArgs(["fight"])).toThrow("Invalid fight arguments");
+    expect(parseArgs(["combat", "--json"])).toEqual({
+      mode: "combat",
+      json: true,
+    });
+  });
+});
+
+describe("follow arguments", () => {
+  test("keeps default distance optional and preserves uint64 target precision", () => {
+    expect(parseArgs(["follow", "18446744073709551615"])).toEqual({
+      mode: "follow",
+      guid: 0xffff_ffff_ffff_ffffn,
+      distance: undefined,
+    });
+    expect(parseArgs(["follow", "0xabcdef", "2.5"])).toEqual({
+      mode: "follow",
+      guid: 0xabcdefn,
+      distance: 2.5,
+    });
+    expect(parseArgs(["following", "--json"])).toEqual({
+      mode: "following",
+      json: true,
+    });
+  });
+
+  test("rejects malformed targets and distances before IPC", () => {
+    for (const args of [
+      ["follow"],
+      ["follow", "0"],
+      ["follow", "-1"],
+      ["follow", "18446744073709551616"],
+      ["follow", "0xzz"],
+      ["follow", "1", "NaN"],
+      ["follow", "1", "Infinity"],
+      ["follow", "1", "0.9"],
+      ["follow", "1", "20.1"],
+      ["follow", "1", ""],
+      ["follow", "1", "3", "extra"],
+    ])
+      expect(() => parseArgs(args)).toThrow();
+  });
+});
+
+describe("recovery arguments", () => {
+  test("parses inspection and explicit resurrection decisions", () => {
+    expect(parseArgs(["recovery", "--json"])).toEqual({
+      mode: "recovery",
+      json: true,
+    });
+    expect(parseArgs(["query-corpse"])).toEqual({ mode: "query_corpse" });
+    expect(parseArgs(["release-spirit"])).toEqual({ mode: "release_spirit" });
+    expect(parseArgs(["reclaim-corpse"])).toEqual({ mode: "reclaim_corpse" });
+    expect(parseArgs(["resurrect", "accept"])).toEqual({
+      mode: "resurrect",
+      accept: true,
+    });
+    expect(parseArgs(["resurrect", "decline"])).toEqual({
+      mode: "resurrect",
+      accept: false,
+    });
+  });
+
+  test("rejects implicit resurrection decisions and extra action arguments", () => {
+    for (const args of [
+      ["resurrect"],
+      ["resurrect", "yes"],
+      ["resurrect", "accept", "extra"],
+      ["query-corpse", "1"],
+      ["release-spirit", "1"],
+      ["reclaim-corpse", "0x1"],
+    ])
+      expect(() => parseArgs(args)).toThrow();
+  });
+});
+
+describe("quest arguments", () => {
+  test("distinguishes absent and empty gossip code without concatenating arguments", () => {
+    expect(parseArgs(["select-option", "0"])).toEqual({
+      mode: "select_option",
+      optionId: 0,
+      code: undefined,
+    });
+    expect(parseArgs(["select-option", "0", ""])).toEqual({
+      mode: "select_option",
+      optionId: 0,
+      code: "",
+    });
+    const code = "  two words\nHALT\r\n  ";
+    expect(parseArgs(["select-option", "4294967295", code])).toEqual({
+      mode: "select_option",
+      optionId: 0xffff_ffff,
+      code,
+    });
+    expect(() => parseArgs(["select-option", "0", "one", "two"])).toThrow();
+    expect(() => parseArgs(["select-option", "0", "bad\0code"])).toThrow();
+  });
+
+  test("preserves GUID precision and uses zero-based reward and log slots", () => {
+    expect(parseArgs(["talk", "18446744073709551615"])).toEqual({
+      mode: "talk",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+    expect(parseArgs(["query-quest", "4294967295"])).toEqual({
+      mode: "query_quest",
+      questId: 0xffff_ffff,
+    });
+    expect(parseArgs(["choose-reward", "0"])).toEqual({
+      mode: "choose_reward",
+      index: 0,
+    });
+    expect(parseArgs(["abandon-quest", "24"])).toEqual({
+      mode: "abandon_quest",
+      slot: 24,
+    });
+    expect(parseArgs(["quests", "--json"])).toEqual({
+      mode: "quests",
+      json: true,
+    });
+  });
+
+  test("rejects out-of-range IDs, slots and unexpected action arguments", () => {
+    for (const args of [
+      ["talk", "0"],
+      ["query-quest", "0"],
+      ["select-quest", "4294967296"],
+      ["complete-quest", "1.5"],
+      ["select-option", "-1"],
+      ["choose-reward", "6"],
+      ["abandon-quest", "25"],
+      ["accept-quest", "1"],
+      ["request-reward", "0"],
+      ["cancel-interaction", "force"],
+    ])
+      expect(() => parseArgs(args)).toThrow();
+  });
+});
+
+describe("loot arguments", () => {
+  test("preserves creature GUID precision and the uint8 offered-slot boundary", () => {
+    expect(parseArgs(["open-loot", "18446744073709551615"])).toEqual({
+      mode: "open_loot",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+    expect(parseArgs(["take-loot", "0"])).toEqual({
+      mode: "take_loot",
+      slot: 0,
+    });
+    expect(parseArgs(["take-loot", "255"])).toEqual({
+      mode: "take_loot",
+      slot: 255,
+    });
+    expect(parseArgs(["inventory", "--json"])).toEqual({
+      mode: "inventory",
+      json: true,
+    });
+    expect(parseArgs(["loot", "--json"])).toEqual({ mode: "loot", json: true });
+  });
+
+  test("rejects invalid loot targets, slots and extra mutation arguments", () => {
+    for (const args of [
+      ["open-loot"],
+      ["open-loot", "0"],
+      ["open-loot", "18446744073709551616"],
+      ["open-loot", "1", "extra"],
+      ["take-loot", "-1"],
+      ["take-loot", "256"],
+      ["take-loot", "1.5"],
+      ["take-loot", "NaN"],
+      ["take-money", "1"],
+      ["release-loot", "1"],
+    ])
+      expect(() => parseArgs(args)).toThrow();
+  });
 });

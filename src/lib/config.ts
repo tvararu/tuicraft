@@ -6,6 +6,9 @@ export type Config = {
   port: number;
   language: number;
   timeout_minutes: number;
+  spell_data_dir?: string;
+  navigation_data_dir?: string;
+  navigation_library?: string;
 };
 
 const DEFAULTS: Partial<Config> = {
@@ -44,6 +47,18 @@ export function parseConfig(text: string): Config {
     if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
       throw new Error(`Invalid ${field}: must be a finite positive number`);
     }
+  }
+  for (const field of [
+    "spell_data_dir",
+    "navigation_data_dir",
+    "navigation_library",
+  ] as const) {
+    const value = result[field];
+    if (
+      value !== undefined &&
+      (typeof value !== "string" || value.trim().length === 0)
+    )
+      throw new Error(`Invalid ${field}: must be a non-empty string`);
   }
   return result as unknown as Config;
 }

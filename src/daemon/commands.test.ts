@@ -28,6 +28,7 @@ import type {
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 import type { ControlEvent, ControlState } from "wow/control";
+import type { FollowState } from "wow/follow";
 
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
@@ -123,6 +124,18 @@ type ControlMock = ReturnType<typeof createMockHandle> & {
   selectTarget: ReturnType<typeof jest.fn>;
   halt: ReturnType<typeof jest.fn>;
   onControlEvent: ReturnType<typeof jest.fn>;
+  getCombatState: ReturnType<typeof jest.fn>;
+  getSpellbook: ReturnType<typeof jest.fn>;
+  cast: ReturnType<typeof jest.fn>;
+  attack: ReturnType<typeof jest.fn>;
+  cancelCast: ReturnType<typeof jest.fn>;
+  stopAttack: ReturnType<typeof jest.fn>;
+  startTactics: ReturnType<typeof jest.fn>;
+  getTacticsState: ReturnType<typeof jest.fn>;
+  goTo: ReturnType<typeof jest.fn>;
+  getNavigationState: ReturnType<typeof jest.fn>;
+  onCombatEvent: ReturnType<typeof jest.fn>;
+  onTacticsEvent: ReturnType<typeof jest.fn>;
 };
 
 function attachControl(
@@ -149,6 +162,18 @@ function attachControl(
     selectTarget: jest.fn(),
     halt: jest.fn(),
     onControlEvent: jest.fn(),
+    getCombatState: jest.fn(() => ({})),
+    getSpellbook: jest.fn(async () => []),
+    cast: jest.fn(),
+    attack: jest.fn(),
+    cancelCast: jest.fn(),
+    stopAttack: jest.fn(),
+    startTactics: jest.fn(async () => {}),
+    getTacticsState: jest.fn(() => ({})),
+    goTo: jest.fn(),
+    getNavigationState: jest.fn(() => ({})),
+    onCombatEvent: jest.fn(),
+    onTacticsEvent: jest.fn(),
   });
   return handle as ControlMock;
 }
@@ -482,6 +507,41 @@ describe("parseIpcCommand", () => {
 
   test("HALT", () => {
     expect(parseIpcCommand("HALT")).toEqual({ type: "halt" });
+  });
+
+  test("CAST ATTACK FIGHT GOTO parse exact arity", () => {
+    expect(parseIpcCommand("CAST 585 0xa")).toEqual({
+      type: "cast",
+      spellId: 585,
+      guid: 0xan,
+    });
+    expect(parseIpcCommand("ATTACK 0xa")).toEqual({
+      type: "attack",
+      guid: 0xan,
+    });
+    expect(parseIpcCommand("FIGHT 0xa")).toEqual({
+      type: "fight",
+      guid: 0xan,
+      instruction:
+        "defeat the selected target while keeping the character alive",
+    });
+    expect(parseIpcCommand("FIGHT 0xa hold threat")).toEqual({
+      type: "fight",
+      guid: 0xan,
+      instruction: "hold threat",
+    });
+    expect(parseIpcCommand("GOTO 1 2 3")).toEqual({
+      type: "goto",
+      x: 1,
+      y: 2,
+      z: 3,
+    });
+    expect(parseIpcCommand("CAST")?.type).toBe("invalid");
+    expect(parseIpcCommand("CAST 0 0x1")?.type).toBe("invalid");
+    expect(parseIpcCommand("GOTO 1 2")?.type).toBe("invalid");
+    expect(parseIpcCommand("GOTO 1 2 Infinity")?.type).toBe("invalid");
+    expect(parseIpcCommand("COMBAT")).toEqual({ type: "combat" });
+    expect(parseIpcCommand("SPELLS_JSON")).toEqual({ type: "spells_json" });
   });
 
   test("slash /accept maps to accept", () => {
@@ -3361,6 +3421,141 @@ describe("IPC round-trip", () => {
     expect(lines).toContain("OK");
   });
 
+  test("HALT drops older CAST and keeps later GOTO", async () => {
+    startTestServer();
+    const lines = await sendRawUntilClose(sockPath, [
+      "CAST 585 0xa\nHALT\nGOTO 1 2 3\n",
+    ]);
+    expect(handle.cast).not.toHaveBeenCalled();
+    expect(handle.halt).toHaveBeenCalled();
+    expect(handle.goTo).toHaveBeenCalledWith(1, 2, 3);
+    expect(lines).toContain("OK");
+  });
+
+  test("HALT drops older FOLLOW but preserves a newer follow request", async () => {
+    startTestServer();
+    const requested: bigint[] = [];
+    Object.assign(handle, {
+      follow: (guid: bigint) => {
+        requested.push(guid);
+      },
+    });
+    const lines = await sendRawUntilClose(sockPath, [
+      "FOLLOW 1 3\nHALT\nFOLLOW 2 4\n",
+    ]);
+    expect(requested).toEqual([2n]);
+    expect(lines).toEqual(["OK", "OK"]);
+  });
+
+  test("HALT drops older recovery mutations but retains a corpse query and newer response", async () => {
+    startTestServer();
+    const actions: string[] = [];
+    Object.assign(handle, {
+      queryCorpse: () => {
+        actions.push("query");
+      },
+      releaseSpirit: () => {
+        actions.push("release");
+      },
+      reclaimCorpse: () => {
+        actions.push("reclaim");
+      },
+      respondResurrection: (accept: boolean) => {
+        actions.push(accept ? "accept" : "decline");
+      },
+    });
+    await sendRawUntilClose(sockPath, [
+      "RELEASE_SPIRIT\nRECLAIM_CORPSE\nRESURRECT accept\nQUERY_CORPSE\nHALT\nRESURRECT decline\n",
+    ]);
+    expect(actions).toEqual(["query", "decline"]);
+  });
+
+  test("gossip JSON code cannot inject a second IPC command", async () => {
+    startTestServer();
+    const codes: Array<string | undefined> = [];
+    Object.assign(handle, {
+      selectGossipOption: (_id: number, code?: string) => {
+        codes.push(code);
+      },
+    });
+    const code = '  say "hello"\nHALT\r\n  ';
+    const lines = await sendToSocket(
+      `SELECT_OPTION 0 ${JSON.stringify(code)}`,
+      sockPath,
+    );
+    expect(lines).toEqual(["OK"]);
+    expect(codes).toEqual([code]);
+    expect(handle.halt).not.toHaveBeenCalled();
+  });
+
+  test("HALT drops old quest mutations but retains metadata and a new cancel", async () => {
+    startTestServer();
+    const actions: string[] = [];
+    Object.assign(handle, {
+      talk: () => {
+        actions.push("talk");
+      },
+      selectGossipOption: () => {
+        actions.push("option");
+      },
+      selectQuest: () => {
+        actions.push("select");
+      },
+      acceptQuest: () => {
+        actions.push("accept");
+      },
+      completeQuest: () => {
+        actions.push("complete");
+      },
+      requestQuestReward: () => {
+        actions.push("request_reward");
+      },
+      chooseQuestReward: () => {
+        actions.push("choose_reward");
+      },
+      abandonQuest: () => {
+        actions.push("abandon");
+      },
+      cancelInteraction: () => {
+        actions.push("cancel");
+      },
+      queryQuest: () => {
+        actions.push("query");
+      },
+    });
+    await sendRawUntilClose(sockPath, [
+      "TALK 1\nSELECT_OPTION 0 null\nSELECT_QUEST 1\nACCEPT_QUEST\nCOMPLETE_QUEST 1\nREQUEST_REWARD\nCHOOSE_REWARD 0\nABANDON_QUEST 0\nCANCEL_INTERACTION\nQUERY_QUEST 1\nHALT\nCANCEL_INTERACTION\n",
+    ]);
+    expect(actions).toEqual(["query", "cancel"]);
+  });
+
+  test("HALT drops older loot mutations and keeps a newer open", async () => {
+    startTestServer();
+    const actions: string[] = [];
+    Object.assign(handle, {
+      openLoot: (guid: bigint) => {
+        actions.push(`open:${guid}`);
+      },
+      takeLoot: () => {
+        actions.push("take");
+      },
+      takeLootMoney: () => {
+        actions.push("money");
+      },
+      releaseLoot: () => {
+        actions.push("release");
+      },
+      getInventoryState: () => {
+        actions.push("inventory");
+        return { status: "unknown" };
+      },
+    });
+    await sendRawUntilClose(sockPath, [
+      "OPEN_LOOT 1\nTAKE_LOOT 0\nTAKE_MONEY\nRELEASE_LOOT\nINVENTORY_JSON\nHALT\nOPEN_LOOT 2\n",
+    ]);
+    expect(actions).toEqual(["inventory", "open:2"]);
+  });
+
   test("HALT preempts READ_WAIT arriving in a later chunk", async () => {
     startTestServer();
     await sendToSocket("MOVE forward 10000", sockPath);
@@ -3470,35 +3665,62 @@ describe("IPC round-trip", () => {
     expect(handle.move).not.toHaveBeenCalled();
   });
 
-  test("MOVE ERR exits nonzero from src/main.ts", async () => {
-    const xdg = `${process.cwd()}/tmp/cli-main-${Date.now()}`;
+  async function runMain(args: string[]) {
+    const xdg = `${process.cwd()}/tmp/cli-main-${++sockCounter}-${Date.now()}`;
     await mkdir(`${xdg}/tuicraft`, { recursive: true });
     sockPath = `${xdg}/tuicraft/sock`;
-    handle = attachControl(createMockHandle());
-    handle.move.mockImplementation(() => {
-      throw new Error("rooted");
-    });
     const log = new SessionLog(`${xdg}/session.jsonl`);
     exitSpy = jest
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
     result = startDaemonServer({ handle, sock: sockPath, log });
     const proc = Bun.spawn({
-      cmd: [
-        process.execPath,
-        `${import.meta.dir}/../main.ts`,
-        "move",
-        "forward",
-      ],
+      cmd: [process.execPath, `${import.meta.dir}/../main.ts`, ...args],
       cwd: `${import.meta.dir}/../..`,
       env: { ...process.env, XDG_RUNTIME_DIR: xdg },
       stdout: "pipe",
       stderr: "pipe",
     });
-    const code = await proc.exited;
-    const out = await new Response(proc.stdout).text();
+    const [code, out, error] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+    return { code, out, error };
+  }
+
+  test("MOVE ERR exits nonzero from src/main.ts", async () => {
+    handle = attachControl(createMockHandle());
+    handle.move.mockImplementation(() => {
+      throw new Error("rooted");
+    });
+    const { code, out } = await runMain(["move", "forward"]);
     expect(code).toBe(1);
     expect(out).toContain("ERR rooted");
+  });
+
+  test("spellbook inspection errors exit nonzero from the CLI", async () => {
+    handle = attachControl(createMockHandle());
+    handle.getSpellbook.mockImplementation(async () => {
+      throw new Error("missing_spell_data");
+    });
+    const { code, out } = await runMain(["spells", "--json"]);
+    expect(code).toBe(1);
+    expect(out.startsWith("ERR ")).toBe(true);
+  });
+
+  test("multiline fight instructions cannot execute injected controls", async () => {
+    handle = attachControl(createMockHandle());
+    const startTactics = jest.fn(async () => {});
+    handle.startTactics = startTactics;
+    const { code } = await runMain([
+      "fight",
+      "0xa",
+      "stay alive\nMOVE forward 10000",
+    ]);
+    expect(handle.move).not.toHaveBeenCalled();
+    expect(startTactics).not.toHaveBeenCalled();
+    expect(code).toBe(1);
   });
 
   test("MOVE FACE TARGET round-trip call handle", async () => {
@@ -4085,5 +4307,473 @@ describe("onControlEvent", () => {
     const entry = events.drain()[0]!;
     expect(JSON.parse(entry.json).pose.source).toBe("server");
     expect(entry.text).toContain("server");
+  });
+});
+
+describe("follow IPC boundary", () => {
+  test("parses optional finite standoff and exact unsigned GUIDs", () => {
+    expect(parseIpcCommand("FOLLOW 18446744073709551615")).toEqual({
+      type: "follow",
+      guid: 0xffff_ffff_ffff_ffffn,
+      distance: undefined,
+    });
+    expect(parseIpcCommand("FOLLOW 0xabc 2.5")).toEqual({
+      type: "follow",
+      guid: 0xabcn,
+      distance: 2.5,
+    });
+    expect(parseIpcCommand("FOLLOWING")).toEqual({ type: "following" });
+    expect(parseIpcCommand("FOLLOWING_JSON")).toEqual({
+      type: "following_json",
+    });
+  });
+
+  test("malformed follow is an error instead of a chat message or action", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      follow: () => {
+        throw new Error("action_was_called");
+      },
+    });
+    for (const line of [
+      "FOLLOW",
+      "FOLLOW 0",
+      "FOLLOW -1",
+      "FOLLOW 18446744073709551616",
+      "FOLLOW 1 Infinity",
+      "FOLLOW 1 0",
+      "FOLLOW 1 21",
+      "FOLLOW 1 3 extra",
+    ]) {
+      const command = parseIpcCommand(line)!;
+      expect(command.type).toBe("invalid");
+      const socket = createMockSocket();
+      await dispatchCommand(
+        command,
+        handle,
+        new RingBuffer<EventEntry>(10),
+        socket,
+        jest.fn(),
+      );
+      expect(socket.written()).toMatch(/^ERR /);
+      expect(socket.written()).not.toContain("action_was_called");
+    }
+    expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
+  });
+
+  test("follow rejection is ERR without an OK or arrival claim", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      follow: () => {
+        throw new Error("target_motion_unknown");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "follow", guid: 1n },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR target_motion_unknown\n\n");
+  });
+
+  test("following JSON preserves provenance and encodes uint64 identifiers", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getFollowState: (): FollowState => ({
+        active: true,
+        status: "following",
+        guid: 0xffff_ffff_ffff_ffffn,
+        distance: 3,
+        separation: undefined,
+        destination: undefined,
+        startedAt: 1000,
+        expiresAt: 31_000,
+        plans: 1,
+        targetPose: {
+          x: 1,
+          y: 2,
+          z: 3,
+          mapId: 530,
+          orientation: 0,
+          source: "predicted",
+          updatedAt: 1100,
+        },
+        observedAt: 1000,
+        attempts: 2,
+        reason: undefined,
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "following_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.guid).toBe("0xffffffffffffffff");
+    expect(state.status).toBe("following");
+    expect(state.targetPose.source).toBe("predicted");
+    expect(state.observedAt).toBe(1000);
+    expect(state.targetPose.updatedAt).toBe(1100);
+  });
+
+  test("following inspection failure cannot be presented as an empty state", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getFollowState: () => {
+        throw new Error("session_closed");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "following" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR session_closed\n\n");
+  });
+});
+
+describe("recovery IPC boundary", () => {
+  test("requires exact recovery action syntax", () => {
+    expect(parseIpcCommand("RECOVERY_JSON")).toEqual({ type: "recovery_json" });
+    expect(parseIpcCommand("QUERY_CORPSE")).toEqual({ type: "query_corpse" });
+    expect(parseIpcCommand("RESURRECT accept")).toEqual({
+      type: "resurrect",
+      accept: true,
+    });
+    expect(parseIpcCommand("RESURRECT decline")).toEqual({
+      type: "resurrect",
+      accept: false,
+    });
+    for (const line of [
+      "QUERY_CORPSE 1",
+      "RELEASE_SPIRIT now",
+      "RECLAIM_CORPSE 0",
+      "RESURRECT",
+      "RESURRECT yes",
+      "RESURRECT accept extra",
+    ])
+      expect(parseIpcCommand(line)?.type).toBe("invalid");
+  });
+
+  test("a recovery request acknowledgement does not claim a life transition", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      releaseSpirit: () => ({
+        request: { action: "release", status: "unanswered" },
+        life: "dead",
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "release_spirit" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("reclaim refusal is ERR without success", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      reclaimCorpse: () => {
+        throw new Error("Cannot request reclaim: wrong_map");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "reclaim_corpse" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR Cannot request reclaim: wrong_map\n\n");
+  });
+
+  test("recovery JSON preserves unknown timing, pose provenance and distinct corpse maps", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getRecoveryState: () => ({
+        selfGuid: 0xffff_ffff_ffff_ffffn,
+        life: "ghost",
+        health: 1,
+        corpse: {
+          status: "found",
+          mapId: 530,
+          corpseMapId: 540,
+          position: { x: 1, y: 2, z: 3 },
+          observedAt: 1000,
+        },
+        reclaim: {
+          canRequest: false,
+          readiness: "blocked",
+          remainingMs: undefined,
+          pose: { source: "predicted", updatedAt: 1200 },
+        },
+        request: { action: "reclaim", timing: "unknown", status: "unanswered" },
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "recovery_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.selfGuid).toBe("0xffffffffffffffff");
+    expect(state.life).toBe("ghost");
+    expect(state.corpse.mapId).toBe(530);
+    expect(state.corpse.corpseMapId).toBe(540);
+    expect(state.reclaim.pose.source).toBe("predicted");
+    expect(state.reclaim).not.toHaveProperty("remainingMs");
+    expect(state.request.timing).toBe("unknown");
+    expect(state.request.status).toBe("unanswered");
+  });
+
+  test("recovery inspection failures are not empty healthy state", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getRecoveryState: () => {
+        throw new Error("session_closed");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "recovery" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR session_closed\n\n");
+  });
+});
+
+describe("quest IPC boundary", () => {
+  test("JSON gossip code preserves omitted, null, empty and whitespace values", () => {
+    expect(parseIpcCommand("SELECT_OPTION 0")).toEqual({
+      type: "select_option",
+      optionId: 0,
+      code: undefined,
+    });
+    expect(parseIpcCommand("SELECT_OPTION 0 null")).toEqual({
+      type: "select_option",
+      optionId: 0,
+      code: undefined,
+    });
+    expect(parseIpcCommand('SELECT_OPTION 0 ""')).toEqual({
+      type: "select_option",
+      optionId: 0,
+      code: "",
+    });
+    const code = '  hello "friend"\nHALT  ';
+    expect(parseIpcCommand(`SELECT_OPTION 0 ${JSON.stringify(code)}`)).toEqual({
+      type: "select_option",
+      optionId: 0,
+      code,
+    });
+  });
+
+  test("rejects malformed gossip JSON, nonstrings, NUL and trailing tokens", () => {
+    for (const code of [
+      "raw text",
+      "true",
+      "3",
+      "{}",
+      "[]",
+      '"ok" "extra"',
+      '"unterminated',
+      JSON.stringify("bad\0code"),
+    ])
+      expect(parseIpcCommand(`SELECT_OPTION 0 ${code}`)?.type).toBe("invalid");
+    for (const line of [
+      "TALK 0",
+      "QUERY_QUEST 0",
+      "SELECT_QUEST 4294967296",
+      "COMPLETE_QUEST 1.5",
+      "CHOOSE_REWARD 6",
+      "ABANDON_QUEST 25",
+      "ACCEPT_QUEST extra",
+      "REQUEST_REWARD 0",
+      "CANCEL_INTERACTION extra",
+    ])
+      expect(parseIpcCommand(line)?.type).toBe("invalid");
+  });
+
+  test("an unanswered interaction error cannot produce a success acknowledgement", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      acceptQuest: () => {
+        throw new Error("quest_reply_unanswered");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "accept_quest" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR quest_reply_unanswered\n\n");
+  });
+
+  test("quest JSON keeps unanswered metadata separate from accepted state", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getQuestState: () => ({
+        giver: 0xffff_ffff_ffff_ffffn,
+        queries: [{ questId: 42, status: "unanswered", sentAt: 1000 }],
+        log: {
+          complete: false,
+          slots: [
+            { slot: 0, questId: undefined, counters: [undefined, 1, 0, 0] },
+          ],
+        },
+        pending: { action: "accept", questId: 42 },
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "quests_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.giver).toBe("0xffffffffffffffff");
+    expect(state.queries[0].status).toBe("unanswered");
+    expect(state.log.slots[0]).not.toHaveProperty("questId");
+    expect(state.log.slots[0].counters).toEqual([null, 1, 0, 0]);
+    expect(state.pending.action).toBe("accept");
+  });
+});
+
+describe("loot IPC boundary", () => {
+  test("uses nonzero uint64 targets and actual uint8 slot range", () => {
+    expect(parseIpcCommand("OPEN_LOOT 18446744073709551615")).toEqual({
+      type: "open_loot",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+    expect(parseIpcCommand("TAKE_LOOT 255")).toEqual({
+      type: "take_loot",
+      slot: 255,
+    });
+    for (const line of [
+      "OPEN_LOOT 0",
+      "OPEN_LOOT 18446744073709551616",
+      "TAKE_LOOT -1",
+      "TAKE_LOOT 256",
+      "TAKE_LOOT 0 extra",
+      "TAKE_MONEY extra",
+      "RELEASE_LOOT 1",
+    ])
+      expect(parseIpcCommand(line)?.type).toBe("invalid");
+  });
+
+  test("unoffered loot is an error, not a success or chat action", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      takeLoot: () => {
+        throw new Error("Loot slot was not offered");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "take_loot", slot: 0 },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR Loot slot was not offered\n\n");
+    expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
+  });
+
+  test("release-only opening remains unanswered in serialized loot inspection", async () => {
+    const guid = 0xffff_ffff_ffff_ffffn;
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getRewardsState: () => ({
+        loot: { phase: "opening", guid, requestedAt: 1000 },
+        pending: {
+          action: "open",
+          guid,
+          status: "unanswered",
+          requestedAt: 1000,
+        },
+        lastRelease: { guid, status: 1, observedAt: 1100 },
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "loot_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.loot.phase).toBe("opening");
+    expect(state.pending.status).toBe("unanswered");
+    expect(state.lastRelease.guid).toBe("0xffffffffffffffff");
+    expect(state.lastRelease.status).toBe(1);
+  });
+
+  test("inventory serialization does not turn unknown counts or capacity into defaults", async () => {
+    const guid = 0xffff_ffff_ffff_ffffn;
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getInventoryState: () => ({
+        selfGuid: 1n,
+        scope: "carried",
+        status: "partial",
+        coinage: undefined,
+        freeSlots: undefined,
+        slots: [
+          {
+            bag: 255,
+            slot: 23,
+            region: "backpack",
+            status: "occupied",
+            guid,
+            item: { guid, count: undefined },
+          },
+        ],
+        bags: [],
+        issues: [],
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "inventory_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.slots[0].guid).toBe("0xffffffffffffffff");
+    expect(state.slots[0].item).not.toHaveProperty("count");
+    expect(state).not.toHaveProperty("coinage");
+    expect(state).not.toHaveProperty("freeSlots");
+  });
+
+  test("loot inspection errors retain ERR semantics", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getRewardsState: () => {
+        throw new Error("session_closed");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "loot" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR session_closed\n\n");
   });
 });
