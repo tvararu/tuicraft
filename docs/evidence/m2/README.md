@@ -26,6 +26,30 @@ five, inside the 1 to 5 Hz ambition. Request latency is stable at 256 to 264
 ms. No tactical command was given during any encounter; the supervising agent
 only selected and approached the creature.
 
+### Loop rate is not tactical decision rate
+
+The cadence column above is the loop rate: how often a decision was requested
+and applied. It is real, but it counts turns where the client offered no
+genuine choice. While a cast is in flight or the global cooldown is running,
+the candidate set collapses to `wait` and `cancel`, and Jev correctly answers
+`wait`.
+
+Counted from the records:
+
+| # | Decisions | Offered only wait/cancel | Genuine choices |
+|---|-----------|--------------------------|-----------------|
+| 01 | 54 | 47 | 12 |
+| 04 | 51 | 42 | 14 |
+| 05 | 65 | 56 | 9 |
+
+So 78 to 86 per cent of decisions are forced, and the tactical decision rate is
+roughly 0.6 to 1.0 per second rather than 3.8. Both numbers are worth keeping,
+but a report that quotes only the loop rate overstates how much judgement is
+being exercised. Milestone 2 asks for the actual cadence rather than an assumed
+5 Hz, and this table is that number.
+
+The genuine choices are where the instruction contrast below appears.
+
 ### The standing-instruction contrast
 
 Encounters 04 and 05 ran back to back, at the same character level, against
