@@ -2,7 +2,7 @@
   "enabledPlugins": {
     "claude-code-setup@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": false,
+    "superpowers@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true
   },
   "hooks": {
