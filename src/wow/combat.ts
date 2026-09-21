@@ -158,6 +158,7 @@ const SPELL_FAILED_INTERRUPTED = 40;
 export class CombatRuntime {
   private readonly deps: CombatDeps;
   private listener: ((event: CombatEvent) => void) | undefined;
+  private readonly incomingAttackers = new Set<bigint>();
   private readonly learned = new Set<number>();
   private readonly cooldowns = new Map<
     number,
@@ -194,6 +195,16 @@ export class CombatRuntime {
 
   onEvent(cb: ((event: CombatEvent) => void) | undefined): void {
     this.listener = cb;
+  }
+
+  isAttackingSelf(guid: bigint): boolean {
+    if (!this.incomingAttackers.has(guid)) return false;
+    const entity = this.deps.getEntity(guid);
+    if (entity && "health" in entity && entity.health === 0) {
+      this.incomingAttackers.delete(guid);
+      return false;
+    }
+    return true;
   }
 
   snapshot(selected = this.deps.selectedGuid()): CombatState {
@@ -337,6 +348,7 @@ export class CombatRuntime {
 
   dispose(): void {
     this.listener = undefined;
+    this.incomingAttackers.clear();
     this.motions.clear();
     this.auras.clear();
     this.learned.clear();
@@ -351,6 +363,7 @@ export class CombatRuntime {
   }
 
   forget(guid: bigint): void {
+    this.incomingAttackers.delete(guid);
     this.motions.delete(guid);
     for (const [key, aura] of this.auras)
       if (aura.unit === guid) this.auras.delete(key);
@@ -617,32 +630,38 @@ export class CombatRuntime {
 
   applyAttackStart(r: PacketReader): void {
     const packet = parseAttackStart(r);
-    if (packet.attacker !== this.deps.selfGuid()) return;
-    this.pendingAttack = undefined;
-    this.attacking = true;
-    this.attackTarget = packet.victim;
-    this.lastOutcome = {
-      kind: "attack",
-      status: "started",
-      target: packet.victim,
-      at: this.deps.now(),
-    };
-    this.emit("attack_started");
+    if (packet.attacker === this.deps.selfGuid()) {
+      this.pendingAttack = undefined;
+      this.attacking = true;
+      this.attackTarget = packet.victim;
+      this.lastOutcome = {
+        kind: "attack",
+        status: "started",
+        target: packet.victim,
+        at: this.deps.now(),
+      };
+      this.emit("attack_started");
+    } else if (packet.victim === this.deps.selfGuid()) {
+      this.incomingAttackers.add(packet.attacker);
+    }
   }
 
   applyAttackStop(r: PacketReader): void {
     const packet = parseAttackStop(r);
-    if (packet.attacker !== this.deps.selfGuid()) return;
-    this.pendingAttack = undefined;
-    this.attacking = false;
-    this.attackTarget = undefined;
-    this.lastOutcome = {
-      kind: "attack",
-      status: packet.dead ? "succeeded" : "interrupted",
-      target: packet.victim,
-      at: this.deps.now(),
-    };
-    this.emit("attack_stopped");
+    if (packet.attacker === this.deps.selfGuid()) {
+      this.pendingAttack = undefined;
+      this.attacking = false;
+      this.attackTarget = undefined;
+      this.lastOutcome = {
+        kind: "attack",
+        status: packet.dead ? "succeeded" : "interrupted",
+        target: packet.victim,
+        at: this.deps.now(),
+      };
+      this.emit("attack_stopped");
+    } else if (this.incomingAttackers.has(packet.attacker)) {
+      this.incomingAttackers.delete(packet.attacker);
+    }
   }
 
   applyAura(r: PacketReader): void {

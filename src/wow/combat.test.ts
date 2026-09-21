@@ -320,3 +320,49 @@ test("a new open Catmull packet cannot promote old facing to authoritative launc
   expect(target.motion?.unsupportedReason).toBe("unknown_launch_orientation");
   expect(target.pose).toBeUndefined();
 });
+
+test("incoming attack start registers attacker against self and stop clears it", () => {
+  const { combat } = setup();
+  expect(combat.isAttackingSelf(0x10n)).toBe(false);
+  combat.applyAttackStart(
+    packet((w) => {
+      w.uint64LE(0x10n);
+      w.uint64LE(1n);
+    }),
+  );
+  expect(combat.isAttackingSelf(0x10n)).toBe(true);
+  expect(combat.isAttackingSelf(0x20n)).toBe(false);
+  combat.applyAttackStop(
+    packet((w) => {
+      w.packedGuid(0x10, 0);
+      w.packedGuid(1, 0);
+      w.uint32LE(0);
+    }),
+  );
+  expect(combat.isAttackingSelf(0x10n)).toBe(false);
+});
+
+test("dead incoming attacker is cleared on check", () => {
+  let health = 50;
+  const combat = new CombatRuntime({
+    send() {},
+    now: () => 1000,
+    selfGuid: () => 1n,
+    selectedGuid: () => 2n,
+    getEntity: () =>
+      ({
+        guid: 0x10n,
+        health,
+      }) as any,
+    selfPose: () => undefined,
+  });
+  combat.applyAttackStart(
+    packet((w) => {
+      w.uint64LE(0x10n);
+      w.uint64LE(1n);
+    }),
+  );
+  expect(combat.isAttackingSelf(0x10n)).toBe(true);
+  health = 0;
+  expect(combat.isAttackingSelf(0x10n)).toBe(false);
+});

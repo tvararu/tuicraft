@@ -449,3 +449,90 @@ test("facing remains recoverable and does not stop as unreachable", () => {
     definition.mockRestore();
   }
 });
+
+test("an attacking creature whose faction relation is not verified as hostile can be engaged", () => {
+  const store = new EntityStore();
+  const fields = new Map<number, number>([
+    [UNIT_FIELDS.HEALTH.offset, 100],
+    [UNIT_FIELDS.MAXHEALTH.offset, 100],
+    [UNIT_FIELDS.BYTES_0.offset, 1],
+    [0x7a, 0x2801],
+    [UNIT_FIELDS.POWER1.offset, 15],
+    [UNIT_FIELDS.MAXPOWER1.offset, 1000],
+    [UNIT_FIELDS.BASE_MANA.offset, 100],
+  ]);
+  store.create(1n, ObjectType.PLAYER, {
+    health: 100,
+    maxHealth: 100,
+    factionTemplate: 1610,
+    rawFields: fields,
+  });
+  store.create(2n, ObjectType.UNIT, {
+    health: 100,
+    maxHealth: 100,
+    unitFlags: 0,
+    target: 0n,
+    factionTemplate: 7,
+    rawFields: new Map([[UNIT_FIELDS.HEALTH.offset, 100]]),
+  });
+  const control = new ControlRuntime({
+    send() {},
+    now: () => 1000,
+    ticks: () => 0,
+    guidLow: () => 1,
+    guidHigh: () => 0,
+    selfGuid: () => 1n,
+  });
+  control.observeSelf({
+    position: { mapId: 530, x: 0, y: 0, z: 0, orientation: 0 },
+    runSpeed: 7,
+    runBackSpeed: 4,
+  });
+  const combat = new CombatRuntime({
+    send() {},
+    now: () => 1000,
+    selfGuid: () => 1n,
+    selectedGuid: () => 2n,
+    getEntity: (guid) => store.get(guid),
+    selfPose: () => control.snapshot().pose,
+  });
+  combat.observePosition(2n, { mapId: 530, x: 10, y: 0, z: 0, orientation: 0 });
+  const w = new PacketWriter();
+  w.uint8(0);
+  w.uint16LE(1);
+  w.uint32LE(17);
+  w.uint16LE(0);
+  w.uint16LE(0);
+  combat.applyInitialSpells(new PacketReader(w.finish()));
+  const factionsCatalog = {
+    relation: () => "neutral" as const,
+  };
+  const actions = new CombatActions({
+    combat,
+    control,
+    entity: (guid) => store.get(guid),
+    factions: () => factionsCatalog as any,
+    now: () => 1000,
+  });
+
+  expect(() => actions.activate(context)).toThrow(
+    "unverified_hostile_relation",
+  );
+
+  const startWriter = new PacketWriter();
+  startWriter.uint64LE(2n);
+  startWriter.uint64LE(1n);
+  combat.applyAttackStart(new PacketReader(startWriter.finish()));
+
+  expect(() => actions.activate(context)).not.toThrow();
+
+  const stopWriter = new PacketWriter();
+  stopWriter.packedGuid(2, 0);
+  stopWriter.packedGuid(1, 0);
+  stopWriter.uint32LE(0);
+  combat.applyAttackStop(new PacketReader(stopWriter.finish()));
+
+  expect(() => actions.activate(context)).toThrow(
+    "unverified_hostile_relation",
+  );
+});

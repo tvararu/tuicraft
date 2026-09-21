@@ -404,7 +404,10 @@ export class CombatActions {
     if (state.target.health === 0) return "target_dead";
     if (target.unitFlags & TARGET_BLOCK) return "target_not_attackable";
     if (self.unitFlags & SELF_BLOCK) return "self_cannot_act";
-    if (target.target === state.self.guid && target.unitFlags & 0x80000)
+    if (
+      this.deps.combat.isAttackingSelf(guid) ||
+      (target.target === state.self.guid && (target.unitFlags & 0x80000) !== 0)
+    )
       return undefined;
     const factions = this.deps.factions();
     if (
