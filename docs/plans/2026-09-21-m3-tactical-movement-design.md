@@ -143,6 +143,30 @@ standing-required actions only when already stationary — was rejected because 
 hides the trade-off from the model. Jev should be able to choose to stop in
 order to cast.
 
+## The observation must gain distance
+
+The observation assembled for Jev (`src/wow/combat-actions.ts:73-105`) carries
+no distance to the target. `separation(state)` is computed at
+`combat-actions.ts:273`, `364` and `429`, but only to gate candidates
+internally; the value never reaches the model.
+
+That is correct today, because every action is range-gated before Jev sees it
+and the model never needs the number. It breaks under this milestone: a model
+asked to choose a direction without knowing whether the creature is at two
+yards or thirty is choosing blind, and no amount of candidate gating can supply
+that judgement for it.
+
+Movement decisions therefore require adding to the observation, at minimum, the
+separation from the current target. Facing relative to the target is likely
+needed too, since backing away from a creature the character is not facing moves
+her somewhere other than away from it; establish this against the live evidence
+rather than assuming it.
+
+This is a prerequisite to any meaningful movement choice, not a refinement of
+one. Implement it before the first live encounter, and treat a sudden change in
+Jev's behaviour on the existing non-movement candidates as an expected
+consequence of changing the observation, worth recording rather than suppressing.
+
 ## Observing the outcome
 
 `SMSG_CAST_FAILED` carries `SPELL_FAILED_MOVING` (51) when a cast is refused at
