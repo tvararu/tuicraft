@@ -202,6 +202,7 @@ export class ControlRuntime {
   private rooted = false;
   private teleporting = false;
   private unitBlocked = false;
+  private blockedReason: string | undefined;
   private leaseTimer: ReturnType<typeof setTimeout> | undefined;
   private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   private lastIntegrate = 0;
@@ -220,7 +221,7 @@ export class ControlRuntime {
   }
 
   snapshot(): ControlState {
-    const blockedReason = this.blockReason();
+    const blockedReason = this.blockReason() ?? this.blockedReason;
     return {
       selfGuid: this.deps.selfGuid(),
       pose: copyPose(this.predicted ?? this.server),
@@ -229,7 +230,7 @@ export class ControlRuntime {
       requestedTarget: this.requestedTarget,
       moving: this.moving,
       direction: this.direction,
-      movementAllowed: blockedReason === undefined,
+      movementAllowed: this.blockReason() === undefined,
       blockedReason,
       speed: this.currentSpeed() ?? 0,
       owner: this.mode === "none" ? this.owner : this.mode,
@@ -587,6 +588,7 @@ export class ControlRuntime {
     this.direction = direction;
     this.moving = true;
     this.owner = "manual";
+    this.blockedReason = undefined;
     this.moveFlags = DIR_FLAG[direction];
     this.lastIntegrate = this.deps.now();
     this.lastHeartbeat = this.deps.ticks();
@@ -600,8 +602,8 @@ export class ControlRuntime {
     this.emit("control_changed");
   }
 
-  private stopMoving(reason: string, sendStop: boolean): void {
-    this.integrate();
+  private haltMovement(reason: string, sendStop: boolean): void {
+    if (!this.moving && this.owner === "none") return;
     this.clearTimers();
     this.endNavigation(reason);
     const wasMoving = this.moving;
@@ -609,6 +611,7 @@ export class ControlRuntime {
     this.moving = false;
     this.direction = undefined;
     this.owner = "none";
+    this.blockedReason = reason === "obstructed" ? "obstructed" : undefined;
     const movingBits =
       MovementFlag.FORWARD |
       MovementFlag.BACKWARD |
@@ -620,6 +623,11 @@ export class ControlRuntime {
     if (ownerChanged) this.emit("control_changed", reason);
   }
 
+  private stopMoving(reason: string, sendStop: boolean): void {
+    this.integrate();
+    this.haltMovement(reason, sendStop);
+  }
+
   private abortUnsafe(reason: string): void {
     this.clearTimers();
     this.endNavigation(reason);
@@ -628,6 +636,7 @@ export class ControlRuntime {
     this.moving = false;
     this.direction = undefined;
     this.owner = "none";
+    this.blockedReason = reason;
     this.moveFlags &= ~(
       MovementFlag.FORWARD |
       MovementFlag.BACKWARD |
@@ -698,6 +707,23 @@ export class ControlRuntime {
       }
     }
     if (newZ === undefined || !Number.isFinite(newZ)) {
+      let currentZ: number | undefined;
+      if (this.deps.findHeight) {
+        try {
+          currentZ = this.deps.findHeight(
+            this.predicted.mapId,
+            this.predicted.x,
+            this.predicted.y,
+            this.predicted,
+          );
+        } catch {
+          currentZ = undefined;
+        }
+      }
+      if (currentZ !== undefined && Number.isFinite(currentZ)) {
+        this.haltMovement("obstructed", true);
+        return;
+      }
       this.abortUnsafe("ground_height_unavailable");
       this.sendMove(GameOpcode.MSG_MOVE_STOP);
       this.emit("control_error", "ground_height_unavailable");

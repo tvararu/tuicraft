@@ -761,3 +761,84 @@ test("free movement aborts and stops when ground height is unavailable", () => {
     jest.useRealTimers();
   }
 });
+
+test("free movement stops with obstructed when an obstacle blocks forward path but ground is valid", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, sent, events, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
+        return undefined;
+      },
+    });
+    sent.length = 0;
+    runtime.move("forward", 1000);
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_START_FORWARD);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().movementAllowed).toBe(true);
+    expect(runtime.snapshot().blockedReason).toBe("obstructed");
+    expect(runtime.snapshot().pose?.x).toBeCloseTo(8709.46);
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_STOP);
+    expect(
+      events.some(
+        (e) => e.type === "movement_stopped" && e.reason === "obstructed",
+      ),
+    ).toBe(true);
+    expect(events.some((e) => e.type === "control_error")).toBe(false);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("movement away from an obstruction clears blockedReason and succeeds", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, sent, events, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (x <= 8709.46) return from?.z ?? 70.34;
+        return undefined;
+      },
+    });
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().blockedReason).toBe("obstructed");
+    expect(runtime.snapshot().pose?.x).toBeCloseTo(8709.46);
+
+    sent.length = 0;
+    events.length = 0;
+    runtime.move("backward", 1000);
+    expect(runtime.snapshot().blockedReason).toBeUndefined();
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_START_BACKWARD);
+    advance(500);
+    expect(runtime.snapshot().pose?.x).toBeLessThan(8709.46);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBeUndefined();
+    expect(events.some((e) => e.type === "control_error")).toBe(false);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("consecutive moves into an obstruction remain non-fatal and leave pose unchanged", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, events, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
+        return undefined;
+      },
+    });
+    for (let i = 0; i < 20; i++) {
+      runtime.move("forward", 1000);
+      advance(500);
+      expect(runtime.snapshot().moving).toBe(false);
+      expect(runtime.snapshot().blockedReason).toBe("obstructed");
+      expect(runtime.snapshot().pose?.x).toBeCloseTo(8709.46);
+    }
+    expect(events.some((e) => e.type === "control_error")).toBe(false);
+  } finally {
+    jest.useRealTimers();
+  }
+});

@@ -2715,6 +2715,28 @@ describe("dispatchCommand", () => {
     expect(parsed.owner).toBe("manual");
   });
 
+  test("control json reports obstructed blockedReason", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(
+      sampleState({
+        moving: false,
+        direction: undefined,
+        blockedReason: "obstructed",
+      }),
+    );
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "control_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const parsed = JSON.parse(socket.written().trim());
+    expect(parsed.moving).toBe(false);
+    expect(parsed.blockedReason).toBe("obstructed");
+  });
+
   test("control text distinguishes predicted from server pose", async () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(sampleState());
