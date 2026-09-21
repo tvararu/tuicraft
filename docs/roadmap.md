@@ -398,6 +398,14 @@ against the server relogin position to 0.0005 yards. Records are in
 `docs/evidence/m2/fault-*.json`; injection tooling and the operator runbook
 remain at `docs/evidence/m2/fault-runbook.md`.
 
+One gap remains inside that. The planner verification above ran a 62-yard
+direct corridor, not the observed 20-yard funnel-corner case this milestone
+names. The behaviours that case was meant to exercise are evidenced, including
+non-anchor samples against the native height query, preservation of the
+original start, and rejection of wrong-floor and obstructed routes. The funnel
+corner itself was not reached, so the route-selection repair recorded above is
+not yet verified on the geometry that motivated it.
+
 Limits found live and not yet resolved. The client never chases, so a creature
 that leashes home cannot be finished; one was driven to 2 health and reset. It
 has no collision sensing, so walking into a structure is indistinguishable from
