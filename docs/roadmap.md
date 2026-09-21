@@ -305,20 +305,18 @@ encounters with those diagnostics rather than claiming an unproven provider fix.
 
 Attempt05 then completed the first genuine autonomous encounter: server kill
 credit, 108 experience, 14.8 seconds, zero interventions. Attempt06 failed
-immediately after, and its cause is now located rather than inferred. The
-provider returned a well-formed Choice whose probabilities summed to 0.99;
-`selectJevAction` rejected it at `src/wow/jev.ts:149`, which requires
-`Math.abs(total - 1) <= 1e-6`. The observed deviation is 1e-2, four orders of
-magnitude outside that window, so this is provider rounding to two decimal
-places rather than floating-point drift. The regression that appears to cover
-this path, `src/wow/jev.test.ts:336-351`, exercises only a 1e-8 deviation and
-sits comfortably inside the tolerance; it therefore satisfies the letter of the
+immediately after, because a well-formed response summed to 0.99. The cause
+was provider rounding to two decimal places rather than floating-point drift:
+the observed deviation of 1e-2 was four orders of magnitude outside the
+earlier 1e-6 window at `src/wow/jev.ts:149`. The regression that appeared to
+cover this path, `src/wow/jev.test.ts:336-351`, exercised only a 1e-8 deviation
+and sat comfortably inside tolerance, satisfying the letter of the
 no-exact-equality requirement without testing the case that actually occurred.
-The failed request is retained at `tmp/jev-mass-request.json`. The tolerance
-stays unchanged pending an explicit decision, because widening it contradicts
-the review recorded above; renormalising after acceptance and treating a
-near-total as retryable are the other candidates. Record the choice here before
-changing the predicate.
+The failed request is retained at `tmp/jev-mass-request.json`. The resolution
+was to renormalise a near-unit total and reject anything further out:
+`src/wow/jev.ts:149-156` renormalises deviations between 1e-6 and 2e-2 by
+dividing each probability by the total, while rejecting any total deviating
+more than the 2e-2 tolerance at `src/wow/jev.ts:150`.
 
 Two further observations from the same audit, neither blocking. `src/wow/jev.ts`
 reads and type-validates `output_tokens` and then discards it, since
