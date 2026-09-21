@@ -102,8 +102,9 @@ describe("parseChatMessage", () => {
     w.uint32LE(0x00);
     w.uint32LE(0);
     const nameBytes = new TextEncoder().encode("GameMaster");
-    w.uint32LE(nameBytes.byteLength);
+    w.uint32LE(nameBytes.byteLength + 1);
     w.rawBytes(nameBytes);
+    w.uint8(0);
     w.uint32LE(0x42);
     w.uint32LE(0x00);
     w.uint32LE(5);

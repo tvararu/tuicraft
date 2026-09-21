@@ -37,7 +37,10 @@ export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
   let senderName: string | undefined;
   if (isGm) {
     const nameLen = r.uint32LE();
-    senderName = new TextDecoder().decode(r.bytes(nameLen));
+    const nameBytes = r.bytes(nameLen);
+    const nameEnd =
+      nameLen > 0 && nameBytes[nameLen - 1] === 0 ? nameLen - 1 : nameLen;
+    senderName = new TextDecoder().decode(nameBytes.subarray(0, nameEnd));
   }
 
   let channel: string | undefined;
