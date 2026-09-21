@@ -1,3 +1,4 @@
+import type { GroundRoute, NavPoint } from "wow/navigation";
 import type { Position } from "wow/entity-store";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { MovementFlag } from "wow/protocol/entity-fields";
@@ -24,6 +25,9 @@ export type ControlPose = Position & {
   updatedAt: number;
 };
 
+export type ControlMode = "none" | "jev" | "follow";
+export type ControlOwner = ControlMode | "manual";
+
 export type ControlState = {
   selfGuid: bigint;
   pose: ControlPose | undefined;
@@ -35,7 +39,15 @@ export type ControlState = {
   movementAllowed: boolean;
   blockedReason: string | undefined;
   speed: number;
-  owner: "manual" | "none";
+  owner: ControlOwner;
+};
+
+export type NavigationState = {
+  active: boolean;
+  destination: NavPoint | undefined;
+  remaining: number | undefined;
+  owner: ControlOwner;
+  blockedReason: string | undefined;
 };
 
 export type ControlEventType =
@@ -168,6 +180,16 @@ export class ControlRuntime {
   private direction: MovementDirection | undefined;
   private moving = false;
   private owner: "manual" | "none" = "none";
+  private mode: ControlMode = "none";
+  private route: GroundRoute | undefined;
+  private routeDistance = 0;
+  private navigation: NavigationState = {
+    active: false,
+    destination: undefined,
+    remaining: undefined,
+    owner: "none",
+    blockedReason: undefined,
+  };
   private target: bigint | undefined;
   private requestedTarget: bigint | undefined;
   private clientControl = true;
@@ -204,13 +226,88 @@ export class ControlRuntime {
       movementAllowed: blockedReason === undefined,
       blockedReason,
       speed: this.currentSpeed() ?? 0,
-      owner: this.owner,
+      owner: this.mode === "none" ? this.owner : this.mode,
     };
+  }
+
+  setMode(mode: ControlMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    this.stopMoving("mode_changed", true);
+    this.emit("control_changed", "mode_changed");
+  }
+
+  pause(owner: "follow"): void {
+    if (this.mode !== owner) throw new Error("control_owner_changed");
+    this.stopMoving("follow_pause", true);
+  }
+
+  navigationState(): NavigationState {
+    return {
+      ...this.navigation,
+      destination: this.navigation.destination
+        ? { ...this.navigation.destination }
+        : undefined,
+    };
+  }
+
+  navigationError(destination: NavPoint, reason: string): void {
+    this.abortUnsafe(reason);
+    this.navigation = {
+      active: false,
+      destination: { ...destination },
+      remaining: undefined,
+      owner: "none",
+      blockedReason: reason,
+    };
+    this.emit("control_error", reason);
+  }
+
+  navigate(
+    route: GroundRoute,
+    destination: NavPoint,
+    mode: ControlMode = this.mode === "jev" ? "jev" : "none",
+  ): void {
+    this.guardMove("forward");
+    this.setMode(mode);
+    this.stopMoving("navigation_replaced", true);
+    const origin = route.points[0]!;
+    const pose = this.requirePose();
+    if (
+      Math.hypot(origin.x - pose.x, origin.y - pose.y, origin.z - pose.z) > 1e-6
+    )
+      throw new Error("navigation_origin_changed");
+    if (route.length === 0) {
+      this.navigation = {
+        active: false,
+        destination,
+        remaining: 0,
+        owner: "none",
+        blockedReason: undefined,
+      };
+      return;
+    }
+    this.applyFacing(route.sample(0).orientation);
+    this.route = route;
+    this.routeDistance = 0;
+    this.navigation = {
+      active: true,
+      destination: { ...destination },
+      remaining: route.length,
+      owner: this.mode === "none" ? "manual" : this.mode,
+      blockedReason: undefined,
+    };
+    this.startMoving(
+      "forward",
+      Math.min(MAX_DURATION_MS, (route.length / this.runSpeed!) * 1000),
+    );
   }
 
   move(direction: MovementDirection, durationMs: number): void {
     this.assertDirection(direction);
     this.assertDuration(durationMs);
+    if (this.mode === "follow") this.setMode("none");
+    if (this.route) this.stopMoving("manual_move", true);
     if (this.moving && this.direction === direction) {
       this.guardMove(direction);
       this.armLease(durationMs);
@@ -225,6 +322,11 @@ export class ControlRuntime {
     if (!Number.isFinite(orientation)) throw new Error("invalid_orientation");
     const reason = this.blockReason();
     if (reason) throw new Error(reason);
+    if (this.mode === "follow") this.setMode("none");
+    this.applyFacing(orientation);
+  }
+
+  private applyFacing(orientation: number): void {
     this.integrate();
     const pose = this.requirePose();
     pose.orientation = normalizeFacing(orientation);
@@ -243,13 +345,14 @@ export class ControlRuntime {
   }
 
   halt(): void {
+    if (this.mode === "follow") this.setMode("none");
     this.stopMoving("halt", true);
   }
 
   dispose(): void {
-    this.clearTimers();
-    if (this.moving) this.stopMoving("close", true);
     this.listener = undefined;
+    this.mode = "none";
+    this.abortUnsafe("close");
   }
 
   applyLoginVerify(r: PacketReader): void {
@@ -483,7 +586,10 @@ export class ControlRuntime {
     this.lastHeartbeat = this.deps.ticks();
     this.sendMove(DIR_START[direction]);
     this.armLease(durationMs);
-    this.heartbeatTimer = setInterval(() => this.heartbeat(), HEARTBEAT_MS);
+    this.heartbeatTimer = setInterval(
+      () => this.heartbeat(),
+      this.route ? 100 : HEARTBEAT_MS,
+    );
     this.emit("movement_started");
     this.emit("control_changed");
   }
@@ -491,6 +597,7 @@ export class ControlRuntime {
   private stopMoving(reason: string, sendStop: boolean): void {
     this.integrate();
     this.clearTimers();
+    this.endNavigation(reason);
     const wasMoving = this.moving;
     const ownerChanged = this.owner !== "none";
     this.moving = false;
@@ -509,6 +616,7 @@ export class ControlRuntime {
 
   private abortUnsafe(reason: string): void {
     this.clearTimers();
+    this.endNavigation(reason);
     const wasMoving = this.moving;
     const ownerChanged = this.owner !== "none";
     this.moving = false;
@@ -526,8 +634,13 @@ export class ControlRuntime {
 
   private heartbeat(): void {
     this.integrate();
+    if (!this.moving) return;
+    if (this.route && this.routeDistance >= this.route.length) {
+      this.stopMoving("arrived", true);
+      return;
+    }
     const now = this.deps.ticks();
-    if (now - this.lastHeartbeat < HEARTBEAT_MS) return;
+    if (now - this.lastHeartbeat < (this.route ? 100 : HEARTBEAT_MS)) return;
     this.lastHeartbeat = now;
     this.sendMove(GameOpcode.MSG_MOVE_HEARTBEAT);
   }
@@ -540,6 +653,28 @@ export class ControlRuntime {
     if (dt <= 0) return;
     const speed = this.currentSpeed();
     if (speed === undefined) return;
+    if (this.route) {
+      this.routeDistance = Math.min(
+        this.route.length,
+        this.routeDistance + speed * dt,
+      );
+      try {
+        this.predicted = {
+          ...this.predicted,
+          ...this.route.sample(this.routeDistance),
+          source: "predicted",
+          updatedAt: now,
+        };
+        this.navigation.remaining = this.route.length - this.routeDistance;
+      } catch (error) {
+        const reason =
+          error instanceof Error ? error.message : "navigation_sample_failed";
+        this.abortUnsafe(reason);
+        this.sendMove(GameOpcode.MSG_MOVE_STOP);
+        this.emit("control_error", reason);
+      }
+      return;
+    }
     const heading = this.predicted.orientation + DIR_HEADING[this.direction];
     this.predicted.x += Math.cos(heading) * speed * dt;
     this.predicted.y += Math.sin(heading) * speed * dt;
@@ -549,10 +684,35 @@ export class ControlRuntime {
 
   private armLease(durationMs: number): void {
     if (this.leaseTimer !== undefined) clearTimeout(this.leaseTimer);
-    this.leaseTimer = setTimeout(
-      () => this.stopMoving("lease", true),
-      durationMs,
-    );
+    this.leaseTimer = setTimeout(() => {
+      if (!this.route) {
+        this.stopMoving("lease", true);
+        return;
+      }
+      this.heartbeat();
+      if (this.route)
+        this.armLease(
+          Math.max(
+            1,
+            Math.min(
+              MAX_DURATION_MS,
+              ((this.route.length - this.routeDistance) / this.runSpeed!) *
+                1000,
+            ),
+          ),
+        );
+    }, durationMs);
+  }
+
+  private endNavigation(reason: string): void {
+    if (!this.route) return;
+    this.navigation = {
+      ...this.navigation,
+      active: false,
+      owner: "none",
+      blockedReason: reason === "arrived" ? undefined : reason,
+    };
+    this.route = undefined;
   }
 
   private clearTimers(): void {
