@@ -27,7 +27,7 @@ USAGE
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack
   tuicraft fight [--framing <variant>] <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
-                            Spell kit: observed normal form; no chase or kite
+                            Spell kit: observed normal form; Jev may move under a renewable lease
   tuicraft tactics [--json]  Tactics state and terminal observations
   tuicraft goto <x> <y> <z>  Walk a ground route
   tuicraft navigation [--json]  Navigation state

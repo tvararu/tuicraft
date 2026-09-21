@@ -1,5 +1,5 @@
 import type { CombatRuntime, CombatState, CombatUnit } from "wow/combat";
-import type { ControlRuntime } from "wow/control";
+import type { ControlRuntime, MovementDirection } from "wow/control";
 import type { Entity } from "wow/entity-store";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { FactionTemplateCatalog } from "wow/faction-template";
@@ -17,6 +17,7 @@ type ActionDeps = {
   factions: () => FactionTemplateCatalog | undefined;
   now: () => number;
   unreachableTimeoutMs?: number;
+  moveLeaseMs?: number;
 };
 
 type SpellAction = {
@@ -28,16 +29,59 @@ type SpellAction = {
 };
 const WAIT = {
   id: "wait",
-  description: "Wait for current server state without starting another action",
+  description:
+    "Hold current state and start nothing new: if moving, this refreshes the current direction's movement lease; if stationary, this is a no-op. Use stop_moving to release movement explicitly.",
 };
+const MOVEMENT_LEASE_DESCRIPTION =
+  "continues under a renewable movement lease until a later decision names a different direction, stop_moving is chosen, or the lease lapses without being renewed.";
+const MOVE_CANDIDATES: ReadonlyArray<{
+  id: string;
+  direction: MovementDirection;
+  description: string;
+}> = [
+  {
+    id: "move_forward",
+    direction: "forward",
+    description: `Move forward; ${MOVEMENT_LEASE_DESCRIPTION}`,
+  },
+  {
+    id: "move_backward",
+    direction: "backward",
+    description: `Move backward; ${MOVEMENT_LEASE_DESCRIPTION}`,
+  },
+  {
+    id: "strafe_left",
+    direction: "left",
+    description: `Strafe left; ${MOVEMENT_LEASE_DESCRIPTION}`,
+  },
+  {
+    id: "strafe_right",
+    direction: "right",
+    description: `Strafe right; ${MOVEMENT_LEASE_DESCRIPTION}`,
+  },
+];
+const MOVE_DIRECTION_BY_ID: Record<string, MovementDirection> = {
+  move_forward: "forward",
+  move_backward: "backward",
+  strafe_left: "left",
+  strafe_right: "right",
+};
+const STOP_MOVING = {
+  id: "stop_moving",
+  description: "Stop moving now and release the movement lease immediately.",
+};
+const MOVEMENT_INTERRUPT_FLAG = 0x1;
+const AUTO_REPEAT_ATTRIBUTE_EX2 = 0x20;
 const TARGET_BLOCK = 0x2 | 0x8 | 0x80 | 0x100 | 0x10000 | 0x100000 | 0x2000000;
 const SELF_BLOCK = 0x1 | 0x40000 | 0x100000 | 0x400000 | 0x800000;
 const AURAS = new Set([3, 8, 13, 22, 29, 69, 85]);
 const DEFAULT_UNREACHABLE_TIMEOUT_MS = 5000;
+const DEFAULT_MOVE_LEASE_MS = 2500;
 
 export class CombatActions {
   private readonly deps: ActionDeps;
   private readonly unreachableTimeoutMs: number;
+  private readonly moveLeaseMs: number;
   private startedAt = 0;
   private deadAt: number | undefined;
   private unreachableAt: number | undefined;
@@ -46,6 +90,7 @@ export class CombatActions {
     this.deps = deps;
     this.unreachableTimeoutMs =
       deps.unreachableTimeoutMs ?? DEFAULT_UNREACHABLE_TIMEOUT_MS;
+    this.moveLeaseMs = deps.moveLeaseMs ?? DEFAULT_MOVE_LEASE_MS;
   }
 
   activate(context: TacticsContext): void {
@@ -73,6 +118,8 @@ export class CombatActions {
       observation: {
         self: unitObservation(state.self),
         target: state.target ? unitObservation(state.target) : null,
+        separation: separation(state) ?? null,
+        facingTarget: facing(state),
         casting: state.casting
           ? { ...state.casting, target: hex(state.casting.target) }
           : null,
@@ -115,7 +162,12 @@ export class CombatActions {
       !frame.candidates.some((candidate) => candidate.id === id)
     )
       throw new Error("action_no_longer_legal");
-    if (id === "wait") return;
+    if (id === "wait") {
+      const control = this.deps.control.snapshot();
+      if (control.moving && control.direction)
+        this.deps.control.move(control.direction, this.moveLeaseMs);
+      return;
+    }
     if (id === "cancel") {
       this.deps.combat.cancelCast();
       return;
@@ -128,8 +180,17 @@ export class CombatActions {
       this.deps.combat.stopAttack();
       return;
     }
+    if (id === "stop_moving") {
+      this.deps.control.halt();
+      return;
+    }
+    const direction = MOVE_DIRECTION_BY_ID[id];
+    if (direction) {
+      this.deps.control.move(direction, this.moveLeaseMs);
+      return;
+    }
     const state = this.deps.combat.snapshot(context.targetGuid);
-    if (id === "face") {
+    if (id === "face_target") {
       const from = state.self.pose!;
       const to = state.target!.pose!;
       this.deps.control.face(Math.atan2(to.y - from.y, to.x - from.x));
@@ -139,6 +200,8 @@ export class CombatActions {
       .map((spellId) => this.spellAction(spellId, context, state))
       .find((entry) => entry.id === id && !entry.reason);
     if (!action?.spell) throw new Error("action_no_longer_legal");
+    if (this.deps.control.snapshot().moving && requiresStanding(action.spell))
+      this.deps.control.halt();
     this.deps.combat.cast(action.spell.id, action.target);
   }
 
@@ -157,7 +220,11 @@ export class CombatActions {
       });
       return;
     }
-    if (this.deps.control.snapshot().moving) return;
+    if (this.deps.control.snapshot().movementAllowed) {
+      for (const move of MOVE_CANDIDATES)
+        candidates.push({ id: move.id, description: move.description });
+      candidates.push(STOP_MOVING);
+    }
     for (const action of spells)
       if (action.spell && !action.reason)
         candidates.push({
@@ -181,7 +248,7 @@ export class CombatActions {
       this.deps.control.snapshot().movementAllowed
     )
       candidates.push({
-        id: "face",
+        id: "face_target",
         description:
           "Turn to face the selected creature at its current observed or predicted position",
       });
@@ -431,6 +498,16 @@ export class CombatActions {
       return false;
     return distance <= Math.max(5, a + b + 4 / 3);
   }
+}
+
+function requiresStanding(spell: SpellDefinition): boolean {
+  if (spell.attributes.ex2 & AUTO_REPEAT_ATTRIBUTE_EX2) return true;
+  const castTimeMs = spell.castTime?.castTimeMs;
+  return (
+    castTimeMs !== undefined &&
+    castTimeMs > 0 &&
+    (spell.interruptFlags & MOVEMENT_INTERRUPT_FLAG) !== 0
+  );
 }
 
 function unsupportedSpell(

@@ -6,7 +6,11 @@ import {
 } from "wow/jev";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 
-const WAIT = { id: "wait", description: "Do not start a new action" } as const;
+const WAIT = {
+  id: "wait",
+  description:
+    "Hold current state and start nothing new: if moving, this refreshes the current direction's movement lease; if stationary, this is a no-op. Use stop_moving to release movement explicitly.",
+} as const;
 const DEFAULT_MAX_AGE_MS = 2000;
 const DEFAULT_INTERVAL_MS = 200;
 const DEFAULT_TIMEOUT_MS = 5000;
