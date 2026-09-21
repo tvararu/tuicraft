@@ -138,3 +138,28 @@ native geometry verification is a poor fit for `agy` and stays with the
 coordinator or a Sonnet 5 escalation. Roadmap editing and the constant de-dup
 are good worker tasks. Jev spend is roughly $4.89 of $5 and is not a practical
 limit. Nobody else is playing the character.
+
+## A noted future direction: movement as a tactical action
+
+Theo's observation, 2026-09-21. There will be situations where cancelling a
+cast and retreating is the better play.
+
+Half of that already works. `cancel` is offered as a candidate whenever a cast
+is in flight, and Jev weighs it: in the cancellation run it scored `cancel` at
+0.06 against `wait` at 0.94, so the judgement is live, it simply chose not to.
+
+The missing half is that no movement action is ever offered. Jev can stop
+acting but cannot reposition, so retreat is not expressible in the current
+candidate set. This is the same gap that made the leash failure unwinnable,
+where a creature was driven to 2 health and the character had no way to close
+the remaining distance.
+
+The roadmap already anticipates this under milestone 4, which asks for tactics
+such as kiting without letting one class's fixed rotation become the
+architecture. Kiting is cancel plus reposition. The prerequisite is that
+movement becomes an offered action rather than something only the supervising
+agent performs, which in turn depends on the approach capability milestone 3
+owns.
+
+No work is scheduled against this. It is recorded so the connection between
+the observed limitation and the existing milestone is not rediscovered later.
