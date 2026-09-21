@@ -1,0 +1,311 @@
+{
+  "runId": "bfd20483-8968-4643-ac5f-388f47700acd",
+  "recordedAt": "2026-09-21T14:09:43.440Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "cancellation-reproof",
+  "character": {
+    "level": 10,
+    "maxPower": 547,
+    "maxHealth": 187
+  },
+  "target": {
+    "guid": "0xf130003d23019683",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [
+    {
+      "n": 1,
+      "offered": [
+        "wait",
+        "spell:1243:self",
+        "spell:17:self",
+        "face"
+      ],
+      "choice": "face",
+      "confidence": 0.75,
+      "probabilities": {
+        "face": 0.8181818181818181,
+        "wait": 0.0101010101010101,
+        "spell:1243:self": 0.0404040404040404,
+        "spell:17:self": 0.1313131313131313
+      },
+      "latencyMs": 595.5459940000001,
+      "applied": true,
+      "appliedAgeMs": 596.5593069999959
+    },
+    {
+      "n": 2,
+      "offered": [
+        "wait",
+        "spell:8092:target",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "choice": "spell:8092:target",
+      "confidence": 0.36,
+      "probabilities": {
+        "spell:594:target": 0.17,
+        "spell:8092:target": 0.45,
+        "spell:17:self": 0.13,
+        "spell:591:target": 0.08,
+        "wait": 0.01,
+        "spell:589:target": 0.08,
+        "spell:585:target": 0.06,
+        "spell:1243:self": 0.02
+      },
+      "latencyMs": 250.96522900000127,
+      "applied": true,
+      "appliedAgeMs": 251.41404399999738
+    },
+    {
+      "n": 3,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.89,
+      "probabilities": {
+        "wait": 0.94,
+        "cancel": 0.06
+      },
+      "latencyMs": 245.64855100000568,
+      "applied": true,
+      "appliedAgeMs": 246.0584930000041
+    },
+    {
+      "n": 4,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.88,
+      "probabilities": {
+        "wait": 0.94,
+        "cancel": 0.06
+      },
+      "latencyMs": 228.5761280000006,
+      "applied": true,
+      "appliedAgeMs": 229.03373100000317
+    },
+    {
+      "n": 5,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.87,
+      "probabilities": {
+        "cancel": 0.06,
+        "wait": 0.94
+      },
+      "latencyMs": 281.285183999993,
+      "applied": true,
+      "appliedAgeMs": 281.78654000000097
+    },
+    {
+      "n": 6,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.87,
+      "probabilities": {
+        "wait": 0.93,
+        "cancel": 0.07
+      },
+      "latencyMs": 262.74171500000375,
+      "applied": true,
+      "appliedAgeMs": 263.24483400000463
+    },
+    {
+      "n": 7,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.88,
+      "probabilities": {
+        "cancel": 0.06,
+        "wait": 0.94
+      },
+      "latencyMs": 246.17385400000057,
+      "applied": true,
+      "appliedAgeMs": 246.703542999996
+    },
+    {
+      "n": 8,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.9,
+      "probabilities": {
+        "cancel": 0.05,
+        "wait": 0.95
+      },
+      "latencyMs": 230.55556200000137,
+      "applied": true,
+      "appliedAgeMs": 231.20258599999943
+    },
+    {
+      "n": 9,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.93,
+      "probabilities": {
+        "wait": 0.96,
+        "cancel": 0.04
+      },
+      "latencyMs": 232.704651,
+      "applied": true,
+      "appliedAgeMs": 233.20656799999415
+    },
+    {
+      "n": 10,
+      "offered": [
+        "wait",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "choice": "spell:591:target",
+      "confidence": 0.18,
+      "probabilities": {
+        "spell:589:target": 0.08,
+        "spell:585:target": 0.17,
+        "wait": 0.05,
+        "spell:591:target": 0.3,
+        "spell:17:self": 0.18,
+        "spell:1243:self": 0.02,
+        "spell:594:target": 0.2
+      },
+      "latencyMs": 262.5490989999962,
+      "applied": true,
+      "appliedAgeMs": 263.12855399999535
+    },
+    {
+      "n": 11,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.83,
+      "probabilities": {
+        "wait": 0.91,
+        "cancel": 0.09
+      },
+      "latencyMs": 232.81083400000352,
+      "applied": true,
+      "appliedAgeMs": 233.19776100000308
+    },
+    {
+      "n": 12,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.87,
+      "probabilities": {
+        "wait": 0.94,
+        "cancel": 0.06
+      },
+      "latencyMs": 243.22578300000168,
+      "applied": true,
+      "appliedAgeMs": 243.88347699999576
+    },
+    {
+      "n": 13,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.89,
+      "probabilities": {
+        "cancel": 0.06,
+        "wait": 0.94
+      },
+      "latencyMs": 269.2423110000018,
+      "applied": true,
+      "appliedAgeMs": 269.7347310000041
+    },
+    {
+      "n": 14,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.86,
+      "probabilities": {
+        "wait": 0.93,
+        "cancel": 0.07
+      },
+      "latencyMs": 238.27397100000235,
+      "applied": true,
+      "appliedAgeMs": 238.76397500000166
+    },
+    {
+      "n": 15,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.89,
+      "probabilities": {
+        "cancel": 0.05,
+        "wait": 0.95
+      },
+      "latencyMs": 274.554449999996,
+      "applied": true,
+      "appliedAgeMs": 275.03965600000083
+    },
+    {
+      "n": 16,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.89,
+      "probabilities": {
+        "cancel": 0.06,
+        "wait": 0.94
+      },
+      "latencyMs": 244.61389999999665,
+      "applied": true,
+      "appliedAgeMs": 245.20559800000046
+    }
+  ],
+  "discarded": [],
+  "transportErrors": [],
+  "cadence": {
+    "decisions": 16,
+    "elapsedMs": 4603,
+    "perSecond": 3.476
+  },
+  "outcome": {},
+  "model": "jev-1.13.0",
+  "rawLines": 52
+}
