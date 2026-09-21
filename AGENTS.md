@@ -29,8 +29,12 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
-- `mise worktree <branch>` — create a feature worktree under `.worktrees/`
-- `mise worktree:clean <branch>` — remove a worktree and delete the branch
+- `orca-ide worktree create --name <name>` — create a worktree. Setup runs by
+  default; no flags needed, and a nested agent creating its own worktree
+  inherits both setup and lineage.
+- `orca-ide worktree rm --worktree name:<name>` — remove a worktree and its
+  branch. No `--run-hooks`: there is no archive hook and passing it only adds
+  a way for removal to fail.
 
 ## Skills
 
