@@ -190,10 +190,14 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
 Shipping:
 
-- After verification, one integration owner commits and pushes to `main`. No PRs.
-- `git add` the intended files, then `git commit` as a separate step. Do not
-  stage unrelated work. Independent agents use local or Orca worktrees; land
-  the combined tree only after final verification.
+- One integration owner commits and pushes to `main`. No PRs.
+- `git add` the intended files, then `git commit` as a separate step. Do
+  not stage unrelated work.
+- Independent agents work in their own worktree and commit there freely.
+  Never instruct a worker to leave its work uncommitted.
+- The integration owner commits each coherent unit as soon as it passes
+  `mise ci`. Do not hold integrated work uncommitted until a milestone
+  is verified.
 - Do not force-push, delete branches, or bypass hooks without permission.
 - Releases are paused; do not run release-please or publish versions.
 - NEVER add a Claude Code attribution footer
