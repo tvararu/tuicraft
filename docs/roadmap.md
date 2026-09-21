@@ -431,6 +431,28 @@ incoming attacker is now permitted; faction hostility is not forced, because
 forcing it risks attacking bystanders, a judgement about the untried fix
 rather than an observed outcome.
 
+#### Decision: milestone 2 accepted with two gaps, 2026-09-21
+
+Theo's call. Milestone 2 is accepted as done enough to move on, with both
+unmet criteria recorded here rather than closed.
+
+**Unmet: demonstrate behaviour change from instructions.** The exit evidence
+asks for a demonstrated change in behaviour when the instruction changes. What
+exists is one unreplicated pair, encounters 04 and 05, in which Jev stopped
+choosing the two costly spells under the conserving instruction. An independent
+review found that a single pair cannot carry the conclusion, and the claim was
+downgraded rather than replicated. Closing it needs two or three more pairs at
+comparable level against comparable creatures. That is farming, not new
+capability.
+
+**Unmet: planner verification on the funnel corner.** A 62-yard direct corridor
+was verified along with wrong-floor and obstructed rejections. The 20-yard
+funnel-corner case this milestone names was not reached, so the route-selection
+repair remains unverified on the geometry that motivated it.
+
+Neither gap is to be read as satisfied by the work recorded above. A later
+reader deciding whether to trust the milestone should treat both as open.
+
 ### 3. Reliable local navigation
 
 Extend basic movement with route planning, obstacle handling, arrival/failure
