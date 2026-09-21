@@ -83,6 +83,11 @@ description = "Build and symlink to /usr/local/bin"
 depends = ["build"]
 run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 
+[tasks."evidence:encounter"]
+description = "Distil an encounter record from the session log"
+raw = true
+run = "bun run src/tools/distil-encounter.ts"
+
 [tasks.main]
 description = "Switch to main and fast-forward"
 run = '''
