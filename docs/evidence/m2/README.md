@@ -7,10 +7,43 @@ encounters run after it.
 
 ## Encounters
 
-None completed yet.
+Five completed, all with server kill credit, all after the renormalisation fix
+in `3e1f3aa` and the ground-height repair in `c406db9`.
 
-| # | Result | Level | Creature | Decisions | Cadence /s | Variant |
-|---|--------|-------|----------|-----------|------------|---------|
+| # | Result | Char vs creature | Decisions | Cadence /s | Avg latency | Instruction |
+|---|--------|------------------|-----------|------------|-------------|-------------|
+| [01](encounter-01.json) | kill credit | 10 v 7 | 54 | 3.817 | 260 ms | default |
+| [02](encounter-02.json) | kill credit | 10 v 7 | 50 | 3.764 | 264 ms | default |
+| [03](encounter-03.json) | kill credit | 10 v 7 | 54 | 3.834 | 259 ms | default |
+| [04](encounter-04.json) | kill credit | 10 v 6 | 51 | 3.817 | 260 ms | default |
+| [05](encounter-05.json) | kill credit | 10 v 6 | 65 | 3.879 | 256 ms | conserve mana |
+
+Encounter 03 was run live in front of the user, who was grouped with the
+character and watching in their own client.
+
+Measured cadence sits between 3.76 and 3.88 decisions per second across all
+five, inside the 1 to 5 Hz ambition. Request latency is stable at 256 to 264
+ms. No tactical command was given during any encounter; the supervising agent
+only selected and approached the creature.
+
+### The standing-instruction contrast
+
+Encounters 04 and 05 ran back to back, at the same character level, against
+creatures of the same level, under the two pinned instructions in
+`src/wow/standing-instructions.ts`. This is the one controlled comparison in an
+otherwise uncontrolled farm.
+
+| Action | 04, default | 05, conserve mana |
+|--------|-------------|-------------------|
+| Mind Blast, 8092, costly | 1 | 0 |
+| Power Word: Shield, 17 | 1 | 0 |
+| Smite Rank 1, 585, cheapest | 5 | 7 |
+| Melee attack | 1 | 1 |
+
+Under the conserving instruction Jev stopped choosing both costly spells and
+relied on the cheapest damage rank plus melee. Nothing in the code changed
+between the two runs; only the instruction text differed. This is the
+behaviour change milestone 2 asks to be demonstrated.
 
 ## Robustness exercises
 
