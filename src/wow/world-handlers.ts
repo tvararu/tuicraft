@@ -443,7 +443,18 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           ...(cachedName ? { name: cachedName } : {}),
           ...(entry.position ? { position: entry.position } : {}),
           rawFields: new Map(entry.fields),
+          createComplete: true,
         } as any);
+        if (entry.guid === self) {
+          const created = conn.entityStore.get(self);
+          if (created) conn.quests?.observeSelfCreate(created);
+        }
+        if (entry.position)
+          conn.combat?.observePosition(
+            entry.guid,
+            entry.position,
+            entry.spline,
+          );
         if (!cachedName)
           queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
         if (
@@ -484,11 +495,9 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
           if (key in extraFields) merged[key] = (extraFields as any)[key];
           else if (key in objFields) merged[key] = (objFields as any)[key];
         }
+        for (const [k, v] of entry.fields) entity.rawFields.set(k, v);
+        merged["rawFields"] = entity.rawFields;
         conn.entityStore.update(entry.guid, merged);
-        for (const [k, v] of entry.fields) {
-          const existing = conn.entityStore.get(entry.guid);
-          if (existing) existing.rawFields.set(k, v);
-        }
         if (entry.guid === self) {
           conn.control?.observeSelf({
             target: extraFields.target as bigint | undefined,
@@ -499,6 +508,7 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
       }
       case "movement": {
         conn.entityStore.setPosition(entry.guid, entry.position);
+        conn.combat?.observePosition(entry.guid, entry.position, entry.spline);
         if (entry.guid === self) {
           conn.control?.observeSelf({
             position: entry.position,
@@ -518,6 +528,7 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
       }
     }
   }
+  conn.quests?.observeQuestLog();
 }
 
 export function handleCompressedUpdateObject(
@@ -539,6 +550,7 @@ export function handleDestroyObject(conn: WorldConn, r: PacketReader): void {
   const guid = r.uint64LE();
   r.skip(1);
   conn.entityStore.destroy(guid);
+  conn.quests?.observeQuestLog();
 }
 
 export function lookupCachedName(
@@ -858,7 +870,9 @@ export function handleTransferPending(conn: WorldConn): void {
 
 export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
   conn.control?.handleNewWorld(r);
+  conn.quests?.resetInteraction();
   conn.entityStore.clear();
+  conn.quests?.observeQuestLog();
 }
 
 export function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
@@ -932,4 +946,72 @@ export function registerMovementHandlers(conn: WorldConn): void {
   for (const opcode of speedOpcodes) {
     conn.dispatch.on(opcode, (r) => handleForceSpeedChange(conn, r, opcode));
   }
+}
+
+export function registerCombatHandlers(conn: WorldConn): void {
+  conn.dispatch.on(GameOpcode.SMSG_INITIAL_SPELLS, (r) => {
+    conn.combat?.applyInitialSpells(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_LEARNED_SPELL, (r) => {
+    conn.combat?.applyLearned(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_REMOVED_SPELL, (r) => {
+    conn.combat?.applyRemoved(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_SUPERCEDED_SPELL, (r) => {
+    conn.combat?.applySuperseded(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_SPELL_START, (r) => {
+    conn.combat?.applySpellStart(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_SPELL_GO, (r) => {
+    conn.combat?.applySpellGo(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_CAST_FAILED, (r) => {
+    conn.combat?.applyCastFailed(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_SPELL_FAILURE, (r) => {
+    conn.combat?.applySpellFailure(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_SPELL_COOLDOWN, (r) => {
+    conn.combat?.applyCooldown(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_CLEAR_COOLDOWN, (r) =>
+    conn.combat?.applyClearCooldown(r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_COOLDOWN_EVENT, (r) =>
+    conn.combat?.applyCooldownEvent(r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_SPELL_DELAYED, (r) =>
+    conn.combat?.applySpellDelayed(r),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_CANCEL_COMBAT, () =>
+    conn.combat?.applyCancelCombat(),
+  );
+  for (const opcode of [
+    GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
+    GameOpcode.SMSG_ATTACKSWING_BADFACING,
+    GameOpcode.SMSG_ATTACKSWING_DEADTARGET,
+    GameOpcode.SMSG_ATTACKSWING_CANT_ATTACK,
+  ]) {
+    conn.dispatch.on(opcode, () => conn.combat?.applyAttackError(opcode));
+  }
+  conn.dispatch.on(GameOpcode.SMSG_ATTACKSTART, (r) => {
+    conn.combat?.applyAttackStart(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_ATTACKSTOP, (r) => {
+    conn.combat?.applyAttackStop(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE, (r) => {
+    conn.combat?.applyAura(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE_ALL, (r) => {
+    conn.combat?.applyAuraAll(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_LOG_XPGAIN, (r) => {
+    conn.combat?.applyXp(r);
+  });
+  conn.dispatch.on(GameOpcode.SMSG_MONSTER_MOVE, (r) => {
+    conn.combat?.applyMonsterMove(r, conn.control?.currentMapId() ?? 0);
+  });
 }

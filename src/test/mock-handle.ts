@@ -1,3 +1,9 @@
+import { CombatRuntime, type CombatEvent } from "wow/combat";
+import type { TacticsState, TacticsEvent } from "wow/tactics";
+import type { FollowState, FollowEvent } from "wow/follow";
+import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
+import { QuestRuntime, type QuestEvent } from "wow/quests";
+import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
 import { jest } from "bun:test";
 import type {
   WorldHandle,
@@ -21,6 +27,12 @@ export function createMockHandle(): WorldHandle & {
   triggerIgnoreEvent(event: IgnoreEvent): void;
   triggerGuildEvent(event: GuildEvent): void;
   triggerControlEvent(event: ControlEvent): void;
+  triggerCombatEvent(event: CombatEvent): void;
+  triggerTacticsEvent(event: TacticsEvent): void;
+  triggerFollowEvent(event: FollowEvent): void;
+  triggerRecoveryEvent(event: RecoveryEvent): void;
+  triggerQuestEvent(event: QuestEvent): void;
+  triggerRewardsEvent(event: RewardsEvent): void;
   resolveClosed(): void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
@@ -43,6 +55,60 @@ export function createMockHandle(): WorldHandle & {
     blockedReason: undefined,
     speed: 0,
     owner: "none",
+  };
+  let combatEventCb: ((event: CombatEvent) => void) | undefined;
+  let tacticsEventCb: ((event: TacticsEvent) => void) | undefined;
+  let followEventCb: ((event: FollowEvent) => void) | undefined;
+  let recoveryEventCb: ((event: RecoveryEvent) => void) | undefined;
+  let questEventCb: ((event: QuestEvent) => void) | undefined;
+  let rewardsEventCb: ((event: RewardsEvent) => void) | undefined;
+  const runtimeDeps = {
+    send: () => {},
+    now: () => 0,
+    selfGuid: () => 0n,
+    getEntity: () => undefined,
+  };
+  const combat = new CombatRuntime({
+    ...runtimeDeps,
+    selectedGuid: () => undefined,
+    selfPose: () => undefined,
+  });
+  const recovery = new RecoveryRuntime({
+    ...runtimeDeps,
+    pose: () => undefined,
+  });
+  const quests = new QuestRuntime(runtimeDeps);
+  const rewards = new RewardsRuntime(runtimeDeps);
+  const followState: FollowState = {
+    active: false,
+    status: "idle",
+    guid: undefined,
+    distance: 3,
+    separation: undefined,
+    targetPose: undefined,
+    observedAt: undefined,
+    destination: undefined,
+    startedAt: undefined,
+    expiresAt: undefined,
+    plans: 0,
+    attempts: 0,
+    reason: undefined,
+  };
+  const tacticsState: TacticsState = {
+    status: "idle",
+    runId: undefined,
+    targetGuid: undefined,
+    instruction: "",
+    ownerEpoch: 0,
+    instructionEpoch: 0,
+    targetIntentEpoch: 0,
+    lastRequest: undefined,
+    lastResult: undefined,
+    lastDecision: undefined,
+    lastOutcome: undefined,
+    lastElapsedMs: undefined,
+    lastInterApplyMs: undefined,
+    lastDiscardReason: undefined,
   };
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
@@ -127,6 +193,82 @@ export function createMockHandle(): WorldHandle & {
     halt: jest.fn(),
     onControlEvent(cb) {
       controlEventCb = cb;
+    },
+    getCombatState: jest.fn(() => combat.snapshot()),
+    getSpellbook: jest.fn(async () => []),
+    cast: jest.fn(),
+    attack: jest.fn(),
+    cancelCast: jest.fn(),
+    stopAttack: jest.fn(),
+    startTactics: jest.fn(async () => {}),
+    getTacticsState: jest.fn(() => tacticsState),
+    goTo: jest.fn(),
+    getNavigationState: jest.fn(() => ({
+      active: false,
+      destination: undefined,
+      remaining: undefined,
+      owner: "none" as const,
+      blockedReason: undefined,
+    })),
+    onCombatEvent(cb) {
+      combatEventCb = cb;
+    },
+    onTacticsEvent(cb) {
+      tacticsEventCb = cb;
+    },
+    follow: jest.fn(),
+    getFollowState: jest.fn(() => followState),
+    onFollowEvent(cb) {
+      followEventCb = cb;
+    },
+    getRecoveryState: jest.fn(() => recovery.snapshot()),
+    queryCorpse: jest.fn(),
+    releaseSpirit: jest.fn(),
+    reclaimCorpse: jest.fn(),
+    respondResurrection: jest.fn(),
+    onRecoveryEvent(cb) {
+      recoveryEventCb = cb;
+    },
+    getQuestState: jest.fn(() => quests.snapshot()),
+    talk: jest.fn(),
+    queryQuest: jest.fn(),
+    selectGossipOption: jest.fn(),
+    selectQuest: jest.fn(),
+    acceptQuest: jest.fn(),
+    completeQuest: jest.fn(),
+    requestQuestReward: jest.fn(),
+    chooseQuestReward: jest.fn(),
+    abandonQuest: jest.fn(),
+    cancelInteraction: jest.fn(),
+    onQuestEvent(cb) {
+      questEventCb = cb;
+    },
+    triggerFollowEvent(event) {
+      followEventCb?.(event);
+    },
+    triggerRecoveryEvent(event) {
+      recoveryEventCb?.(event);
+    },
+    triggerQuestEvent(event) {
+      questEventCb?.(event);
+    },
+    getInventoryState: jest.fn(() => rewards.snapshot().inventory),
+    getRewardsState: jest.fn(() => rewards.snapshot()),
+    openLoot: jest.fn(),
+    takeLoot: jest.fn(),
+    takeLootMoney: jest.fn(),
+    releaseLoot: jest.fn(),
+    onRewardsEvent(cb) {
+      rewardsEventCb = cb;
+    },
+    triggerRewardsEvent(event) {
+      rewardsEventCb?.(event);
+    },
+    triggerCombatEvent(event) {
+      combatEventCb?.(event);
+    },
+    triggerTacticsEvent(event) {
+      tacticsEventCb?.(event);
     },
     triggerMessage(msg) {
       messageCb?.(msg);

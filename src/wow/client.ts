@@ -63,7 +63,36 @@ import {
   type ControlEvent,
   type ControlState,
   type MovementDirection,
+  type NavigationState,
 } from "wow/control";
+import { CombatRuntime, type CombatEvent, type CombatState } from "wow/combat";
+import type { SpellDefinition } from "wow/spell-catalog";
+import { loadSpellCatalog } from "wow/spell-catalog";
+import { TacticsLoop, type TacticsEvent, type TacticsState } from "wow/tactics";
+import { CombatActions } from "wow/combat-actions";
+import {
+  loadFactionTemplates,
+  type FactionTemplateCatalog,
+} from "wow/faction-template";
+import { createNavigation, type Navigation } from "wow/navigation";
+import { FollowRuntime, type FollowState, type FollowEvent } from "wow/follow";
+import {
+  RecoveryRuntime,
+  type RecoveryState,
+  type RecoveryEvent,
+} from "wow/recovery";
+import {
+  QuestRuntime,
+  QuestServerOpcode,
+  type QuestState,
+  type QuestEvent,
+} from "wow/quests";
+import {
+  RewardsRuntime,
+  type RewardsState,
+  type RewardsEvent,
+} from "wow/rewards";
+import type { InventoryState } from "wow/inventory";
 import {
   sendPacket,
   handleTimeSync,
@@ -106,6 +135,7 @@ import {
   handleGuildCommandResult,
   handleGuildInvitePacket,
   registerMovementHandlers,
+  registerCombatHandlers,
   selfGuid,
 } from "wow/world-handlers";
 
@@ -120,6 +150,10 @@ export type ClientConfig = {
   pingIntervalMs?: number;
   language?: number;
   cachedSessionKey?: Uint8Array;
+  spellDataDir?: string;
+  navigationDataDir?: string;
+  navigationLibrary?: string;
+  jevApiKey?: string;
 };
 
 import type { AuthResult } from "wow/auth";
@@ -254,6 +288,50 @@ export type WorldHandle = {
   selectTarget(guid: bigint): void;
   halt(): void;
   onControlEvent(cb: ((event: ControlEvent) => void) | undefined): void;
+  getCombatState(): CombatState;
+  getSpellbook(): Promise<SpellDefinition[]>;
+  cast(spellId: number, targetGuid: bigint): void;
+  attack(targetGuid: bigint): void;
+  cancelCast(): void;
+  stopAttack(): void;
+  startTactics(
+    targetGuid: bigint,
+    instruction: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  getTacticsState(): TacticsState;
+  goTo(x: number, y: number, z: number): void;
+  getNavigationState(): NavigationState;
+  onCombatEvent(cb: ((event: CombatEvent) => void) | undefined): void;
+  onTacticsEvent(cb: ((event: TacticsEvent) => void) | undefined): void;
+  follow(guid: bigint, distance?: number): void;
+  getFollowState(): FollowState;
+  onFollowEvent(cb: ((event: FollowEvent) => void) | undefined): void;
+  getRecoveryState(): RecoveryState;
+  queryCorpse(): void;
+  releaseSpirit(): void;
+  reclaimCorpse(): void;
+  respondResurrection(accept: boolean): void;
+  onRecoveryEvent(cb: ((event: RecoveryEvent) => void) | undefined): void;
+  getQuestState(): QuestState;
+  talk(guid: bigint): void;
+  queryQuest(questId: number): void;
+  selectGossipOption(optionId: number, code?: string): void;
+  selectQuest(questId: number): void;
+  acceptQuest(): void;
+  completeQuest(questId: number): void;
+  requestQuestReward(): void;
+  chooseQuestReward(index: number): void;
+  abandonQuest(slot: number): void;
+  cancelInteraction(): void;
+  onQuestEvent(cb: ((event: QuestEvent) => void) | undefined): void;
+  getInventoryState(): InventoryState;
+  getRewardsState(): RewardsState;
+  openLoot(guid: bigint): void;
+  takeLoot(slot: number): void;
+  takeLootMoney(): void;
+  releaseLoot(): void;
+  onRewardsEvent(cb: ((event: RewardsEvent) => void) | undefined): void;
 };
 
 export type WorldConn = {
@@ -290,6 +368,14 @@ export type WorldConn = {
   duelArbiter: bigint;
   onDuelEvent?: (event: DuelEvent) => void;
   control?: ControlRuntime;
+  combat?: CombatRuntime;
+  follow?: FollowRuntime;
+  recovery?: RecoveryRuntime;
+  quests?: QuestRuntime;
+  rewards?: RewardsRuntime;
+  tactics?: TacticsLoop;
+  onControlEvent?: (event: ControlEvent) => void;
+  onRecoveryEvent?: (event: RecoveryEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -418,7 +504,17 @@ export function worldSession(
       pendingRequest: null,
       duelArbiter: 0n,
     };
-    conn.entityStore.onEvent((event) => conn.onEntityEvent?.(event));
+    conn.entityStore.onEvent((event) => {
+      if (event.type === "disappear") {
+        conn.follow?.invalidateTarget(event.guid, "target_lost");
+        conn.combat?.forget(event.guid);
+      } else if ("health" in event.entity && event.entity.health === 0) {
+        conn.follow?.invalidateTarget(event.entity.guid, "target_dead");
+      }
+      conn.recovery?.observeEntity(event);
+      conn.rewards?.observeEntity(event);
+      conn.onEntityEvent?.(event);
+    });
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
     conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
     conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
@@ -431,6 +527,181 @@ export function worldSession(
       guidHigh: () => conn.selfGuidHigh,
       selfGuid: () => selfGuid(conn),
     });
+
+    const control = conn.control;
+    const runtimeDeps = {
+      send: (opcode: number, body?: Uint8Array) =>
+        sendPacket(conn, opcode, body ?? new Uint8Array()),
+      now: () => Date.now(),
+      selfGuid: () => selfGuid(conn),
+      getEntity: (guid: bigint) => conn.entityStore.get(guid),
+    };
+    const combat = new CombatRuntime({
+      ...runtimeDeps,
+      selectedGuid: () => control.snapshot().target,
+      selfPose: () => control.snapshot().pose,
+      selfServerPose: () => control.snapshot().serverPose,
+    });
+    conn.combat = combat;
+    let catalogPromise: Promise<void> | undefined;
+    let factions: FactionTemplateCatalog | undefined;
+    let factionPromise: Promise<void> | undefined;
+    let navigation: Navigation | undefined;
+    let disposed = false;
+    const actions = new CombatActions({
+      combat,
+      control,
+      entity: (guid) => conn.entityStore.get(guid),
+      factions: () => factions,
+      now: () => Date.now(),
+    });
+    function prepareCatalog(): Promise<void> {
+      if (!config.spellDataDir)
+        return Promise.reject(new Error("missing_spell_data"));
+      catalogPromise ??= loadSpellCatalog(config.spellDataDir).then(
+        (catalog) => {
+          if (!disposed) combat.setCatalog(catalog);
+        },
+      );
+      return catalogPromise;
+    }
+    function getNavigation(): Navigation {
+      if (!config.navigationDataDir || !config.navigationLibrary)
+        throw new Error("missing_navigation");
+      navigation ??= createNavigation({
+        dataPath: config.navigationDataDir,
+        libraryPath: config.navigationLibrary,
+      });
+      return navigation;
+    }
+    function rawHalt(): void {
+      if (disposed) return;
+      conn.follow?.stop("halt");
+      control.setMode("none");
+      control.halt();
+      combat.halt();
+    }
+    const tactics = new TacticsLoop({
+      apiKey: config.jevApiKey,
+      async prepare(_context, signal) {
+        signal.throwIfAborted();
+        await prepareCatalog();
+        signal.throwIfAborted();
+        factionPromise ??= loadFactionTemplates(config.spellDataDir!).then(
+          (data) => {
+            if (!disposed) factions = data;
+          },
+        );
+        await factionPromise;
+        signal.throwIfAborted();
+      },
+      activate: (context) => actions.activate(context),
+      observe: (context) => actions.observe(context),
+      execute: (id, context) => actions.execute(id, context),
+      halt: rawHalt,
+    });
+    conn.tactics = tactics;
+    const follow = new FollowRuntime({
+      control,
+      navigation: getNavigation,
+      target: (guid) => combat.unit(guid),
+      now: runtimeDeps.now,
+    });
+    conn.follow = follow;
+    const recovery = new RecoveryRuntime({
+      ...runtimeDeps,
+      pose: () => control.snapshot().pose,
+    });
+    conn.recovery = recovery;
+    const quests = new QuestRuntime(runtimeDeps);
+    conn.quests = quests;
+    const rewards = new RewardsRuntime(runtimeDeps);
+    conn.rewards = rewards;
+    control.onEvent((event) => {
+      follow.observeControl(event);
+      conn.onControlEvent?.(event);
+    });
+    recovery.onEvent((event) => {
+      if (
+        event.type === "recovery_invalidated" ||
+        (event.type === "life_observed" &&
+          (event.state.life === "dead" || event.state.life === "ghost"))
+      ) {
+        tactics.stop(`self_${event.state.life}`);
+        follow.stop(`self_${event.state.life}`);
+      }
+      conn.onRecoveryEvent?.(event);
+    });
+    conn.dispatch.on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
+      recovery.handleCorpseQuery(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_CORPSE_RECLAIM_DELAY, (r) =>
+      recovery.handleCorpseReclaimDelay(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_DEATH_RELEASE_LOC, (r) =>
+      recovery.handleDeathReleaseLocation(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
+      recovery.handleResurrectRequest(r),
+    );
+    for (const opcode of Object.values(QuestServerOpcode))
+      conn.dispatch.on(opcode, (r) => {
+        quests.handlePacket(opcode, r);
+      });
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
+      rewards.handleLootResponse(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_REMOVED, (r) =>
+      rewards.handleLootRemoved(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_RELEASE_RESPONSE, (r) =>
+      rewards.handleLootReleaseResponse(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_MONEY_NOTIFY, (r) =>
+      rewards.handleLootMoneyNotify(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_LOOT_CLEAR_MONEY, (r) =>
+      rewards.handleLootClearMoney(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) =>
+      rewards.handleItemPushResult(r),
+    );
+    conn.dispatch.on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
+      rewards.handleInventoryChangeFailure(r),
+    );
+    function override(): void {
+      follow.stop("manual_override");
+      tactics.stop("manual_override");
+      rawHalt();
+    }
+    function cleanup(sendStop: boolean): void {
+      if (disposed) return;
+      conn.onEntityEvent = undefined;
+      conn.onFriendEvent = undefined;
+      conn.onIgnoreEvent = undefined;
+      conn.onGuildEvent = undefined;
+      conn.onGroupEvent = undefined;
+      conn.onDuelEvent = undefined;
+      conn.onControlEvent = undefined;
+      conn.onRecoveryEvent = undefined;
+      follow.onEvent(undefined);
+      recovery.onEvent(undefined);
+      quests.onEvent(undefined);
+      rewards.onEvent(undefined);
+      control.onEvent(undefined);
+      combat.onEvent(undefined);
+      tactics.onEvent(undefined);
+      if (sendStop) rawHalt();
+      disposed = true;
+      control.dispose();
+      tactics.dispose();
+      follow.dispose();
+      recovery.dispose();
+      quests.dispose();
+      rewards.dispose();
+      combat.dispose();
+      navigation?.close();
+    }
 
     let pingInterval: ReturnType<typeof setInterval>;
     let done = false;
@@ -560,6 +831,7 @@ export function worldSession(
     );
 
     registerMovementHandlers(conn);
+    registerCombatHandlers(conn);
 
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
@@ -581,11 +853,7 @@ export function worldSession(
         closed,
         close() {
           clearInterval(pingInterval);
-          conn.control?.dispose();
-          conn.onEntityEvent = undefined;
-          conn.onFriendEvent = undefined;
-          conn.onIgnoreEvent = undefined;
-          conn.onGuildEvent = undefined;
+          cleanup(true);
           conn.socket.end();
         },
         onMessage(cb) {
@@ -967,23 +1235,193 @@ export function worldSession(
           );
         },
         move(direction, durationMs) {
+          override();
           if (!conn.control) throw new Error("no_control");
           conn.control.move(direction, durationMs);
         },
         face(orientation) {
+          override();
           if (!conn.control) throw new Error("no_control");
           conn.control.face(orientation);
         },
         selectTarget(guid) {
+          override();
           if (!conn.control) throw new Error("no_control");
           conn.control.selectTarget(guid);
         },
         halt() {
-          if (!conn.control) throw new Error("no_control");
-          conn.control.halt();
+          follow.stop("halt");
+          tactics.stop("halt");
+          rawHalt();
+        },
+        getCombatState() {
+          return combat.snapshot();
+        },
+        async getSpellbook() {
+          await prepareCatalog();
+          return combat.spellbook();
+        },
+        cast(spellId, targetGuid) {
+          override();
+          combat.cast(spellId, targetGuid);
+        },
+        attack(targetGuid) {
+          override();
+          combat.attack(targetGuid);
+        },
+        cancelCast() {
+          follow.stop("manual_override");
+          tactics.stop("manual_override");
+          combat.cancelCast();
+        },
+        stopAttack() {
+          follow.stop("manual_override");
+          tactics.stop("manual_override");
+          combat.stopAttack();
+        },
+        startTactics(targetGuid, instruction, signal) {
+          follow.stop("tactics");
+          const life = recovery.snapshot().life;
+          if (life === "dead" || life === "ghost")
+            throw new Error("self_not_alive");
+          return tactics.start({ targetGuid, instruction }, signal);
+        },
+        getTacticsState() {
+          return tactics.snapshot();
+        },
+        goTo(x, y, z) {
+          override();
+          if (![x, y, z].every(Number.isFinite))
+            throw new Error("invalid_destination");
+          const pose = control.snapshot().pose;
+          if (!pose) throw new Error("no_pose");
+          const navigation = getNavigation();
+          const destination = { x, y, z };
+          try {
+            control.navigate(
+              navigation.plan(pose.mapId, pose, destination),
+              destination,
+            );
+          } catch (error) {
+            control.navigationError(
+              destination,
+              error instanceof Error ? error.message : "navigation_failed",
+            );
+            throw error;
+          }
+        },
+        getNavigationState() {
+          return control.navigationState();
+        },
+        onCombatEvent(cb) {
+          combat.onEvent(cb);
+        },
+        onTacticsEvent(cb) {
+          tactics.onEvent(cb);
         },
         onControlEvent(cb) {
-          conn.control?.onEvent(cb);
+          conn.onControlEvent = cb;
+        },
+        follow(guid, distance) {
+          override();
+          follow.start(guid, distance);
+        },
+        getFollowState() {
+          return follow.snapshot();
+        },
+        onFollowEvent(cb) {
+          follow.onEvent(cb);
+        },
+        getRecoveryState() {
+          return recovery.snapshot();
+        },
+        queryCorpse() {
+          recovery.queryCorpse();
+        },
+        releaseSpirit() {
+          override();
+          recovery.releaseSpirit();
+        },
+        reclaimCorpse() {
+          override();
+          recovery.reclaimCorpse();
+        },
+        respondResurrection(accept) {
+          override();
+          recovery.respondResurrection(accept);
+        },
+        onRecoveryEvent(cb) {
+          conn.onRecoveryEvent = cb;
+        },
+        getQuestState() {
+          return quests.snapshot();
+        },
+        talk(guid) {
+          override();
+          quests.talk(guid);
+        },
+        queryQuest(questId) {
+          quests.query(questId);
+        },
+        selectGossipOption(optionId, code) {
+          override();
+          quests.selectOption(optionId, code);
+        },
+        selectQuest(questId) {
+          override();
+          quests.selectQuest(questId);
+        },
+        acceptQuest() {
+          override();
+          quests.accept();
+        },
+        completeQuest(questId) {
+          override();
+          quests.complete(questId);
+        },
+        requestQuestReward() {
+          override();
+          quests.requestReward();
+        },
+        chooseQuestReward(index) {
+          override();
+          quests.chooseReward(index);
+        },
+        abandonQuest(slot) {
+          override();
+          quests.abandon(slot);
+        },
+        cancelInteraction() {
+          override();
+          quests.cancel();
+        },
+        onQuestEvent(cb) {
+          quests.onEvent(cb);
+        },
+        getInventoryState() {
+          return rewards.snapshot().inventory;
+        },
+        getRewardsState() {
+          return rewards.snapshot();
+        },
+        openLoot(guid) {
+          override();
+          rewards.open(guid);
+        },
+        takeLoot(slot) {
+          override();
+          rewards.take(slot);
+        },
+        takeLootMoney() {
+          override();
+          rewards.takeMoney();
+        },
+        releaseLoot() {
+          override();
+          rewards.close();
+        },
+        onRewardsEvent(cb) {
+          rewards.onEvent(cb);
         },
       };
       resolve(handle);
@@ -993,6 +1431,7 @@ export function worldSession(
       done = true;
       clearInterval(pingInterval);
       reject(err);
+      cleanup(false);
       conn.socket?.end();
     });
 
@@ -1009,7 +1448,7 @@ export function worldSession(
         },
         close() {
           clearInterval(pingInterval);
-          conn.control?.dispose();
+          cleanup(false);
           conn.entityStore.clear();
           if (!done) reject(new Error("World connection closed"));
           closedResolve();

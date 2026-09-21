@@ -5,6 +5,8 @@ import { worldSession } from "wow/client";
 import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketWriter } from "wow/protocol/packet";
+import type { QuestEvent } from "wow/quests";
 import {
   FIXTURE_ACCOUNT,
   FIXTURE_PASSWORD,
@@ -145,6 +147,38 @@ describe("session lifecycle", () => {
       expect(handle.getControlState().pose?.mapId).toBe(530);
       const self = handle.getNearbyEntities().find((e) => e.guid === 0x42n);
       expect(self?.position?.mapId).toBe(530);
+      handle.close();
+      await handle.closed;
+    } finally {
+      worldServer.stop();
+    }
+  });
+
+  test("world transfer invalidates quest authority before another self CREATE", async () => {
+    const worldServer = await startMockWorldServer({
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: worldServer.port },
+        fakeAuth(worldServer.port),
+      );
+      expect(handle.getQuestState().log.complete).toBe(true);
+      const events: QuestEvent[] = [];
+      handle.onQuestEvent((event) => events.push(event));
+      const packet = new PacketWriter();
+      packet.uint32LE(530);
+      for (const value of [1, 2, 3, 0]) packet.floatLE(value);
+      worldServer.inject(GameOpcode.SMSG_NEW_WORLD, packet.finish());
+      await worldServer.waitForCapture(
+        (p) => p.opcode === GameOpcode.MSG_MOVE_WORLDPORT_ACK,
+      );
+      expect(handle.getQuestState().log.complete).toBe(false);
+      expect(
+        events.some(
+          (event) => event.type === "accepted" || event.type === "removed",
+        ),
+      ).toBe(false);
       handle.close();
       await handle.closed;
     } finally {

@@ -28,11 +28,13 @@ import {
   GroupUpdateFlag,
 } from "wow/protocol/opcodes";
 import type { EntityEvent } from "wow/entity-store";
+import { readLife, type PlayerLifeState } from "wow/player-state";
 import {
   UpdateFlag,
   OBJECT_FIELDS,
   UNIT_FIELDS,
   GAMEOBJECT_FIELDS,
+  PLAYER_FIELDS,
 } from "wow/protocol/entity-fields";
 import {
   FIXTURE_ACCOUNT,
@@ -1771,6 +1773,94 @@ describe("world handler tests", () => {
         });
       });
     }
+
+    test("complete CREATE establishes zero public fields only for that entity lifetime", async () => {
+      const ws = await startMockWorldServer();
+      try {
+        const handle = await worldSession(
+          { ...base, host: "127.0.0.1", port: ws.port },
+          fakeAuth(ws.port),
+        );
+        const guid = handle.getControlState().selfGuid;
+        const update = async (create: boolean, fields: Map<number, number>) => {
+          const w = new PacketWriter();
+          w.uint32LE(1);
+          w.uint8(create ? 3 : 0);
+          writePackedGuid(w, guid);
+          if (create) {
+            w.uint8(4);
+            w.uint16LE(0);
+          }
+          writeUpdateMask(w, fields);
+          ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
+          await waitForEchoProbe(handle);
+        };
+        expect(handle.getCombatState().self.shapeshiftForm).toBeUndefined();
+        await update(false, new Map([[UNIT_FIELDS.BYTES_2.offset, 3 << 24]]));
+        expect(handle.getCombatState().self.shapeshiftForm).toBeUndefined();
+        await update(true, new Map([[UNIT_FIELDS.HEALTH.offset, 187]]));
+        expect(handle.getCombatState().self).toMatchObject({
+          health: 187,
+          powerType: 0,
+          power: 0,
+          shapeshiftForm: 0,
+        });
+        const lifeEvents: PlayerLifeState[] = [];
+        handle.onEntityEvent((event) => {
+          if (event.type === "update" && event.entity.guid === guid)
+            lifeEvents.push(readLife(guid, () => event.entity));
+        });
+        await update(
+          false,
+          new Map([
+            [UNIT_FIELDS.HEALTH.offset, 1],
+            [PLAYER_FIELDS.FLAGS.offset, 0x10],
+          ]),
+        );
+        expect(lifeEvents.at(-1)).toEqual({
+          life: "ghost",
+          health: 1,
+          flags: 0x10,
+        });
+        const eventCount = lifeEvents.length;
+        await update(false, new Map([[PLAYER_FIELDS.FLAGS.offset, 0]]));
+        expect(lifeEvents.length).toBe(eventCount + 1);
+        expect(lifeEvents.at(-1)).toEqual({
+          life: "alive",
+          health: 1,
+          flags: 0,
+        });
+        await update(
+          false,
+          new Map([[UNIT_FIELDS.BYTES_0.offset, 0xff000000]]),
+        );
+        expect(handle.getCombatState().self.powerType).toBe(255);
+        expect(handle.getCombatState().self.power).toBeUndefined();
+        expect(handle.getCombatState().self.maxPower).toBeUndefined();
+        await update(false, new Map([[UNIT_FIELDS.BYTES_2.offset, 3 << 24]]));
+        await update(false, new Map([[UNIT_FIELDS.HEALTH.offset, 180]]));
+        expect(handle.getCombatState().self).toMatchObject({
+          health: 180,
+          shapeshiftForm: 3,
+        });
+        await update(true, new Map([[UNIT_FIELDS.HEALTH.offset, 187]]));
+        expect(handle.getCombatState().self.shapeshiftForm).toBe(0);
+        const destroy = new PacketWriter();
+        destroy.uint32LE(1);
+        destroy.uint8(4);
+        destroy.uint32LE(1);
+        writePackedGuid(destroy, guid);
+        ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, destroy.finish());
+        await waitForEchoProbe(handle);
+        expect(handle.getCombatState().self.shapeshiftForm).toBeUndefined();
+        await update(false, new Map([[UNIT_FIELDS.BYTES_2.offset, 3 << 24]]));
+        expect(handle.getCombatState().self.shapeshiftForm).toBeUndefined();
+        handle.close();
+        await handle.closed;
+      } finally {
+        ws.stop();
+      }
+    });
 
     test("entity create and creature query response", async () => {
       const ws = await startMockWorldServer();
