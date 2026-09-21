@@ -69,6 +69,8 @@ export type UnitFieldsResult = {
   race?: number;
   class_?: number;
   gender?: number;
+  powerType?: number;
+  baseMana?: number;
   power?: number[];
   maxPower?: number[];
   modCastSpeed?: number;
@@ -84,6 +86,7 @@ const UNIT_U32_FIELDS: [keyof typeof UNIT_FIELDS, keyof UnitFieldsResult][] = [
   ["NATIVEDISPLAYID", "nativeDisplayId"],
   ["NPC_FLAGS", "npcFlags"],
   ["DYNAMIC_FLAGS", "dynamicFlags"],
+  ["BASE_MANA", "baseMana"],
 ];
 
 const UNIT_FLAGS_MAP: [keyof typeof UNIT_FIELDS, keyof UnitFieldsResult][] = [
@@ -144,7 +147,8 @@ export function extractUnitFields(
     result.race = b & 0xff;
     result.class_ = (b >> 8) & 0xff;
     result.gender = (b >> 16) & 0xff;
-    changed.push("race", "class_", "gender");
+    result.powerType = (b >> 24) & 0xff;
+    changed.push("race", "class_", "gender", "powerType");
   }
 
   let powerArr: number[] | undefined;

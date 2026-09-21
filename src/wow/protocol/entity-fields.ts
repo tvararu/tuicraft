@@ -1,9 +1,3 @@
-// Subset of 3.3.5a (build 12340) UpdateFields.
-// Full reference: azerothcore-wotlk UpdateFields.h
-// UNIT has ~142 field slots; only ~28 are defined here.
-// PLAYER fields (UNIT_END..0x0494) are not defined at all.
-// Add fields from UpdateFields.h as features need them.
-
 export const enum ObjectType {
   OBJECT = 0,
   ITEM = 1,
@@ -71,7 +65,9 @@ export const MovementFlagExtra = {
 
 export const OBJECT_END = 0x0006;
 export const UNIT_END = 0x0094;
-export const PLAYER_END = 0x0494;
+export const PLAYER_END = UNIT_END + 0x049a;
+export const ITEM_END = OBJECT_END + 0x003a;
+export const CONTAINER_END = ITEM_END + 0x004a;
 export const GAMEOBJECT_END = 0x0012;
 export const DYNAMICOBJECT_END = 0x000c;
 export const CORPSE_END = 0x0024;
@@ -94,7 +90,8 @@ export const OBJECT_FIELDS = {
 export const UNIT_FIELDS = {
   CHARM: { offset: OE + 0x0000, size: 2, type: "u64" },
   SUMMON: { offset: OE + 0x0002, size: 2, type: "u64" },
-  CHARMEDBY: { offset: OE + 0x0004, size: 2, type: "u64" },
+  CHARMEDBY: { offset: OE + 0x0006, size: 2, type: "u64" },
+  SUMMONEDBY: { offset: OE + 0x0008, size: 2, type: "u64" },
   TARGET: { offset: OE + 0x000c, size: 2, type: "u64" },
   BYTES_0: { offset: OE + 0x0011, size: 1, type: "bytes4" },
   HEALTH: { offset: OE + 0x0012, size: 1, type: "u32" },
@@ -117,11 +114,39 @@ export const UNIT_FIELDS = {
   FACTIONTEMPLATE: { offset: OE + 0x0031, size: 1, type: "u32" },
   FLAGS: { offset: OE + 0x0035, size: 1, type: "u32" },
   FLAGS_2: { offset: OE + 0x0036, size: 1, type: "u32" },
+  COMBATREACH: { offset: OE + 0x003c, size: 1, type: "f32" },
   DISPLAYID: { offset: OE + 0x003d, size: 1, type: "u32" },
   NATIVEDISPLAYID: { offset: OE + 0x003e, size: 1, type: "u32" },
   DYNAMIC_FLAGS: { offset: OE + 0x0049, size: 1, type: "u32" },
   MOD_CAST_SPEED: { offset: OE + 0x004a, size: 1, type: "f32" },
+  BASE_MANA: { offset: OE + 0x0072, size: 1, type: "u32" },
+  BYTES_2: { offset: OE + 0x0074, size: 1, type: "bytes4" },
   NPC_FLAGS: { offset: OE + 0x004c, size: 1, type: "u32" },
+} as const satisfies Record<string, FieldDef>;
+
+export const PLAYER_FIELDS = {
+  FLAGS: { offset: UNIT_END + 0x0002, size: 1, type: "u32" },
+  QUEST_LOG: { offset: UNIT_END + 0x000a, size: 125, type: "u32" },
+  INV_SLOT_HEAD: { offset: UNIT_END + 0x00b0, size: 46, type: "u64" },
+  PACK_SLOT_1: { offset: UNIT_END + 0x00de, size: 32, type: "u64" },
+  KEYRING_SLOT_1: { offset: UNIT_END + 0x015c, size: 64, type: "u64" },
+  CURRENCYTOKEN_SLOT_1: { offset: UNIT_END + 0x019c, size: 64, type: "u64" },
+  COINAGE: { offset: UNIT_END + 0x03fe, size: 1, type: "u32" },
+} as const satisfies Record<string, FieldDef>;
+
+export const ITEM_FIELDS = {
+  OWNER: { offset: OE + 0x0000, size: 2, type: "u64" },
+  CONTAINED: { offset: OE + 0x0002, size: 2, type: "u64" },
+  STACK_COUNT: { offset: OE + 0x0008, size: 1, type: "u32" },
+  FLAGS: { offset: OE + 0x000f, size: 1, type: "u32" },
+  RANDOM_PROPERTIES_ID: { offset: OE + 0x0035, size: 1, type: "u32" },
+  DURABILITY: { offset: OE + 0x0036, size: 1, type: "u32" },
+  MAXDURABILITY: { offset: OE + 0x0037, size: 1, type: "u32" },
+} as const satisfies Record<string, FieldDef>;
+
+export const CONTAINER_FIELDS = {
+  NUM_SLOTS: { offset: ITEM_END + 0x0000, size: 1, type: "u32" },
+  SLOT_1: { offset: ITEM_END + 0x0002, size: 72, type: "u64" },
 } as const satisfies Record<string, FieldDef>;
 
 export const GAMEOBJECT_FIELDS = {
@@ -165,6 +190,7 @@ const FIELD_NAME_MAP: Record<string, string> = {
   CHARM: "charm",
   SUMMON: "summon",
   CHARMEDBY: "charmedBy",
+  SUMMONEDBY: "summonedBy",
   TARGET: "target",
   BYTES_0: "bytes0",
   HEALTH: "health",
@@ -208,6 +234,19 @@ const FIELD_NAME_MAP: Record<string, string> = {
   ITEM: "item",
   BYTES_2: "bytes2",
   GUILD: "guild",
+  QUEST_LOG: "questLog",
+  INV_SLOT_HEAD: "inventorySlots",
+  PACK_SLOT_1: "backpackSlots",
+  KEYRING_SLOT_1: "keyringSlots",
+  CURRENCYTOKEN_SLOT_1: "currencySlots",
+  COINAGE: "coinage",
+  CONTAINED: "contained",
+  STACK_COUNT: "stackCount",
+  RANDOM_PROPERTIES_ID: "randomPropertyId",
+  DURABILITY: "durability",
+  MAXDURABILITY: "maxDurability",
+  NUM_SLOTS: "numSlots",
+  SLOT_1: "slots",
 };
 
 function buildLookup(
@@ -226,7 +265,13 @@ function buildLookup(
 }
 
 const unitLookup = buildLookup(OBJECT_FIELDS, UNIT_FIELDS);
-const playerLookup = buildLookup(OBJECT_FIELDS, UNIT_FIELDS);
+const playerLookup = buildLookup(OBJECT_FIELDS, UNIT_FIELDS, PLAYER_FIELDS);
+const itemLookup = buildLookup(OBJECT_FIELDS, ITEM_FIELDS);
+const containerLookup = buildLookup(
+  OBJECT_FIELDS,
+  ITEM_FIELDS,
+  CONTAINER_FIELDS,
+);
 const gameobjectLookup = buildLookup(OBJECT_FIELDS, GAMEOBJECT_FIELDS);
 const dynamicobjectLookup = buildLookup(OBJECT_FIELDS, DYNAMICOBJECT_FIELDS);
 const corpseLookup = buildLookup(OBJECT_FIELDS, CORPSE_FIELDS);
@@ -234,8 +279,8 @@ const objectLookup = buildLookup(OBJECT_FIELDS);
 
 const lookupByType: Record<number, Map<number, FieldInfo>> = {
   [ObjectType.OBJECT]: objectLookup,
-  [ObjectType.ITEM]: objectLookup,
-  [ObjectType.CONTAINER]: objectLookup,
+  [ObjectType.ITEM]: itemLookup,
+  [ObjectType.CONTAINER]: containerLookup,
   [ObjectType.UNIT]: unitLookup,
   [ObjectType.PLAYER]: playerLookup,
   [ObjectType.GAMEOBJECT]: gameobjectLookup,

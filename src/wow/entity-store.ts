@@ -15,6 +15,7 @@ export type BaseEntity = {
   scale: number;
   position: Position | undefined;
   rawFields: Map<number, number>;
+  createComplete?: boolean;
   name: string | undefined;
 };
 
@@ -31,6 +32,8 @@ export type UnitEntity = BaseEntity & {
   race: number;
   class_: number;
   gender: number;
+  powerType?: number;
+  baseMana?: number;
   power: number[];
   maxPower: number[];
 };

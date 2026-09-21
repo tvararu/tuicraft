@@ -7,7 +7,6 @@ import {
   MovementFlagExtra,
   OBJECT_END,
   UNIT_END,
-  PLAYER_END,
   GAMEOBJECT_END,
   DYNAMICOBJECT_END,
   CORPSE_END,
@@ -75,10 +74,6 @@ describe("end constants", () => {
 
   test("UNIT_END is 0x0094", () => {
     expect(UNIT_END).toBe(0x0094);
-  });
-
-  test("PLAYER_END is 0x0494", () => {
-    expect(PLAYER_END).toBe(0x0494);
   });
 
   test("GAMEOBJECT_END is 0x0012", () => {

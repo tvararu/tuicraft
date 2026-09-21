@@ -83,6 +83,7 @@ describe("extractUnitFields", () => {
     expect(result.race).toBe(2);
     expect(result.class_).toBe(1);
     expect(result.gender).toBe(0);
+    expect(result.powerType).toBe(1);
     expect(result._changed).toEqual(
       expect.arrayContaining(["race", "class_", "gender"]),
     );
