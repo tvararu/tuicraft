@@ -94,6 +94,11 @@ export type ControlDeps = {
     y: number,
     from?: NavPoint,
   ) => number | undefined;
+  isPathClear?: (
+    mapId: number,
+    from: NavPoint,
+    to: NavPoint,
+  ) => boolean | undefined;
 };
 
 const MIN_DURATION_MS = 1;
@@ -632,7 +637,10 @@ export class ControlRuntime {
     this.moving = false;
     this.direction = undefined;
     this.owner = "none";
-    this.blockedReason = reason === "obstructed" ? "obstructed" : undefined;
+    this.blockedReason =
+      reason === "obstructed" || reason === "height_unresolved"
+        ? reason
+        : undefined;
     const movingBits =
       MovementFlag.FORWARD |
       MovementFlag.BACKWARD |
@@ -742,7 +750,26 @@ export class ControlRuntime {
         }
       }
       if (currentZ !== undefined && Number.isFinite(currentZ)) {
-        this.haltMovement("obstructed", true);
+        let clear: boolean | undefined;
+        if (this.deps.isPathClear) {
+          try {
+            clear = this.deps.isPathClear(
+              this.predicted.mapId,
+              this.predicted,
+              {
+                x: newX,
+                y: newY,
+                z: currentZ,
+              },
+            );
+          } catch {
+            clear = undefined;
+          }
+        }
+        this.haltMovement(
+          clear === true ? "height_unresolved" : "obstructed",
+          true,
+        );
         return;
       }
       this.abortUnsafe("ground_height_unavailable");

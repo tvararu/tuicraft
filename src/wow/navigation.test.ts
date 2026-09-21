@@ -371,4 +371,44 @@ describe("ground destinations", () => {
     expect(nav.height(530, 10, 0)).toBeCloseTo(64.17);
     expect(nav.height(530, 10, 0, { x: 0, y: 0, z: 0 })).toBeCloseTo(64.17);
   });
+
+  test("resolves height ahead by matching the known current surface in a multi-floor column", () => {
+    const map = native({
+      findHeight: () => {
+        throw groundError("pathfind_find_height failed (UNKNOWN_HEIGHT)");
+      },
+      findHeights: () => [93.42, 67.88, 70.34],
+    });
+    const nav = navigation(map);
+    expect(nav.height(530, 10, 0, { x: 0, y: 0, z: 70.336 })).toBeCloseTo(
+      70.34,
+    );
+  });
+
+  test("still refuses when two column entries both sit near the current surface", () => {
+    const map = native({
+      findHeight: () => {
+        throw groundError("pathfind_find_height failed (UNKNOWN_HEIGHT)");
+      },
+      findHeights: () => [93.42, 70.23, 70.34],
+    });
+    const nav = navigation(map);
+    expect(() => nav.height(530, 10, 0, { x: 0, y: 0, z: 70.336 })).toThrow(
+      /ambiguous ground column/,
+    );
+  });
+
+  test("reports whether a straight path is clear via a real line-of-sight query", () => {
+    const map = native({
+      lineOfSight: (from, to) => !(from.x < 5 && to.x >= 5),
+    });
+    const nav = navigation(map);
+    expect(nav.clear(530, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 })).toBe(
+      true,
+    );
+    expect(nav.clear(530, { x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 })).toBe(
+      false,
+    );
+    expect(() => nav.clear(0, start, end)).toThrow(/unsupported map/);
+  });
 });

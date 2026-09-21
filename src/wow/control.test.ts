@@ -792,6 +792,58 @@ test("free movement stops with obstructed when an obstacle blocks forward path b
   }
 });
 
+test("free movement stops with height_unresolved when the path ahead is clear but ambiguous", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, sent, events, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
+        return undefined;
+      },
+      isPathClear: () => true,
+    });
+    sent.length = 0;
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBe("height_unresolved");
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_STOP);
+    expect(
+      events.some(
+        (e) =>
+          e.type === "movement_stopped" && e.reason === "height_unresolved",
+      ),
+    ).toBe(true);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("free movement stops with obstructed when the path ahead is not clear", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, sent, events, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
+        return undefined;
+      },
+      isPathClear: () => false,
+    });
+    sent.length = 0;
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBe("obstructed");
+    expect(
+      events.some(
+        (e) => e.type === "movement_stopped" && e.reason === "obstructed",
+      ),
+    ).toBe(true);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("movement away from an obstruction clears blockedReason and succeeds", () => {
   jest.useFakeTimers();
   try {

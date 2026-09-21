@@ -18,6 +18,7 @@ export type Navigation = {
     to: { x: number; y: number },
   ): GroundRoute;
   height(mapId: number, x: number, y: number, from?: NavPoint): number;
+  clear(mapId: number, from: NavPoint, to: NavPoint): boolean;
   close(): void;
 };
 
@@ -132,8 +133,18 @@ export function createNavigation(
           const h = map.findHeight(from, x, y);
           if (Number.isFinite(h)) return h;
         } catch {}
+        const continuous = continuousHeight(map, x, y, from.z);
+        if (continuous !== undefined) return continuous;
       }
       return uniqueHeight(map, x, y);
+    },
+    clear(mapId, from, to) {
+      requireMap(mapId);
+      validateNativePoint(from);
+      validateNativePoint(to);
+      map ??= openMap(dataPath, libraryPath, "Expansion01");
+      map.loadAdtAt(to.x, to.y);
+      return map.lineOfSight(from, to);
     },
     close() {
       closed = true;
@@ -223,6 +234,22 @@ function checkGround(map: NativeMap, point: NavPoint): void {
 
 function uniqueHeight(map: NativeMap, x: number, y: number): number {
   return groundHeights(map, x, y)[0]!;
+}
+
+function continuousHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  referenceZ: number,
+): number | undefined {
+  const matches = map
+    .findHeights(x, y)
+    .filter(
+      (height) =>
+        Number.isFinite(height) &&
+        Math.abs(height - referenceZ) <= GROUND_ERROR,
+    );
+  return matches.length === 1 ? matches[0]! : undefined;
 }
 
 function groundHeights(map: NativeMap, x: number, y: number): number[] {

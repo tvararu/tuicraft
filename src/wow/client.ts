@@ -546,6 +546,13 @@ export function worldSession(
           return undefined;
         }
       },
+      isPathClear: (mapId, from, to) => {
+        try {
+          return getNavigation().clear(mapId, from, to);
+        } catch {
+          return undefined;
+        }
+      },
     });
 
     const control = conn.control;
