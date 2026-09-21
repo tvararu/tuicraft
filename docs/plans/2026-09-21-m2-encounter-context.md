@@ -217,3 +217,29 @@ Ordered by what blocks the most. Each item names who owns it.
 
 6. **Movement is never an offered action.** Recorded above as a future
    direction rather than a defect. Deferred to the kiting work in milestone 4.
+
+## Navmesh routing is a stopgap, not the path to kiting
+
+Theo's observation, 2026-09-21. Recorded as direction, not a design.
+
+Navmesh route planning is the right tool for getting somewhere: plan a
+corridor, walk it, arrive. It is the wrong shape for kiting. Kiting is a
+continuous control problem, where the useful decision is which way to face and
+whether to keep backing away right now, revised several times a second against
+a creature that is also moving. Planning a route to a point and walking it
+cannot express that, and a planner that refuses on ambiguous ground, as ours
+correctly does, cannot be in the inner loop of a fight.
+
+The direction is that Jev eventually drives every input directly, at several
+decisions per second, rather than selecting from a small menu of prepared
+actions. The TypeSafe Doom harness is the reference: a structured account of
+the situation goes in, an input comes out, repeatedly and quickly.
+
+This is not in conflict with the existing rule that Jev must not invent
+coordinates. Driving inputs means choosing among directions and intents the
+client validates, not emitting world positions. How that is expressed remains
+open.
+
+No work is scheduled against this and it is deliberately not solutionised here.
+It is recorded so that the current hand-steering and the navmesh gates are not
+mistaken for progress toward kiting.
