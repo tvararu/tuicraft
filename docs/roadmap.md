@@ -531,18 +531,41 @@ Local command/response records are in `tmp/xiara-m1b-report.json`,
 
 An isolated IPC-server smoke check exercised the actual CLI's nonzero exit on a
 daemon `ERR` response. It did not establish that Xiara was rooted. Forced
-movement, transport, flight, and held remote-query cancellation use protocol or
-daemon regressions; the ordinary live walk does not prove those fault paths.
+movement, denied control and held remote-query cancellation now have live
+evidence of their own, recorded below. Transport and flight remain covered only
+by protocol or daemon regressions; the ordinary live walk does not prove them.
 Independent review found and resolved cancellation and movement-envelope defects.
 Final local checks passed 1306 tests, type checking, formatting, and the binary
 build. The final rebuilt CLI also preserved STATUS after same-socket HALT and
 confirmed target selection/clearing without displacement; evidence is in
 `tmp/xiara-m1-final-report.json` and `tmp/xiara-m1-final-smoke.json`.
 
-The required two-account live suite was run and failed authentication with
-status `0x4`; its dedicated `WOW_*` account credentials are absent. The working
-normal Xiara session is separate evidence, not a passing substitute for that
-suite. Dependent two-account scenarios remain blocked.
+The required two-account live suite now passes in full: 12 of 12 tests against
+the live server, including the two-client chat, party management and entity
+tracking scenarios that need both accounts. The earlier `0x4` authentication
+failure is resolved and its credentials are present. Dependent two-account
+scenarios are no longer blocked.
+
+Three fault paths were proven live on 2026-09-21 and are committed as
+`test: Prove fault paths on the live server`. A forced `.tele` relocated the
+character over 100 yards and the client recovered with no control error, a
+clean STATUS and a working MOVE. A `.freeze` denied movement with under 1.5
+yards of drift and `.unfreeze` restored it. A WHO pipelined with HALT on one
+socket returned both responses sanely and left the session usable. Design and
+acceptance are in `docs/plans/2026-09-21-fault-paths-live-plan.md`.
+
+Transport is deferred with a verified reason rather than unproven.
+`MovementHandler.cpp:419` boards a passenger only when the client itself sends
+`MOVEMENTFLAG_ONTRANSPORT` with the transport GUID, and `ControlRuntime` never
+sets it, so no fixture reaches the scenario. Boarding is a movement capability
+for a milestone that owns it. Flight and knockback stay deferred for their
+recorded reasons.
+
+That run also exposed suite hygiene worth keeping: the two proximity tests
+assert on SAY range and the visibility grid but never positioned the
+characters, so they inherited whatever a previous run left behind and were
+observed failing 1661 yards apart. They now position themselves, and the
+teleport scenario restores its starting position.
 
 Actual build-12340 spell tables were extracted with client MPQ patch precedence
 and recorded in `tmp/gameplay-data/provenance.json`. The matching Expansion01
