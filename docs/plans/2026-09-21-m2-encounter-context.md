@@ -177,3 +177,43 @@ owns.
 
 No work is scheduled against this. It is recorded so the connection between
 the observed limitation and the existing milestone is not rediscovered later.
+
+## Fix list, opened 2026-09-21 after the live session
+
+Ordered by what blocks the most. Each item names who owns it.
+
+1. **An attacking creature must be fightable.** A faction template 7 Crazed
+   Dragonhawk killed the character four times while `fight` refused it with
+   `unverified_hostile_relation`. The escape hatch at
+   `src/wow/combat-actions.ts:407-408` exists but did not fire. Must not be
+   fixed by forcing hostility, because wrongly attacking neutral creatures is
+   worse than refusing. Owner: worker, in progress.
+
+2. **The navmesh height query fails on legitimate ground.** `goto` to the
+   server's own reported corpse position returned `pathfind_find_height failed
+   (UNKNOWN_HEIGHT)`. This is not bad input: the server placed the corpse
+   there. Until this works there is no usable pathfinding, and every approach
+   and corpse run is hand-steered. Owner: worker, queued. This is the milestone
+   2 navigation prerequisite that was deferred.
+
+3. **The three constructed fault exercises.** Tooling is committed and works.
+   Blocked only on keeping the character alive near a fightable creature, so
+   item 1 gates it. Owner: coordinator, live.
+
+4. **Corpse reclaim returns the character into danger.** Reclaiming restores
+   her at the place she died, at partial health, beside whatever killed her.
+   With an unfightable attacker present that is a loop, and it caused deaths
+   three and four. Needs a supported way to recover elsewhere, or an observed
+   warning before reclaiming. Owner: unassigned.
+
+5. **No collision sensing and no routing around an obstruction.** Obstruction
+   is now reported honestly as `blockedReason: "obstructed"`, which is a real
+   improvement, but nothing acts on it. Hand steering failed twice in
+   instructive ways: it drifted the character from 109 to 173 yards from the
+   corpse by keeping whatever the last probe left, and it thrashed for twelve
+   iterations at 114.6 yards because each cycle re-faced at the destination and
+   walked back into the same structure. Largely subsumed by item 2. Owner:
+   unassigned.
+
+6. **Movement is never an offered action.** Recorded above as a future
+   direction rather than a defect. Deferred to the kiting work in milestone 4.
