@@ -83,3 +83,25 @@ test("SRP session key K is 40 bytes with interleaved hashing", () => {
   const allZero = result.K.every((b) => b === 0);
   expect(allZero).toBe(false);
 });
+
+test("SRP preserves 32-byte width when values have leading zero bytes", () => {
+  const srp = new SRP("USER", "PASS");
+  const g = 7n;
+  const N = BigInt(
+    "0x894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7",
+  );
+  const salt = new Uint8Array(32);
+  salt[0] = 0x00;
+  salt[1] = 0x00;
+  salt[31] = 0x05;
+  const B = 0x0000000000000000000000000000000000000000000000000000000000000005n;
+  const a = 1n;
+  const result = srp.calculate(g, N, salt, B, a);
+  expect(result.A.byteLength).toBe(32);
+  expect(result.M1.byteLength).toBe(20);
+  expect(result.K.byteLength).toBe(40);
+  expect(result.A[0]).toBe(7);
+  for (let i = 1; i < 32; i++) {
+    expect(result.A[i]).toBe(0);
+  }
+});
