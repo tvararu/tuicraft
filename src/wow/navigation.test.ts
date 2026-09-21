@@ -361,4 +361,14 @@ describe("ground destinations", () => {
     nav.close();
     expect(() => nav.planGround(530, start, end)).toThrow(/closed/);
   });
+
+  test("queries unambiguous ground height", () => {
+    const map = native({
+      findHeight: (_from, x) => (x === 10 ? 64.17 : 0),
+      findHeights: (x) => (x === 10 ? [64.17] : [0]),
+    });
+    const nav = navigation(map);
+    expect(nav.height(530, 10, 0)).toBeCloseTo(64.17);
+    expect(nav.height(530, 10, 0, { x: 0, y: 0, z: 0 })).toBeCloseTo(64.17);
+  });
 });

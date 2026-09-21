@@ -75,6 +75,12 @@ export type ControlDeps = {
   guidLow: () => number;
   guidHigh: () => number;
   selfGuid: () => bigint;
+  findHeight?: (
+    mapId: number,
+    x: number,
+    y: number,
+    from?: NavPoint,
+  ) => number | undefined;
 };
 
 const MIN_DURATION_MS = 1;
@@ -676,8 +682,30 @@ export class ControlRuntime {
       return;
     }
     const heading = this.predicted.orientation + DIR_HEADING[this.direction];
-    this.predicted.x += Math.cos(heading) * speed * dt;
-    this.predicted.y += Math.sin(heading) * speed * dt;
+    const newX = this.predicted.x + Math.cos(heading) * speed * dt;
+    const newY = this.predicted.y + Math.sin(heading) * speed * dt;
+    let newZ: number | undefined;
+    if (this.deps.findHeight) {
+      try {
+        newZ = this.deps.findHeight(
+          this.predicted.mapId,
+          newX,
+          newY,
+          this.predicted,
+        );
+      } catch {
+        newZ = undefined;
+      }
+    }
+    if (newZ === undefined || !Number.isFinite(newZ)) {
+      this.abortUnsafe("ground_height_unavailable");
+      this.sendMove(GameOpcode.MSG_MOVE_STOP);
+      this.emit("control_error", "ground_height_unavailable");
+      return;
+    }
+    this.predicted.x = newX;
+    this.predicted.y = newY;
+    this.predicted.z = newZ;
     this.predicted.source = "predicted";
     this.predicted.updatedAt = now;
   }

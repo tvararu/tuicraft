@@ -17,6 +17,7 @@ export type Navigation = {
     from: NavPoint,
     to: { x: number; y: number },
   ): GroundRoute;
+  height(mapId: number, x: number, y: number, from?: NavPoint): number;
   close(): void;
 };
 
@@ -120,6 +121,19 @@ export function createNavigation(
         z: uniqueHeight(map, to.x, to.y),
       };
       return planRoute(map, from, destination);
+    },
+    height(mapId, x, y, from) {
+      requireMap(mapId);
+      validateNativeXY(x, y);
+      map ??= openMap(dataPath, libraryPath, "Expansion01");
+      map.loadAdtAt(x, y);
+      if (from) {
+        try {
+          const h = map.findHeight(from, x, y);
+          if (Number.isFinite(h)) return h;
+        } catch {}
+      }
+      return uniqueHeight(map, x, y);
     },
     close() {
       closed = true;

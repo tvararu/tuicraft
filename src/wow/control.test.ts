@@ -24,7 +24,7 @@ function loginReader(): PacketReader {
   return new PacketReader(w.finish());
 }
 
-function setup(): {
+function setup(over: Partial<ControlDeps> = {}): {
   runtime: ControlRuntime;
   sent: Sent[];
   events: ControlEvent[];
@@ -41,6 +41,8 @@ function setup(): {
     guidLow: () => 0x0764,
     guidHigh: () => 0,
     selfGuid: () => 0x0764n,
+    findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
+    ...over,
   };
   const runtime = new ControlRuntime(deps);
   runtime.onEvent((event) => events.push(event));
@@ -715,6 +717,46 @@ test("an old-origin route cannot reset a moving predicted pose", () => {
     expect(() => runtime.navigate(route, destination)).toThrow(/origin/);
     expect(runtime.snapshot().pose!.x).toBeCloseTo(moving.x);
     expect(runtime.snapshot().moving).toBe(false);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("free movement integrates real ground height from findHeight query", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, advance } = setup({
+      findHeight: (_mapId, _x, _y, from) => (from ? from.z - 2 : 68.34),
+    });
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().pose?.z).toBeCloseTo(68.34);
+    advance(500);
+    expect(runtime.snapshot().pose?.z).toBeCloseTo(66.34);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("free movement aborts and stops when ground height is unavailable", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, sent, events, advance } = setup({
+      findHeight: () => undefined,
+    });
+    sent.length = 0;
+    runtime.move("forward", 1000);
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_START_FORWARD);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(lastMove(sent).opcode).toBe(GameOpcode.MSG_MOVE_STOP);
+    expect(
+      events.some(
+        (e) =>
+          e.type === "control_error" &&
+          e.reason === "ground_height_unavailable",
+      ),
+    ).toBe(true);
   } finally {
     jest.useRealTimers();
   }

@@ -530,6 +530,13 @@ export function worldSession(
       guidLow: () => conn.selfGuidLow,
       guidHigh: () => conn.selfGuidHigh,
       selfGuid: () => selfGuid(conn),
+      findHeight: (mapId, x, y, from) => {
+        try {
+          return getNavigation().height(mapId, x, y, from);
+        } catch {
+          return undefined;
+        }
+      },
     });
 
     const control = conn.control;

@@ -21,6 +21,7 @@ function setup(over: Partial<NativeMap> = {}) {
     guidLow: () => 1,
     guidHigh: () => 0,
     selfGuid: () => 1n,
+    findHeight: () => 0,
   });
   control.observeSelf({
     position: { mapId: 530, x: 0, y: 0, z: 0, orientation: 0 },
