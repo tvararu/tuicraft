@@ -16,6 +16,7 @@ type ActionDeps = {
   entity: (guid: bigint) => Entity | undefined;
   factions: () => FactionTemplateCatalog | undefined;
   now: () => number;
+  unreachableTimeoutMs?: number;
 };
 
 type SpellAction = {
@@ -32,14 +33,19 @@ const WAIT = {
 const TARGET_BLOCK = 0x2 | 0x8 | 0x80 | 0x100 | 0x10000 | 0x100000 | 0x2000000;
 const SELF_BLOCK = 0x1 | 0x40000 | 0x100000 | 0x400000 | 0x800000;
 const AURAS = new Set([3, 8, 13, 22, 29, 69, 85]);
+const DEFAULT_UNREACHABLE_TIMEOUT_MS = 5000;
 
 export class CombatActions {
   private readonly deps: ActionDeps;
+  private readonly unreachableTimeoutMs: number;
   private startedAt = 0;
   private deadAt: number | undefined;
+  private unreachableAt: number | undefined;
 
   constructor(deps: ActionDeps) {
     this.deps = deps;
+    this.unreachableTimeoutMs =
+      deps.unreachableTimeoutMs ?? DEFAULT_UNREACHABLE_TIMEOUT_MS;
   }
 
   activate(context: TacticsContext): void {
@@ -48,6 +54,7 @@ export class CombatActions {
     if (reason) throw new Error(reason);
     this.startedAt = this.deps.now();
     this.deadAt = undefined;
+    this.unreachableAt = undefined;
     this.deps.control.halt();
     this.deps.combat.halt();
     this.deps.control.setMode("jev");
@@ -331,7 +338,55 @@ export class CombatActions {
       !spells.some((action) => action.supported)
     )
       return { status: "blocked", reason: "no_supported_combat_actions" };
+    if (!this.targetReachable(context, state, spells)) {
+      this.unreachableAt ??= now;
+      if (now - this.unreachableAt >= this.unreachableTimeoutMs)
+        return { status: "blocked", reason: "target_unreachable" };
+    } else {
+      this.unreachableAt = undefined;
+    }
     return undefined;
+  }
+
+  private targetReachable(
+    context: TacticsContext,
+    state: CombatState,
+    spells: readonly SpellAction[],
+  ): boolean {
+    if (
+      state.pendingCast ||
+      state.casting ||
+      state.pendingAttack ||
+      state.attacking ||
+      this.inMelee(state)
+    )
+      return true;
+    const distance = separation(state);
+    for (const action of spells) {
+      if (
+        action.target !== context.targetGuid ||
+        !action.supported ||
+        !action.spell
+      )
+        continue;
+      if (!action.reason || action.reason === "not_facing") return true;
+      const range = action.spell.range;
+      if (
+        range &&
+        distance !== undefined &&
+        distance >= range.minHostile &&
+        distance <= range.maxHostile &&
+        [
+          "cooldown",
+          "insufficient_mana",
+          "aura_already_present",
+          "caster_aura_required",
+          "target_aura_required",
+        ].includes(action.reason)
+      )
+        return true;
+    }
+    return false;
   }
 
   private targetReason(guid: bigint, state: CombatState): string | undefined {

@@ -96,7 +96,7 @@ function spell(): SpellDefinition {
   };
 }
 
-function setup() {
+function setup(nowFn: () => number = () => 1000) {
   const store = new EntityStore();
   const fields = new Map<number, number>([
     [UNIT_FIELDS.HEALTH.offset, 100],
@@ -121,7 +121,7 @@ function setup() {
   });
   const control = new ControlRuntime({
     send() {},
-    now: () => 1000,
+    now: nowFn,
     ticks: () => 0,
     guidLow: () => 1,
     guidHigh: () => 0,
@@ -134,7 +134,7 @@ function setup() {
   });
   const combat = new CombatRuntime({
     send() {},
-    now: () => 1000,
+    now: nowFn,
     selfGuid: () => 1n,
     selectedGuid: () => 2n,
     getEntity: (guid) => store.get(guid),
@@ -153,7 +153,7 @@ function setup() {
     control,
     entity: (guid) => store.get(guid),
     factions: () => undefined,
-    now: () => 1000,
+    now: nowFn,
   });
   actions.activate(context);
   return { store, control, combat, actions, fields };
@@ -346,6 +346,105 @@ test("dead target waits for real credit and offers no attack or spell", () => {
     const frame = actions.observe(context);
     expect(frame.outcome).toBeUndefined();
     expect(frame.candidates.map((candidate) => candidate.id)).toEqual(["wait"]);
+  } finally {
+    definition.mockRestore();
+  }
+});
+
+test("an unreachable target stops after the persistence threshold", () => {
+  let time = 1000;
+  const { actions, combat } = setup(() => time);
+  const definition = jest.spyOn(combat, "definition").mockReturnValue(spell());
+  try {
+    combat.observePosition(2n, {
+      mapId: 530,
+      x: 50,
+      y: 0,
+      z: 0,
+      orientation: 0,
+    });
+    let frame = actions.observe(context);
+    expect(frame.outcome).toBeUndefined();
+    expect(frame.candidates.map((candidate) => candidate.id)).toEqual(["wait"]);
+    time = 5999;
+    frame = actions.observe(context);
+    expect(frame.outcome).toBeUndefined();
+    time = 6000;
+    frame = actions.observe(context);
+    expect(frame.outcome).toEqual({
+      status: "blocked",
+      reason: "target_unreachable",
+    });
+    expect(frame.candidates.map((candidate) => candidate.id)).toEqual(["wait"]);
+  } finally {
+    definition.mockRestore();
+  }
+});
+
+test("a target re-entering range resets the unreachable persistence threshold", () => {
+  let time = 1000;
+  const { actions, combat } = setup(() => time);
+  const definition = jest.spyOn(combat, "definition").mockReturnValue(spell());
+  try {
+    combat.observePosition(2n, {
+      mapId: 530,
+      x: 50,
+      y: 0,
+      z: 0,
+      orientation: 0,
+    });
+    expect(actions.observe(context).outcome).toBeUndefined();
+    time = 3000;
+    combat.observePosition(2n, {
+      mapId: 530,
+      x: 10,
+      y: 0,
+      z: 0,
+      orientation: 0,
+    });
+    let frame = actions.observe(context);
+    expect(frame.outcome).toBeUndefined();
+    expect(
+      frame.candidates.some((candidate) => candidate.id === "spell:17:target"),
+    ).toBe(true);
+    time = 4000;
+    combat.observePosition(2n, {
+      mapId: 530,
+      x: 50,
+      y: 0,
+      z: 0,
+      orientation: 0,
+    });
+    expect(actions.observe(context).outcome).toBeUndefined();
+    time = 6000;
+    expect(actions.observe(context).outcome).toBeUndefined();
+    time = 9000;
+    expect(actions.observe(context).outcome).toEqual({
+      status: "blocked",
+      reason: "target_unreachable",
+    });
+  } finally {
+    definition.mockRestore();
+  }
+});
+
+test("facing remains recoverable and does not stop as unreachable", () => {
+  let time = 1000;
+  const { actions, combat, control } = setup(() => time);
+  const definition = jest.spyOn(combat, "definition").mockReturnValue(spell());
+  try {
+    control.observeSelf({
+      position: { mapId: 530, x: 0, y: 0, z: 0, orientation: Math.PI },
+      runSpeed: 7,
+      runBackSpeed: 4,
+    });
+    let frame = actions.observe(context);
+    expect(frame.outcome).toBeUndefined();
+    expect(frame.candidates.map((c) => c.id)).toContain("face");
+    time = 10000;
+    frame = actions.observe(context);
+    expect(frame.outcome).toBeUndefined();
+    expect(frame.candidates.map((c) => c.id)).toContain("face");
   } finally {
     definition.mockRestore();
   }
