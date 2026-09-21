@@ -1,3 +1,4 @@
+import type { CreateSpline } from "wow/protocol/monster-move";
 import type { PacketReader } from "./packet";
 import { UpdateType } from "./entity-fields";
 import { parseUpdateMask } from "./update-mask";
@@ -15,6 +16,7 @@ export type UpdateEntry =
       movementFlags?: number;
       runSpeed?: number;
       runBackSpeed?: number;
+      spline?: CreateSpline;
     }
   | { type: "values"; guid: bigint; fields: Map<number, number> }
   | {
@@ -25,6 +27,7 @@ export type UpdateEntry =
       movementFlags?: number;
       runSpeed?: number;
       runBackSpeed?: number;
+      spline?: CreateSpline;
     }
   | { type: "outOfRange"; guids: bigint[] }
   | { type: "nearObjects"; guids: bigint[] };
@@ -59,6 +62,7 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
             movementFlags: movement.movementFlags,
             runSpeed: movement.runSpeed,
             runBackSpeed: movement.runBackSpeed,
+            spline: movement.spline,
           });
           break;
         }
@@ -85,6 +89,7 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
             movementFlags: movement.movementFlags,
             runSpeed: movement.runSpeed,
             runBackSpeed: movement.runBackSpeed,
+            spline: movement.spline,
           });
           break;
         }

@@ -209,12 +209,6 @@ export const STUBS: StubEntry[] = [
     priority: "medium",
   },
   {
-    opcode: GameOpcode.SMSG_LOG_XPGAIN,
-    area: "system",
-    label: "XP gain",
-    priority: "low",
-  },
-  {
     opcode: GameOpcode.SMSG_AREA_TRIGGER_MESSAGE,
     area: "system",
     label: "Area trigger message",
@@ -246,12 +240,6 @@ export const STUBS: StubEntry[] = [
     priority: "low",
   },
 
-  {
-    opcode: GameOpcode.SMSG_MONSTER_MOVE,
-    area: "movement",
-    label: "NPC movement",
-    priority: "low",
-  },
   {
     opcode: GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
     area: "movement",
@@ -296,73 +284,6 @@ export const STUBS: StubEntry[] = [
   },
 
   {
-    opcode: GameOpcode.SMSG_INITIAL_SPELLS,
-    area: "spell",
-    label: "Spellbook",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_LEARNED_SPELL,
-    area: "spell",
-    label: "Spell learned",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_SPELL_START,
-    area: "spell",
-    label: "Spell cast start",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_SPELL_GO,
-    area: "spell",
-    label: "Spell cast",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_SPELL_FAILURE,
-    area: "spell",
-    label: "Spell failed",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_CAST_FAILED,
-    area: "spell",
-    label: "Cast failed",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_SPELL_COOLDOWN,
-    area: "spell",
-    label: "Spell cooldown",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_AURA_UPDATE_ALL,
-    area: "spell",
-    label: "Aura updates",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_AURA_UPDATE,
-    area: "spell",
-    label: "Aura update",
-    priority: "low",
-  },
-
-  {
-    opcode: GameOpcode.SMSG_ATTACKSTART,
-    area: "combat",
-    label: "Combat started",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_ATTACKSTOP,
-    area: "combat",
-    label: "Combat stopped",
-    priority: "low",
-  },
-  {
     opcode: GameOpcode.SMSG_ATTACKERSTATEUPDATE,
     area: "combat",
     label: "Damage dealt",
@@ -388,18 +309,6 @@ export const STUBS: StubEntry[] = [
   },
 
   {
-    opcode: GameOpcode.SMSG_LOOT_RESPONSE,
-    area: "loot",
-    label: "Loot window",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_LOOT_RELEASE_RESPONSE,
-    area: "loot",
-    label: "Loot released",
-    priority: "low",
-  },
-  {
     opcode: GameOpcode.SMSG_LOOT_START_ROLL,
     area: "loot",
     label: "Loot roll",
@@ -412,18 +321,6 @@ export const STUBS: StubEntry[] = [
     priority: "low",
   },
 
-  {
-    opcode: GameOpcode.SMSG_ITEM_PUSH_RESULT,
-    area: "item",
-    label: "Item received",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE,
-    area: "item",
-    label: "Inventory error",
-    priority: "low",
-  },
   {
     opcode: GameOpcode.SMSG_EQUIPMENT_SET_LIST,
     area: "item",
@@ -454,38 +351,6 @@ export const STUBS: StubEntry[] = [
     opcode: GameOpcode.SMSG_BUY_FAILED,
     area: "vendor",
     label: "Purchase failed",
-    priority: "low",
-  },
-
-  {
-    opcode: GameOpcode.SMSG_GOSSIP_MESSAGE,
-    area: "npc",
-    label: "NPC dialogue",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_GOSSIP_COMPLETE,
-    area: "npc",
-    label: "NPC dialogue closed",
-    priority: "low",
-  },
-
-  {
-    opcode: GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS,
-    area: "quest",
-    label: "Quest details",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_QUESTGIVER_QUEST_COMPLETE,
-    area: "quest",
-    label: "Quest complete",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_QUESTUPDATE_ADD_KILL,
-    area: "quest",
-    label: "Quest progress",
     priority: "low",
   },
 
@@ -699,19 +564,6 @@ export const STUBS: StubEntry[] = [
     opcode: GameOpcode.SMSG_PLAY_SPELL_VISUAL,
     area: "visual",
     label: "Spell visual",
-    priority: "low",
-  },
-
-  {
-    opcode: GameOpcode.SMSG_RESURRECT_REQUEST,
-    area: "death",
-    label: "Resurrect request",
-    priority: "low",
-  },
-  {
-    opcode: GameOpcode.SMSG_CORPSE_RECLAIM_DELAY,
-    area: "death",
-    label: "Corpse reclaim",
     priority: "low",
   },
 

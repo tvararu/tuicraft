@@ -1,5 +1,6 @@
 import type { PacketReader } from "./packet";
 import { MovementFlag, MovementFlagExtra, UpdateFlag } from "./entity-fields";
+import { parseCreateSpline, type CreateSpline } from "./monster-move";
 
 export type MovementData = {
   updateFlags: number;
@@ -11,6 +12,7 @@ export type MovementData = {
   runSpeed?: number;
   runBackSpeed?: number;
   movementFlags?: number;
+  spline?: CreateSpline;
 };
 
 export function parseMovementBlock(r: PacketReader): MovementData {
@@ -23,6 +25,7 @@ export function parseMovementBlock(r: PacketReader): MovementData {
   let runSpeed: number | undefined;
   let runBackSpeed: number | undefined;
   let movementFlags: number | undefined;
+  let spline: CreateSpline | undefined;
 
   if (updateFlags & UpdateFlag.LIVING) {
     const flags = r.uint32LE();
@@ -66,27 +69,7 @@ export function parseMovementBlock(r: PacketReader): MovementData {
     runBackSpeed = r.floatLE();
     for (let i = 0; i < 6; i++) r.skip(4);
 
-    if (flags & MovementFlag.SPLINE_ENABLED) {
-      const splineFlags = r.uint32LE();
-      if (splineFlags & 0x00008000) {
-        r.skip(12);
-      } else if (splineFlags & 0x00010000) {
-        r.skip(8);
-      } else if (splineFlags & 0x00020000) {
-        r.skip(4);
-      }
-      r.skip(4);
-      r.skip(4);
-      r.skip(4);
-      r.skip(4);
-      r.skip(4);
-      r.skip(4);
-      r.skip(4);
-      const nodeCount = r.uint32LE();
-      for (let i = 0; i < nodeCount; i++) r.skip(12);
-      r.skip(1);
-      r.skip(12);
-    }
+    if (flags & MovementFlag.SPLINE_ENABLED) spline = parseCreateSpline(r);
   } else if (updateFlags & UpdateFlag.POSITION) {
     r.packedGuid();
     x = r.floatLE();
@@ -132,5 +115,6 @@ export function parseMovementBlock(r: PacketReader): MovementData {
     runSpeed,
     runBackSpeed,
     movementFlags,
+    spline,
   };
 }

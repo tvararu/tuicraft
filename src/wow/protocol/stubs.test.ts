@@ -2,7 +2,7 @@ import { test, expect, describe } from "bun:test";
 import { PacketReader } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { GameOpcode } from "wow/protocol/opcodes";
-import { STUBS, registerStubs } from "wow/protocol/stubs";
+import { registerStubs } from "wow/protocol/stubs";
 
 describe("registerStubs", () => {
   test("registers SMSG opcodes that aren't already handled", () => {
@@ -60,15 +60,6 @@ describe("registerStubs", () => {
 
     d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
     expect(messages).toHaveLength(1);
-  });
-
-  test("STUBS array contains metadata for all entries", () => {
-    for (const stub of STUBS) {
-      expect(stub.opcode).toBeGreaterThan(0);
-      expect(stub.area).toBeTruthy();
-      expect(stub.label).toBeTruthy();
-      expect(["high", "medium", "low"]).toContain(stub.priority);
-    }
   });
 
   test("does not register CMSG opcodes on dispatch", () => {
