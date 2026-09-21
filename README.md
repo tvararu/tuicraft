@@ -151,9 +151,7 @@ daemon's `TYPESAFE_API_KEY` as described in
 
 The narrow Jev spell kit requires observed normal form, including protocol-defined
 zero fields in a complete server CREATE. Absent entities remain unknown.
-Unsupported kits stop with a reason and retain terminal observations; cooldown and
-server-response waits do not. This increment does not provide tactical chasing
-or kiting.
+Unsupported kits stop with a reason and retain terminal observations; cooldown and server-response waits do not. Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases); the observation carries target separation and facing.
 
 `follow` requests a bounded ground route behind an observed unit on map 530.
 The optional distance is 1–20 yards along the ground route, with a default of 3.

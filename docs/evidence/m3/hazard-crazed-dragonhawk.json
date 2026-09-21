@@ -1,0 +1,38 @@
+{
+  "summary": "During this verification run, Xiara died five times to what appears to be the same unfightable 'Crazed Dragonhawk' (entry 15650, faction template 7) documented in docs/evidence/m2/README.md's 'A creature that kills the character but cannot be fought' section.",
+  "evidenceForCause": [
+    "tuicraft fight <Crazed Dragonhawk guid> was refused with unverified_hostile_relation in the M2 evidence run, so it cannot be fought or fled from tactically.",
+    "Every death in this session happened while Xiara was standing still or slowly probing movement/ground-refusal directions in the x~8734-8755, y~-6524..-6580 band where 1-2 Crazed Dragonhawks were consistently observed roaming (confirmed via nearby --all --json with distances recomputed from the live predicted pose, since the tool's own reported 'distance' field is computed from a stale serverPose).",
+    "Health loss in this band was fast (multiple hundred-HP-equivalent chip damage in 1-4 seconds) and NOT correlated with the intended Springpaw Stalker target's health, which stayed at its starting value during several of the fatal windows.",
+    "Health never dropped once Xiara was moved more than roughly 60-100 yards away from that x/y band, and regenerated normally to full at a safe distance every time."
+  ],
+  "deathLog": [
+    {
+      "n": 1,
+      "context": "Idle near (8721-8745, -6558..-6572) while doing lease/ground-refusal CLI tests after the first corpse reclaim",
+      "reclaimDelayAfterMs": 30000
+    },
+    {
+      "n": 2,
+      "context": "Within ~2s of the second corpse reclaim, before any player action other than a Renew self-cast",
+      "reclaimDelayAfterMs": 60000
+    },
+    {
+      "n": 3,
+      "context": "During approach toward a Springpaw Stalker for the second (kiting) encounter, before combat began",
+      "reclaimDelayAfterMs": 120000
+    },
+    {
+      "n": 4,
+      "context": "During the fast approach + movement/cast test near the same stalker",
+      "reclaimDelayAfterMs": 60000
+    },
+    {
+      "n": 5,
+      "context": "Immediately after a second movement/cast test attempt and a delayed flee",
+      "reclaimDelayAfterMs": 120000
+    }
+  ],
+  "mitigationThatWorked": "Reclaiming the corpse and immediately issuing face+move away (no intervening cast/check) toward the graveyard, without pausing in the hazard band, reliably escaped with no further damage and full natural regen within ~15 seconds.",
+  "relationToExitEvidenceItem6": "This is itself part of the item 6 finding: in a world with an unfightable, aggressive wandering mob nearby, time spent idle or slow-probing while verifying movement primitives is dangerous independent of the tactical movement system under test, and a Jev-driven kiting choice that runs the character further into open ground for many consecutive decisions (see encounter-02-kite-blocked.json) has no situational awareness of that hazard. Movement helped survival once in this session (the deliberate post-reclaim flee); it played no defensive role during the four other deaths because the hazard was never in the offered candidate set."
+}

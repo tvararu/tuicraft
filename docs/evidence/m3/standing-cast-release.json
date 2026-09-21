@@ -1,0 +1,39 @@
+{
+  "positiveCase": {
+    "description": "Standing-required cast succeeds after the lease is released (halt-then-cast)",
+    "liveAttempts": [
+      {
+        "sequence": "CLI: move forward 2500  ->  cast 585 <hostile guid>  (no delay between commands)",
+        "events": [
+          "CONTROL movement_started",
+          "CONTROL control_changed",
+          "CONTROL movement_stopped reason=halt",
+          "CONTROL control_changed reason=halt",
+          "COMBAT cast_sent",
+          "COMBAT cast_started"
+        ],
+        "outcome": "cast_started (no cast_failed observed)"
+      },
+      {
+        "sequence": "Repeat of the same sequence against a second hostile target after a fast approach",
+        "events": [
+          "CONTROL movement_stopped reason=halt",
+          "COMBAT cast_sent",
+          "COMBAT cast_started",
+          "COMBAT cast_delayed",
+          "COMBAT cast_succeeded"
+        ],
+        "outcome": "cast_succeeded"
+      }
+    ],
+    "codeReference": "src/wow/client.ts:1279-1283 -- every exposed manual action (move, face, cast, target, goTo, follow, ...) is wrapped in override(), which calls rawHalt() unconditionally before executing the action. src/wow/combat-actions.ts:203-204 implements the design's own gating rule inside Jev's tactics loop: 'if (control.moving && requiresStanding(spell)) control.halt()' before casting.",
+    "finding": "Both live attempts, and the code path both the CLI and Jev's own tactics loop use, halt before a standing-required cast is sent. This satisfies the positive half of exit-evidence item 4: a standing-required action releases the lease and casts successfully."
+  },
+  "negativeCase_SPELL_FAILED_MOVING": {
+    "description": "Cast refused with SPELL_FAILED_MOVING (51) while still moving",
+    "attempts": 2,
+    "outcome": "NOT observed live in this session -- both attempts produced cast_started/cast_succeeded, not cast_failed.",
+    "reasoning": "Every cast path in this codebase (CLI handle.cast() and Jev's combat-actions.ts execute()) halts synchronously before sending the cast packet, and the stop and cast packets are written back-to-back on the same TCP connection in the same JS tick, so the server almost always processes the stop before the cast and never observes the caster as still moving at cast time. The M3 design doc itself frames SPELL_FAILED_MOVING as a real, server-enforced, directly observable code (no other gate produces it) rather than something this client's own halt-then-cast pattern is expected to trigger routinely; it is a race between the stop and cast packets that this client's design deliberately minimises. It was not reproduced live despite two direct attempts under real network latency.",
+    "gap": "This exit-evidence half (cast attempted while moving is refused with SPELL_FAILED_MOVING) is NOT demonstrated live. It rests on code citations from the M3 design doc (Spell.cpp:4382-4391 / SharedDefines.h SPELL_FAILED_MOVING=51) rather than an observed packet in this session."
+  }
+}

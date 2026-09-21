@@ -1,0 +1,120 @@
+{
+  "method": "Direct CLI 'move forward <ms>' primitive (control.move() -> ControlRuntime.armLease), no refresh issued",
+  "configuredLeaseMs": 4000,
+  "observations": [
+    {
+      "tSec": 0.35,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8753.35,
+        "y": -6616.6
+      }
+    },
+    {
+      "tSec": 0.69,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8751.3,
+        "y": -6619.45
+      }
+    },
+    {
+      "tSec": 1.03,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8751.3,
+        "y": -6619.45
+      }
+    },
+    {
+      "tSec": 1.36,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8749.25,
+        "y": -6622.29
+      }
+    },
+    {
+      "tSec": 1.7,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8747.2,
+        "y": -6625.14
+      }
+    },
+    {
+      "tSec": 2.04,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8747.2,
+        "y": -6625.14
+      }
+    },
+    {
+      "tSec": 2.37,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8745.16,
+        "y": -6627.98
+      }
+    },
+    {
+      "tSec": 2.71,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8743.11,
+        "y": -6630.82
+      }
+    },
+    {
+      "tSec": 3.05,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8741.06,
+        "y": -6633.66
+      }
+    },
+    {
+      "tSec": 3.38,
+      "moving": true,
+      "direction": "forward",
+      "blockedReason": null,
+      "pose": {
+        "x": 8741.06,
+        "y": -6633.66
+      }
+    }
+  ],
+  "eventsAfterElapsedGap": [
+    {
+      "type": "CONTROL",
+      "event": "movement_stopped",
+      "reason": "lease"
+    },
+    {
+      "type": "CONTROL",
+      "event": "control_changed",
+      "reason": "lease"
+    }
+  ],
+  "finding": "A single 4000ms move-forward lease held moving=true continuously through t=3.38s (no stops, no refresh issued), then the lease timer fired and the runtime called stopMoving('lease', true) with no client action, matching control.ts armLease()/stopMoving('lease'). This demonstrates 'a stop that follows from Jev going quiet rather than an explicit choice' (exit-evidence item 2, expiry half).",
+  "cliOverrideCaveat": "The CLI 'move' command's handle wraps control.move() with an unconditional override() (src/wow/client.ts:1279-1283) that calls rawHalt() before every manual move, including same-direction re-issues. This means repeated CLI 'move forward' calls at the SAME direction do NOT exercise the silent lease refresh branch (control.ts:344-348, guardMove+armLease only) -- each CLI call is observed as movement_stopped('halt') immediately followed by a fresh movement_started. Jev's own tactics loop calls control.move() directly (src/wow/combat-actions.ts:168,189), bypassing override(), so the true silent-refresh mechanic could only be verified live through a Jev encounter (see encounter-02-kite-blocked.json), not through the CLI move primitive. This is a real verification-methodology finding, not a defect: override() is correct manual-preemption behaviour for a human/CLI operator."
+}

@@ -1,0 +1,27 @@
+{
+  "method": "Daemon process killed (SIGTERM) then restarted via 'tuicraft start', forcing a fresh server login/relogin; ordinary movement never echoes the character's own position back to the same client (per M2 evidence), so a relogin is the only way to read an authoritative server pose after moving.",
+  "predictedPoseBeforeRelogin": {
+    "mapId": 530,
+    "x": 8733.095015636705,
+    "y": -6603.170830822355,
+    "z": 70.71809387207031,
+    "orientation": 4.397322786972263,
+    "source": "predicted",
+    "capturedAfter": "A 6000ms + 4000ms flee move-forward sequence issued after the fifth corpse reclaim, run to escape the Crazed Dragonhawk hazard zone"
+  },
+  "serverPoseAfterRelogin": {
+    "mapId": 530,
+    "x": 8733.0947265625,
+    "y": -6603.1708984375,
+    "z": 70.71809387207031,
+    "orientation": 4.397322654724121,
+    "source": "server"
+  },
+  "difference": {
+    "dx": 0.0002890742052841233,
+    "dy": 6.761514487152454e-05,
+    "dz": 0.0,
+    "dOrientation": 1.3224814221501902e-07
+  },
+  "finding": "The client's dead-reckoned predicted pose matched the server's authoritative pose to within float32 rounding (~0.0003 yards in x, ~0.0001 yards in y, 0 in z, ~1.3e-7 rad in orientation) after a compound movement sequence spanning several move/face commands and multiple ground-refusal recoveries. This satisfies exit-evidence item 5: position confirmed against the server after a movement sequence, with the relogin method stated."
+}

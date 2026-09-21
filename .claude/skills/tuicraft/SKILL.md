@@ -145,7 +145,7 @@ Rules:
 - The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Other forms are unsupported.
 - A structurally unsupported kit ends with `no_supported_combat_actions`. Cooldown and server-response waits are not that failure. Supported melee and facing remain available.
 - For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
-- This increment cannot chase or kite. Approach with a checked ground route before `fight`; never copy a flying creature's Z as ground height.
+- Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases, standing-required spells halt first). The observation carries target separation and facing.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.

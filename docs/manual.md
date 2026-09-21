@@ -148,16 +148,15 @@ keeping the character alive. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
 `minimal` frames the game, class and observed level; `mechanics` adds non-refilling
 resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
 fails with `ERR`.
-The instruction must be a single line. Daemon `ERR` replies, including inspection
-failures, make the CLI exit with status 1.
-The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`).
-A complete server CREATE defines omitted public fields as zero. An absent entity
-or incomplete observation does not establish that baseline.
+The instruction must be a single line. Daemon `ERR` replies, including inspection failures, make the CLI exit with status 1.
+The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). A complete server CREATE defines omitted public fields as zero. An absent entity or incomplete observation does not establish that baseline.
 Unknown or nonzero forms are not supported. Structurally unsupported combat
 capabilities stop with `no_supported_combat_actions`; cooldowns and pending
 server responses remain waits. Facing and supported melee remain available.
-This increment does not chase or kite. Use a checked ground route to approach
-before starting a fight.
+Jev may choose directional movement during a fight under a renewable lease:
+`wait` holds the current direction, `stop_moving` releases it, and choosing a
+standing-required spell releases the lease before casting. The observation
+carries target separation and facing for those choices.
 
 `tuicraft tactics` [`--json`]
 :: Print tactics loop state. `lastOutcome.observation` retains the actual

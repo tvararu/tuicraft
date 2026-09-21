@@ -1,0 +1,54 @@
+{
+  "method": "Direct CLI 'face <rad>' + 'move forward <ms>' primitives (control.face()/control.move()) toward the corpse and toward live creatures; control.ts integrate() raises the refusal independently of the manual-override wrapper, so this is valid evidence for cause-3-outranks-lease regardless of the CLI override caveat.",
+  "liveOccurrences": [
+    {
+      "reason": "height_unresolved",
+      "context": "Ghost-form corpse retrieval, heading 0.9467 rad from (8712,-6674) toward corpse (8801.13,-6550.23)",
+      "leaseArmedMs": 3000,
+      "elapsedMsAtRefusal": 1501,
+      "before": {
+        "pose": {
+          "x": 8712,
+          "y": -6674,
+          "z": 70.336
+        },
+        "moving": true,
+        "blockedReason": null
+      },
+      "after": {
+        "pose": {
+          "x": 8721.21,
+          "y": -6661.21,
+          "z": 70.366
+        },
+        "moving": false,
+        "blockedReason": "height_unresolved"
+      },
+      "retryResult": "Re-issuing move forward at the identical heading halted again within 0.6s at the identical position -- a persistent boundary, not a one-off lazy-ADT-load hiccup.",
+      "note": "control.ts integrate(): findHeight() failed for the next step, currentZ succeeded, isPathClear()===true, so haltMovement(reason='height_unresolved') fired (src/wow/control.ts:769-778) while a 3000ms lease was still armed and only 1.5s had elapsed -- cause 3 pre-empted the lease."
+    },
+    {
+      "reason": "ambiguous ground column",
+      "context": "goto/planGround probes at 7 points within ~15 yards of the height_unresolved boundary, and again during a later approach near (8734,-6599) and (8721,-6661)",
+      "note": "src/wow/navigation.ts uniqueHeight()/pick_destination rejected every probed destination in this pocket as having multiple stacked ground surfaces with no disambiguating hint -- independently corroborates the height_unresolved boundary above and matches the M2 evidence README's own note about a 'four-floor column at (8713.8, -6625.3)'.",
+      "workaround": "A short lateral detour (offset heading by 30-90 degrees for one lease) reliably escaped the ambiguous pocket; straight-line resume then proceeded without further refusal."
+    },
+    {
+      "reason": "obstructed",
+      "context": "Approach toward a Springpaw Stalker near (8738,-6600), heading toward (8750.14,-6558.85)",
+      "before": {
+        "pose": {
+          "x": 8738.37,
+          "y": -6599.92
+        },
+        "moving": true
+      },
+      "after": {
+        "moving": false,
+        "blockedReason": "obstructed"
+      },
+      "note": "isPathClear() returned non-true for the next step, so haltMovement(reason='obstructed') fired instead of height_unresolved -- both refusal reasons in control.ts:769-772 were exercised live in this session."
+    }
+  ],
+  "finding": "All three ground/safety refusal reasons the M3 design names (height_unresolved, obstructed, and the upstream 'ambiguous ground column' / pick_destination refusal from src/wow/navigation.ts) were observed live, each stopping movement while a manual lease was still active and before it expired on its own timer. This satisfies exit-evidence item 3: 'A ground or safety refusal stops movement while a lease is live, proving cause 3 outranks the latch.' No abortUnsafe('ground_height_unavailable') was observed live in this session; the two haltMovement() reasons were."
+}
