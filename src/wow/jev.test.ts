@@ -403,3 +403,49 @@ test("already aborted requests never reach the provider", async () => {
   ).rejects.toMatchObject({ name: "AbortError" });
   expect(calls).toBe(0);
 });
+
+test("probabilities within tolerance are renormalised", async () => {
+  const result = await selectJevAction(request, {
+    apiKey: "ts_test_key",
+    signal: new AbortController().signal,
+    fetch: async () =>
+      jsonResponse(200, {
+        ...validPayload,
+        answers: {
+          action: {
+            ...validPayload.answers.action,
+            choice: "smite",
+            probabilities: { smite: 0.6, wait: 0.39 },
+          },
+        },
+      }),
+  });
+  expect(result.choice).toBe("smite");
+  const smite = result.probabilities["smite"];
+  const wait = result.probabilities["wait"];
+  expect(smite).toBeDefined();
+  expect(wait).toBeDefined();
+  expect(Math.abs((smite ?? 0) + (wait ?? 0) - 1)).toBeLessThan(1e-9);
+  expect(Math.abs((smite ?? 0) / (wait ?? 1) - 0.6 / 0.39)).toBeLessThan(1e-9);
+});
+
+test("probability totals outside renormalisation tolerance are rejected", async () => {
+  await expect(
+    selectJevAction(request, {
+      apiKey: "ts_test_key",
+      signal: new AbortController().signal,
+      fetch: async () =>
+        jsonResponse(200, {
+          ...validPayload,
+          answers: {
+            action: {
+              ...validPayload.answers.action,
+              probabilities: { smite: 0.5, wait: 0.4 },
+            },
+          },
+        }),
+    }),
+  ).rejects.toMatchObject({
+    cause: { field: "probabilities.total", total: 0.9 },
+  });
+});

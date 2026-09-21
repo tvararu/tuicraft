@@ -146,8 +146,12 @@ function parseProbabilities(
     total += probability;
   }
 
-  if (Math.abs(total - 1) > 1e-6)
-    throw responseError("probabilities.total", { total });
+  const delta = Math.abs(total - 1);
+  if (delta > 2e-2) throw responseError("probabilities.total", { total });
+  if (delta > 1e-6)
+    return Object.fromEntries(
+      entries.map(([key, probability]) => [key, probability / total]),
+    );
   return Object.fromEntries(entries);
 }
 
