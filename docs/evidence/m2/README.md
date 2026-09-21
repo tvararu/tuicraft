@@ -74,6 +74,53 @@ which reads exactly like a broken catalog and would leave Jev with no
 candidates. Running `spells` once warms the lazy catalog and `unknownLearned`
 drops to zero. Check this before diagnosing a candidate failure.
 
+## Three live attempts at encounter one, and why each failed
+
+No encounter has completed. The three attempts are recorded because failed
+attempts are part of the evidence, and together they locate three separate
+defects rather than one.
+
+**[failed-01-out-of-range.json](failed-01-out-of-range.json)** — 18 decisions
+over 118 seconds. Every offensive spell reported `out_of_range` because the
+creature wandered off, and the client never chases by design. The loop did not
+stop. It spun for two minutes choosing `wait` eleven times and self-buffs six
+times, and it only ended because the operator halted it. A structurally
+unreachable target must stop the run with a concrete reason; instead it burns
+Jev requests indefinitely.
+
+**[failed-02-leash-reset.json](failed-02-leash-reset.json)** — 161 decisions
+over 79.4 seconds, a measured 2.03 decisions per second at an average request
+latency of 261 ms. This is the strongest cadence evidence so far and it sits
+inside the 1 to 5 Hz ambition. Jev chose twenty real offensive casts. The
+creature fell from 137 health to 2, then reset to full, because the client
+cannot follow it and the server leashed it home. Xiara's own health never moved
+from 217, so the creature was never engaging her in melee. Mana ran out at 13 of
+547.
+
+**[failed-03-not-infront.json](failed-03-not-infront.json)** — 3 decisions,
+stopped with `server_action_rejected:134`. That code is
+`SPELL_FAILED_UNIT_NOT_INFRONT` in `SharedDefines.h`: the server refused the
+Smite because Xiara was not facing the creature, although the operator had
+faced her at it immediately before engaging. One facing rejection ends the whole
+run rather than re-facing and retrying.
+
+### The probable common cause
+
+The observation in the third attempt puts Xiara's predicted position at Z 70.34
+and the creature at Z 64.17, roughly six yards below her. 70.34 is the
+graveyard height she was standing at before the corpse run. Her predicted Z did
+not track terrain while she walked, so the client believes she is hovering above
+the creature. A wrong Z plausibly explains the facing rejection and the range
+rejections alike, and it should be ruled in or out before treating those as
+three independent faults.
+
+Two related observations. `serverPose` never updates for the character's own
+ordinary movement, which is documented behaviour, but it means the `distance`
+column in `nearby` is computed from a stale position: it read 25.3 yards while
+the predicted separation was 9.6. And the route planner refuses to plan from a
+ghost, returning `position disagrees with ground height`, which is consistent
+with the same Z problem seen from the other side.
+
 ## Reading a record
 
 See [../README.md](../README.md).

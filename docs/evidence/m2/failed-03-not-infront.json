@@ -1,0 +1,107 @@
+{
+  "runId": "40225847-0a39-4617-b6b9-894f78983f36",
+  "recordedAt": "2026-09-21T14:21:47.777Z",
+  "instruction": "defeat the selected target while keeping the character alive",
+  "promptVariant": "none",
+  "character": {
+    "level": 10,
+    "maxPower": 547,
+    "maxHealth": 217
+  },
+  "target": {
+    "guid": "0xf130003d23019683",
+    "name": "Springpaw Stalker",
+    "level": 7,
+    "maxHealth": 137
+  },
+  "decisions": [
+    {
+      "n": 1,
+      "offered": [
+        "wait",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:139:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "face"
+      ],
+      "choice": "face",
+      "confidence": 0.78,
+      "probabilities": {
+        "spell:2052:self": 0.01,
+        "spell:2050:self": 0.03,
+        "wait": 0.01,
+        "spell:17:self": 0.11,
+        "face": 0.81,
+        "spell:2053:self": 0.01,
+        "spell:139:self": 0.02
+      },
+      "latencyMs": 262.35282000002917,
+      "applied": true,
+      "appliedAgeMs": 262.81650299998
+    },
+    {
+      "n": 2,
+      "offered": [
+        "wait",
+        "spell:8092:target",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "choice": "spell:591:target",
+      "confidence": 0.38,
+      "probabilities": {
+        "spell:17:self": 0.07,
+        "spell:585:target": 0.06,
+        "spell:139:self": 0.03,
+        "spell:594:target": 0.13,
+        "spell:591:target": 0.44,
+        "spell:8092:target": 0.22,
+        "spell:589:target": 0.03,
+        "spell:2052:self": 0,
+        "spell:2053:self": 0.01,
+        "wait": 0.01,
+        "spell:2050:self": 0
+      },
+      "latencyMs": 219.83376000006683,
+      "applied": true,
+      "appliedAgeMs": 220.25140699988697
+    },
+    {
+      "n": 3,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "choice": "wait",
+      "confidence": 0.84,
+      "probabilities": {
+        "cancel": 0.08,
+        "wait": 0.92
+      },
+      "latencyMs": 259.85384300001897,
+      "applied": false
+    }
+  ],
+  "discarded": [],
+  "transportErrors": [],
+  "cadence": {
+    "decisions": 3,
+    "elapsedMs": 747,
+    "perSecond": 4.016
+  },
+  "outcome": {
+    "status": "blocked",
+    "reason": "server_action_rejected:134"
+  },
+  "model": "jev-1.13.0",
+  "rawLines": 12
+}
