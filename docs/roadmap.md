@@ -303,6 +303,30 @@ diagnostics with raw exceptions retained only as causes; acceptance predicates,
 probability-total tolerance and transport behavior remain unchanged. Resume live
 encounters with those diagnostics rather than claiming an unproven provider fix.
 
+Attempt05 then completed the first genuine autonomous encounter: server kill
+credit, 108 experience, 14.8 seconds, zero interventions. Attempt06 failed
+immediately after, and its cause is now located rather than inferred. The
+provider returned a well-formed Choice whose probabilities summed to 0.99;
+`selectJevAction` rejected it at `src/wow/jev.ts:149`, which requires
+`Math.abs(total - 1) <= 1e-6`. The observed deviation is 1e-2, four orders of
+magnitude outside that window, so this is provider rounding to two decimal
+places rather than floating-point drift. The regression that appears to cover
+this path, `src/wow/jev.test.ts:336-351`, exercises only a 1e-8 deviation and
+sits comfortably inside the tolerance; it therefore satisfies the letter of the
+no-exact-equality requirement without testing the case that actually occurred.
+The failed request is retained at `tmp/jev-mass-request.json`. The tolerance
+stays unchanged pending an explicit decision, because widening it contradicts
+the review recorded above; renormalising after acceptance and treating a
+near-total as retryable are the other candidates. Record the choice here before
+changing the predicate.
+
+Two further observations from the same audit, neither blocking. `src/wow/jev.ts`
+reads and type-validates `output_tokens` and then discards it, since
+`JevActionResult` has no field for it. `src/wow/tactics.ts` hardcodes its result
+age, interval and timeout bounds as bare literals with no recorded derivation,
+although the design note required a bound chosen from measured round-trip time;
+observed decision latency was about 258 ms against a 2000 ms bound.
+
 A narrow mesh-backed approach capability is pulled forward from milestone 3 to
 reach the first encounter safely. Independent data review identified the existing
 Expansion01 mesh and native path/height APIs. The decision is to load relevant
