@@ -453,32 +453,103 @@ repair remains unverified on the geometry that motivated it.
 Neither gap is to be read as satisfied by the work recorded above. A later
 reader deciding whether to trust the milestone should treat both as open.
 
-### 3. Reliable local navigation
+### 3. Movement as a tactical action
 
-Extend basic movement with route planning, obstacle handling, arrival/failure
-reporting, and server correction and interruption handling. Verify following a
-moving character as a separate capability rather than coupling every navigation
-test to a second account.
+Jev gains directional movement in its per-decision vocabulary during an
+encounter. Movement is held under a renewable lease, and ground safety outranks
+the lease.
+
+Refined 2026-09-21. This milestone previously bundled ground navigation, remote
+movement reception and character following. Theo's direction is that navmesh
+route planning cannot produce real kiting, and that Jev must eventually drive
+every input several times per second. Route planning to a destination, and
+remote movement reception with character following, each become their own
+milestone. The funnel-corner planner verification travels with route planning.
+
+The design note is
+[docs/plans/2026-09-21-m3-tactical-movement-design.md](plans/2026-09-21-m3-tactical-movement-design.md).
+
+**The lease.** A movement choice issues `move(direction, leaseMs)` against the
+existing primitive; every later decision naming the same direction refreshes it.
+Movement continues only while Jev keeps confirming it, so a stale, timed-out,
+failed or hung decision stops the character without needing a held-state policy.
+The lease is a safety bound and never a control semantic: no candidate and no
+movement state may encode the current round-trip time, because the same code
+must be correct for a local model deciding every 16ms.
+
+Exactly three causes may change movement state: a decision naming a different
+direction or a stop, lease expiry, or a ground or safety refusal raised during
+integration. The third is the Z-defect machinery from `6f30aaa` and outranks the
+lease. Jev may not hold a direction into unresolved ground.
+
+Route planning leaves this milestone but the ground-query surface stays, because
+latched movement resolves ground height on every integration step.
+
+**Candidate gating** follows from server behaviour established by source review.
+Instant-cast spells start and survive while moving; cast-time spells, channels,
+wand and auto-shoot do not; melee is unaffected. A moving client that stays
+quiet still loses its cast, and no client cancel opcode is required, so the loop
+must not depend on observing one. Choosing a standing-required action implicitly
+releases the lease, which keeps the model's interface a single choice from an
+enumerated set.
+
+For the level 10 priest, movement-compatible damage is Shadow Word: Pain plus
+melee; Smite and wand fire require a standstill. The demonstrable pattern is
+therefore an alternation rather than continuous kiting.
+
+**Exit evidence:** Jev selects movement candidates in a live encounter and the
+character moves as chosen. The lease both holds under refresh and expires
+without one, demonstrated separately. A ground or safety refusal stops movement
+while a lease is live. A standing-required action releases the lease and casts,
+and a cast attempted while moving is refused with `SPELL_FAILED_MOVING`, which
+is the only movement-specific signal available — after a cast begins the server
+reports a generic interruption, so mid-cast cause is not observable and must not
+be claimed. Position is confirmed against the server after a movement sequence,
+with the method of confirmation stated.
+
+Recorded as required findings rather than pass conditions: the achieved decision
+rate, the configured lease, the refresh rate, and whether movement helped or hurt
+the encounters. If latched movement at achievable cadence loses fights, that
+measurement is what milestone 4 needs in order to choose between attacking the
+round-trip latency and splitting the loop into a slow stance with a fast local
+reflex layer. Neither is decided in advance.
+
+Out of scope: any local reflex layer, any stance abstraction, parameterised or
+coordinate movement, route planning to a destination, remote movement reception,
+and character following.
+
+### 3a. Reliable local navigation
+
+Route planning to a destination, obstacle handling, arrival and failure
+reporting, and server correction and interruption handling.
 
 **Exit evidence:** repeatedly traverse known routes, stop or change course
 cleanly, and report unreachable destinations or lost targets instead of silently
 retrying forever. Confirm positions from observed state. Selected destinations
 or explicit coordinates are sufficient; named-place language understanding is
-not required.
+not required. Verify native ground-derived destinations and the repaired route
+planner on the observed 20-yard funnel corner, with non-anchor samples checked
+against the real native height query, exact preservation of the original start
+point, and rejection of wrong-floor and obstructed cases.
 
-Independent navigation review approved bounded, ground-only following: derive
-destination Z from a unique native column, retain the existing route gates, and
-stop/integrate old motion before sampling a fresh replan origin. Follow ownership
-must be distinct from Jev/manual control; stale cleanup must not stop a newer
-owner. Replans require meaningful observed displacement and have explicit time,
-distance and plan-count limits. Quiet or unsupported targets may stop
-conservatively with a reason, not trigger automatic retries.
+Independent navigation review approved deriving destination Z from a unique
+native column, retaining the existing route gates, and stopping and integrating
+old motion before sampling a fresh replan origin. Replans require meaningful
+observed displacement and have explicit time, distance and plan-count limits.
+Quiet or unsupported targets may stop conservatively with a reason, not trigger
+automatic retries.
 
-Verify native ground-derived destinations, repeated known routes with observed
-positions, and an actual moving character with standoff pause/resume. Exercise
-HALT/manual takeover, loss, unsupported motion, correction and failed planning.
-Remote player movement reception is a prerequisite to that character-follow
-claim; NPC-only or predicted-endpoint demonstrations do not substitute.
+### 3b. Remote movement and character following
+
+Verify following a moving character as a separate capability rather than
+coupling every navigation test to a second account.
+
+Follow ownership must be distinct from Jev and manual control; stale cleanup
+must not stop a newer owner. Verify an actual moving character with standoff
+pause and resume, and exercise HALT and manual takeover, loss, unsupported
+motion, correction and failed planning. Remote player movement reception is a
+prerequisite to the character-follow claim; NPC-only or predicted-endpoint
+demonstrations do not substitute.
 
 Independent protocol review requires exact flag authority on both ordinary
 observer movement and CREATE/UPDATE_OBJECT movement. Preserve flags and extra
