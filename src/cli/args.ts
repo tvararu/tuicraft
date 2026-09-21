@@ -1,4 +1,5 @@
 import type { MovementDirection } from "wow/control";
+import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -504,8 +505,6 @@ function parseTarget(args: string[]): CliAction {
   return { mode: "target", guid };
 }
 
-const DEFAULT_FIGHT_INSTRUCTION =
-  "defeat the selected target while keeping the character alive";
 const MAX_SPELL_ID = 0xffff_ffff;
 
 function parseSpellId(raw: string): number | undefined {

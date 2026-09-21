@@ -38,6 +38,7 @@ import type {
 } from "wow/control";
 import type { CombatEvent } from "wow/combat";
 import type { TacticsEvent } from "wow/tactics";
+import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
 import type { FollowEvent } from "wow/follow";
 import type { RecoveryEvent } from "wow/recovery";
 import type { QuestEvent } from "wow/quests";
@@ -1481,8 +1482,6 @@ export function onRewardsEvent(
   log.append(obj as LogEntry).catch(() => {});
 }
 
-const DEFAULT_FIGHT_INSTRUCTION =
-  "defeat the selected target while keeping the character alive";
 const MAX_SPELL_ID = 0xffff_ffff;
 
 function jsonSafe(value: unknown): unknown {
