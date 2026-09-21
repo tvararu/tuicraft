@@ -213,3 +213,34 @@ controlled comparisons, and no prompt variant may be described as measured
 better on this evidence. The single exception is the standing-instruction
 contrast pair, which runs back to back at one level against comparable
 creatures.
+
+## A creature that kills the character but cannot be fought, 2026-09-21
+
+Xiara died four times in one area after the five encounters were recorded. The
+deaths were not caused by the tactics loop and none happened during an
+encounter.
+
+The only aggressive creature in range each time was a **Crazed Dragonhawk,
+faction template 7**. `tuicraft fight` against it is refused with
+`unverified_hostile_relation`, both while it was idle and while it was actively
+attacking her. The fourth death happened while she was walking away from it.
+
+Springpaw Stalkers, faction template 38, engage normally, which is what all
+five completed encounters were fought against.
+
+The refusal comes from `src/wow/combat-actions.ts:409-417`, which requires the
+loaded faction data to report the relation as hostile. An escape hatch already
+exists immediately above at lines 407-408: a target whose own `target` field is
+the character's GUID and which carries unit flag `0x80000` is allowed. That path
+did not rescue the situation and the reason is not yet established.
+
+This is recorded as a capability gap rather than a diagnosis. The faction data
+may genuinely not mark that relation hostile, in which case forcing it would be
+wrong: wrongly attacking a neutral creature is worse than refusing. What is not
+acceptable is the present outcome, where the character dies repeatedly with no
+way to respond. The investigation is in progress.
+
+A second observation from the same sequence. Reclaiming a corpse returns the
+character to the spot where she died, at partial health, next to whatever killed
+her. With an unfightable attacker present this is a recovery loop rather than a
+recovery, and it is what produced deaths three and four.
