@@ -355,6 +355,55 @@ approach and interruption evidence above remain required. Ray checks and the
 native library's incomplete stacked-floor enumeration do not establish general
 capsule collision or multi-floor support.
 
+#### Outcome, 2026-09-21
+
+Five autonomous encounters completed, every one with server kill credit, all
+after the probability renormalisation in `3e1f3aa` and the ground-height repair
+in `c406db9`. Attempt05 is treated as history rather than as evidence because it
+predates the first of those. The records are in `docs/evidence/m2/`, one file
+per encounter, distilled from the session log by `mise evidence:encounter`.
+
+Cadence is recorded as two separate numbers, because quoting one overstates the
+other. The loop rate is 3.76 to 3.88 decisions per second, at request latency
+256 to 264 ms. The tactical decision rate is roughly 0.6 to 1.0 per second:
+between 78 and 86 per cent of decisions offered only `wait` and `cancel`,
+because a cast was in flight or the global cooldown was running, and Jev
+correctly answered `wait`. Both numbers are in the evidence README. No report
+may present the loop rate alone as the decision cadence.
+
+The instruction contrast is demonstrated by encounters 04 and 05, run back to
+back at one character level against creatures of the same level under the two
+texts now pinned in `src/wow/standing-instructions.ts`. Under the conserving
+instruction Jev stopped choosing Mind Blast and Power Word: Shield entirely and
+relied on the cheapest damage rank plus melee. No code differed between the
+runs. That comparison is the one controlled measurement; the rest of the farm
+is uncontrolled and the prompt work yields an informed opinion, not evidence.
+
+Cancellation is proven live. The remaining three robustness exercises, delayed
+responses, obsolete decisions and model unavailability, are not yet run.
+Injection tooling for them is committed and an operator runbook is at
+`docs/evidence/m2/fault-runbook.md`. They cannot be produced by farming and must
+be constructed at the Jev boundary in a real session.
+
+Limits found live and not yet resolved. The client never chases, so a creature
+that leashes home cannot be finished; one was driven to 2 health and reset. It
+has no collision sensing, so walking into a structure is indistinguishable from
+a failed height query, and every approach and corpse run this session was
+steered by hand. Route planning is unusable in the tested area: `goto` to the
+server's own reported corpse position fails with `UNKNOWN_HEIGHT`, because
+Detour's `dtPointInPolygon` rejects points lying exactly on a polygon boundary
+and the corridor corners returned by `findPath` are polygon vertices. That is an
+upstream defect in `namigator`, not a data gap; the tile is present and the
+column query returns one unambiguous height.
+
+One protocol defect was found and fixed. The client discarded every
+`SMSG_ATTACKSTART` in which it was not the attacker, so it never observed that
+a creature had begun attacking it. A neutral-faction creature killed the
+character four times while `fight` refused it. Defending against an observed
+incoming attacker is now permitted; faction hostility is not forced, because
+template 7 covers creatures neutral to all and forcing it would attack
+bystanders.
+
 ### 3. Reliable local navigation
 
 Extend basic movement with route planning, obstacle handling, arrival/failure
@@ -404,6 +453,15 @@ without making the first class's fixed rotation the architecture.
 relevant, respond to trouble, and recover or report a concrete blocking
 condition. A rising kill count alone does not establish success. Death/recovery
 scenarios must not depend on a developer secretly repairing the session.
+
+Movement is not currently an offered action. Jev can cancel a cast but cannot
+reposition, so retreating is not expressible and kiting is unreachable. The
+slice that unblocks it is to offer bounded movement intents as candidates
+alongside spells, validated and routed by the client. Jev must not emit
+coordinates; it selects among intents the client has already established are
+legal, exactly as it does for spells today. Route planning is a prerequisite and
+is not sufficient on its own: planning a corridor and walking it cannot express
+continuous repositioning against a moving creature.
 
 Independent state review approved explicit request-versus-observation tracking.
 Loot windows use offered slot permissions and a release acknowledgement barrier;
