@@ -1,0 +1,116 @@
+export type DbcSpec = {
+  file: string;
+  fields: number;
+  recordSize: number;
+};
+
+export type DbcFile = {
+  name: string;
+  fields: number;
+  records: DataView;
+  strings: Uint8Array;
+  recordCount: number;
+  byId: Map<number, number>;
+};
+
+const utf8 = new TextDecoder("utf-8");
+
+export async function openDbc(
+  directory: string,
+  spec: DbcSpec,
+): Promise<DbcFile> {
+  const path = `${directory.replace(/\/$/, "")}/${spec.file}`;
+  const handle = Bun.file(path);
+  if (!(await handle.exists()))
+    throw new Error(`missing ${spec.file} in ${directory}`);
+  return parseDbc(spec, new Uint8Array(await handle.arrayBuffer()));
+}
+
+export function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
+  const { file: name, fields, recordSize } = spec;
+  if (bytes.byteLength < 20) throw new Error(`${name}: truncated header`);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const magic = String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!);
+  if (magic !== "WDBC") throw new Error(`${name}: expected WDBC, got ${magic}`);
+  const recordCount = view.getUint32(4, true);
+  const fieldCount = view.getUint32(8, true);
+  const recSize = view.getUint32(12, true);
+  const stringBlockSize = view.getUint32(16, true);
+  if (fieldCount !== fields || recSize !== recordSize) {
+    throw new Error(
+      `${name}: unsupported layout fields=${fieldCount} recordSize=${recSize} (need ${fields}x${recordSize} for build 12340)`,
+    );
+  }
+  const expected = 20 + recordCount * recSize + stringBlockSize;
+  if (bytes.byteLength !== expected) {
+    throw new Error(
+      `${name}: truncated (expected ${expected} bytes, got ${bytes.byteLength})`,
+    );
+  }
+  const records = new DataView(
+    bytes.buffer,
+    bytes.byteOffset + 20,
+    recordCount * recSize,
+  );
+  const strings = bytes.subarray(20 + recordCount * recSize);
+  return {
+    name,
+    fields,
+    records,
+    strings,
+    recordCount,
+    byId: indexById(records, recordCount, fields),
+  };
+}
+
+function indexById(
+  records: DataView,
+  recordCount: number,
+  fields: number,
+): Map<number, number> {
+  const byId = new Map<number, number>();
+  for (let row = 0; row < recordCount; row++) {
+    byId.set(records.getUint32(row * fields * 4, true), row);
+  }
+  return byId;
+}
+
+export function u32(file: DbcFile, row: number, col: number): number {
+  return file.records.getUint32((row * file.fields + col) * 4, true);
+}
+
+export function i32(file: DbcFile, row: number, col: number): number {
+  return file.records.getInt32((row * file.fields + col) * 4, true);
+}
+
+export function f32(file: DbcFile, row: number, col: number): number {
+  return file.records.getFloat32((row * file.fields + col) * 4, true);
+}
+
+export function readString(file: DbcFile, row: number, col: number): string {
+  const offset = u32(file, row, col);
+  if (offset >= file.strings.byteLength) return "";
+  let end = offset;
+  while (end < file.strings.byteLength && file.strings[end] !== 0) end++;
+  return utf8.decode(file.strings.subarray(offset, end));
+}
+
+export function localeString(
+  file: DbcFile,
+  row: number,
+  start: number,
+): string {
+  let fallback = "";
+  for (let slot = 0; slot < 16; slot++) {
+    const text = readString(file, row, start + slot);
+    if (text.length === 0) continue;
+    if (slot === 0) return text;
+    if (fallback.length === 0) fallback = text;
+  }
+  return fallback;
+}
+
+export function joinRow(file: DbcFile, id: number): number | undefined {
+  if (id === 0) return undefined;
+  return file.byId.get(id);
+}
