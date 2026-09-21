@@ -116,6 +116,54 @@ describe("parseChatMessage", () => {
     expect(msg.senderName).toBe("GameMaster");
     expect(msg.message).toBe("hello");
   });
+
+  test("parses a monster yell message with embedded sender name", () => {
+    const w = new PacketWriter();
+    w.uint8(0x0e);
+    w.uint32LE(0);
+    w.uint32LE(0x42);
+    w.uint32LE(0x00);
+    w.uint32LE(0);
+    const nameBytes = new TextEncoder().encode("Zapetta");
+    w.uint32LE(nameBytes.byteLength + 1);
+    w.rawBytes(nameBytes);
+    w.uint8(0);
+    w.uint32LE(0x00);
+    w.uint32LE(0x00);
+    const msgBytes = new TextEncoder().encode(
+      "The zeppelin to Orgrimmar has arrived!",
+    );
+    w.uint32LE(msgBytes.byteLength + 1);
+    w.rawBytes(msgBytes);
+    w.uint8(0);
+    w.uint8(0);
+
+    const msg = parseChatMessage(new PacketReader(w.finish()));
+    expect(msg.type).toBe(0x0e);
+    expect(msg.senderName).toBe("Zapetta");
+    expect(msg.message).toBe("The zeppelin to Orgrimmar has arrived!");
+  });
+
+  test("raid warning carries no sender name", () => {
+    const w = new PacketWriter();
+    w.uint8(ChatType.RAID_WARNING);
+    w.uint32LE(0);
+    w.uint32LE(0x42);
+    w.uint32LE(0x00);
+    w.uint32LE(0);
+    w.uint32LE(0x00);
+    w.uint32LE(0x00);
+    const msgBytes = new TextEncoder().encode("Boss incoming");
+    w.uint32LE(msgBytes.byteLength + 1);
+    w.rawBytes(msgBytes);
+    w.uint8(0);
+    w.uint8(0);
+
+    const msg = parseChatMessage(new PacketReader(w.finish()));
+    expect(msg.type).toBe(ChatType.RAID_WARNING);
+    expect(msg.senderName).toBeUndefined();
+    expect(msg.message).toBe("Boss incoming");
+  });
 });
 
 describe("buildChatMessage", () => {

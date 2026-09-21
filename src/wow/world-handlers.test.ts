@@ -15,6 +15,7 @@ import {
   handleGuildEvent,
   handleGuildCommandResult,
   handleGuildInvitePacket,
+  handleChatMessage,
 } from "wow/world-handlers";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
@@ -3743,6 +3744,60 @@ describe("world handler tests", () => {
         ws.stop();
       }
     });
+  });
+});
+
+describe("embedded chat sender names", () => {
+  function monsterYell(): PacketReader {
+    const w = new PacketWriter();
+    w.uint8(ChatType.MONSTER_YELL);
+    w.uint32LE(0);
+    w.uint32LE(0x42);
+    w.uint32LE(0xf1300000);
+    w.uint32LE(0);
+    const name = new TextEncoder().encode("Zapetta");
+    w.uint32LE(name.byteLength + 1);
+    w.rawBytes(name);
+    w.uint8(0);
+    w.uint32LE(0);
+    w.uint32LE(0);
+    const body = new TextEncoder().encode("The zeppelin has arrived!");
+    w.uint32LE(body.byteLength + 1);
+    w.rawBytes(body);
+    w.uint8(0);
+    w.uint8(0);
+    return new PacketReader(w.finish());
+  }
+
+  function deliver(ignored: boolean): ChatMessage {
+    let result!: ChatMessage;
+    let nameQueries = 0;
+    const conn = {
+      onMessage: (m: ChatMessage) => {
+        result = m;
+      },
+      ignoreStore: { has: () => ignored },
+      nameCache: {
+        get: () => {
+          nameQueries++;
+          return undefined;
+        },
+      },
+    } as unknown as WorldConn;
+    handleChatMessage(conn, monsterYell());
+    expect(nameQueries).toBe(0);
+    return result;
+  }
+
+  test("a monster yell delivers its embedded sender name", () => {
+    const msg = deliver(false);
+    expect(msg.sender).toBe("Zapetta");
+    expect(msg.message).toBe("The zeppelin has arrived!");
+  });
+
+  test("the embedded name outranks an ignore-store collision", () => {
+    const msg = deliver(true);
+    expect(msg.sender).toBe("Zapetta");
   });
 });
 

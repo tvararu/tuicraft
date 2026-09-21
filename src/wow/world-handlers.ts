@@ -115,6 +115,11 @@ export function resolveAndDeliver(conn: WorldConn, raw: RawChatMessage): void {
     return;
   }
 
+  if (raw.senderName !== undefined) {
+    deliverMessage(conn, raw, raw.senderName);
+    return;
+  }
+
   if (conn.ignoreStore.has(raw.senderGuidLow)) return;
 
   const cached = conn.nameCache.get(raw.senderGuidLow);

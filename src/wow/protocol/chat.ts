@@ -27,6 +27,21 @@ export type WhoResult = {
   zone: number;
 };
 
+function hasSenderName(type: number, isGm: boolean): boolean {
+  if (isGm) return true;
+  return (
+    type === ChatType.WHISPER_FOREIGN ||
+    type === ChatType.MONSTER_SAY ||
+    type === ChatType.MONSTER_PARTY ||
+    type === ChatType.MONSTER_YELL ||
+    type === ChatType.MONSTER_WHISPER ||
+    type === ChatType.MONSTER_EMOTE ||
+    type === ChatType.RAID_BOSS_EMOTE ||
+    type === ChatType.RAID_BOSS_WHISPER ||
+    type === ChatType.BATTLENET
+  );
+}
+
 export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
   const type = r.uint8();
   const language = r.uint32LE();
@@ -35,7 +50,7 @@ export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
   r.uint32LE();
 
   let senderName: string | undefined;
-  if (isGm) {
+  if (hasSenderName(type, isGm)) {
     const nameLen = r.uint32LE();
     const nameBytes = r.bytes(nameLen);
     const nameEnd =
