@@ -125,4 +125,25 @@ describe("distil-encounter", () => {
     const rec = distil(parseLog(customLog), "r2", "unrecorded");
     expect(rec.promptVariant).toBe("mechanics");
   });
+
+  test("extracts fault marker from events into encounter record", () => {
+    const faultLog = [
+      line(1000, {
+        type: "started",
+        runId: "r3",
+        targetGuid: "0xf13",
+        fault: "delay:2500ms",
+      }),
+      line(1100, {
+        type: "request",
+        runId: "r3",
+        instruction: "kill it",
+        candidates: [{ id: "wait" }],
+        observation: { self: { level: 10 } },
+        fault: "delay:2500ms",
+      }),
+    ].join("\n");
+    const rec = distil(parseLog(faultLog), "r3", "unrecorded");
+    expect(rec.fault).toBe("delay:2500ms");
+  });
 });

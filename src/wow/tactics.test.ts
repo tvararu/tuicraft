@@ -669,3 +669,17 @@ test("unknown framing variant rejects start with clear error", async () => {
     f.tactics.dispose();
   }
 });
+
+test("fault marker propagates to state and emitted events", async () => {
+  const events: TacticsEvent[] = [];
+  const f = fixture({ fault: "delay:2500ms" });
+  f.tactics.onEvent((e) => events.push(e));
+  try {
+    await f.tactics.start(context);
+    expect(f.tactics.snapshot().fault).toBe("delay:2500ms");
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((e) => e.fault === "delay:2500ms")).toBe(true);
+  } finally {
+    f.tactics.dispose();
+  }
+});

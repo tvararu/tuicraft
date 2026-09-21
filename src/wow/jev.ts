@@ -24,6 +24,7 @@ export type JevActionOptions = {
   apiKey: string;
   signal: AbortSignal;
   model?: string;
+  endpointUrl?: string;
   fetch?: (
     input: string | URL | Request,
     init?: RequestInit,
@@ -98,7 +99,12 @@ async function postSystemOne(
   };
   let response: Response;
   try {
-    response = await http(SYSTEMONE_URL, {
+    const endpoint =
+      options.endpointUrl ??
+      process.env["JEV_ENDPOINT_URL"] ??
+      process.env["TYPESAFE_ENDPOINT_URL"] ??
+      SYSTEMONE_URL;
+    response = await http(endpoint, {
       method: "POST",
       headers,
       body,

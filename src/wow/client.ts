@@ -69,8 +69,15 @@ import {
 import { CombatRuntime, type CombatEvent, type CombatState } from "wow/combat";
 import type { SpellDefinition } from "wow/spell-catalog";
 import { loadSpellCatalog } from "wow/spell-catalog";
-import { TacticsLoop, type TacticsEvent, type TacticsState } from "wow/tactics";
+import {
+  TacticsLoop,
+  type TacticsEvent,
+  type TacticsState,
+  type TacticsSelect,
+} from "wow/tactics";
 import { CombatActions } from "wow/combat-actions";
+import { selectJevAction } from "wow/jev";
+import { readJevFaultFromEnv, createFaultSelect } from "wow/jev-fault";
 import {
   loadFactionTemplates,
   type FactionTemplateCatalog,
@@ -155,6 +162,7 @@ export type ClientConfig = {
   navigationDataDir?: string;
   navigationLibrary?: string;
   jevApiKey?: string;
+  jevEndpointUrl?: string;
   framing?: FramingVariant;
   characterClass?: string;
 };
@@ -592,10 +600,23 @@ export function worldSession(
       control.halt();
       combat.halt();
     }
+    const faultInfo = readJevFaultFromEnv();
+    const baseSelect: TacticsSelect = (request, options) =>
+      selectJevAction(request, {
+        ...options,
+        endpointUrl: config.jevEndpointUrl,
+      });
+    const faultSelect = faultInfo.fault
+      ? createFaultSelect(faultInfo.fault, baseSelect)
+      : config.jevEndpointUrl
+        ? baseSelect
+        : undefined;
     const tactics = new TacticsLoop({
       apiKey: config.jevApiKey,
       framing: config.framing,
       characterClass: config.characterClass,
+      fault: faultInfo.marker,
+      select: faultSelect,
       async prepare(_context, signal) {
         signal.throwIfAborted();
         await prepareCatalog();

@@ -261,6 +261,8 @@ function buildClientConfig(cfg: Awaited<ReturnType<typeof readConfig>>) {
     navigationDataDir: cfg.navigation_data_dir,
     navigationLibrary: cfg.navigation_library,
     jevApiKey: process.env["TYPESAFE_API_KEY"],
+    jevEndpointUrl:
+      process.env["JEV_ENDPOINT_URL"] ?? process.env["TYPESAFE_ENDPOINT_URL"],
   };
 }
 

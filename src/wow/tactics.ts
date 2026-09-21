@@ -54,6 +54,7 @@ export type TacticsDeps = {
   requestTimeoutMs?: number;
   framing?: FramingVariant;
   characterClass?: string;
+  fault?: string;
 };
 
 export type TacticsState = {
@@ -85,6 +86,7 @@ export type TacticsState = {
   lastDiscardReason: string | undefined;
   lastStopReason?: string;
   lastInterRequestMs?: number;
+  fault?: string;
 };
 
 export type TacticsEvent =
@@ -97,8 +99,9 @@ export type TacticsEvent =
       instructionEpoch: number;
       targetIntentEpoch: number;
       framing?: FramingVariant;
+      fault?: string;
     }
-  | { type: "activated"; runId: string }
+  | { type: "activated"; runId: string; fault?: string }
   | {
       type: "request";
       runId: string;
@@ -107,13 +110,32 @@ export type TacticsEvent =
       candidates: readonly TacticsCandidate[];
       sentAtMs: number;
       framing: FramingVariant;
+      fault?: string;
     }
-  | ({ type: "result"; runId: string } & JevActionResult)
-  | { type: "applied"; runId: string; actionId: string; ageMs: number }
-  | { type: "discarded"; runId: string; reason: string; actionId?: string }
-  | ({ type: "outcome"; runId: string } & TacticsOutcome)
-  | { type: "transport"; runId: string; error: string }
-  | { type: "stopped"; runId: string; reason: string; state: TacticsState };
+  | ({ type: "result"; runId: string; fault?: string } & JevActionResult)
+  | {
+      type: "applied";
+      runId: string;
+      actionId: string;
+      ageMs: number;
+      fault?: string;
+    }
+  | {
+      type: "discarded";
+      runId: string;
+      reason: string;
+      actionId?: string;
+      fault?: string;
+    }
+  | ({ type: "outcome"; runId: string; fault?: string } & TacticsOutcome)
+  | { type: "transport"; runId: string; error: string; fault?: string }
+  | {
+      type: "stopped";
+      runId: string;
+      reason: string;
+      state: TacticsState;
+      fault?: string;
+    };
 
 type Run = {
   generation: number;
@@ -228,7 +250,11 @@ export class TacticsLoop {
   }
 
   private emit(event: TacticsEvent): void {
-    this.listener?.(structuredClone(event));
+    const payload =
+      this.deps.fault !== undefined && event.fault === undefined
+        ? { ...event, fault: this.deps.fault }
+        : event;
+    this.listener?.(structuredClone(payload));
   }
 
   private begin(context: TacticsContext, external?: AbortSignal): Run {
@@ -266,6 +292,7 @@ export class TacticsLoop {
       lastElapsedMs: undefined,
       lastInterApplyMs: undefined,
       lastDiscardReason: undefined,
+      fault: this.deps.fault,
     };
     this.emit({
       type: "started",

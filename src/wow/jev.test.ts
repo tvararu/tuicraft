@@ -547,3 +547,37 @@ test("rejects unknown framing variant", async () => {
     'Unknown framing variant: "bogus". Must be one of: none, minimal, mechanics',
   );
 });
+
+test("uses endpointUrl option when provided", async () => {
+  let capturedUrl = "";
+  await selectJevAction(request, {
+    apiKey: "ts_test_key",
+    signal: new AbortController().signal,
+    endpointUrl: "http://localhost:9999/custom",
+    fetch: async (input) => {
+      capturedUrl = String(input);
+      return jsonResponse(200, validPayload);
+    },
+  });
+  expect(capturedUrl).toBe("http://localhost:9999/custom");
+});
+
+test("uses JEV_ENDPOINT_URL environment variable override", async () => {
+  const previous = process.env["JEV_ENDPOINT_URL"];
+  process.env["JEV_ENDPOINT_URL"] = "http://localhost:8888/override";
+  try {
+    let capturedUrl = "";
+    await selectJevAction(request, {
+      apiKey: "ts_test_key",
+      signal: new AbortController().signal,
+      fetch: async (input) => {
+        capturedUrl = String(input);
+        return jsonResponse(200, validPayload);
+      },
+    });
+    expect(capturedUrl).toBe("http://localhost:8888/override");
+  } finally {
+    if (previous === undefined) delete process.env["JEV_ENDPOINT_URL"];
+    else process.env["JEV_ENDPOINT_URL"] = previous;
+  }
+});

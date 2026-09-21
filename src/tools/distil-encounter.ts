@@ -35,6 +35,7 @@ export type EncounterRecord = {
   cadence: { decisions: number; elapsedMs: number; perSecond: number };
   outcome: { status?: string; reason?: string };
   model: string | undefined;
+  fault?: string;
   rawLines: number;
 };
 
@@ -96,10 +97,12 @@ export function distil(
   let target: EncounterRecord["target"] = {};
   let outcome: EncounterRecord["outcome"] = {};
   let model: string | undefined;
+  let fault: string | undefined;
   let offered: string[] = [];
   let pending: Decision | undefined;
 
   for (const { event } of mine) {
+    if (event["fault"]) fault = str(event["fault"]) ?? fault;
     if (event.type === "started") {
       instruction = str(event["instruction"]) ?? instruction;
       target = { ...target, guid: str(event["targetGuid"]) };
@@ -189,6 +192,7 @@ export function distil(
     },
     outcome,
     model,
+    ...(fault !== undefined ? { fault } : {}),
     rawLines: mine.length,
   };
 }
