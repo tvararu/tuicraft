@@ -129,6 +129,19 @@ async function main() {
       }
       break;
     }
+    case "start": {
+      try {
+        const lines = await sendToSocket("STATUS");
+        if (lines.includes("CONNECTED")) {
+          console.log("Daemon is already running.");
+          break;
+        }
+      } catch {}
+      await ensureDaemon();
+      const lines = await sendToSocket("STATUS");
+      for (const line of lines) console.log(line);
+      break;
+    }
     case "status": {
       try {
         const lines = await sendToSocket("STATUS");

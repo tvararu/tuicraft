@@ -7,11 +7,45 @@ description: Use when interacting with a WoW 3.3.5a game world — sending chat,
 
 CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game connection and buffers events. The daemon starts automatically on first use and stays running for 30 minutes of inactivity.
 
-## Status
+## Daemon lifecycle
 
-    tuicraft status
+    tuicraft start                # connect daemon explicitly
+    tuicraft status               # show connection status
+    tuicraft stop                 # disconnect and stop daemon
 
-Returns CONNECTED or an error. Check this before other commands.
+- `start` connects the daemon explicitly and reports outcome (`CONNECTED` on fresh start, `Daemon is already running.` if already running, exit 1 on failure).
+- `status` returns `CONNECTED` or `Daemon is not running.` Check this before issuing game commands.
+- `stop` gracefully disconnects the session and terminates the daemon.
+
+## JSON output shapes
+
+Commands supporting `--json` emit one of two structural shapes. Do not assume all `--json` commands emit a single JSON document.
+
+### 1. JSONL (newline-delimited JSON objects, one per line)
+- `tuicraft nearby --json`: Local spatial scan. Emits one JSON object per nearby entity line, or 0 lines if no entities are in range.
+- `tuicraft read [--wait N] --json`: Buffered event stream. Emits one JSON object per event, or 0 lines if empty.
+- `tuicraft tail --json`: Continuous live event stream. Emits one JSON object per line.
+
+Parsing JSONL output directly with `JSON.parse` or `json.loads` on the complete stdout will fail with `JSONDecodeError: Extra data: line 2 column 1`. Parse line-by-line:
+```python
+lines = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+```
+
+### 2. Single JSON document (single line payload)
+- **Single JSON object (`{...}`):**
+  - `tuicraft control --json`: Subsystem control state (`pose`, `serverPose`, `target`, `requestedTarget`, `moving`, `direction`, `owner`).
+  - `tuicraft combat --json`: Combat snapshot (`self`, target vitals).
+  - `tuicraft tactics --json`: Tactics state and terminal observations.
+  - `tuicraft navigation --json`: Navigation state.
+  - `tuicraft following --json`: Follow state, provenance, and stop reason.
+  - `tuicraft recovery --json`: Life, corpse, delay, and pending intent.
+  - `tuicraft quests --json`: Offered dialog, quest log, and pending intent.
+  - `tuicraft inventory --json`: Observed carried items and coinage.
+  - `tuicraft loot --json`: Loot offer, pending intent, and notices.
+  - `tuicraft who [filter] --json`: Structured player query envelope (`{"type":"WHO","count":N,"results":[...]}`).
+  - `tuicraft send <message> --json` (and `-w`, `-y`, `-g`, `-p`): Action acknowledgment (`{"status":"ok"}`). If `--wait N` is used, events received during wait are emitted as subsequent JSONL lines.
+- **Single JSON array (`[...]`):**
+  - `tuicraft spells --json`: Learned spellbook catalog (`[{"spellId":...,"name":...},...]`).
 
 ## Direct control
 

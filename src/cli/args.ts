@@ -8,6 +8,7 @@ export type CliAction =
   | { mode: "help" }
   | { mode: "stop" }
   | { mode: "status" }
+  | { mode: "start" }
   | { mode: "logs" }
   | { mode: "read"; wait: number | undefined; json: boolean }
   | { mode: "tail"; json: boolean }
@@ -68,6 +69,7 @@ export type CliAction =
 
 const SUBCOMMANDS = new Set([
   "setup",
+  "start",
   "stop",
   "status",
   "read",
@@ -218,6 +220,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
   switch (cmd) {
     case "setup":
       return { mode: "setup", args: args.slice(1) };
+    case "start":
+      return { mode: "start" };
     case "read":
       return parseRead(args);
     case "tail":

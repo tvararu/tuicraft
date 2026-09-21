@@ -25,6 +25,10 @@ describe("parseArgs", () => {
     expect(parseArgs(["status"])).toEqual({ mode: "status" });
   });
 
+  test("start subcommand", () => {
+    expect(parseArgs(["start"])).toEqual({ mode: "start" });
+  });
+
   test("read subcommand", () => {
     expect(parseArgs(["read"])).toEqual({
       mode: "read",

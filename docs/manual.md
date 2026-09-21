@@ -10,6 +10,7 @@ tuicraft <message>
 tuicraft [-w <name> | -y | -g | -p] <message>
 tuicraft [--who [filter]] [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME]
+tuicraft start | status | stop
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
 tuicraft control [--json] | nearby [--json]
@@ -67,26 +68,32 @@ manual casting by learned spell ID do not require these data paths or a Jev key.
 `tuicraft setup` [*flags*]
 : Configure account credentials. With no flags, runs an interactive wizard.
 
+`tuicraft start`
+:: Start the background daemon explicitly and connect to the WoW server.
+If the daemon is already running and connected, prints `Daemon is already running.` and exits with status 0.
+On a successful new connection, prints `CONNECTED` and exits with status 0.
+If the daemon fails to connect (missing configuration, invalid credentials, unreachable server, or startup timeout), prints the error and exits with status 1.
+
 `tuicraft read` [`--wait` *N*] [`--json`]
-: Read buffered events. `--wait` polls for _N_ seconds before returning.
+: Read buffered events. With `--json`, emits JSONL (one JSON object per event, or empty). `--wait` polls for _N_ seconds before returning.
 
 `tuicraft tail` [`--json`]
-: Continuous event stream. Blocks and prints events as they arrive.
+: Continuous event stream. Blocks and prints events as they arrive. With `--json`, emits JSONL (one JSON object per line).
 
 `tuicraft status`
-: Print daemon connection status (`CONNECTED` or error).
+: Print daemon connection status (`CONNECTED` or `Daemon is not running.`).
 
 `tuicraft stop`
 :: Graceful daemon shutdown. Disconnects the session.
 
 `tuicraft control` [`--json`]
-:: Print control state. `pose.source` is `predicted` or `server`. `serverPose`
+:: Print control state. With `--json`, emits a single JSON object (`pose`, `serverPose`, `target`, `requestedTarget`, `moving`, `direction`, `owner`). `pose.source` is `predicted` or `server`. `serverPose`
 is the last server-observed pose. `target` is the last server-observed self
 target. `requestedTarget` is the last GUID this client sent. Predicted pose is
 not server confirmation. Relog to read the pose the server accepted.
 
 `tuicraft nearby` [`--json`]
-:: List nearby entities. GUIDs are hexadecimal (`0x…`). JSON includes `self`
+:: List nearby entities. With `--json`, emits JSONL (one JSON object per nearby entity line, or empty). GUIDs are hexadecimal (`0x…`). JSON includes `self`
 true only for the observed self GUID.
 
 `tuicraft move` _direction_ [*ms*]
@@ -111,10 +118,10 @@ HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT commands as well.
 Metadata queries and inventory/loot inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
 
 `tuicraft combat` [`--json`]
-:: Print combat state. GUIDs are hex. Predicted poses keep `source=predicted`.
+:: Print combat state. With `--json`, emits a single JSON object. GUIDs are hex. Predicted poses keep `source=predicted`.
 
 `tuicraft spells` [`--json`]
-:: Print the learned spellbook joined to client metadata.
+:: Print the learned spellbook joined to client metadata. With `--json`, emits a single JSON array of spell objects.
 
 `tuicraft cast` _id_ _guid_
 :: Cast a learned spell. _id_ is a positive integer. _guid_ is uint64 hex or
@@ -324,8 +331,16 @@ All acknowledgements are intent only. Action and inspection errors print `ERR` a
 ## Options
 
 `--json`
-:: JSON output. Works with `read`, `tail`, `who`, `control`, `nearby`, and chat
-commands.
+:: Output as structured JSON. Commands emit one of two shapes:
+
+- **JSONL (newline-delimited JSON, one object per line):**
+  `read`, `tail`, and `nearby`. Each emitted line is a standalone JSON object.
+  Parsing full output as a single JSON document will fail with `Extra data`.
+  Parse line-by-line.
+- **Single JSON document (single line payload):**
+  `control`, `combat`, `tactics`, `navigation`, `following`, `recovery`, `quests`,
+  `inventory`, `loot`, `who` (all emit a single JSON object `{...}`),
+  `chat` / `send` (emits `{"status":"ok"}`), and `spells` (emits a single JSON array `[...]`).
 
 `--wait` _N_
 : Wait _N_ seconds for events before returning. For use with `read`.

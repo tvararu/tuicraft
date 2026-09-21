@@ -12,6 +12,7 @@ USAGE
   tuicraft who [filter]       Who query
   tuicraft read [--wait N]    Read buffered events
   tuicraft tail               Continuous event stream
+  tuicraft start              Start background daemon and connect
   tuicraft status             Show daemon status
   tuicraft control [--json]  Show control state
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)

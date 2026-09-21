@@ -138,6 +138,7 @@ tuicraft take-loot 0       # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of the open window
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, follow
+tuicraft start             # start background daemon and connect
 tuicraft status            # daemon status
 tuicraft stop              # stop daemon
 tuicraft skill             # print SKILL.md for AI agents

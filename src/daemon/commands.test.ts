@@ -3709,6 +3709,13 @@ describe("IPC round-trip", () => {
     expect(out.startsWith("ERR ")).toBe(true);
   });
 
+  test("start reports already running if daemon is active", async () => {
+    handle = attachControl(createMockHandle());
+    const { code, out } = await runMain(["start"]);
+    expect(code).toBe(0);
+    expect(out.trim()).toBe("Daemon is already running.");
+  });
+
   test("multiline fight instructions cannot execute injected controls", async () => {
     handle = attachControl(createMockHandle());
     const startTactics = jest.fn(async () => {});
