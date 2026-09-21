@@ -185,4 +185,23 @@ describe("session lifecycle", () => {
       worldServer.stop();
     }
   });
+
+  test("goTo classifies refusals for wait, pick_destination, and stop", async () => {
+    const worldServer = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: worldServer.port },
+        fakeAuth(worldServer.port),
+      );
+      expect(() => handle.goTo(NaN, 0, 0)).toThrow("stop: invalid_destination");
+
+      handle.close();
+      await handle.closed;
+    } finally {
+      worldServer.stop();
+    }
+  });
 });

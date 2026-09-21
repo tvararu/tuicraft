@@ -42,12 +42,25 @@ export type ControlState = {
   owner: ControlOwner;
 };
 
+export type NavigationRefusal = "wait" | "pick_destination" | "stop";
+
+export function classifyNavigationRefusal(reason: string): NavigationRefusal {
+  if (reason.includes("position disagrees with ground height")) {
+    return "wait";
+  }
+  if (reason.includes("ambiguous ground column")) {
+    return "pick_destination";
+  }
+  return "stop";
+}
+
 export type NavigationState = {
   active: boolean;
   destination: NavPoint | undefined;
   remaining: number | undefined;
   owner: ControlOwner;
   blockedReason: string | undefined;
+  refusal: NavigationRefusal | undefined;
 };
 
 export type ControlEventType =
@@ -195,6 +208,7 @@ export class ControlRuntime {
     remaining: undefined,
     owner: "none",
     blockedReason: undefined,
+    refusal: undefined,
   };
   private target: bigint | undefined;
   private requestedTarget: bigint | undefined;
@@ -258,7 +272,11 @@ export class ControlRuntime {
     };
   }
 
-  navigationError(destination: NavPoint, reason: string): void {
+  navigationError(
+    destination: NavPoint,
+    reason: string,
+    refusal?: NavigationRefusal,
+  ): void {
     this.abortUnsafe(reason);
     this.navigation = {
       active: false,
@@ -266,6 +284,7 @@ export class ControlRuntime {
       remaining: undefined,
       owner: "none",
       blockedReason: reason,
+      refusal: refusal ?? classifyNavigationRefusal(reason),
     };
     this.emit("control_error", reason);
   }
@@ -291,6 +310,7 @@ export class ControlRuntime {
         remaining: 0,
         owner: "none",
         blockedReason: undefined,
+        refusal: undefined,
       };
       return;
     }
@@ -303,6 +323,7 @@ export class ControlRuntime {
       remaining: route.length,
       owner: this.mode === "none" ? "manual" : this.mode,
       blockedReason: undefined,
+      refusal: undefined,
     };
     this.startMoving(
       "forward",
@@ -765,6 +786,8 @@ export class ControlRuntime {
       active: false,
       owner: "none",
       blockedReason: reason === "arrived" ? undefined : reason,
+      refusal:
+        reason === "arrived" ? undefined : classifyNavigationRefusal(reason),
     };
     this.route = undefined;
   }

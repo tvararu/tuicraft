@@ -8,6 +8,7 @@ import { parseMovementInfo, writeMovementInfo } from "wow/protocol/movement";
 
 import {
   ControlRuntime,
+  classifyNavigationRefusal,
   type ControlEvent,
   type ControlDeps,
 } from "wow/control";
@@ -841,4 +842,55 @@ test("consecutive moves into an obstruction remain non-fatal and leave pose unch
   } finally {
     jest.useRealTimers();
   }
+});
+
+test("classifyNavigationRefusal distinguishes wait, pick_destination, and stop", () => {
+  expect(
+    classifyNavigationRefusal("position disagrees with ground height"),
+  ).toBe("wait");
+  expect(classifyNavigationRefusal("ambiguous ground column")).toBe(
+    "pick_destination",
+  );
+  expect(
+    classifyNavigationRefusal("pathfind_find_height failed (UNKNOWN_HEIGHT)"),
+  ).toBe("stop");
+  expect(classifyNavigationRefusal("ground height unavailable")).toBe("stop");
+  expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
+});
+
+test("navigationError stores refusal and navigate clears refusal", () => {
+  const { runtime } = setup();
+  const dest = { x: 8730, y: -6600, z: 70 };
+  runtime.navigationError(dest, "position disagrees with ground height");
+  expect(runtime.navigationState()).toEqual({
+    active: false,
+    destination: dest,
+    remaining: undefined,
+    owner: "none",
+    blockedReason: "position disagrees with ground height",
+    refusal: "wait",
+  });
+
+  runtime.navigationError(dest, "ambiguous ground column");
+  expect(runtime.navigationState().refusal).toBe("pick_destination");
+
+  runtime.navigationError(dest, "pathfind_find_height failed (UNKNOWN_HEIGHT)");
+  expect(runtime.navigationState().refusal).toBe("stop");
+
+  const start = runtime.snapshot().pose!;
+  const destMatching = { ...dest, z: start.z };
+  const ground: NativeMap = {
+    loadAdtAt() {},
+    findHeights: () => [start.z],
+    findHeight: () => start.z,
+    lineOfSight: () => true,
+    findPath: () => [],
+    close() {},
+  };
+  runtime.navigate(
+    new GroundRoute([start, destMatching], ground),
+    destMatching,
+  );
+  expect(runtime.navigationState().refusal).toBeUndefined();
+  expect(runtime.navigationState().blockedReason).toBeUndefined();
 });

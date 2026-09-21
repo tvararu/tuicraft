@@ -209,6 +209,7 @@ export function createMockHandle(): WorldHandle & {
       remaining: undefined,
       owner: "none" as const,
       blockedReason: undefined,
+      refusal: undefined,
     })),
     onCombatEvent(cb) {
       combatEventCb = cb;

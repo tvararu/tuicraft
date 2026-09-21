@@ -61,6 +61,7 @@ import {
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
   ControlRuntime,
+  classifyNavigationRefusal,
   type ControlEvent,
   type ControlState,
   type MovementDirection,
@@ -1326,9 +1327,9 @@ export function worldSession(
         goTo(x, y, z) {
           override();
           if (![x, y, z].every(Number.isFinite))
-            throw new Error("invalid_destination");
+            throw new Error("stop: invalid_destination");
           const pose = control.snapshot().pose;
-          if (!pose) throw new Error("no_pose");
+          if (!pose) throw new Error("stop: no_pose");
           const navigation = getNavigation();
           const destination = { x, y, z };
           try {
@@ -1337,11 +1338,11 @@ export function worldSession(
               destination,
             );
           } catch (error) {
-            control.navigationError(
-              destination,
-              error instanceof Error ? error.message : "navigation_failed",
-            );
-            throw error;
+            const raw =
+              error instanceof Error ? error.message : "navigation_failed";
+            const refusal = classifyNavigationRefusal(raw);
+            control.navigationError(destination, raw, refusal);
+            throw new Error(`${refusal}: ${raw}`);
           }
         },
         getNavigationState() {
