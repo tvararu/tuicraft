@@ -264,6 +264,45 @@ changes, and server rejections. Client spell metadata is not evidence that a
 spell is learned or currently usable. Moving creatures need current movement
 observations; their initial spawn positions are not sufficient.
 
+Live spellbook validation exposed blanket rejection of ordinary normal-form
+spells and an active loop with no supported actions. Independent review of
+`SpellInfo::CheckShapeshift` confirmed the repair: observe the high form byte
+of `UNIT_FIELD_BYTES_2`, support form zero, and apply the normal-form allowance
+flag to nonzero stance masks. Do not invent form state from class or whitelist
+spell IDs. Other forms and unsupported mechanics remain explicit limits.
+
+Verify actual learned spells become candidates, and revalidate form before
+execution. A structurally unsupported kit must stop with a concrete reason,
+including permanently unsupported hostile ranges. Temporary cooldowns and
+in-flight responses must remain waits, and viable facing/melee must remain
+available. Repeat live cancellation after the correlated-failure repair before
+counting the remaining autonomous encounters.
+Retain the actual terminal observation even when a block occurs before any Jev
+request; do not fabricate request or timing evidence for that case.
+
+The rebuilt client confirmed cancellation through START, CAST_FAILED40 and
+SPELL_FAILURE40 without losing the cancel outcome or mana. Encounter attempt03
+then stopped before inference because the real self CREATE omitted the zero
+packed form word. Independent protocol review confirmed that complete CREATE
+omits zero visible fields. Record that network provenance per entity lifetime:
+PUBLIC unit fields omitted from a complete CREATE are zero; incomplete or
+synthetic entities remain unknown. Preserve this authority through sparse VALUES
+and reset it on destruction or replacement CREATE. Bound power-field offsets to
+the seven public power slots. Nonself form is client-visible state and can be
+masked by cross-faction grouping; it is not proof of another player's actual form.
+The next login confirmed self form zero and a usable candidate kit.
+
+Attempt04 selected Mind Blast through Jev and the server confirmed a successful
+cast: target health120→80 and mana547→501. Five further requests succeeded; the
+next response failed validation after2.55 seconds. The character subsequently
+died without tactical intervention, then the server automatically released the
+ghost. This remains a failed encounter: zero of five autonomous wins credited.
+The rejected body was not retained. Forty-one controlled replays did not
+reproduce the failure. Independent provider review approved field-specific
+diagnostics with raw exceptions retained only as causes; acceptance predicates,
+probability-total tolerance and transport behavior remain unchanged. Resume live
+encounters with those diagnostics rather than claiming an unproven provider fix.
+
 A narrow mesh-backed approach capability is pulled forward from milestone 3 to
 reach the first encounter safely. Independent data review identified the existing
 Expansion01 mesh and native path/height APIs. The decision is to load relevant
@@ -278,6 +317,22 @@ the approach with a reason. No invented ground heights, bulk ADT loading, GM
 shortcuts, or silent retry loop. Following, general route robustness, and the
 remaining navigation evidence stay in milestone 3.
 
+Native execution exposed a funnel corner with no queryable height even though a
+fully checked direct ground corridor was usable. Independent geometry review
+recommended retaining native-path success and original endpoint/floor/snap gates,
+then preferring a direct corridor only when all connected-height, reverse-height,
+ambiguity, collision, and headroom checks pass. The equally checked funnel route
+is the alternative for expected geometry rejection; native ABI, lifecycle, and
+invalid-domain errors still fail. This is the adopted route-selection repair,
+not coordinate jitter, a relaxed tolerance, or a height fallback.
+
+Verify the repaired public planner on the observed 20-yard case, including
+non-anchor samples against the real native height query, exact original-start
+preservation, and rejection of wrong-floor and obstructed cases. The short live
+approach and interruption evidence above remain required. Ray checks and the
+native library's incomplete stacked-floor enumeration do not establish general
+capsule collision or multi-floor support.
+
 ### 3. Reliable local navigation
 
 Extend basic movement with route planning, obstacle handling, arrival/failure
@@ -291,6 +346,31 @@ retrying forever. Confirm positions from observed state. Selected destinations
 or explicit coordinates are sufficient; named-place language understanding is
 not required.
 
+Independent navigation review approved bounded, ground-only following: derive
+destination Z from a unique native column, retain the existing route gates, and
+stop/integrate old motion before sampling a fresh replan origin. Follow ownership
+must be distinct from Jev/manual control; stale cleanup must not stop a newer
+owner. Replans require meaningful observed displacement and have explicit time,
+distance and plan-count limits. Quiet or unsupported targets may stop
+conservatively with a reason, not trigger automatic retries.
+
+Verify native ground-derived destinations, repeated known routes with observed
+positions, and an actual moving character with standoff pause/resume. Exercise
+HALT/manual takeover, loss, unsupported motion, correction and failed planning.
+Remote player movement reception is a prerequisite to that character-follow
+claim; NPC-only or predicted-endpoint demonstrations do not substitute.
+
+Independent protocol review requires exact flag authority on both ordinary
+observer movement and CREATE/UPDATE_OBJECT movement. Preserve flags and extra
+flags, including unknown bits; absence is not zero evidence. Ground movement must
+reject contradictory direction/root flags and unsupported modes. Remote poses
+remain non-extrapolated observations with receive time separate from mover time.
+Time-skipped and malformed known-GUID bodies invalidate prior motion without
+refreshing pose age. Teleport, knockback, unsafe motion, disappearance, replacement
+and death must immediately stop matching follow ownership, even if a safe packet
+arrives in the same event-loop turn. Keep validated NPC splines a separate path
+and gate map/transfer lifetime. Prove these boundaries before live player follow.
+
 ### 4. Repeatable encounter cycles
 
 Deliver this in bounded slices: encounter robustness, encounter completion and
@@ -303,6 +383,36 @@ relevant, respond to trouble, and recover or report a concrete blocking
 condition. A rising kill count alone does not establish success. Death/recovery
 scenarios must not depend on a developer secretly repairing the session.
 
+Independent state review approved explicit request-versus-observation tracking.
+Loot windows use offered slot permissions and a release acknowledgement barrier;
+slot removal alone is not personal inventory gain. Reconcile own item pushes and
+coinage with observed inventory slots/counts. Only authenticated self/owned-item
+visibility and complete-CREATE provenance can establish omitted zero fields.
+
+Recovery observes ghost flags before health, invalidates stale death-epoch
+offers/queries, and keeps unresolved response correlation across timeouts.
+Graveyard markers and sent requests never prove release or resurrection. Verify
+actual death, observed ghost, corpse map/range/delay constraints, reclaim intent,
+and observed life restoration without server edits or hidden session repair.
+Include denied/full/empty loot and current-offer resurrection behavior; report
+unexercised branches rather than infer success from codecs or fixtures.
+
+The first rescue after attempt04 requires adding supported recovery controls and
+reconnecting. Record it as repair-assisted; it does not satisfy the clean recovery
+criterion above. A later complete death/ghost/reclaim/life cycle must use the
+already-working interface without developer repair. A rejected native preflight
+is not movement or a corpse query; actual corpse observations determine the
+destination and reclaim range.
+
+Independent loot review found that release packets do not uniquely acknowledge
+an explicit close or prove cleared server loot ownership. A same-GUID reopen can
+receive a preliminary release before its actual offer. Keep an opening request
+unanswered until a matching full response. A release-only opening denial,
+including ordinary out-of-range denial, currently requires an explicit ordinary
+reconnect; this is a functional limitation, not completed denial/retry support.
+Prove offered-item storage with raw slot/count changes, money with raw coinage,
+and another valid window after closure. Retain the unanswered boundary in reports.
+
 ### 5. A selected questing loop
 
 Add the NPC interactions, quest state, inventory, and other capabilities required
@@ -313,6 +423,17 @@ choices, with server-confirmed transitions.
 return, and turn it in, with Jev handling the relevant moment-to-moment work.
 Verify actual quest progress and completion. This does not require discovering
 every quest chain or building a general-purpose planner.
+
+Independent quest review requires CREATE-time visibility provenance: quest ID
+fields can be hidden under an outsider controller even for authenticated self.
+Do not infer earlier zero IDs retrospectively after control changes. Observe the
+quest log after complete update packets and after world removal; initial or
+replacement baselines are not acceptance. Dialog actions require current offered
+giver/menu/quest state. Cancellation sends the protocol request but cannot
+silently clear an unresolved correlation barrier. Preserve optional gossip codes
+as JSON strings or null through IPC, including empty strings and line breaks.
+Live proof must distinguish acceptance, objective progress, completion, reward
+notification and actual inventory/experience changes.
 
 ### 6. Sustained supervised play
 
