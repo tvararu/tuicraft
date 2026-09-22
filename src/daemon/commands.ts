@@ -109,6 +109,14 @@ export type IpcCommand =
     }
   | { type: "tactics" }
   | { type: "tactics_json" }
+  | {
+      type: "cycle";
+      guids: bigint[];
+      instruction: string;
+      maxStarts: number;
+    }
+  | { type: "cycling" }
+  | { type: "cycling_json" }
   | { type: "goto"; x: number; y: number; z: number }
   | { type: "navigation" }
   | { type: "navigation_json" }
@@ -351,6 +359,12 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "tactics" };
     case "TACTICS_JSON":
       return { type: "tactics_json" };
+    case "CYCLE":
+      return parseCycleCommand(rest);
+    case "CYCLING":
+      return { type: "cycling" };
+    case "CYCLING_JSON":
+      return { type: "cycling_json" };
     case "GOTO":
       return parseGotoCommand(rest);
     case "NAVIGATION":
@@ -848,6 +862,14 @@ export async function dispatchCommand(
       return writeInspect(socket, () => handle.getTacticsState(), false);
     case "tactics_json":
       return writeInspect(socket, () => handle.getTacticsState(), true);
+    case "cycle":
+      return runControlActionAsync(socket, () =>
+        handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts),
+      );
+    case "cycling":
+      return writeInspect(socket, () => handle.getCycleState(), false);
+    case "cycling_json":
+      return writeInspect(socket, () => handle.getCycleState(), true);
     case "goto":
       return runControlAction(socket, () => {
         handle.goTo(cmd.x, cmd.y, cmd.z);
@@ -1579,6 +1601,79 @@ function parseFightCommand(rest: string): IpcCommand {
   if (guid === undefined) return { type: "invalid", reason: "invalid guid" };
   const instruction = filtered.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
   return { type: "fight", guid, instruction, framing };
+}
+
+const CYCLE_COMMAND_FLAGS = ["--max", "--instruction"];
+
+function isCycleCommandFlag(token: string): boolean {
+  return CYCLE_COMMAND_FLAGS.some(
+    (flag) => token === flag || token.startsWith(`${flag}=`),
+  );
+}
+
+function parseCycleMax(raw: string): number | undefined {
+  if (!/^[0-9]+$/.test(raw)) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) return undefined;
+  return value;
+}
+
+function parseCycleCommand(rest: string): IpcCommand {
+  const parts = rest.split(" ").filter(Boolean);
+  if (parts.length < 1) return { type: "invalid", reason: "invalid cycle" };
+  let maxStarts: number | undefined;
+  let instructionWords: string[] | undefined;
+  const guidTokens: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
+    if (part === "--max") {
+      const next = parts[i + 1];
+      if (!next) return { type: "invalid", reason: "invalid cycle max" };
+      const value = parseCycleMax(next);
+      if (value === undefined) {
+        return { type: "invalid", reason: "invalid cycle max" };
+      }
+      maxStarts = value;
+      i++;
+    } else if (part.startsWith("--max=")) {
+      const value = parseCycleMax(part.slice("--max=".length));
+      if (value === undefined) {
+        return { type: "invalid", reason: "invalid cycle max" };
+      }
+      maxStarts = value;
+    } else if (part === "--instruction") {
+      const words: string[] = [];
+      let j = i + 1;
+      while (j < parts.length && !isCycleCommandFlag(parts[j]!)) {
+        words.push(parts[j]!);
+        j++;
+      }
+      instructionWords = words;
+      i = j - 1;
+    } else if (part.startsWith("--instruction=")) {
+      instructionWords = [part.slice("--instruction=".length)];
+    } else {
+      guidTokens.push(part);
+    }
+  }
+  if (guidTokens.length < 1) {
+    return { type: "invalid", reason: "invalid cycle" };
+  }
+  const guids: bigint[] = [];
+  for (const token of guidTokens) {
+    const guid = parseGuid(token);
+    if (guid === undefined || guid === 0n) {
+      return { type: "invalid", reason: "invalid guid" };
+    }
+    guids.push(guid);
+  }
+  const instruction = instructionWords?.join(" ") || DEFAULT_FIGHT_INSTRUCTION;
+  return {
+    type: "cycle",
+    guids,
+    instruction,
+    maxStarts: maxStarts ?? 10,
+  };
 }
 
 function parseGotoCommand(rest: string): IpcCommand {

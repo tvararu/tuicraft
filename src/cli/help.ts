@@ -29,6 +29,8 @@ USAGE
   tuicraft fight [--framing <variant>] <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
                             Spell kit: observed normal form; Jev may move under a renewable lease
   tuicraft tactics [--json]  Tactics state and terminal observations
+  tuicraft cycle <guid...> [--instruction ...] [--max N]  Run fight-loot-next loop (default max 10 starts)
+  tuicraft cycling [--json]  Cycle phase, queue, loot deltas and stop cause
   tuicraft goto <x> <y> <z>  Walk a ground route
   tuicraft navigation [--json]  Navigation state
   tuicraft follow <guid> [distance]  Bounded ground follow (1-20 yards, default 3)
@@ -69,7 +71,7 @@ USAGE
 FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
-  --json          Output as JSON (read, tail, chat, who, control, nearby, combat, spells, tactics, navigation, following, recovery, quests, inventory, loot)
+  --json          Output as JSON (read, tail, chat, who, control, nearby, combat, spells, tactics, cycling, navigation, following, recovery, quests, inventory, loot)
   --all           Output all tracked entities without distance filter (nearby)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)

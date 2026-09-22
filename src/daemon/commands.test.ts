@@ -29,6 +29,7 @@ import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 import type { ControlEvent, ControlState } from "wow/control";
 import type { FollowState } from "wow/follow";
+import type { CycleState } from "wow/encounter-cycle";
 
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
@@ -560,6 +561,35 @@ describe("parseIpcCommand", () => {
       "invalid",
     );
     expect(parseIpcCommand("FIGHT --framing")?.type).toBe("invalid");
+    expect(parseIpcCommand("CYCLE 0xa 0xb")).toEqual({
+      type: "cycle",
+      guids: [0xan, 0xbn],
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      maxStarts: 10,
+    });
+    expect(parseIpcCommand("CYCLE 0xa --max 3")).toEqual({
+      type: "cycle",
+      guids: [0xan],
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      maxStarts: 3,
+    });
+    expect(
+      parseIpcCommand("CYCLE 0xa 0xb --instruction hold aggro --max 5"),
+    ).toEqual({
+      type: "cycle",
+      guids: [0xan, 0xbn],
+      instruction: "hold aggro",
+      maxStarts: 5,
+    });
+    expect(parseIpcCommand("CYCLE")?.type).toBe("invalid");
+    expect(parseIpcCommand("CYCLE 0")?.type).toBe("invalid");
+    expect(parseIpcCommand("CYCLE 0xa --max 0")?.type).toBe("invalid");
+    expect(parseIpcCommand("CYCLING")).toEqual({ type: "cycling" });
+    expect(parseIpcCommand("CYCLING_JSON")).toEqual({
+      type: "cycling_json",
+    });
     expect(parseIpcCommand("GOTO 1 2 3")).toEqual({
       type: "goto",
       x: 1,
@@ -4892,6 +4922,88 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "recovery" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR session_closed\n\n");
+  });
+});
+
+describe("cycle IPC boundary", () => {
+  test("cycle dispatch starts the queue with parsed guids, instruction and max starts", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      startCycle: jest.fn(async () => {}),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "cycle", guids: [1n, 2n], instruction: "kill fast", maxStarts: 3 },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(handle.startCycle).toHaveBeenCalledWith([1n, 2n], "kill fast", 3);
+    expect(socket.written()).toBe("OK\n\n");
+  });
+
+  test("cycle start rejection is ERR without an OK", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      startCycle: jest.fn(async () => {
+        throw new Error("self_not_alive");
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "cycle", guids: [1n], instruction: "fight", maxStarts: 10 },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("ERR self_not_alive\n\n");
+  });
+
+  test("cycling reports the same snapshot the runtime exposes", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getCycleState: (): CycleState => ({
+        active: true,
+        phase: "fighting",
+        queue: [{ guid: 1n, status: "queued" }],
+        currentIndex: 0,
+        instruction: "fight",
+        maxStarts: 10,
+        startsUsed: 1,
+        stopCause: undefined,
+        stopDetail: undefined,
+        startedAt: 1000,
+        lastLoot: undefined,
+      }),
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "cycling_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written());
+    expect(state.phase).toBe("fighting");
+    expect(state.queue[0].guid).toBe("0x1");
+    expect(state.startsUsed).toBe(1);
+  });
+
+  test("cycling inspection failure is ERR, not an empty phase", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      getCycleState: () => {
+        throw new Error("session_closed");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "cycling" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,

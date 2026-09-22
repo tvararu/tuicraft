@@ -213,6 +213,7 @@ async function main() {
     case "combat":
     case "spells":
     case "tactics":
+    case "cycling":
     case "navigation":
     case "following":
     case "recovery":
@@ -260,6 +261,18 @@ async function main() {
       printControlReply(
         await sendToSocket(
           `FIGHT ${framingPart}0x${action.guid.toString(16)} ${action.instruction}`,
+        ),
+      );
+      break;
+    }
+    case "cycle": {
+      await ensureDaemon();
+      const guidsPart = action.guids
+        .map((guid) => `0x${guid.toString(16)}`)
+        .join(" ");
+      printControlReply(
+        await sendToSocket(
+          `CYCLE ${guidsPart} --max ${action.maxStarts} --instruction ${action.instruction}`,
         ),
       );
       break;

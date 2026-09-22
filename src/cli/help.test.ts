@@ -28,6 +28,8 @@ test("help text includes all subcommands", () => {
     "stop-attack",
     "fight",
     "tactics",
+    "cycle",
+    "cycling",
     "goto",
     "navigation",
     "follow",

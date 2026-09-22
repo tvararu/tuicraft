@@ -46,6 +46,13 @@ export type CliAction =
       framing?: FramingVariant;
     }
   | { mode: "tactics"; json: boolean }
+  | {
+      mode: "cycle";
+      guids: bigint[];
+      instruction: string;
+      maxStarts: number;
+    }
+  | { mode: "cycling"; json: boolean }
   | { mode: "goto"; x: number; y: number; z: number }
   | { mode: "navigation"; json: boolean }
   | { mode: "follow"; guid: bigint; distance?: number }
@@ -101,6 +108,8 @@ const SUBCOMMANDS = new Set([
   "stop-attack",
   "fight",
   "tactics",
+  "cycle",
+  "cycling",
   "goto",
   "navigation",
   "follow",
@@ -261,6 +270,7 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     case "combat":
     case "spells":
     case "tactics":
+    case "cycling":
     case "navigation":
     case "following":
     case "recovery":
@@ -278,6 +288,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return { mode: "stop_attack" };
     case "fight":
       return parseFight(args);
+    case "cycle":
+      return parseCycle(args);
     case "goto":
       return parseGoto(args);
     case "follow":
@@ -578,6 +590,75 @@ function parseFight(args: string[]): CliAction {
     throw new Error("Fight instruction must not contain line breaks");
   }
   return { mode: "fight", guid, instruction, framing };
+}
+
+const DEFAULT_CYCLE_MAX_STARTS = 10;
+const CYCLE_FLAGS = ["--max", "--instruction"];
+
+function isCycleFlag(token: string): boolean {
+  return CYCLE_FLAGS.some(
+    (flag) => token === flag || token.startsWith(`${flag}=`),
+  );
+}
+
+function parseCycleMax(raw: string): number {
+  if (!/^[0-9]+$/.test(raw)) throw new Error("Invalid cycle max");
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error("Invalid cycle max");
+  }
+  return value;
+}
+
+function parseCycle(args: string[]): CliAction {
+  const rest = args.slice(1);
+  if (rest.length === 0) throw new Error("Invalid cycle arguments");
+  let maxStarts: number | undefined;
+  let instructionWords: string[] | undefined;
+  const guidTokens: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    const part = rest[i]!;
+    if (part === "--max") {
+      const next = rest[i + 1];
+      if (next === undefined) throw new Error("Invalid cycle max");
+      maxStarts = parseCycleMax(next);
+      i++;
+    } else if (part.startsWith("--max=")) {
+      maxStarts = parseCycleMax(part.slice("--max=".length));
+    } else if (part === "--instruction") {
+      const words: string[] = [];
+      let j = i + 1;
+      while (j < rest.length && !isCycleFlag(rest[j]!)) {
+        words.push(rest[j]!);
+        j++;
+      }
+      instructionWords = words;
+      i = j - 1;
+    } else if (part.startsWith("--instruction=")) {
+      instructionWords = [part.slice("--instruction=".length)];
+    } else {
+      guidTokens.push(part);
+    }
+  }
+  if (guidTokens.length === 0) throw new Error("Invalid cycle arguments");
+  const guids: bigint[] = [];
+  for (const token of guidTokens) {
+    const guid = parseGuid(token);
+    if (guid === undefined || guid === 0n) {
+      throw new Error("Invalid cycle guid");
+    }
+    guids.push(guid);
+  }
+  const instruction = instructionWords?.join(" ") || DEFAULT_FIGHT_INSTRUCTION;
+  if (/[\r\n]/.test(instruction)) {
+    throw new Error("Cycle instruction must not contain line breaks");
+  }
+  return {
+    mode: "cycle",
+    guids,
+    instruction,
+    maxStarts: maxStarts ?? DEFAULT_CYCLE_MAX_STARTS,
+  };
 }
 
 function parseGoto(args: string[]): CliAction {

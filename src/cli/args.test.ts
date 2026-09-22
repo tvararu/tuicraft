@@ -524,6 +524,66 @@ describe("parseArgs", () => {
   });
 });
 
+describe("cycle arguments", () => {
+  test("parses guid queue, instruction and max starts", () => {
+    expect(parseArgs(["cycle", "0xa", "0xb", "--max", "3"])).toEqual({
+      mode: "cycle",
+      guids: [0xan, 0xbn],
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      maxStarts: 3,
+    });
+    expect(
+      parseArgs(["cycle", "0xa", "--instruction", "kill fast"]),
+    ).toEqual({
+      mode: "cycle",
+      guids: [0xan],
+      instruction: "kill fast",
+      maxStarts: 10,
+    });
+    expect(
+      parseArgs([
+        "cycle",
+        "0xa",
+        "0xb",
+        "--instruction",
+        "hold aggro",
+        "--max",
+        "5",
+      ]),
+    ).toEqual({
+      mode: "cycle",
+      guids: [0xan, 0xbn],
+      instruction: "hold aggro",
+      maxStarts: 5,
+    });
+    expect(parseArgs(["cycling", "--json"])).toEqual({
+      mode: "cycling",
+      json: true,
+    });
+  });
+
+  test("rejects missing guids, invalid guids and non-positive max", () => {
+    expect(() => parseArgs(["cycle"])).toThrow("Invalid cycle arguments");
+    expect(() => parseArgs(["cycle", "0"])).toThrow("Invalid cycle guid");
+    expect(() => parseArgs(["cycle", "0xa", "--max", "0"])).toThrow(
+      "Invalid cycle max",
+    );
+    expect(() => parseArgs(["cycle", "0xa", "--max", "-1"])).toThrow(
+      "Invalid cycle max",
+    );
+    expect(() => parseArgs(["cycle", "0xa", "--max"])).toThrow(
+      "Invalid cycle max",
+    );
+  });
+
+  test("rejects multiline cycle instructions", () => {
+    expect(() =>
+      parseArgs(["cycle", "0xa", "--instruction", "line1\nline2"]),
+    ).toThrow("Cycle instruction must not contain line breaks");
+  });
+});
+
 describe("follow arguments", () => {
   test("keeps default distance optional and preserves uint64 target precision", () => {
     expect(parseArgs(["follow", "18446744073709551615"])).toEqual({
