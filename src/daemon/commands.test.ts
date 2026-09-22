@@ -4553,6 +4553,41 @@ describe("IPC round-trip", () => {
     });
   });
 
+  test("JSON stop reports a broken existing socket as an error", async () => {
+    const xdg = `${process.cwd()}/tmp/cli-stop-${++sockCounter}-${Date.now()}`;
+    const path = `${xdg}/tuicraft/sock`;
+    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    await Bun.write(path, "not a socket");
+    try {
+      const proc = Bun.spawn({
+        cmd: [
+          process.execPath,
+          `${import.meta.dir}/../main.ts`,
+          "stop",
+          "--json",
+        ],
+        cwd: `${import.meta.dir}/../..`,
+        env: { ...process.env, XDG_RUNTIME_DIR: xdg },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [code, out] = await Promise.all([
+        proc.exited,
+        new Response(proc.stdout).text(),
+      ]);
+      expect(code).toBe(1);
+      expect(JSON.parse(out)).toMatchObject({
+        command: "stop",
+        kind: "error",
+        data: null,
+        events: [],
+        error: { stage: "command" },
+      });
+    } finally {
+      await unlink(path);
+    }
+  });
+
   test("JSON send does not fabricate success on daemon error", async () => {
     handle = attachControl(createMockHandle());
     handle.sendSay = () => {
