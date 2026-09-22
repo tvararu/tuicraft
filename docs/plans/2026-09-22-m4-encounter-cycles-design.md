@@ -40,36 +40,60 @@ state, and the stop cause. It is pollable with `--json` and visible in
 the event stream. No separate query per concern.
 
 Targets stay explicit. The LLM resolves victims first with
-`nearby --json`, then hands the loop a GUID list with an optional shared
-instruction (`cycle <guid...> [--instruction ...] [--max N]`). The loop
-never auto-acquires. Auto-acquire is new judgment and stays out.
+`nearby --json`, then hands the loop a GUID queue with an optional shared
+instruction (`cycle <guid...> [--instruction ...] [--max N]`, where N caps
+tactics-loop starts). The loop never auto-acquires. Auto-acquire is new
+judgment and stays out.
+
+Per-target failure skips, it never aborts the queue. A lost target records
+its cause against that GUID and the loop advances to the next one. Loot
+denial and death are loop-level: the loop stops with its cause, or enters
+recovery and resumes with the next GUID after observed life.
 
 Loot stays automatic. The loop takes every offered slot plus money and
 reports per-slot deltas against observed inventory and coinage. The LLM
-never names slots. A denied offer or a refused take stops the loop with
-its cause, including the known release-only-denial reconnect limit.
+never names slots. An empty offer closes the window and advances to the
+next target. A denied offer stops the loop with its cause. A refused take
+stops the loop with its cause, including full inventory. A release-only
+denial stops the loop and reports that an explicit ordinary reconnect is
+needed first; the loop never reconnects itself.
 
 Recovery stays honest about travel. Corpse-run navigation belongs to
 milestone 3a, so the loop does not promise it. It drives the same bounded
-direct legs M3 used live (`face` plus short `move` leases toward the
-queried corpse pose, lateral detour on refusal) and stops with the corpse
-pose and range when ground refuses. Release, query, reclaim, and the
-resurrection answer use the shipped primitives.
+direct legs M3 used live: one `face` plus one short `move` lease toward
+the queried corpse pose per leg, a single fixed-angle retry on refusal,
+then stop with the corpse pose and range when ground still refuses. No
+planner, no destination sampling, no arrival logic.
 
-`halt` always wins. The loop never traps it, never retries silently, and
-never waits without a bound and a reported cause.
+Reclaim delay waits bounded. The queried delay carries a known
+remaining time; the loop waits that long plus a small margin, retries
+once, then stops with its cause if still gated. A cross-map or
+out-of-range corpse stops the loop with the corpse pose and range. It
+never walks blind.
 
+Resurrection offers are accepted when current. A current-epoch unanswered
+offer is answered accept; it restores life without a corpse run.
+Stale-epoch offers are ignored through the recovery epoch check. Release,
+query, reclaim, and the resurrection answer use the shipped primitives.
+
+`halt` from outside the loop always wins. The loop's own primitive calls
+route through `override()` and must not stop the loop itself; only an
+external `halt` stops it. The loop never retries silently, and never waits
+without a bound and a reported cause.
 ## Trouble rules
 
-Three named stops, each reported with its cause. No silent retries.
+Per-target failure skips to the next queued GUID; loot denial and death
+are loop-level. No silent retries.
 
 - Target lost: the fight outcome reports unreachable or the target
-  disappears. The loop stops and names the cause.
+  disappears. The loop records the cause against that GUID and advances.
 - Loot denied: the loot offer carries an error, or a take is refused. The
-  loop stops and names the cause.
+  loop stops and names the cause. An empty offer is not denial: the loop
+  closes the window and advances.
 - Death: tactics already stops on observed dead or ghost life. The loop
   starts the recovery primitive and tracks release, corpse query, corpse
-  travel, reclaim, and observed life restoration.
+  travel, reclaim, and observed life restoration. A current-epoch
+  resurrection offer is answered accept; stale-epoch offers are ignored.
 
 A full death cycle must run with no developer repair: actual death,
 observed ghost, corpse map and range checks, reclaim intent, and observed
