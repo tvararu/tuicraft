@@ -4,6 +4,13 @@ import type { FollowState, FollowEvent } from "wow/follow";
 import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
 import { QuestRuntime, type QuestEvent } from "wow/quests";
 import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
+import {
+  EncounterCycleRuntime,
+  type CycleTactics,
+  type CycleLoot,
+  type CycleRecovery,
+  type CycleControl,
+} from "wow/encounter-cycle";
 import { jest } from "bun:test";
 import type {
   WorldHandle,
@@ -79,6 +86,40 @@ export function createMockHandle(): WorldHandle & {
   });
   const quests = new QuestRuntime(runtimeDeps);
   const rewards = new RewardsRuntime(runtimeDeps);
+  const cycleTactics: CycleTactics = {
+    start: () => new Promise<void>(() => {}),
+    stop: () => {},
+    lastOutcome: () => undefined,
+    selfDead: () => false,
+  };
+  const cycleLoot: CycleLoot = {
+    snapshot: () => rewards.snapshot(),
+    open: (guid) => rewards.open(guid),
+    take: (slot) => rewards.take(slot),
+    takeMoney: () => rewards.takeMoney(),
+    close: () => rewards.close(),
+    onEvent: (callback) => rewards.onEvent(callback),
+  };
+  const cycleRecovery: CycleRecovery = {
+    snapshot: () => recovery.snapshot(),
+    releaseSpirit: () => recovery.releaseSpirit(),
+    queryCorpse: () => recovery.queryCorpse(),
+    reclaimCorpse: () => recovery.reclaimCorpse(),
+    respondResurrection: (accept) => recovery.respondResurrection(accept),
+    onEvent: (callback) => recovery.onEvent(callback),
+  };
+  const cycleControl: CycleControl = {
+    pose: () => undefined,
+    face: () => {},
+    move: () => {},
+  };
+  const cycle = new EncounterCycleRuntime({
+    tactics: cycleTactics,
+    loot: cycleLoot,
+    recovery: cycleRecovery,
+    control: cycleControl,
+    now: runtimeDeps.now,
+  });
   const followState: FollowState = {
     active: false,
     status: "idle",
@@ -190,7 +231,9 @@ export function createMockHandle(): WorldHandle & {
     move: jest.fn(),
     face: jest.fn(),
     selectTarget: jest.fn(),
-    halt: jest.fn(),
+    halt: jest.fn(() => {
+      cycle.stop("halt");
+    }),
     onControlEvent(cb) {
       controlEventCb = cb;
     },
@@ -264,6 +307,16 @@ export function createMockHandle(): WorldHandle & {
     },
     triggerRewardsEvent(event) {
       rewardsEventCb?.(event);
+    },
+    startCycle: jest.fn((guids: bigint[], instruction: string, maxStarts?: number) =>
+      cycle.start({ guids, instruction, maxStarts }),
+    ),
+    stopCycle: jest.fn(() => {
+      cycle.stop("manual_override");
+    }),
+    getCycleState: jest.fn(() => cycle.snapshot()),
+    onCycleEvent(cb) {
+      cycle.onEvent(cb);
     },
     triggerCombatEvent(event) {
       combatEventCb?.(event);

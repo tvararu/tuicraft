@@ -125,6 +125,9 @@ function makeMockClient(): {
         takeLootMoney: jest.fn(),
         releaseLoot: jest.fn(),
         onRewardsEvent: jest.fn(),
+        startCycle: jest.fn(),
+        stopCycle: jest.fn(),
+        onCycleEvent: jest.fn(),
       }),
     ),
     mockHandleClose,
@@ -329,5 +332,27 @@ describe("startDaemon", () => {
 
     closedResolve();
     await promise;
+  });
+});
+
+describe("cycle wiring", () => {
+  test("startCycle enters fighting phase, halt stops the cycle with cause halt", () => {
+    const handle = createMockHandle();
+    void handle.startCycle([1n], "kill nearest");
+    expect(handle.getCycleState().phase).toBe("fighting");
+    handle.halt();
+    expect(handle.getCycleState().stopCause).toBe("halt");
+  });
+
+  test("shared and inline mocks expose the four cycle methods", async () => {
+    const sharedHandle = createMockHandle();
+    const client = makeMockClient();
+    const inlineHandle = await client.worldSession();
+    for (const handle of [sharedHandle, inlineHandle]) {
+      expect(typeof handle.startCycle).toBe("function");
+      expect(typeof handle.stopCycle).toBe("function");
+      expect(typeof handle.getCycleState).toBe("function");
+      expect(typeof handle.onCycleEvent).toBe("function");
+    }
   });
 });

@@ -101,6 +101,15 @@ import {
   type RewardsState,
   type RewardsEvent,
 } from "wow/rewards";
+import {
+  EncounterCycleRuntime,
+  type CycleState,
+  type CycleEvent,
+  type CycleTactics,
+  type CycleLoot,
+  type CycleRecovery,
+  type CycleControl,
+} from "wow/encounter-cycle";
 import type { InventoryState } from "wow/inventory";
 import {
   sendPacket,
@@ -345,6 +354,14 @@ export type WorldHandle = {
   takeLootMoney(): void;
   releaseLoot(): void;
   onRewardsEvent(cb: ((event: RewardsEvent) => void) | undefined): void;
+  startCycle(
+    guids: bigint[],
+    instruction: string,
+    maxStarts?: number,
+  ): Promise<void>;
+  stopCycle(): void;
+  getCycleState(): CycleState;
+  onCycleEvent(cb: ((event: CycleEvent) => void) | undefined): void;
 };
 
 export type WorldConn = {
@@ -659,6 +676,50 @@ export function worldSession(
     conn.quests = quests;
     const rewards = new RewardsRuntime(runtimeDeps);
     conn.rewards = rewards;
+    let cycleRecoveryListener: ((event: RecoveryEvent) => void) | undefined;
+    const cycleTactics: CycleTactics = {
+      start: (context, signal) =>
+        tactics.start(
+          { targetGuid: context.targetGuid, instruction: context.instruction },
+          signal,
+        ),
+      stop: (reason) => tactics.stop(reason),
+      lastOutcome: () => tactics.snapshot().lastOutcome,
+      selfDead: () => {
+        const life = recovery.snapshot().life;
+        return life === "dead" || life === "ghost";
+      },
+    };
+    const cycleLoot: CycleLoot = {
+      snapshot: () => rewards.snapshot(),
+      open: (guid) => rewards.open(guid),
+      take: (slot) => rewards.take(slot),
+      takeMoney: () => rewards.takeMoney(),
+      close: () => rewards.close(),
+      onEvent: (callback) => rewards.onEvent(callback),
+    };
+    const cycleRecovery: CycleRecovery = {
+      snapshot: () => recovery.snapshot(),
+      releaseSpirit: () => recovery.releaseSpirit(),
+      queryCorpse: () => recovery.queryCorpse(),
+      reclaimCorpse: () => recovery.reclaimCorpse(),
+      respondResurrection: (accept) => recovery.respondResurrection(accept),
+      onEvent: (callback) => {
+        cycleRecoveryListener = callback;
+      },
+    };
+    const cycleControl: CycleControl = {
+      pose: () => control.snapshot().pose,
+      face: (orientation) => control.face(orientation),
+      move: (direction, durationMs) => control.move(direction, durationMs),
+    };
+    const cycle = new EncounterCycleRuntime({
+      tactics: cycleTactics,
+      loot: cycleLoot,
+      recovery: cycleRecovery,
+      control: cycleControl,
+      now: runtimeDeps.now,
+    });
     control.onEvent((event) => {
       follow.observeControl(event);
       conn.onControlEvent?.(event);
@@ -673,6 +734,7 @@ export function worldSession(
         follow.stop(`self_${event.state.life}`);
       }
       conn.onRecoveryEvent?.(event);
+      cycleRecoveryListener?.(event);
     });
     conn.dispatch.on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
       recovery.handleCorpseQuery(r),
@@ -733,6 +795,8 @@ export function worldSession(
       control.onEvent(undefined);
       combat.onEvent(undefined);
       tactics.onEvent(undefined);
+      cycle.onEvent(undefined);
+      cycleRecoveryListener = undefined;
       if (sendStop) rawHalt();
       disposed = true;
       control.dispose();
@@ -742,6 +806,7 @@ export function worldSession(
       quests.dispose();
       rewards.dispose();
       combat.dispose();
+      cycle.dispose();
       navigation?.close();
     }
 
@@ -1294,6 +1359,7 @@ export function worldSession(
         halt() {
           follow.stop("halt");
           tactics.stop("halt");
+          cycle.stop("halt");
           rawHalt();
         },
         getCombatState() {
@@ -1464,6 +1530,20 @@ export function worldSession(
         },
         onRewardsEvent(cb) {
           rewards.onEvent(cb);
+        },
+        async startCycle(guids, instruction, maxStarts) {
+          override();
+          await cycle.start({ guids, instruction, maxStarts });
+        },
+        stopCycle() {
+          cycle.stop("manual_override");
+          tactics.stop("manual_override");
+        },
+        getCycleState() {
+          return cycle.snapshot();
+        },
+        onCycleEvent(cb) {
+          cycle.onEvent(cb);
         },
       };
       resolve(handle);
