@@ -1870,12 +1870,17 @@ describe("dispatchCommand", () => {
     expect(player.type).toBe("player");
     expect(player.level).toBe(70);
     expect(player.health).toBe(8000);
+    expect(player.distance).toBe(0);
+    expect(player.horizontalDistance).toBeNull();
+    expect(player.originSource).toBeNull();
+    expect(go.distance).toBeNull();
+    expect(go.bearingRadians).toBeNull();
     expect(go.type).toBe("gameobject");
     expect(go.gameObjectType).toBe(3);
     expect(corpse.type).toBe("object");
   });
 
-  test("nearby_json computes distance and orders nearest first", async () => {
+  test("nearby_json uses predicted self pose for distance, order, and range", async () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
       sampleState({
@@ -1897,7 +1902,7 @@ describe("dispatchCommand", () => {
       name: "PlayerOne",
       entry: 0,
       scale: 1,
-      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
+      position: { mapId: 530, x: 1000, y: 1000, z: 10, orientation: 0 },
       rawFields: new Map(),
       health: 100,
       maxHealth: 100,
@@ -1971,10 +1976,51 @@ describe("dispatchCommand", () => {
     expect(rows[0]!.guid).toBe("0x1");
     expect(rows[0]!.self).toBe(true);
     expect(rows[0]!.distance).toBe(0);
+    expect(rows[0]!.x).toBe(10);
+    expect(rows[0]!.y).toBe(10);
+    expect(rows[0]!.bearingRadians).toBeNull();
+    expect(rows[0]!.turnRadians).toBeNull();
     expect(rows[1]!.guid).toBe("0x2");
     expect(rows[1]!.distance).toBe(5);
+    expect(rows[1]!.horizontalDistance).toBe(5);
+    expect(rows[1]!.bearingRadians).toBeCloseTo(0.927295218, 8);
+    expect(rows[1]!.turnRadians).toBeCloseTo(0.927295218, 8);
+    expect(rows[1]!.originSource).toBe("predicted");
+    expect(rows[1]!.originUpdatedAt).toBe(1000);
     expect(rows[2]!.guid).toBe("0x3");
     expect(rows[2]!.distance).toBe(10);
+  });
+
+  test("nearby excludes a target beyond 100 yards before rounding", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(sampleState());
+    const target: BaseEntity = {
+      guid: 0xfn,
+      objectType: ObjectType.CORPSE,
+      entry: 0,
+      scale: 1,
+      position: {
+        mapId: 530,
+        x: 8809.464,
+        y: -6671.76,
+        z: 70.34,
+        orientation: 0,
+      },
+      rawFields: new Map(),
+      name: undefined,
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      target,
+    ]);
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "nearby_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe("\n");
   });
 
   test("nearby_json with all returns distant and off-map entities", async () => {
@@ -2070,6 +2116,9 @@ describe("dispatchCommand", () => {
     expect(rows[2]!.distance).toBe(200);
     expect(rows[3]!.guid).toBe("0x5");
     expect(rows[3]!.distance).toBeNull();
+    expect(rows[3]!.horizontalDistance).toBeNull();
+    expect(rows[3]!.bearingRadians).toBeNull();
+    expect(rows[3]!.turnRadians).toBeNull();
   });
 
   test("nearby plain text filters by range and supports all", async () => {
@@ -2094,7 +2143,7 @@ describe("dispatchCommand", () => {
       name: "PlayerOne",
       entry: 0,
       scale: 1,
-      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
+      position: { mapId: 530, x: 1000, y: 1000, z: 10, orientation: 0 },
       rawFields: new Map(),
       health: 100,
       maxHealth: 100,
@@ -2146,7 +2195,14 @@ describe("dispatchCommand", () => {
     const lines1 = socket1.written().trim().split("\n");
     expect(lines1).toHaveLength(2);
     expect(lines1[0]).toContain("PlayerOne");
+    expect(lines1[0]).toContain("at 10.00, 10.00, 10.00");
     expect(lines1[1]).toContain("NearUnit");
+    expect(lines1[1]).toContain("0x2");
+    expect(lines1[1]).toContain("5.00 yd");
+    expect(lines1[1]).toContain("xy=5.00 yd");
+    expect(lines1[1]).toContain("face=0.9273");
+    expect(lines1[1]).toContain("turn=0.9273");
+    expect(lines1[1]).toContain("predicted");
 
     const socket2 = createMockSocket();
     await dispatchCommand(
@@ -2766,6 +2822,50 @@ describe("dispatchCommand", () => {
     const parsed = JSON.parse(socket.written().trim());
     expect(parsed.moving).toBe(false);
     expect(parsed.blockedReason).toBe("obstructed");
+    expect(parsed.nextStep).toContain("different route");
+  });
+
+  test("control recommends a new heading after unresolved height", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getControlState.mockReturnValue(
+      sampleState({ moving: false, blockedReason: "height_unresolved" }),
+    );
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "control_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(JSON.parse(socket.written().trim()).nextStep).toContain(
+      "different short heading",
+    );
+  });
+
+  test("navigation refuses an ambiguous column without guessing Z", async () => {
+    const handle = attachControl(createMockHandle());
+    handle.getNavigationState.mockReturnValue({
+      active: false,
+      destination: { x: 8713.8, y: -6625.3, z: 70 },
+      remaining: undefined,
+      owner: "none",
+      blockedReason: "ambiguous ground column",
+      refusal: "pick_destination",
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "navigation_json" },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    const state = JSON.parse(socket.written().trim());
+    expect(state.blockedReason).toBe("ambiguous ground column");
+    expect(state.refusal).toBe("pick_destination");
+    expect(state.nextStep).toContain("one ground height");
+    expect(state.nextStep).toContain("Do not guess Z");
   });
 
   test("control text distinguishes predicted from server pose", async () => {
@@ -2780,8 +2880,10 @@ describe("dispatchCommand", () => {
       jest.fn(),
     );
     const output = socket.written();
-    expect(output).toContain("predicted");
-    expect(output).toContain("server");
+    expect(output).toContain("current pose predicted");
+    expect(output).toContain("last server pose server");
+    expect(output).toContain("updatedAt=1000");
+    expect(output).toContain("updatedAt=900");
     expect(output).toContain("0xabcde");
     expect(output).not.toContain("authoritative");
   });

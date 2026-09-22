@@ -33,9 +33,13 @@ switching
 🤖 **CLI & Daemon** - Background daemon, pipe mode, and JSONL output for
 scripting
 
-**Direct control** - Bounded walk, face, target, and halt through the CLI.
-Control state separates predicted movement from last server pose and requested
-selection from observed target. Combat, routing, and cycle commands also exist.
+**Direct control and spatial observation** - Bounded walk, face, target, and
+halt through the CLI. `control` separates the current pose (server-observed
+or predicted) from the last server observation, and requested selection from
+the observed target. Relogin confirms ordinary movement.
+`nearby` reports 3D/XY distance and facing from the current pose.
+Ground refusals give conservative next steps, not automatic detours.
+Combat, routing, and cycle commands also exist.
 
 📝 **Session Logging** - Persistent session log with `tuicraft logs` playback
 
@@ -107,8 +111,8 @@ tuicraft send -g "lfm"     # guild chat
 tuicraft who               # who query
 tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
-tuicraft control [--json]  # predicted pose; observed vs requested target
-tuicraft nearby [--all] [--json] # nearby entities, nearest first (within 100yd, or --all)
+tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
+tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin
 tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
 tuicraft face 1.57         # facing in radians
 tuicraft target 0xabc      # request selection (0 clears); uint64 hex or decimal
@@ -120,6 +124,7 @@ tuicraft fight 0xabc       # Jev tactics; optional --framing none|minimal|mechan
 tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycling --json        # phase, per-target cause, loot requests, stop cause
 tuicraft goto 1 2 3        # ground route
+tuicraft navigation --json # route state, refusal and conservative next step
 tuicraft follow 0xabc 3    # bounded follow of an observed unit
 tuicraft following --json # follow state and terminal reason
 tuicraft recovery --json  # observed life, corpse, delay and pending intent

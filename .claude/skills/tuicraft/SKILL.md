@@ -98,16 +98,30 @@ Rules:
 
 | Field | Meaning |
 | ----- | ------- |
-| `pose` | Current pose used for control. Read `pose.source`. |
-| `pose.source` | `predicted` is a local estimate. `server` is a server observation. Predicted is not server confirmation. |
-| `serverPose` | Last pose the server reported. Unchanged during your own walk until a server correction or a new login. |
+| `pose` | Current control estimate. Read `source` and `updatedAt`; `predicted` is local, not server-confirmed. |
+| `pose.source` | `server` means server-observed; `predicted` means locally estimated. |
+| `serverPose` | Last server observation and its `updatedAt`. It stays unchanged during ordinary self movement until correction or relogin. |
 | `target` | Last server-observed self target GUID (`0x…`); `0x0` is an observed clear, null means not observed yet. |
 | `requestedTarget` | Last GUID this client sent with `target`; `0x0` is a clear request, null means none sent. It can differ from `target`. |
 | `moving` | Whether a timed walk is active. |
 | `direction` | `forward` / `backward` / `left` / `right`, or null. |
 | `owner` | `manual` for direct movement. `follow` or `jev` while that runtime owns control, including stationary waits. `none` when unowned. |
+| `nextStep` | Conservative guidance after a known ground refusal, or `null`. Keep `blockedReason` as the actual refusal. |
 
 Self movement is not echoed by the server. After a walk, `pose` is predicted. Relog (`stop`, then connect again) and read `control` to see the server-accepted position.
+
+Use `nearby --json` for relative geometry. Each JSONL row has 3D `distance`
+and XY `horizontalDistance` in yards, `bearingRadians` for `face`, and
+`turnRadians` from current facing. Angles are `null` when direction is
+unknown or XY displacement is zero. For non-self rows, off-map or
+missing positions give `null` distances and angles. The self row uses
+the control pose when available, or the last self-entity position.
+Its 3D distance is zero even if neither position is known. Its XY
+distance is `null` only if neither position is known. `originSource`
+identifies `predicted`, `server`, or fallback `self_entity`;
+`originUpdatedAt` is `null` for the fallback.
+Other entities use last observed positions. The result does
+not verify a route. Move in bounded legs and read a new observation.
 
 IPC verbs on the daemon socket:
 
@@ -160,6 +174,7 @@ Rules:
 - `goto` takes three finite coordinates. It is not a named-place planner.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
 - `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded.
+- `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column`, choose a destination with one ground height. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
 
 IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
@@ -206,7 +221,7 @@ Use this four-step corpse run. Inspect state between requests. An `OK` reply rec
    - Check `reclaim.pose.mapId` against `corpse.corpseMapId`. Stop on a map mismatch or an unknown pose.
    - If out of range, use short `face` and `move forward` legs toward the queried position. Recompute the heading from the current pose after each leg. Read `recovery --json` again. Stop if movement makes no progress or ground is unsafe. Do not use `goto` from a ghost; the ground planner has refused ghost poses.
 4. Before reclaim, require observed ghost and a found corpse from this epoch. Require matching displayed, actual, and pose maps. Require `reclaim.distance <= 39` yards in 3D. A known positive `remainingMs` blocks reclaim. Missing `remainingMs` means unknown timing, not zero. When other guards pass, `reclaim.canRequest=true` with `readiness=unverified` permits one explicit request. This does not prove readiness. A `predicted` pose is not server confirmation. Its source alone does not block the request.
-   - Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim. Its distance may use a stale self position after walking. Compare killer coordinates with the current `reclaim.pose`. If the killer is near, choose a clear escape heading. If no clear heading is known, report the risk rather than repeat a death loop.
+   - Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim. Its distances use the current control pose when available, but creature positions are last observations. Compare killer coordinates with the current `reclaim.pose`. If the killer is near, choose a clear escape heading. If no clear heading is known, report the risk rather than repeat a death loop.
    - Issue `reclaim-corpse` once, without a GUID. If the killer is near, issue `face` and a short `move forward` away immediately after `OK`. Do not pause to cast or inspect state first. Then inspect `recovery --json` for observed `life=alive`. If life is not observed, report the unanswered outcome. Do not retry reclaim automatically.
 
 A current unanswered resurrection offer is a separate choice. Answer `resurrect accept|decline` once only for that offer. A known future offer delay blocks accept, not decline. Confirm observed life after an accept request.

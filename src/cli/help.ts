@@ -14,13 +14,13 @@ USAGE
   tuicraft tail               Continuous event stream
   tuicraft start              Start background daemon and connect
   tuicraft status             Show daemon status
-  tuicraft control [--json]  Show control state
+  tuicraft control [--json]  Current pose estimate, last server pose, refusal guidance
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
   tuicraft face <radians>    Set facing in radians
   tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
   tuicraft halt              Cancel motion, cast, attack, tactics, follow, cycle
                             Drop older queued mutations on this socket; not sent requests
-  tuicraft nearby [--all] [--json]  List nearby entities (nearest first; --all disables distance filter)
+  tuicraft nearby [--all] [--json]  Nearby 3D/XY distance and facing from current pose
   tuicraft combat [--json]   Combat state
   tuicraft spells [--json]   Learned spellbook
                             After reconnect, run once if all learned spells appear in unknownLearned
@@ -34,7 +34,7 @@ USAGE
   tuicraft cycle <guid...> [--instruction ...] [--max N]  Explicit nearby GUID queue; no auto-acquire
   tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
   tuicraft goto <x> <y> <z>  Walk a ground route
-  tuicraft navigation [--json]  Navigation state
+  tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft follow <guid> [distance]  Bounded ground follow (1-20 yards, default 3)
                             Map 530; maximum 30s; OK is intent, not arrival
   tuicraft following [--json]  Follow state, provenance and stop reason

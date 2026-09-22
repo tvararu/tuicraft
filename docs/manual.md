@@ -88,26 +88,18 @@ If the daemon fails to connect (missing configuration, invalid credentials, unre
 :: Graceful daemon shutdown. Disconnects the session.
 
 `tuicraft control` [`--json`]
-:: Print control state. With `--json`, emits a single JSON object (`pose`, `serverPose`, `target`, `requestedTarget`, `moving`, `direction`, `owner`). `pose.source` is `predicted` or `server`. `serverPose`
-is the last server-observed pose. `target` is the last server-observed self
-target; `requestedTarget` is the last GUID this client sent.
-Predicted pose is not server confirmation. Relog to read the pose the server accepted.
-For either target field, `0x0` means a clear; `null` means no observation or
-request yet. A sent selection is not server confirmation.
-Matching target values alone do not acknowledge a new request: the observation
-may predate the request.
+:: Print control state. JSON includes `pose`, `serverPose`, `target`, `requestedTarget`, motion, and `blockedReason`. `pose` is the current control estimate. Its `source` is `predicted` after local movement or `server` after a server observation.
+`serverPose` is the last server-observed pose, not the current position after ordinary movement. Each pose has `updatedAt`, the time that pose was last updated; a recent prediction is not server confirmation. Text labels these poses as current and last server. `nextStep` is conservative guidance when a known ground refusal occurs, or `null`.
+`target` is the last server-observed self target; `requestedTarget` is the last GUID this client sent. For either field, `0x0` means a clear and `null` means no observation or request yet. A sent selection is not server confirmation. Matching values alone do not acknowledge a new request: the observation may predate it.
+Ordinary self movement is not echoed. A server correction can update the observed pose; relog to confirm the position the server accepted after a walk.
 
 `tuicraft nearby` [`--all`] [`--json`]
-:: List nearby entities ordered nearest first. By default, entities beyond 100
-yards or on a different map are filtered when player position is known; pass `--all`
-to list all tracked entities, including transports the server sends map-wide.
-With `--json`, emits JSONL (one JSON object per nearby entity line, or empty).
-GUIDs are hexadecimal (`0x…`). JSON includes 3D
-`distance` in yards (`0` for self, `null` if off-map or unestablished) and `self`
-true only for the observed self GUID. `mapId` is the map this client was on when
-the entity was parsed, not a property the server states per entity.
-For `fight` and `cycle`, choose current non-self creature GUIDs from this JSONL
-output. A stored GUID or an old spawn position does not establish a current target.
+:: List nearby entities ordered by raw 3D distance from the current `control.pose`, before display rounding. When no control pose exists, the last self-entity position is a fallback. By default, entities beyond 100 yards or on another map are filtered when self position is known; `--all` lists all tracked entities, including map-wide transports.
+Text lists each GUID, 3D and XY yards, absolute face angle, signed turn angle, and origin source. The self row uses the current control pose when available, not its older entity position.
+With `--json`, output is JSONL, one object per entity or none. `distance` is 3D yards and `horizontalDistance` is XY yards, both rounded to two decimals for output. Self has 3D distance zero by identity, and XY distance zero only when self position is known; its angles are `null`.
+`bearingRadians` is the absolute angle from +X toward +Y in [0, 2π); use it with `face`. `turnRadians` is the shortest signed rotation from current facing in [-π, π); positive rotates from +X toward +Y. Both angles are `null` when direction is undefined, including zero XY displacement.
+Non-self distances and angles are `null` if either position is unknown or off-map. `originSource` is `predicted`, `server`, `self_entity`, or `null`. `originUpdatedAt` is the control pose update time, or `null` for fallback. Other entity positions are last observations, not guaranteed current. `mapId` is the map at entity parsing, not a server field per entity. Straight-line distance and bearing do not prove a safe or reachable route.
+For `fight` and `cycle`, choose current non-self creature GUIDs from this JSONL output. A stored GUID or an old spawn position does not establish a current target.
 
 `tuicraft move` _direction_ [*ms*]
 :: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.
@@ -216,9 +208,16 @@ inventory slot or count changes.
 
 `tuicraft goto` _x_ _y_ _z_
 :: Request a ground route. Missing navigation data fails with `ERR`.
+An entity's observed Z need not be a unique ground height. Do not pass
+`nearby` coordinates to `goto` without ground validation.
 
 `tuicraft navigation` [`--json`]
-:: Print navigation state.
+:: Print navigation state, including raw `blockedReason`, `refusal` and
+`nextStep`. For `obstructed`, choose another route and inspect the ground.
+For `height_unresolved`, choose a different short heading or a known
+grounded waypoint; do not repeat the failed heading. For `ambiguous ground
+column`, choose a destination with one ground height; do not guess Z.
+`nextStep` is advice, not a verified detour or an automatic retry.
 
 `tuicraft follow` _guid_ [_distance_]
 :: Request bounded following of an observed unit on Expansion01/map 530.
@@ -276,7 +275,7 @@ Guided corpse run:
 1. Inspect `recovery --json`. Use observed `life` and `epoch`, not health alone. Stop if life is unknown.
 2. If dead, issue `release-spirit` once and wait for observed ghost state. If already ghost, skip release.
 3. Check `query` before requesting the corpse. Wait if a query is unanswered or stale. Use a found corpse from this epoch without another query. Stop if the reply says absent. Otherwise issue `query-corpse` once and require a found corpse from this epoch. Check displayed `corpse.mapId` against actual `corpse.corpseMapId` and `reclaim.pose.mapId`. If the maps match but the corpse is distant, use short `face` and `move forward` legs. Recheck `recovery --json` after each leg. Do not use `goto` from a ghost; the ground planner has refused ghost poses. Stop if motion makes no progress.
-4. Require `reclaim.canRequest=true` and a 3D distance of at most 39 yards. Wait out a known positive `remainingMs`. Unknown timing permits one explicit request but does not prove readiness. A predicted pose is not server confirmation. It does not by itself block reclaim. Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim near a killer. Its distance may use a stale self position after walking. Compare killer coordinates with the current `reclaim.pose` and choose a clear escape heading. If no clear heading is known, report the risk. After `reclaim-corpse` returns `OK`, flee with `face` and a short `move forward` before inspecting life. Require observed `life=alive`. Never treat `OK` as proof or retry an unanswered request.
+4. Require `reclaim.canRequest=true` and a 3D distance of at most 39 yards. Wait out a known positive `remainingMs`. Unknown timing permits one explicit request but does not prove readiness. A predicted pose is not server confirmation. It does not by itself block reclaim. Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim near a killer. Its distances use the current control pose when available, but creature positions are last observations. Compare killer coordinates with the current `reclaim.pose` and choose a clear escape heading. If no clear heading is known, report the risk. After `reclaim-corpse` returns `OK`, flee with `face` and a short `move forward` before inspecting life. Require observed `life=alive`. Never treat `OK` as proof or retry an unanswered request.
 
 After reconnect, `combat --json` may list every learned spell in `unknownLearned` while the catalog is cold. Run `spells` once. Inspect `combat --json` again before diagnosing a broken spell kit.
 

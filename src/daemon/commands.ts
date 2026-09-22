@@ -690,20 +690,14 @@ export async function dispatchCommand(
       return false;
     case "nearby": {
       const items = prepareNearbyEntities(handle, cmd.all);
-      writeLines(
-        socket,
-        items.map((p) => formatNearbyLine(p.entity)),
-      );
+      writeLines(socket, items.map(formatNearbyLine));
       return false;
     }
     case "nearby_json": {
-      const selfGuid = handle.getControlState().selfGuid;
       const items = prepareNearbyEntities(handle, cmd.all);
       writeLines(
         socket,
-        items.map((p) =>
-          JSON.stringify(formatNearbyObj(p.entity, selfGuid, p.distance)),
-        ),
+        items.map((p) => JSON.stringify(formatNearbyObj(p))),
       );
       return false;
     }
@@ -876,9 +870,9 @@ export async function dispatchCommand(
         handle.goTo(cmd.x, cmd.y, cmd.z);
       });
     case "navigation":
-      return writeInspect(socket, () => handle.getNavigationState(), false);
+      return writeInspect(socket, () => navigationObservation(handle), false);
     case "navigation_json":
-      return writeInspect(socket, () => handle.getNavigationState(), true);
+      return writeInspect(socket, () => navigationObservation(handle), true);
     case "follow":
       return runControlAction(socket, () => {
         handle.follow(cmd.guid, cmd.distance);
@@ -995,7 +989,19 @@ function objectTypeName(type: ObjectType): string {
   }
 }
 
-function formatNearbyLine(entity: Entity): string {
+function formatNearbyLine(p: PreparedNearbyEntity): string {
+  const entity = p.entity;
+  const guid = `0x${entity.guid.toString(16)}`;
+  const distance =
+    p.distance === null ? "distance=unknown" : `${p.distance.toFixed(2)} yd`;
+  const xy =
+    p.horizontalDistance === null
+      ? "xy=unknown"
+      : `xy=${p.horizontalDistance.toFixed(2)} yd`;
+  const face =
+    p.bearingRadians === null ? "unknown" : p.bearingRadians.toFixed(4);
+  const turn = p.turnRadians === null ? "unknown" : p.turnRadians.toFixed(4);
+  const spatial = ` [${distance} ${xy} face=${face} turn=${turn} origin=${p.originSource ?? "unknown"}]`;
   if (
     entity.objectType === ObjectType.UNIT ||
     entity.objectType === ObjectType.PLAYER
@@ -1005,19 +1011,19 @@ function formatNearbyLine(entity: Entity): string {
     const kind = objectTypeName(entity.objectType);
     const level = unit.level > 0 ? `, level ${unit.level}` : "";
     const hp = `HP ${unit.health}/${unit.maxHealth}`;
-    const pos = entity.position
-      ? ` at ${entity.position.x.toFixed(2)}, ${entity.position.y.toFixed(2)}, ${entity.position.z.toFixed(2)}`
+    const pos = p.position
+      ? ` at ${p.position.x.toFixed(2)}, ${p.position.y.toFixed(2)}, ${p.position.z.toFixed(2)}`
       : "";
-    return `${name} (${kind}${level}) ${hp}${pos}`;
+    return `${name} (${kind}${level}) ${hp}${pos} ${guid}${spatial}`;
   }
   if (entity.objectType === ObjectType.GAMEOBJECT) {
     const name = entity.name ?? "Unknown";
-    const pos = entity.position
-      ? ` at ${entity.position.x.toFixed(2)}, ${entity.position.y.toFixed(2)}, ${entity.position.z.toFixed(2)}`
+    const pos = p.position
+      ? ` at ${p.position.x.toFixed(2)}, ${p.position.y.toFixed(2)}, ${p.position.z.toFixed(2)}`
       : "";
-    return `${name} (GameObject)${pos}`;
+    return `${name} (GameObject)${pos} ${guid}${spatial}`;
   }
-  return `Entity 0x${entity.guid.toString(16)} (${objectTypeName(entity.objectType)})`;
+  return `Entity ${guid} (${objectTypeName(entity.objectType)})${spatial}`;
 }
 
 function objectTypeString(type: ObjectType): string {
@@ -1037,7 +1043,13 @@ const NEARBY_DEFAULT_RANGE = 100;
 
 type PreparedNearbyEntity = {
   entity: Entity;
+  position: Entity["position"];
   distance: number | null;
+  horizontalDistance: number | null;
+  bearingRadians: number | null;
+  turnRadians: number | null;
+  originSource: "predicted" | "server" | "self_entity" | null;
+  originUpdatedAt: number | null;
   self: boolean;
 };
 
@@ -1049,13 +1061,20 @@ function prepareNearbyEntities(
   const selfGuid = controlState.selfGuid;
   const entities = handle.getNearbyEntities();
   const selfEntity = entities.find((e) => e.guid === selfGuid);
-  const selfPos = selfEntity?.position ?? controlState.pose;
+  const selfPose = controlState.pose;
+  const selfPos = selfPose ?? selfEntity?.position;
+  const originSource = selfPose?.source ?? (selfPos ? "self_entity" : null);
+  const originUpdatedAt = selfPose?.updatedAt ?? null;
 
   const prepared: PreparedNearbyEntity[] = entities.map((entity) => {
     const isSelf = entity.guid === selfGuid;
     let distance: number | null = null;
+    let horizontalDistance: number | null = null;
+    let bearingRadians: number | null = null;
+    let turnRadians: number | null = null;
     if (isSelf) {
       distance = 0;
+      if (selfPos) horizontalDistance = 0;
     } else if (
       selfPos &&
       entity.position &&
@@ -1064,9 +1083,28 @@ function prepareNearbyEntities(
       const dx = entity.position.x - selfPos.x;
       const dy = entity.position.y - selfPos.y;
       const dz = entity.position.z - selfPos.z;
-      distance = Math.round(Math.hypot(dx, dy, dz) * 100) / 100;
+      horizontalDistance = Math.hypot(dx, dy);
+      distance = Math.hypot(horizontalDistance, dz);
+      if (horizontalDistance > 0) {
+        const angle = Math.atan2(dy, dx);
+        bearingRadians = angle < 0 ? angle + Math.PI * 2 : angle;
+        const turn = bearingRadians - selfPos.orientation;
+        turnRadians =
+          ((((turn + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) -
+          Math.PI;
+      }
     }
-    return { entity, distance, self: isSelf };
+    return {
+      position: isSelf ? selfPos : entity.position,
+      entity,
+      distance,
+      horizontalDistance,
+      bearingRadians,
+      turnRadians,
+      originSource,
+      originUpdatedAt,
+      self: isSelf,
+    };
   });
 
   prepared.sort((a, b) => {
@@ -1102,18 +1140,33 @@ function prepareNearbyEntities(
   return prepared;
 }
 
-function formatNearbyObj(
-  entity: Entity,
-  selfGuid: bigint,
-  distance: number | null,
-): Record<string, unknown> {
+function formatNearbyObj(p: PreparedNearbyEntity): Record<string, unknown> {
+  const {
+    entity,
+    position,
+    self,
+    distance,
+    horizontalDistance,
+    bearingRadians,
+    turnRadians,
+    originSource,
+    originUpdatedAt,
+  } = p;
   const obj: Record<string, unknown> = {
     guid: `0x${entity.guid.toString(16)}`,
     type: objectTypeString(entity.objectType),
     name: entity.name,
     entry: entity.entry,
-    self: entity.guid === selfGuid,
-    distance,
+    self,
+    distance: distance === null ? null : Math.round(distance * 100) / 100,
+    horizontalDistance:
+      horizontalDistance === null
+        ? null
+        : Math.round(horizontalDistance * 100) / 100,
+    bearingRadians,
+    turnRadians,
+    originSource,
+    originUpdatedAt,
   };
   if (
     entity.objectType === ObjectType.UNIT ||
@@ -1131,12 +1184,12 @@ function formatNearbyObj(
   if (entity.objectType === ObjectType.GAMEOBJECT) {
     obj["gameObjectType"] = (entity as GameObjectEntity).gameObjectType;
   }
-  if (entity.position) {
-    obj["x"] = entity.position.x;
-    obj["y"] = entity.position.y;
-    obj["z"] = entity.position.z;
-    obj["mapId"] = entity.position.mapId;
-    obj["orientation"] = entity.position.orientation;
+  if (position) {
+    obj["x"] = position.x;
+    obj["y"] = position.y;
+    obj["z"] = position.z;
+    obj["mapId"] = position.mapId;
+    obj["orientation"] = position.orientation;
   }
   return obj;
 }
@@ -1931,6 +1984,21 @@ function formatPoseObj(pose: ControlPose): Record<string, unknown> {
   };
 }
 
+function nextStepFor(reason: string | undefined): string | null {
+  if (reason === "obstructed")
+    return "Choose a different route. Inspect the ground before moving.";
+  if (reason === "height_unresolved")
+    return "Choose a different short heading or a known grounded waypoint. Do not retry this heading.";
+  if (reason?.includes("ambiguous ground column"))
+    return "Choose a destination with one ground height. Do not guess Z.";
+  return null;
+}
+
+function navigationObservation(handle: WorldHandle) {
+  const state = handle.getNavigationState();
+  return { ...state, nextStep: nextStepFor(state.blockedReason) };
+}
+
 function formatControlStateObj(state: ControlState): Record<string, unknown> {
   return {
     selfGuid: `0x${state.selfGuid.toString(16)}`,
@@ -1946,6 +2014,7 @@ function formatControlStateObj(state: ControlState): Record<string, unknown> {
     direction: state.direction ?? null,
     movementAllowed: state.movementAllowed,
     blockedReason: state.blockedReason ?? null,
+    nextStep: nextStepFor(state.blockedReason),
     speed: state.speed,
     owner: state.owner,
   };
@@ -1954,13 +2023,14 @@ function formatControlStateObj(state: ControlState): Record<string, unknown> {
 function formatPoseLine(label: string, pose: ControlPose | undefined): string {
   if (!pose) return `${label} unknown`;
   const pos = `${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
-  return `${label} ${pose.source} ${pos} map=${pose.mapId} facing=${pose.orientation}`;
+  return `${label} ${pose.source} ${pos} map=${pose.mapId} facing=${pose.orientation} updatedAt=${pose.updatedAt}`;
 }
 
 function formatControlState(state: ControlState): string {
   const moving = state.moving ? `moving ${state.direction ?? "yes"}` : "idle";
   const allowed = state.movementAllowed ? "allowed" : "rooted";
   const blocked = state.blockedReason ? ` blocked=${state.blockedReason}` : "";
+  const nextStep = nextStepFor(state.blockedReason);
   const observed =
     state.target === undefined ? "none" : `0x${state.target.toString(16)}`;
   const requested =
@@ -1968,7 +2038,7 @@ function formatControlState(state: ControlState): string {
       ? "none"
       : `0x${state.requestedTarget.toString(16)}`;
   const header = `self 0x${state.selfGuid.toString(16)} owner=${state.owner} ${moving} speed=${state.speed} ${allowed}${blocked}`;
-  return `${header}\n${formatPoseLine("pose", state.pose)}\n${formatPoseLine("serverPose", state.serverPose)}\ntarget observed=${observed} requested=${requested}`;
+  return `${header}\n${formatPoseLine("current pose", state.pose)}\n${formatPoseLine("last server pose", state.serverPose)}\ntarget observed=${observed} requested=${requested}${nextStep ? `\nnext step: ${nextStep}` : ""}`;
 }
 
 function formatControlEvent(event: ControlEvent): string {
