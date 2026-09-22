@@ -9,9 +9,9 @@ export type CliAction =
   | { mode: "version" }
   | { mode: "setup"; args: string[] }
   | { mode: "help" }
-  | { mode: "stop" }
-  | { mode: "status" }
-  | { mode: "start" }
+  | { mode: "stop"; json?: true }
+  | { mode: "status"; json?: true }
+  | { mode: "start"; json?: true }
   | { mode: "logs" }
   | { mode: "read"; wait: number | undefined; json: boolean }
   | { mode: "tail"; json: boolean }
@@ -29,24 +29,30 @@ export type CliAction =
     }
   | { mode: "who"; filter: string | undefined; json: boolean }
   | { mode: "control"; json: boolean }
-  | { mode: "move"; direction: MovementDirection; durationMs: number }
-  | { mode: "face"; orientation: number }
-  | { mode: "face_guid"; guid: bigint }
-  | { mode: "walk_toward"; yards: number; target: WalkTarget }
-  | { mode: "target"; guid: bigint }
-  | { mode: "halt" }
+  | {
+      mode: "move";
+      direction: MovementDirection;
+      durationMs: number;
+      json?: true;
+    }
+  | { mode: "face"; orientation: number; json?: true }
+  | { mode: "face_guid"; guid: bigint; json?: true }
+  | { mode: "walk_toward"; yards: number; target: WalkTarget; json?: true }
+  | { mode: "target"; guid: bigint; json?: true }
+  | { mode: "halt"; json?: true }
   | { mode: "nearby"; json: boolean; all?: boolean }
   | { mode: "combat"; json: boolean }
   | { mode: "spells"; json: boolean }
-  | { mode: "cast"; spellId: number; guid: bigint }
-  | { mode: "attack"; guid: bigint }
-  | { mode: "cancel_cast" }
-  | { mode: "stop_attack" }
+  | { mode: "cast"; spellId: number; guid: bigint; json?: true }
+  | { mode: "attack"; guid: bigint; json?: true }
+  | { mode: "cancel_cast"; json?: true }
+  | { mode: "stop_attack"; json?: true }
   | {
       mode: "fight";
       guid: bigint;
       instruction: string;
       framing?: FramingVariant;
+      json?: true;
     }
   | { mode: "tactics"; json: boolean }
   | {
@@ -54,38 +60,43 @@ export type CliAction =
       guids: bigint[];
       instruction: string;
       maxStarts: number;
+      json?: true;
     }
   | { mode: "cycling"; json: boolean }
-  | { mode: "goto"; x: number; y: number; z: number }
+  | { mode: "goto"; x: number; y: number; z: number; json?: true }
   | { mode: "navigation"; json: boolean }
-  | { mode: "follow"; guid: bigint; distance?: number }
+  | { mode: "follow"; guid: bigint; distance?: number; json?: true }
   | { mode: "following"; json: boolean }
   | { mode: "recovery"; json: boolean }
-  | { mode: "query_corpse" }
-  | { mode: "release_spirit" }
-  | { mode: "reclaim_corpse" }
-  | { mode: "resurrect"; accept: boolean }
+  | { mode: "query_corpse"; json?: true }
+  | { mode: "release_spirit"; json?: true }
+  | { mode: "reclaim_corpse"; json?: true }
+  | { mode: "resurrect"; accept: boolean; json?: true }
   | { mode: "quests"; json: boolean }
-  | { mode: "talk"; guid: bigint }
-  | { mode: "query_quest"; questId: number }
-  | { mode: "select_option"; optionId: number; code?: string }
-  | { mode: "select_quest"; questId: number }
-  | { mode: "accept_quest" }
-  | { mode: "complete_quest"; questId: number }
-  | { mode: "request_reward" }
-  | { mode: "choose_reward"; index: number }
-  | { mode: "abandon_quest"; slot: number }
-  | { mode: "cancel_interaction" }
+  | { mode: "talk"; guid: bigint; json?: true }
+  | { mode: "query_quest"; questId: number; json?: true }
+  | {
+      mode: "select_option";
+      optionId: number;
+      code?: string;
+      json?: true;
+    }
+  | { mode: "select_quest"; questId: number; json?: true }
+  | { mode: "accept_quest"; json?: true }
+  | { mode: "complete_quest"; questId: number; json?: true }
+  | { mode: "request_reward"; json?: true }
+  | { mode: "choose_reward"; index: number; json?: true }
+  | { mode: "abandon_quest"; slot: number; json?: true }
+  | { mode: "cancel_interaction"; json?: true }
   | { mode: "inventory"; json: boolean }
   | { mode: "loot"; json: boolean }
-  | { mode: "open_loot"; guid: bigint }
-  | { mode: "take_loot"; slot: number }
-  | { mode: "take_money" }
-  | { mode: "release_loot" }
+  | { mode: "open_loot"; guid: bigint; json?: true }
+  | { mode: "take_loot"; slot: number; json?: true }
+  | { mode: "take_money"; json?: true }
+  | { mode: "release_loot"; json?: true }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
-  "setup",
   "start",
   "stop",
   "status",
@@ -239,8 +250,6 @@ function parseSubcommand(args: string[]): CliAction | undefined {
   if (!cmd || !SUBCOMMANDS.has(cmd)) return undefined;
 
   switch (cmd) {
-    case "setup":
-      return { mode: "setup", args: args.slice(1) };
     case "start":
       return { mode: "start" };
     case "read":
@@ -444,14 +453,49 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
   return undefined;
 }
 
+const SETUP_VALUE_FLAGS: Record<string, true> = {
+  "--account": true,
+  "--password": true,
+  "--character": true,
+  "--host": true,
+  "--port": true,
+  "--language": true,
+  "--timeout_minutes": true,
+};
+
+function withJson(action: CliAction, json: boolean): CliAction {
+  if (!json) return action;
+  switch (action.mode) {
+    case "interactive":
+    case "daemon":
+    case "version":
+    case "setup":
+    case "help":
+    case "logs":
+    case "skill":
+      throw new Error(`--json is not supported for ${action.mode}`);
+    default:
+      return { ...action, json: true };
+  }
+}
+
 export function parseArgs(args: string[]): CliAction {
   if (args.length === 0) return { mode: "interactive" };
+  if (args[0] === "setup") {
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === "--json" && !SETUP_VALUE_FLAGS[args[i - 1]!])
+        throw new Error("--json is not supported for setup");
+    }
+    return { mode: "setup", args: args.slice(1) };
+  }
 
-  const sub = parseSubcommand(args);
-  if (sub) return sub;
+  const json = hasFlag(args, "--json");
+  const withoutJson = json ? args.filter((arg) => arg !== "--json") : args;
+  const sub = parseSubcommand(withoutJson);
+  if (sub) return withJson(sub, json);
 
-  const flag = parseFlagCommands(args);
-  if (flag) return flag;
+  const flag = parseFlagCommands(withoutJson);
+  if (flag) return withJson(flag, json);
 
   throw new Error(
     `Unknown command: ${args.join(" ")}\nRun tuicraft --help for usage.`,

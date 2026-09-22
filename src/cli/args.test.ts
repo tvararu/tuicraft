@@ -772,3 +772,171 @@ describe("loot arguments", () => {
       expect(() => parseArgs(args)).toThrow();
   });
 });
+
+describe("daemon JSON arguments", () => {
+  const actions = [
+    [["start"], { mode: "start" }],
+    [["status"], { mode: "status" }],
+    [["stop"], { mode: "stop" }],
+    [
+      ["move", "left", "250"],
+      { mode: "move", direction: "left", durationMs: 250 },
+    ],
+    [["face", "1.57"], { mode: "face", orientation: 1.57 }],
+    [["target", "0xa"], { mode: "target", guid: 10n }],
+    [["halt"], { mode: "halt" }],
+    [["cast", "585", "0xa"], { mode: "cast", spellId: 585, guid: 10n }],
+    [["attack", "0xa"], { mode: "attack", guid: 10n }],
+    [["cancel-cast"], { mode: "cancel_cast" }],
+    [["stop-attack"], { mode: "stop_attack" }],
+    [
+      ["fight", "--framing", "minimal", "0xa", "hold threat"],
+      {
+        mode: "fight",
+        guid: 10n,
+        instruction: "hold threat",
+        framing: "minimal",
+      },
+    ],
+    [
+      ["cycle", "0xa", "0xb", "--max", "3", "--instruction", "hold threat"],
+      {
+        mode: "cycle",
+        guids: [10n, 11n],
+        instruction: "hold threat",
+        maxStarts: 3,
+      },
+    ],
+    [["goto", "1.5", "2", "3"], { mode: "goto", x: 1.5, y: 2, z: 3 }],
+    [
+      ["follow", "0xa", "2.5"],
+      { mode: "follow", guid: 10n, distance: 2.5 },
+    ],
+    [["query-corpse"], { mode: "query_corpse" }],
+    [["release-spirit"], { mode: "release_spirit" }],
+    [["reclaim-corpse"], { mode: "reclaim_corpse" }],
+    [["resurrect", "accept"], { mode: "resurrect", accept: true }],
+    [["talk", "0xa"], { mode: "talk", guid: 10n }],
+    [["query-quest", "7"], { mode: "query_quest", questId: 7 }],
+    [
+      ["select-option", "0", "door"],
+      { mode: "select_option", optionId: 0, code: "door" },
+    ],
+    [["select-quest", "7"], { mode: "select_quest", questId: 7 }],
+    [["accept-quest"], { mode: "accept_quest" }],
+    [["complete-quest", "7"], { mode: "complete_quest", questId: 7 }],
+    [["request-reward"], { mode: "request_reward" }],
+    [["choose-reward", "0"], { mode: "choose_reward", index: 0 }],
+    [["abandon-quest", "24"], { mode: "abandon_quest", slot: 24 }],
+    [["cancel-interaction"], { mode: "cancel_interaction" }],
+    [["open-loot", "0xa"], { mode: "open_loot", guid: 10n }],
+    [["take-loot", "255"], { mode: "take_loot", slot: 255 }],
+    [["take-money"], { mode: "take_money" }],
+    [["release-loot"], { mode: "release_loot" }],
+  ] as const;
+
+  for (const [args, action] of actions) {
+    test(`${args[0]} keeps operands and adds JSON only when requested`, () => {
+      expect(parseArgs([...args])).toEqual(action);
+      expect(parseArgs([...args, "--json"])).toEqual({ ...action, json: true });
+    });
+  }
+
+  test("removes JSON from fight instructions and positions before parsing", () => {
+    expect(parseArgs(["fight", "--json", "0xa", "hold", "threat"])).toEqual({
+      mode: "fight",
+      guid: 10n,
+      instruction: "hold threat",
+      framing: "none",
+      json: true,
+    });
+    expect(parseArgs(["goto", "1", "--json", "2", "3"])).toEqual({
+      mode: "goto",
+      x: 1,
+      y: 2,
+      z: 3,
+      json: true,
+    });
+    expect(parseArgs(["follow", "0xa", "--json", "2.5"])).toEqual({
+      mode: "follow",
+      guid: 10n,
+      distance: 2.5,
+      json: true,
+    });
+    expect(parseArgs(["move", "forward", "--json"])).toEqual({
+      mode: "move",
+      direction: "forward",
+      durationMs: 1000,
+      json: true,
+    });
+  });
+
+  test("does not insert JSON into cycle instructions or chat aliases", () => {
+    expect(
+      parseArgs(["cycle", "0xa", "--instruction", "hold", "--json", "threat"]),
+    ).toEqual({
+      mode: "cycle",
+      guids: [10n],
+      instruction: "hold threat",
+      maxStarts: 10,
+      json: true,
+    });
+    expect(parseArgs(["-w", "--json", "Xiara", "follow me"])).toEqual({
+      mode: "whisper",
+      target: "Xiara",
+      message: "follow me",
+      json: true,
+      wait: undefined,
+    });
+  });
+
+  test("rejects explicit JSON on unsupported modes", () => {
+    for (const args of [
+      ["help", "--json"],
+      ["version", "--json"],
+      ["logs", "--json"],
+      ["skill", "--json"],
+      ["--help", "--json"],
+      ["--json", "-h"],
+      ["--version", "--json"],
+      ["--json", "-v"],
+      ["--daemon", "--json"],
+      ["setup", "--json"],
+      ["setup", "--password", "secret", "--json"],
+      ["--json"],
+    ]) {
+      expect(() => parseArgs(args)).toThrow();
+    }
+  });
+
+  test("keeps setup password values equal to --json", () => {
+    expect(parseArgs(["setup", "--password", "--json"])).toEqual({
+      mode: "setup",
+      args: ["--password", "--json"],
+    });
+    expect(
+      parseArgs([
+        "setup",
+        "--account",
+        "player",
+        "--password",
+        "--json",
+        "--character",
+        "Hero",
+      ]),
+    ).toEqual({
+      mode: "setup",
+      args: [
+        "--account",
+        "player",
+        "--password",
+        "--json",
+        "--character",
+        "Hero",
+      ],
+    });
+    expect(() =>
+      parseArgs(["setup", "--password", "--json", "--json"]),
+    ).toThrow();
+  });
+});
