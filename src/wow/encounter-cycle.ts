@@ -1,5 +1,11 @@
 import type { TacticsOutcome } from "wow/tactics";
 import type { RewardsEvent, RewardsState } from "wow/rewards";
+import type {
+  RecoveryEvent,
+  RecoveryReclaim,
+  RecoveryState,
+} from "wow/recovery";
+import type { ControlPose, MovementDirection } from "wow/control";
 
 export type CyclePhase =
   | "idle"
@@ -22,11 +28,12 @@ export type CycleState = {
   maxStarts: number;
   startsUsed: number;
   stopCause: string | undefined;
+  stopDetail: Record<string, unknown> | undefined;
   startedAt: number | undefined;
   lastLoot: CycleLootRecord | undefined;
 };
 export type CycleEvent = {
-  type: "started" | "target_done" | "loot_done" | "stopped";
+  type: "started" | "target_done" | "loot_done" | "recovery" | "stopped";
   state: CycleState;
   at: number;
 };
@@ -54,14 +61,34 @@ export type CycleLootRecord = {
   coinageBefore: number | undefined;
   coinageAfter: number | undefined;
 };
+export type CycleRecovery = {
+  snapshot(): RecoveryState;
+  releaseSpirit(): void;
+  queryCorpse(): void;
+  reclaimCorpse(): void;
+  respondResurrection(accept: boolean): void;
+  onEvent(callback: ((event: RecoveryEvent) => void) | undefined): void;
+};
+export type CycleControl = {
+  pose(): ControlPose | undefined;
+  face(orientation: number): void;
+  move(direction: MovementDirection, durationMs: number): void;
+};
 export type CycleDeps = {
   tactics: CycleTactics;
   loot: CycleLoot;
+  recovery: CycleRecovery;
+  control: CycleControl;
   now: () => number;
 };
 
 const DEFAULT_MAX_STARTS = 10;
 const LOOT_SETTLE_MS = 5000;
+const RECLAIM_MARGIN_MS = 2000;
+const LEG_LEASE_MS = 3000;
+const DETOUR_RAD = Math.PI / 4;
+const RECOVERY_WAIT_MS = 30000;
+const POSE_MOVED_EPS = 0.05;
 
 export class EncounterCycleRuntime {
   private readonly deps: CycleDeps;
@@ -77,6 +104,7 @@ export class EncounterCycleRuntime {
     maxStarts: DEFAULT_MAX_STARTS,
     startsUsed: 0,
     stopCause: undefined,
+    stopDetail: undefined,
     startedAt: undefined,
     lastLoot: undefined,
   };
@@ -116,6 +144,7 @@ export class EncounterCycleRuntime {
       maxStarts,
       startsUsed: 0,
       stopCause: undefined,
+      stopDetail: undefined,
       startedAt: this.deps.now(),
       lastLoot: undefined,
     };
@@ -123,7 +152,7 @@ export class EncounterCycleRuntime {
     await this.drive(generation);
   }
 
-  stop(reason: string): void {
+  stop(reason: string, detail?: Record<string, unknown>): void {
     if (!this.state.active) return;
     this.generation++;
     this.state = {
@@ -131,6 +160,7 @@ export class EncounterCycleRuntime {
       active: false,
       phase: "stopped",
       stopCause: reason,
+      stopDetail: detail,
     };
     this.emit("stopped");
   }
@@ -187,8 +217,211 @@ export class EncounterCycleRuntime {
     if (this.live(generation)) this.stop("queue_exhausted");
   }
 
-  protected async onDeath(_generation: number): Promise<void> {
-    throw new Error("cycle_no_recovery");
+  protected async onDeath(generation: number): Promise<void> {
+    const record = this.state.queue[this.state.currentIndex]!;
+    record.status = "skipped";
+    record.cause = "died";
+    this.state.phase = "recovering";
+    this.emit("recovery");
+    const recovered = await this.recover(generation);
+    if (!recovered || !this.live(generation)) return;
+    this.advance();
+    if (!this.live(generation)) return;
+    await this.drive(generation);
+  }
+
+  private async recover(generation: number): Promise<boolean> {
+    const recovery = this.deps.recovery;
+    const control = this.deps.control;
+    const pending: RecoveryEvent[] = [];
+    let wake: (() => void) | undefined;
+    recovery.onEvent((event) => {
+      pending.push(event);
+      wake?.();
+    });
+    const waitFor = (
+      predicate: (event: RecoveryEvent) => boolean,
+      timeoutMs: number,
+    ): Promise<RecoveryEvent | undefined> => {
+      const waiter = Promise.withResolvers<RecoveryEvent | undefined>();
+      const drain = (): boolean => {
+        const index = pending.findIndex(predicate);
+        if (index === -1) return false;
+        waiter.resolve(pending.splice(index, 1)[0]);
+        return true;
+      };
+      if (drain()) return waiter.promise;
+      const timer = setTimeout(() => {
+        wake = undefined;
+        waiter.resolve(undefined);
+      }, timeoutMs);
+      wake = () => {
+        if (drain()) {
+          clearTimeout(timer);
+          wake = undefined;
+        }
+      };
+      return waiter.promise;
+    };
+    const awaitLife = (life: string): Promise<RecoveryEvent | undefined> =>
+      waitFor(
+        (event) => event.type === "life_observed" && event.state.life === life,
+        RECOVERY_WAIT_MS,
+      );
+    try {
+      const deathEpoch = recovery.snapshot().epoch;
+      const offerState = recovery.snapshot();
+      const offer =
+        offerState.epoch === deathEpoch ? offerState.resurrection : undefined;
+      if (offer?.response === "unanswered") {
+        recovery.respondResurrection(true);
+        const revived = await awaitLife("alive");
+        if (!this.live(generation)) return false;
+        if (!revived) {
+          this.stop("resurrection_not_confirmed");
+          return false;
+        }
+        return true;
+      }
+
+      let state = recovery.snapshot();
+      if (state.life === "dead") {
+        recovery.releaseSpirit();
+        const released = await awaitLife("ghost");
+        if (!this.live(generation)) return false;
+        if (!released) {
+          this.stop("ghost_not_confirmed");
+          return false;
+        }
+        state = released.state;
+      } else if (state.life !== "ghost") {
+        this.stop("life_unknown");
+        return false;
+      }
+
+      recovery.queryCorpse();
+      const queried = await waitFor(
+        (event) => event.type === "corpse_observed",
+        RECOVERY_WAIT_MS,
+      );
+      if (!this.live(generation)) return false;
+      if (!queried) {
+        this.stop("corpse_query_timeout");
+        return false;
+      }
+      if (queried.state.corpse.status !== "found") {
+        this.stop("corpse_absent");
+        return false;
+      }
+      state = queried.state;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const remaining = state.reclaim.remainingMs;
+        if (remaining === undefined || remaining <= 0) break;
+        await this.sleep(remaining + RECLAIM_MARGIN_MS);
+        if (!this.live(generation)) return false;
+        state = recovery.snapshot();
+      }
+      if (
+        state.reclaim.remainingMs !== undefined &&
+        state.reclaim.remainingMs > 0
+      ) {
+        this.stop("reclaim_delayed");
+        return false;
+      }
+
+      if (state.reclaim.reason === "corpse_map_mismatch") {
+        this.stop("corpse_out_of_range", describePoseRange(state.reclaim));
+        return false;
+      }
+
+      if (!state.reclaim.canRequest) {
+        if (state.corpse.status !== "found") {
+          this.stop("corpse_absent");
+          return false;
+        }
+        const corpsePosition = state.corpse.position;
+        const before = control.pose();
+        if (!before) {
+          this.stop("corpse_unreachable", describePoseRange(state.reclaim));
+          return false;
+        }
+        let outcome = await this.travelLeg(
+          generation,
+          0,
+          corpsePosition,
+          before,
+        );
+        if (!outcome) return false;
+        let retried = false;
+        if (!outcome.arrived && !outcome.moved) {
+          retried = true;
+          outcome = await this.travelLeg(
+            generation,
+            DETOUR_RAD,
+            corpsePosition,
+            outcome.pose ?? before,
+          );
+          if (!outcome) return false;
+        }
+        if (!outcome.arrived) {
+          const cause = retried ? "corpse_unreachable" : "corpse_out_of_range";
+          this.stop(cause, describePoseRange(outcome.reclaim));
+          return false;
+        }
+      }
+
+      recovery.reclaimCorpse();
+      const revived = await awaitLife("alive");
+      if (!this.live(generation)) return false;
+      if (!revived) {
+        this.stop("reclaim_not_confirmed");
+        return false;
+      }
+      return true;
+    } finally {
+      recovery.onEvent(undefined);
+    }
+  }
+
+  private async travelLeg(
+    generation: number,
+    bearingOffset: number,
+    corpsePosition: { x: number; y: number; z: number },
+    before: ControlPose,
+  ): Promise<
+    | {
+        arrived: boolean;
+        moved: boolean;
+        pose: ControlPose | undefined;
+        reclaim: RecoveryReclaim;
+      }
+    | undefined
+  > {
+    const bearing = normalizeAngle(
+      Math.atan2(corpsePosition.y - before.y, corpsePosition.x - before.x) +
+        bearingOffset,
+    );
+    try {
+      this.deps.control.face(bearing);
+      this.deps.control.move("forward", LEG_LEASE_MS);
+    } catch {}
+    await this.sleep(LEG_LEASE_MS);
+    if (!this.live(generation)) return undefined;
+    const after = this.deps.control.pose();
+    const reclaim = this.deps.recovery.snapshot().reclaim;
+    return {
+      arrived: reclaim.canRequest,
+      moved: poseMoved(before, after),
+      pose: after,
+      reclaim,
+    };
+  }
+
+  private sleep(ms: number): Promise<void> {
+    const waiter = Promise.withResolvers<void>();
+    setTimeout(waiter.resolve, ms);
+    return waiter.promise;
   }
 
   private advance(): void {
@@ -261,8 +494,7 @@ export class EncounterCycleRuntime {
       if (offeredSlots.length === 0 && offeredMoney === 0) {
         try {
           loot.close();
-        } catch {
-        }
+        } catch {}
         this.recordLoot(guid, [], 0, coinageBefore, coinageBefore);
         return true;
       }
@@ -314,8 +546,7 @@ export class EncounterCycleRuntime {
       }
       try {
         loot.close();
-      } catch {
-      }
+      } catch {}
       const coinageAfter = loot.snapshot().inventory.coinage;
       this.recordLoot(
         guid,
@@ -354,4 +585,24 @@ export class EncounterCycleRuntime {
 
 function describeLootFailure(error: unknown): string {
   return error instanceof Error ? error.message : "loot_request_failed";
+}
+
+function poseMoved(
+  before: ControlPose | undefined,
+  after: ControlPose | undefined,
+): boolean {
+  if (!before || !after) return false;
+  return (
+    Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z) >
+    POSE_MOVED_EPS
+  );
+}
+
+function normalizeAngle(radians: number): number {
+  const twoPi = Math.PI * 2;
+  return ((radians % twoPi) + twoPi) % twoPi;
+}
+
+function describePoseRange(reclaim: RecoveryReclaim): Record<string, unknown> {
+  return { pose: reclaim.pose, range: reclaim.distance };
 }

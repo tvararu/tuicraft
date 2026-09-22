@@ -1,21 +1,33 @@
-import { test, expect } from "bun:test";
+import { test, expect, jest } from "bun:test";
 import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import type { RewardsEvent, RewardsState } from "wow/rewards";
+import type {
+  RecoveryEvent,
+  RecoveryReclaim,
+  RecoveryState,
+} from "wow/recovery";
+import type { ControlPose, MovementDirection } from "wow/control";
+import type { PlayerLife } from "wow/player-state";
 
-function fakeTactics(outcomes: (string | Error)[]) {
+function fakeTactics(
+  outcomes: (string | Error)[],
+  config: { deadOn?: number } = {},
+) {
   let calls = 0;
+  let lastCallIndex = -1;
   return {
     calls: () => calls,
     start: async (
       _ctx: { targetGuid: bigint; instruction: string },
       _s: AbortSignal,
     ) => {
+      lastCallIndex = calls;
       const next = outcomes[calls++];
       if (next instanceof Error) throw next;
     },
     stop: (_r: string) => {},
     lastOutcome: () => undefined,
-    selfDead: () => false,
+    selfDead: () => lastCallIndex === config.deadOn,
   };
 }
 
@@ -159,10 +171,268 @@ function fakeLoot(config: {
   };
 }
 
+type FakeCorpse =
+  | { status: "unknown" }
+  | { status: "absent" }
+  | {
+      status: "found";
+      mapId: number;
+      corpseMapId: number;
+      position: { x: number; y: number; z: number };
+    };
+
+function fakeControl(
+  config: { pose?: ControlPose; speed?: number; refuseMoves?: number } = {},
+) {
+  let pose: ControlPose | undefined = config.pose;
+  const speed = config.speed ?? 7;
+  let refusalsRemaining = config.refuseMoves ?? 0;
+  const faced: number[] = [];
+  const moves: { direction: MovementDirection; durationMs: number }[] = [];
+  return {
+    faced: () => faced,
+    moves: () => moves,
+    pose: (): ControlPose | undefined => (pose ? { ...pose } : undefined),
+    face(orientation: number) {
+      faced.push(orientation);
+      if (pose) pose = { ...pose, orientation };
+    },
+    move(direction: MovementDirection, durationMs: number) {
+      moves.push({ direction, durationMs });
+      if (!pose) return;
+      if (refusalsRemaining > 0) {
+        refusalsRemaining--;
+        return;
+      }
+      if (direction !== "forward") return;
+      const traveled = (speed * durationMs) / 1000;
+      pose = {
+        ...pose,
+        x: pose.x + Math.cos(pose.orientation) * traveled,
+        y: pose.y + Math.sin(pose.orientation) * traveled,
+      };
+    },
+  };
+}
+
+function fakeRecovery(config: {
+  offerEpoch?: "current" | "stale" | "none";
+  life: PlayerLife[];
+  corpse?: FakeCorpse;
+  pose?: () => ControlPose | undefined;
+  now?: () => number;
+  reclaimDelaySchedule?: Array<{ atMs: number; delayMs: number }>;
+}) {
+  let lifeIndex = 0;
+  let snapshotCalls = 0;
+  let answered = false;
+  let responded: "unanswered" | "accept_requested" | "decline_requested" =
+    "unanswered";
+  const corpse: FakeCorpse = config.corpse ?? { status: "unknown" };
+  let delay:
+    | { delayMs: number; receivedAt: number; readyAt: number }
+    | undefined;
+  const now = config.now ?? (() => 0);
+  const posefn = config.pose ?? (() => undefined);
+  let listener: ((event: RecoveryEvent) => void) | undefined;
+
+  function life(): PlayerLife {
+    return config.life[Math.min(lifeIndex, config.life.length - 1)] ?? "dead";
+  }
+
+  function reclaimGate(): RecoveryReclaim {
+    const pose = posefn();
+    const remainingMs = delay ? Math.max(0, delay.readyAt - now()) : undefined;
+    if (life() !== "ghost")
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: life() === "unknown" ? "life_unknown" : "not_ghost",
+        distance: undefined,
+        remainingMs,
+        pose: pose ? { ...pose } : undefined,
+      };
+    if (corpse.status !== "found")
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: corpse.status === "absent" ? "corpse_absent" : "corpse_unknown",
+        distance: undefined,
+        remainingMs,
+        pose: pose ? { ...pose } : undefined,
+      };
+    if (!pose)
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: "pose_unknown",
+        distance: undefined,
+        remainingMs,
+        pose: undefined,
+      };
+    if (pose.mapId !== corpse.corpseMapId)
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: "corpse_map_mismatch",
+        distance: undefined,
+        remainingMs,
+        pose: { ...pose },
+      };
+    const distance = Math.hypot(
+      pose.x - corpse.position.x,
+      pose.y - corpse.position.y,
+      pose.z - corpse.position.z,
+    );
+    if (distance > 39)
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: "corpse_out_of_range",
+        distance,
+        remainingMs,
+        pose: { ...pose },
+      };
+    if (remainingMs !== undefined && remainingMs > 0)
+      return {
+        canRequest: false,
+        readiness: "blocked",
+        reason: "reclaim_delay",
+        distance,
+        remainingMs,
+        pose: { ...pose },
+      };
+    return {
+      canRequest: true,
+      readiness: remainingMs === undefined ? "unverified" : "ready",
+      reason: undefined,
+      distance,
+      remainingMs,
+      pose: { ...pose },
+    };
+  }
+
+  function snapshot(): RecoveryState {
+    snapshotCalls++;
+    const epoch = config.offerEpoch === "stale" && snapshotCalls > 1 ? 2 : 1;
+    return {
+      life: life(),
+      health: undefined,
+      flags: undefined,
+      selfGuid: 1n,
+      epoch,
+      corpse:
+        corpse.status === "found"
+          ? {
+              ...corpse,
+              position: { ...corpse.position },
+              unknown: 0,
+              observedAt: now(),
+            }
+          : corpse.status === "absent"
+            ? { status: "absent", observedAt: now() }
+            : { status: "unknown" },
+      query: undefined,
+      reclaimDelay: delay ? { ...delay } : undefined,
+      reclaim: reclaimGate(),
+      graveyard: undefined,
+      resurrection:
+        config.offerEpoch && config.offerEpoch !== "none"
+          ? {
+              guid: 99n,
+              name: "Healer",
+              reserved: 0,
+              sickness: 0,
+              delayMs: undefined,
+              receivedAt: 0,
+              readyAt: undefined,
+              response: responded,
+            }
+          : undefined,
+      request: undefined,
+      disposed: false,
+    };
+  }
+
+  function emit(type: RecoveryEvent["type"]): void {
+    listener?.({ type, at: now(), state: snapshot() });
+  }
+
+  for (const entry of config.reclaimDelaySchedule ?? []) {
+    if (entry.atMs <= 0) {
+      delay = {
+        delayMs: entry.delayMs,
+        receivedAt: now(),
+        readyAt: now() + entry.delayMs,
+      };
+      continue;
+    }
+    setTimeout(() => {
+      delay = {
+        delayMs: entry.delayMs,
+        receivedAt: now(),
+        readyAt: now() + entry.delayMs,
+      };
+      emit("reclaim_delay_observed");
+    }, entry.atMs);
+  }
+
+  return {
+    answered: () => answered,
+    onEvent(cb: ((event: RecoveryEvent) => void) | undefined) {
+      listener = cb;
+    },
+    snapshot,
+    releaseSpirit() {
+      lifeIndex++;
+      emit("life_observed");
+    },
+    queryCorpse() {
+      emit("corpse_observed");
+    },
+    reclaimCorpse() {
+      lifeIndex++;
+      emit("life_observed");
+    },
+    respondResurrection(accept: boolean) {
+      answered = true;
+      responded = accept ? "accept_requested" : "decline_requested";
+      if (accept) {
+        lifeIndex++;
+        emit("life_observed");
+      }
+    },
+  };
+}
+
+async function advanceUntilSettled(
+  promise: Promise<unknown>,
+  totalMs: number,
+  options: { stepMs?: number; onTick?: (stepMs: number) => void } = {},
+): Promise<void> {
+  const stepMs = options.stepMs ?? 100;
+  let settled = false;
+  promise.finally(() => {
+    settled = true;
+  });
+  for (let elapsed = 0; !settled && elapsed < totalMs; elapsed += stepMs) {
+    await Promise.resolve();
+    options.onTick?.(stepMs);
+    jest.advanceTimersByTime(stepMs);
+  }
+  await promise;
+}
+
 test("lost target records cause and advances, loop stops at end of queue", async () => {
   const tactics = fakeTactics([new Error("target_unreachable")]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({ tactics, loot, now: () => 0 });
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
   const events: string[] = [];
   runtime.onEvent((e) => events.push(e.type));
   await runtime.start({ guids: [1n, 2n], instruction: "fight", maxStarts: 5 });
@@ -185,7 +455,13 @@ test("lost target records cause and advances, loop stops at end of queue", async
 test("stops at max starts with cause", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({ tactics, loot, now: () => 0 });
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
   await runtime.start({
     guids: [1n, 2n, 3n],
     instruction: "fight",
@@ -200,7 +476,13 @@ test("stops at max starts with cause", async () => {
 test("empty queue and bad max throw", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({ tactics, loot, now: () => 0 });
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
   await expect(
     runtime.start({ guids: [], instruction: "fight" }),
   ).rejects.toThrow("cycle_empty_queue");
@@ -223,7 +505,13 @@ test("second start replaces the first", async () => {
     selfDead: () => false,
   };
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({ tactics, loot, now: () => 0 });
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
   const first = runtime.start({ guids: [1n], instruction: "a" });
   await Bun.sleep(0);
   const second = runtime.start({ guids: [2n], instruction: "b" });
@@ -242,6 +530,8 @@ test("loot takes every slot plus money and records deltas", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
@@ -265,6 +555,8 @@ test("empty offer closes and advances without stopping", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
@@ -286,6 +578,8 @@ test("denied offer stops with loot_denied cause", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
@@ -300,6 +594,8 @@ test("refused take stops with cause", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
@@ -312,6 +608,8 @@ test("full inventory stops with loot_inventory_full", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
@@ -323,10 +621,255 @@ test("release-only denial stops with reconnect cause", async () => {
   const runtime = new EncounterCycleRuntime({
     tactics: fakeTactics([]),
     loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
   expect(runtime.snapshot().stopCause).toBe(
     "loot_release_only_reconnect_required",
   );
+});
+
+test("current resurrection offer is accepted and loop resumes", async () => {
+  const recovery = fakeRecovery({
+    offerEpoch: "current",
+    life: ["ghost", "alive"],
+  });
+  const runtime = new EncounterCycleRuntime({
+    tactics: fakeTactics([], { deadOn: 0 }),
+    loot: fakeLoot({ items: [], money: 0 }),
+    recovery,
+    control: fakeControl(),
+    now: () => 0,
+  });
+  await runtime.start({ guids: [1n, 2n], instruction: "fight" });
+  expect(recovery.answered()).toBe(true);
+  expect(runtime.snapshot()).toMatchObject({
+    phase: "stopped",
+    stopCause: "queue_exhausted",
+  });
+});
+
+test("stale resurrection offer is ignored, corpse run proceeds", async () => {
+  const control = fakeControl({
+    pose: {
+      mapId: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+      orientation: 0,
+      source: "predicted",
+      updatedAt: 0,
+    },
+  });
+  const recovery = fakeRecovery({
+    offerEpoch: "stale",
+    life: ["dead", "ghost", "alive"],
+    corpse: {
+      status: "found",
+      mapId: 0,
+      corpseMapId: 0,
+      position: { x: 5, y: 0, z: 0 },
+    },
+    pose: () => control.pose(),
+  });
+  const runtime = new EncounterCycleRuntime({
+    tactics: fakeTactics([], { deadOn: 0 }),
+    loot: fakeLoot({ items: [], money: 0 }),
+    recovery,
+    control,
+    now: () => 0,
+  });
+  await runtime.start({ guids: [1n, 2n], instruction: "fight" });
+  expect(recovery.answered()).toBe(false);
+  const state = runtime.snapshot();
+  expect(state).toMatchObject({
+    phase: "stopped",
+    stopCause: "queue_exhausted",
+  });
+  expect(state.queue[0]).toMatchObject({ status: "skipped", cause: "died" });
+  expect(state.queue[1]).toMatchObject({ status: "done" });
+});
+
+test("reclaim delay waits bounded then retries once", async () => {
+  jest.useFakeTimers();
+  try {
+    let now = 0;
+    const advance = (ms: number) => {
+      now += ms;
+    };
+    const control = fakeControl({
+      pose: {
+        mapId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        orientation: 0,
+        source: "predicted",
+        updatedAt: 0,
+      },
+    });
+    const recovery = fakeRecovery({
+      offerEpoch: "none",
+      life: ["dead", "ghost", "alive"],
+      corpse: {
+        status: "found",
+        mapId: 0,
+        corpseMapId: 0,
+        position: { x: 5, y: 0, z: 0 },
+      },
+      pose: () => control.pose(),
+      now: () => now,
+      reclaimDelaySchedule: [
+        { atMs: 0, delayMs: 5000 },
+        { atMs: 6000, delayMs: 6000 },
+      ],
+    });
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([], { deadOn: 0 }),
+      loot: fakeLoot({ items: [], money: 0 }),
+      recovery,
+      control,
+      now: () => now,
+    });
+    const started = runtime.start({ guids: [1n], instruction: "fight" });
+    await advanceUntilSettled(started, 16000, { onTick: advance });
+    expect(runtime.snapshot()).toMatchObject({
+      phase: "stopped",
+      stopCause: "queue_exhausted",
+    });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("cross-map corpse stops with pose and range", async () => {
+  const control = fakeControl({
+    pose: {
+      mapId: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+      orientation: 0,
+      source: "predicted",
+      updatedAt: 0,
+    },
+  });
+  const recovery = fakeRecovery({
+    offerEpoch: "none",
+    life: ["dead", "ghost"],
+    corpse: {
+      status: "found",
+      mapId: 1,
+      corpseMapId: 1,
+      position: { x: 5, y: 0, z: 0 },
+    },
+    pose: () => control.pose(),
+  });
+  const runtime = new EncounterCycleRuntime({
+    tactics: fakeTactics([], { deadOn: 0 }),
+    loot: fakeLoot({ items: [], money: 0 }),
+    recovery,
+    control,
+    now: () => 0,
+  });
+  await runtime.start({ guids: [1n], instruction: "fight" });
+  const state = runtime.snapshot();
+  expect(state.stopCause).toBe("corpse_out_of_range");
+  expect(state.stopDetail).toMatchObject({
+    pose: { mapId: 0, x: 0, y: 0, z: 0 },
+  });
+  expect(control.moves()).toEqual([]);
+});
+
+test("ground refusal retries once at fixed angle then stops", async () => {
+  jest.useFakeTimers();
+  try {
+    const control = fakeControl({
+      pose: {
+        mapId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        orientation: 0,
+        source: "predicted",
+        updatedAt: 0,
+      },
+      refuseMoves: 2,
+    });
+    const recovery = fakeRecovery({
+      offerEpoch: "none",
+      life: ["dead", "ghost"],
+      corpse: {
+        status: "found",
+        mapId: 0,
+        corpseMapId: 0,
+        position: { x: 100, y: 0, z: 0 },
+      },
+      pose: () => control.pose(),
+    });
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([], { deadOn: 0 }),
+      loot: fakeLoot({ items: [], money: 0 }),
+      recovery,
+      control,
+      now: () => 0,
+    });
+    const started = runtime.start({ guids: [1n], instruction: "fight" });
+    await advanceUntilSettled(started, 8000);
+    const state = runtime.snapshot();
+    expect(state.stopCause).toBe("corpse_unreachable");
+    expect(control.faced().length).toBe(2);
+    expect(control.moves().length).toBe(2);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("reclaim restores life and resumes next target", async () => {
+  jest.useFakeTimers();
+  try {
+    const control = fakeControl({
+      pose: {
+        mapId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        orientation: 0,
+        source: "predicted",
+        updatedAt: 0,
+      },
+      speed: 7,
+    });
+    const recovery = fakeRecovery({
+      offerEpoch: "none",
+      life: ["dead", "ghost", "alive"],
+      corpse: {
+        status: "found",
+        mapId: 0,
+        corpseMapId: 0,
+        position: { x: 20, y: 0, z: 0 },
+      },
+      pose: () => control.pose(),
+    });
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([], { deadOn: 0 }),
+      loot: fakeLoot({ items: [], money: 0 }),
+      recovery,
+      control,
+      now: () => 0,
+    });
+    const started = runtime.start({ guids: [1n, 2n], instruction: "fight" });
+    await advanceUntilSettled(started, 6000);
+    const state = runtime.snapshot();
+    expect(state).toMatchObject({
+      phase: "stopped",
+      stopCause: "queue_exhausted",
+    });
+    expect(state.queue[0]).toMatchObject({ status: "skipped", cause: "died" });
+    expect(state.queue[1]).toMatchObject({ status: "done" });
+  } finally {
+    jest.useRealTimers();
+  }
 });
