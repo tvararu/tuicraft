@@ -90,7 +90,8 @@ Rules:
 - `face` takes one finite radian number.
 - `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
-- `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Readonly corpse queries remain queued. HALT cannot undo a request already sent.
+- A valid GUID can still be stale. `target` sends it without checking entity age. Refresh `nearby --json` before acting. `requestedTarget` is sent intent; `target` is the last server observation. Equal values do not prove a fresh acknowledgment.
+- `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. On one IPC socket it interrupts pending work and drops older queued mutating control, recovery, quest, and loot commands, including `cycle`, plus older read waits. It retains state inspections, corpse and metadata queries, and newer requests. It cannot undo a sent request or disengage an attacking enemy. `status` remains CONNECTED.
 - Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1.
 
 `control --json` fields you must not mix up:
@@ -100,8 +101,8 @@ Rules:
 | `pose` | Current pose used for control. Read `pose.source`. |
 | `pose.source` | `predicted` is a local estimate. `server` is a server observation. Predicted is not server confirmation. |
 | `serverPose` | Last pose the server reported. Unchanged during your own walk until a server correction or a new login. |
-| `target` | Last server-observed self target GUID (`0x…`), or null. |
-| `requestedTarget` | Last GUID this client sent with `target`. Can differ from `target` until the server observes the change. |
+| `target` | Last server-observed self target GUID (`0x…`); `0x0` is an observed clear, null means not observed yet. |
+| `requestedTarget` | Last GUID this client sent with `target`; `0x0` is a clear request, null means none sent. It can differ from `target`. |
 | `moving` | Whether a timed walk is active. |
 | `direction` | `forward` / `backward` / `left` / `right`, or null. |
 | `owner` | `manual` for direct movement. `follow` or `jev` while that runtime owns control, including stationary waits. `none` when unowned. |
@@ -145,13 +146,15 @@ Rules:
 - `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none.
 - `fight` requires a GUID. Optional `--framing` accepts `none`, `minimal`, or `mechanics` (default `none` or `WOW_JEV_FRAMING`). Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
 - Use a current observed PvE opponent, not a GUID copied from an example or an old spawn position.
-- The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Other forms are unsupported.
-- A structurally unsupported kit ends with `no_supported_combat_actions`. Cooldown and server-response waits are not that failure. Supported melee and facing remain available.
+- The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Unknown and nonzero forms disable supported spells, not necessarily melee.
+- `unverified_hostile_relation` refuses a fight unless faction data or current attack evidence verifies hostility. Do not infer hostility from a creature name.
+- `no_supported_combat_actions` blocks when there is no supported spell and no current melee or attack progress. Cooldowns and pending server responses remain waits; supported melee and facing remain available.
 - For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
 - Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases, standing-required spells halt first). The observation carries target separation and facing.
-- `cycle` runs `fight`-loot-next over an explicit queue of observed GUIDs (`cycle <guid...>`); at least one nonzero GUID is required. `--instruction` applies to every target and defaults like `fight`'s default; `cycle` has no `--framing`. `--max N` caps tactics-loop starts for the whole run (positive integer, default 10).
+- Choose current creature GUIDs from `nearby --json` (JSONL) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; `cycle` has no `--framing`. `--max N` caps tactics-loop starts (positive integer, default 10).
 - A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery (release, corpse query, reclaim-delay wait, one direct travel leg) before resuming.
-- Inspect `cycling --json` for `phase`, per-target `queue` status/cause, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` values include `queue_exhausted`, `max_starts_reached`, `halt`, `loot_denied:*`, `loot_inventory_full`, `loot_release_only_reconnect_required`, `corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`, and `corpse_unreachable`, among other recovery causes.
+- Inspect `cycling --json` for `phase`, per-target `queue` status/cause, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `loot_denied:*`, `loot_inventory_full`, `loot_release_only_reconnect_required`, and recovery causes. Inspect `stopDetail`.
+- `lastLoot.slotsTaken` records requested slots, `moneyTaken` records offered money, and before/after coinage is observed when known. None of these proves item storage. Check raw inventory slot/count changes before claiming a gain.
 - Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.

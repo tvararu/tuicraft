@@ -17,8 +17,9 @@ USAGE
   tuicraft control [--json]  Show control state
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
   tuicraft face <radians>    Set facing in radians
-  tuicraft target <guid>     Select target (0 clears)
-  tuicraft halt              Cancel motion, casting, attack, tactics and follow
+  tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
+  tuicraft halt              Cancel motion, cast, attack, tactics, follow, cycle
+                            Drop older queued mutations on this socket; not sent requests
   tuicraft nearby [--all] [--json]  List nearby entities (nearest first; --all disables distance filter)
   tuicraft combat [--json]   Combat state
   tuicraft spells [--json]   Learned spellbook
@@ -28,10 +29,10 @@ USAGE
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack
   tuicraft fight [--framing <variant>] <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
-                            Spell kit: observed normal form; Jev may move under a renewable lease
+                            Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
-  tuicraft cycle <guid...> [--instruction ...] [--max N]  Run fight-loot-next loop (default max 10 starts)
-  tuicraft cycling [--json]  Cycle phase, queue, loot deltas and stop cause
+  tuicraft cycle <guid...> [--instruction ...] [--max N]  Explicit nearby GUID queue; no auto-acquire
+  tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
   tuicraft goto <x> <y> <z>  Walk a ground route
   tuicraft navigation [--json]  Navigation state
   tuicraft follow <guid> [distance]  Bounded ground follow (1-20 yards, default 3)
@@ -45,10 +46,11 @@ USAGE
                             OK is request intent, not confirmed recovery
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim
                             Near a killer: plan an exit, flee after OK, then inspect observed life
-  tuicraft quests [--json]    Offered dialog, quest log and pending intent
+  tuicraft quests [--json]    Offered dialog, quest log and one pending mutation
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization)
   tuicraft select-option <id> [code]  Choose an offered gossip option
+                            Quote one code argument; omitted differs from empty
   tuicraft select-quest <id>  Choose a quest from the offered menu
   tuicraft accept-quest      Request acceptance of offered details
   tuicraft complete-quest <id>  Request offered quest completion
@@ -64,6 +66,7 @@ USAGE
   tuicraft take-money        Request money from the current offer
   tuicraft release-loot      Request close of the open loot window
                             OK/slot removal is not stored gain
+                            Item-push slot 0xFFFFFFFF means stacking, not a bag slot
                             Release-only opening stays unanswered; reconnect explicitly
   tuicraft stop               Stop the daemon
   tuicraft logs               Print session log

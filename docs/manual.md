@@ -90,8 +90,12 @@ If the daemon fails to connect (missing configuration, invalid credentials, unre
 `tuicraft control` [`--json`]
 :: Print control state. With `--json`, emits a single JSON object (`pose`, `serverPose`, `target`, `requestedTarget`, `moving`, `direction`, `owner`). `pose.source` is `predicted` or `server`. `serverPose`
 is the last server-observed pose. `target` is the last server-observed self
-target. `requestedTarget` is the last GUID this client sent. Predicted pose is
-not server confirmation. Relog to read the pose the server accepted.
+target; `requestedTarget` is the last GUID this client sent.
+Predicted pose is not server confirmation. Relog to read the pose the server accepted.
+For either target field, `0x0` means a clear; `null` means no observation or
+request yet. A sent selection is not server confirmation.
+Matching target values alone do not acknowledge a new request: the observation
+may predate the request.
 
 `tuicraft nearby` [`--all`] [`--json`]
 :: List nearby entities ordered nearest first. By default, entities beyond 100
@@ -102,6 +106,8 @@ GUIDs are hexadecimal (`0x…`). JSON includes 3D
 `distance` in yards (`0` for self, `null` if off-map or unestablished) and `self`
 true only for the observed self GUID. `mapId` is the map this client was on when
 the entity was parsed, not a property the server states per entity.
+For `fight` and `cycle`, choose current non-self creature GUIDs from this JSONL
+output. A stored GUID or an old spawn position does not establish a current target.
 
 `tuicraft move` _direction_ [*ms*]
 :: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.
@@ -112,17 +118,23 @@ ends when the duration ends. Repeating the same direction renews the duration.
 :: Set facing. The value is a finite number in radians. Empty input is rejected.
 
 `tuicraft target` _guid_
-:: Select a unit. *guid* is an unsigned 64-bit integer in `0x` hex or decimal.
-`0` clears the target and does not attack.
+:: Request selection of a unit. *guid* is an unsigned 64-bit integer in `0x`
+hex or decimal. `0` sends a clear request and does not attack. A syntactically
+valid GUID is sent even if the entity is stale. Refresh `nearby --json` before
+use. Inspect `control --json`: `requestedTarget` is intent, `target` is the last
+server observation.
 
 `tuicraft halt`
 :: Stop motion, cast, attack, tactics, navigation, follow, and cycle. The daemon stays connected.
-HALT on a connection cancels a pending read or query and does not run older queued
-MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT.
-Readonly corpse queries remain queued. Newer commands after HALT still run.
+HALT on one IPC socket interrupts pending work and drops older queued
+MOVE/FACE/TARGET/CAST/ATTACK/CANCEL_CAST/STOP_ATTACK/FIGHT/CYCLE/GOTO/
+FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Older queued read waits
+are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
 HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT commands as well.
 Metadata queries and inventory/loot inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
+An enemy already attacking can continue after `halt`; stopping client actions
+does not disengage combat.
 
 `tuicraft combat` [`--json`]
 :: Print combat state. With `--json`, emits a single JSON object. GUIDs are hex. Predicted poses keep `source=predicted`.
@@ -151,9 +163,12 @@ resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
 fails with `ERR`.
 The instruction must be a single line. Daemon `ERR` replies, including inspection failures, make the CLI exit with status 1.
 The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). A complete server CREATE defines omitted public fields as zero. An absent entity or incomplete observation does not establish that baseline.
-Unknown or nonzero forms are not supported. Structurally unsupported combat
-capabilities stop with `no_supported_combat_actions`; cooldowns and pending
-server responses remain waits. Facing and supported melee remain available.
+Unknown or nonzero forms make spells unsupported, not melee automatically.
+`no_supported_combat_actions` is a structural block when no supported spell
+and no current melee or attack progress are available. Cooldowns and pending
+server responses remain waits. An unverified hostile relation refuses `fight`
+unless faction data or current attack evidence establishes hostility. Inspect
+`tactics.lastOutcome.observation.unavailable` for spell reasons.
 Jev may choose directional movement during a fight under a renewable lease:
 `wait` holds the current direction, `stop_moving` releases it, and choosing a
 standing-required spell releases the lease before casting. The observation
@@ -172,6 +187,8 @@ as `fight`; unlike `fight`, `cycle` does not accept `--framing`. `--max`
 caps tactics-loop starts for the whole run, a positive integer, default 10.
 At least one nonzero GUID is required. Starting a new cycle replaces any
 running cycle; `halt` stops it.
+Choose the queued creature GUIDs from a current `nearby --json` result. The
+cycle never acquires targets itself.
 A target that dies, is unreachable, or fails to fight is skipped with a
 recorded cause instead of stopping the loop. A mid-fight death runs bounded
 recovery (release, corpse query, reclaim-delay wait, one direct travel leg)
@@ -184,12 +201,18 @@ The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
 `corpse_unreachable`, among other recovery causes). Inspect `cycling` for
 the stop cause, detail, and per-target queue status.
+`stopCause` is not a closed list: `loot_denied:*` includes a reason, and
+recovery can report other causes. Inspect `stopDetail` instead of guessing.
 
 `tuicraft cycling` [`--json`]
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
 `status` (`queued`, `done`, or `skipped`) and skip `cause`, `startsUsed`,
 `stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
 snapshot the `CYCLE` event carries in `read`/`tail`.
+`lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
+amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
+record observed values when known. Confirm stored items through actual
+inventory slot or count changes.
 
 `tuicraft goto` _x_ _y_ _z_
 :: Request a ground route. Missing navigation data fails with `ERR`.

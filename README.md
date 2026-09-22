@@ -34,8 +34,8 @@ switching
 scripting
 
 **Direct control** - Bounded walk, face, target, and halt through the CLI.
-Ordinary walking is predicted locally; control state keeps the last server pose
-separate. Not combat, pathfinding, or autonomous play.
+Control state separates predicted movement from last server pose and requested
+selection from observed target. Combat, routing, and cycle commands also exist.
 
 📝 **Session Logging** - Persistent session log with `tuicraft logs` playback
 
@@ -107,18 +107,18 @@ tuicraft send -g "lfm"     # guild chat
 tuicraft who               # who query
 tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
-tuicraft control [--json]  # predicted pose vs last server pose, targets
+tuicraft control [--json]  # predicted pose; observed vs requested target
 tuicraft nearby [--all] [--json] # nearby entities, nearest first (within 100yd, or --all)
 tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
 tuicraft face 1.57         # facing in radians
-tuicraft target 0xabc      # select (0 clears); uint64 hex or decimal
+tuicraft target 0xabc      # request selection (0 clears); uint64 hex or decimal
 tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
 tuicraft fight 0xabc       # Jev tactics; optional --framing none|minimal|mechanics
-tuicraft cycle 0xa 0xb --max 3 # fight-loot-next loop over a GUID queue (default max 10 starts)
-tuicraft cycling --json        # cycle phase, queue, loot deltas and stop cause
+tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
+tuicraft cycling --json        # phase, per-target cause, loot requests, stop cause
 tuicraft goto 1 2 3        # ground route
 tuicraft follow 0xabc 3    # bounded follow of an observed unit
 tuicraft following --json # follow state and terminal reason
@@ -146,24 +146,32 @@ tuicraft stop              # stop daemon
 tuicraft skill             # print SKILL.md for AI agents
 ```
 
+The GUIDs in these examples are placeholders. Copy current creature GUIDs from
+`nearby --json` before `fight` or `cycle`; `target` also accepts a stale GUID
+and `control --json` separates the sent request from the observed selection.
+
 Spellbook/tactics require compatible client tables; ground routes require
 Namigator data and its native library. Set their optional config paths and the
 daemon's `TYPESAFE_API_KEY` as described in
 [gameplay configuration](docs/manual.md#gameplay-configuration).
 
 The narrow Jev spell kit requires observed normal form, including protocol-defined
-zero fields in a complete server CREATE. Absent entities remain unknown.
-Unsupported kits stop with a reason and retain terminal observations; cooldown and server-response waits do not. Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases); the observation carries target separation and facing.
+zero fields in a complete server CREATE. Unknown or nonzero forms disable spells,
+not necessarily melee. An unverified hostile relation refuses a fight unless
+faction data or current attack evidence verifies it. A structural lack of
+supported combat actions stops with a reason; cooldown and server-response waits
+do not. Inspect `tactics` for terminal observations. Jev may choose directional
+movement under a renewable lease (`wait` holds, `stop_moving` releases).
 
-`cycle` runs `fight` over an explicit GUID queue, auto-looting each kill
-before advancing to the next target. A target that dies, is unreachable, or
-fails to fight is skipped with a recorded cause instead of stopping the
-loop; a mid-fight death runs bounded recovery (release, corpse query,
-reclaim-delay wait, one direct travel leg) before resuming. `--max` caps
-tactics-loop starts for the whole run (positive integer, default 10). The
-loop stops on queue exhaustion, the starts cap, `halt`, a denied or blocked
-loot window, or an unrecovered death — inspect `cycling --json` for the
-stop cause and per-target queue detail.
+`cycle` takes an explicit GUID queue selected from `nearby --json`; it does
+not auto-acquire. It runs `fight` over the queue and requests loot after each
+completed target. A target that dies, is unreachable, or fails to fight is
+skipped with a recorded cause instead of stopping the loop. A mid-fight death
+runs bounded recovery before resuming. `--max` caps tactics-loop starts for
+the whole run (positive integer, default 10). Inspect `cycling --json` for
+each target's status and an open-ended `stopCause` with `stopDetail`.
+`lastLoot.slotsTaken` and `moneyTaken` report requests and offered money, not
+verified item gains. Confirm storage from `inventory --json` slot/count changes.
 
 `follow` requests a bounded ground route behind an observed unit on map 530.
 The optional distance is 1–20 yards along the ground route, with a default of 3.
