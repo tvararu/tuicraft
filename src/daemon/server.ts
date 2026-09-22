@@ -20,6 +20,7 @@ import {
   onCombatEvent,
   onTacticsEvent,
   onFollowEvent,
+  onCycleEvent,
   onRecoveryEvent,
   onQuestEvent,
   onRewardsEvent,
@@ -220,6 +221,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onCombatEvent((event) => onCombatEvent(event, events, log));
   handle.onTacticsEvent((event) => onTacticsEvent(event, events, log));
   handle.onFollowEvent((event) => onFollowEvent(event, events, log));
+  handle.onCycleEvent((event) => onCycleEvent(event, events, log));
   handle.onRecoveryEvent((event) => onRecoveryEvent(event, events, log));
   handle.onQuestEvent((event) => onQuestEvent(event, events, log));
   handle.onRewardsEvent((event) => onRewardsEvent(event, events, log));
@@ -230,8 +232,8 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
     cleaned = true;
     handle.onControlEvent(undefined);
     handle.onCombatEvent(undefined);
-    handle.onTacticsEvent(undefined);
     handle.onFollowEvent(undefined);
+    handle.onCycleEvent(undefined);
     handle.onRecoveryEvent(undefined);
     handle.onQuestEvent(undefined);
     handle.onRewardsEvent(undefined);

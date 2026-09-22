@@ -11,6 +11,7 @@ import {
   onGuildEvent,
   onDuelEvent,
   onControlEvent,
+  onCycleEvent,
   writeLines,
   type EventEntry,
 } from "daemon/commands";
@@ -5010,6 +5011,18 @@ describe("cycle IPC boundary", () => {
       jest.fn(),
     );
     expect(socket.written()).toBe("ERR session_closed\n\n");
+  });
+
+  test("cycle events reach the ring buffer and session log", () => {
+    const events = new RingBuffer<EventEntry>(10);
+    const log = {
+      append: jest.fn(() => Promise.resolve()),
+    } as unknown as SessionLog;
+    const state = createMockHandle().getCycleState();
+    onCycleEvent({ type: "started", state, at: 1000 }, events, log);
+    const drained = events.drain();
+    expect(drained[0]!.text).toBe("[cycle] started");
+    expect(JSON.parse(drained[0]!.json).type).toBe("CYCLE");
   });
 });
 

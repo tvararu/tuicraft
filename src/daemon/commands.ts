@@ -41,6 +41,7 @@ import type { TacticsEvent } from "wow/tactics";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 import type { FollowEvent } from "wow/follow";
+import type { CycleEvent } from "wow/encounter-cycle";
 import type { RecoveryEvent } from "wow/recovery";
 import type { QuestEvent } from "wow/quests";
 import type { RewardsEvent } from "wow/rewards";
@@ -1460,6 +1461,22 @@ export function onFollowEvent(
   };
   events.push({
     text: formatDomainEvent("follow", event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onCycleEvent(
+  event: CycleEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: "CYCLE",
+    data: jsonSafe(event),
+  };
+  events.push({
+    text: formatDomainEvent("cycle", event),
     json: JSON.stringify(obj),
   });
   log.append(obj as LogEntry).catch(() => {});
