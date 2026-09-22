@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test";
-import { parseArgs } from "cli/args";
+import { parseArgs, type CliAction } from "cli/args";
 
 describe("parseArgs", () => {
   test("no args with tty = interactive", () => {
@@ -833,7 +833,7 @@ describe("daemon JSON arguments", () => {
     [["take-loot", "255"], { mode: "take_loot", slot: 255 }],
     [["take-money"], { mode: "take_money" }],
     [["release-loot"], { mode: "release_loot" }],
-  ] as const;
+  ] satisfies [string[], CliAction][];
 
   for (const [args, action] of actions) {
     test(`${args[0]} keeps operands and adds JSON only when requested`, () => {
