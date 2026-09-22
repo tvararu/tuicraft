@@ -518,6 +518,29 @@ Out of scope: any local reflex layer, any stance abstraction, parameterised or
 coordinate movement, route planning to a destination, remote movement reception,
 and character following.
 
+#### Decision: milestone 3 accepted with two gaps, 2026-09-22
+
+Theo's call. Milestone 3 is accepted as done enough to move on, with both
+unmet criteria recorded here rather than closed.
+
+**Unmet: cast refused with SPELL_FAILED_MOVING.** The exit evidence asks for
+a cast attempted while moving to be refused with the movement-specific
+signal. Two live attempts both succeeded instead: every cast path halts
+before sending, and the stop and cast packets go out back-to-back on the
+same connection, so the server processes the stop first and never sees the
+caster as moving. Reproducing it needs a deliberately un-halted cast path
+or worse network timing. The code citation stands; the packet was not
+observed.
+
+**Unmet: wait-as-hold exercised under its own id.** The refresh mechanic
+`wait` shares with same-direction `move_*` was proven live through 85
+refreshed `move_backward` decisions, never through a literal `wait` while
+moving: encounter-01 never moved, encounter-02 never chose `wait`. Closing
+it needs one run in which Jev holds direction via `wait`.
+
+Neither gap is to be read as satisfied by the work recorded above. A later
+reader deciding whether to trust the milestone should treat both as open.
+
 ### 3a. Reliable local navigation
 
 Route planning to a destination, obstacle handling, arrival and failure
