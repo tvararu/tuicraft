@@ -43,6 +43,15 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Skills and frameworks, including Superpowers, are optional aids. Choose the
   planning, delegation, and review process that best delivers and verifies the
   active goal; no framework-specific ceremony or routine human approval gate.
+- Canonical Superpowers source is upstream `obra/superpowers` (this machine:
+  `superpowers@6.4.1`, installed via `omp install
+  git:github.com/obra/superpowers`). The Pi extension injects the
+  `using-superpowers` bootstrap into the model context at session start and
+  after compaction; it does not appear as a `skill://` entry or in saved
+  transcripts, so verify with a no-tools prompt
+  (`omp -p --no-session --no-tools "…"`) rather than `skill://` reads or
+  session JSONL. Claude Code uses `superpowers@claude-plugins-official`
+  (already enabled in `.claude/settings.json`).
 - Use `/typescript-style` as a reference for existing code conventions.
 - When designing or integrating Jev, read `.claude/skills/typesafe-ai` first. Keep the TypeSafe API key private.
 
