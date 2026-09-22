@@ -308,8 +308,9 @@ export function createMockHandle(): WorldHandle & {
     triggerRewardsEvent(event) {
       rewardsEventCb?.(event);
     },
-    startCycle: jest.fn((guids: bigint[], instruction: string, maxStarts?: number) =>
-      cycle.start({ guids, instruction, maxStarts }),
+    startCycle: jest.fn(
+      (guids: bigint[], instruction: string, maxStarts?: number) =>
+        cycle.start({ guids, instruction, maxStarts }),
     ),
     stopCycle: jest.fn(() => {
       cycle.stop("manual_override");

@@ -29,6 +29,7 @@ Commands supporting `--json` require different parsing strategies. Do not assume
 | `combat` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
 | `spells` | Single document | Array | Parse full stdout with `JSON.parse` / `json.loads` |
 | `tactics` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
+| `cycling` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
 | `navigation` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
 | `following` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
 | `recovery` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
@@ -44,7 +45,7 @@ Commands supporting `--json` require different parsing strategies. Do not assume
 
 ### Parsing methods
 
-1. **Single document commands (`control`, `combat`, `spells`, `tactics`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who`, and `send` without `--wait`):**
+1. **Single document commands (`control`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who`, and `send` without `--wait`):**
    Parse the complete stdout at once:
    ```python
    data = json.loads(stdout)  # Returns dict, or list for spells
@@ -89,7 +90,7 @@ Rules:
 - `face` takes one finite radian number.
 - `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
-- `halt` stops walking, casting, auto-attack, tactics, navigation, and follow. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Readonly corpse queries remain queued. HALT cannot undo a request already sent.
+- `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. `status` still returns CONNECTED. On one IPC socket, HALT cancels a pending read or query and does not run older queued MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Readonly corpse queries remain queued. HALT cannot undo a request already sent.
 - Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1.
 
 `control --json` fields you must not mix up:
@@ -134,6 +135,8 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft fight [--framing none|minimal|mechanics] <observed-hostile-guid>
     tuicraft fight <observed-hostile-guid> conserve mana and stay alive
     tuicraft tactics [--json]
+    tuicraft cycle <guid...> [--instruction ...] [--max N]
+    tuicraft cycling [--json]
     tuicraft goto <grounded-x> <grounded-y> <grounded-z>
     tuicraft navigation [--json]
 
@@ -146,13 +149,17 @@ Rules:
 - A structurally unsupported kit ends with `no_supported_combat_actions`. Cooldown and server-response waits are not that failure. Supported melee and facing remain available.
 - For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
 - Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases, standing-required spells halt first). The observation carries target separation and facing.
+- `cycle` runs `fight`-loot-next over an explicit queue of observed GUIDs (`cycle <guid...>`); at least one nonzero GUID is required. `--instruction` applies to every target and defaults like `fight`'s default; `cycle` has no `--framing`. `--max N` caps tactics-loop starts for the whole run (positive integer, default 10).
+- A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery (release, corpse query, reclaim-delay wait, one direct travel leg) before resuming.
+- Inspect `cycling --json` for `phase`, per-target `queue` status/cause, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` values include `queue_exhausted`, `max_starts_reached`, `halt`, `loot_denied:*`, `loot_inventory_full`, `loot_release_only_reconnect_required`, `corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`, and `corpse_unreachable`, among other recovery causes.
+- Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
 - `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
 
-IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
+IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
 
 ## Bounded ground follow
 

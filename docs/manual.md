@@ -17,6 +17,7 @@ tuicraft control [--json] | nearby [--all] [--json]
 tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--json]
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
+tuicraft cycle <guid...> [--instruction ...] [--max N] | cycling [--json]
 tuicraft follow <guid> [distance] | following [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft resurrect accept|decline
@@ -115,7 +116,7 @@ ends when the duration ends. Repeating the same direction renews the duration.
 `0` clears the target and does not attack.
 
 `tuicraft halt`
-:: Stop motion, cast, attack, tactics, navigation, and follow. The daemon stays connected.
+:: Stop motion, cast, attack, tactics, navigation, follow, and cycle. The daemon stays connected.
 HALT on a connection cancels a pending read or query and does not run older queued
 MOVE/FACE/TARGET/CAST/ATTACK/FIGHT/GOTO/FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT.
 Readonly corpse queries remain queued. Newer commands after HALT still run.
@@ -162,6 +163,33 @@ carries target separation and facing for those choices.
 :: Print tactics loop state. `lastOutcome.observation` retains the actual
 terminal observation when one was available, including blocks before inference.
 `lastRequest` is not populated without a real Jev request.
+
+`tuicraft cycle` _guid..._ [`--instruction` _text_] [`--max` _N_]
+:: Run the fight-loot-next-target loop over an explicit GUID queue: `fight`
+each target in order, auto-loot any offered items and money, then advance.
+`--instruction` applies to every target and defaults to the same instruction
+as `fight`; unlike `fight`, `cycle` does not accept `--framing`. `--max`
+caps tactics-loop starts for the whole run, a positive integer, default 10.
+At least one nonzero GUID is required. Starting a new cycle replaces any
+running cycle; `halt` stops it.
+A target that dies, is unreachable, or fails to fight is skipped with a
+recorded cause instead of stopping the loop. A mid-fight death runs bounded
+recovery (release, corpse query, reclaim-delay wait, one direct travel leg)
+before resuming the queue; the loop stops instead of retrying indefinitely
+if recovery does not clear.
+The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
+(`max_starts_reached`), `halt`, a denied or blocked loot window
+(`loot_denied:*`, `loot_inventory_full`,
+`loot_release_only_reconnect_required`), or an unrecovered death
+(`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
+`corpse_unreachable`, among other recovery causes). Inspect `cycling` for
+the stop cause, detail, and per-target queue status.
+
+`tuicraft cycling` [`--json`]
+:: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
+`status` (`queued`, `done`, or `skipped`) and skip `cause`, `startsUsed`,
+`stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
+snapshot the `CYCLE` event carries in `read`/`tail`.
 
 `tuicraft goto` _x_ _y_ _z_
 :: Request a ground route. Missing navigation data fails with `ERR`.

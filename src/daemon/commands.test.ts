@@ -4939,7 +4939,12 @@ describe("cycle IPC boundary", () => {
     });
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "cycle", guids: [1n, 2n], instruction: "kill fast", maxStarts: 3 },
+      {
+        type: "cycle",
+        guids: [1n, 2n],
+        instruction: "kill fast",
+        maxStarts: 3,
+      },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,

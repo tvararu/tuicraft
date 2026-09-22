@@ -597,14 +597,14 @@ relevant, respond to trouble, and recover or report a concrete blocking
 condition. A rising kill count alone does not establish success. Death/recovery
 scenarios must not depend on a developer secretly repairing the session.
 
-Movement is not currently an offered action. Jev can cancel a cast but cannot
-reposition, so retreating is not expressible and kiting is unreachable. The
-slice that unblocks it is to offer bounded movement intents as candidates
-alongside spells, validated and routed by the client. Jev must not emit
-coordinates; it selects among intents the client has already established are
-legal, exactly as it does for spells today. Route planning is a prerequisite and
-is not sufficient on its own: planning a corridor and walking it cannot express
-continuous repositioning against a moving creature.
+Movement is an offered action since milestone 3: Jev selects among
+`move_forward`, `move_backward`, `strafe_left`, `strafe_right`, and
+`stop_moving`, held under a renewable 2500ms lease with ground safety
+outranking the lease. This milestone consumes that capability as is and
+changes no movement candidate, lease value, or movement judgment. Route
+planning to a destination lives under milestone 3a; corpse travel here
+uses bounded direct legs only, with no planner, destination sampling, or
+arrival logic.
 
 Independent state review approved explicit request-versus-observation tracking.
 Loot windows use offered slot permissions and a release acknowledgement barrier;

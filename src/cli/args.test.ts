@@ -533,9 +533,7 @@ describe("cycle arguments", () => {
         "defeat the selected target while keeping the character alive",
       maxStarts: 3,
     });
-    expect(
-      parseArgs(["cycle", "0xa", "--instruction", "kill fast"]),
-    ).toEqual({
+    expect(parseArgs(["cycle", "0xa", "--instruction", "kill fast"])).toEqual({
       mode: "cycle",
       guids: [0xan],
       instruction: "kill fast",

@@ -117,6 +117,8 @@ tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
 tuicraft fight 0xabc       # Jev tactics; optional --framing none|minimal|mechanics
+tuicraft cycle 0xa 0xb --max 3 # fight-loot-next loop over a GUID queue (default max 10 starts)
+tuicraft cycling --json        # cycle phase, queue, loot deltas and stop cause
 tuicraft goto 1 2 3        # ground route
 tuicraft follow 0xabc 3    # bounded follow of an observed unit
 tuicraft following --json # follow state and terminal reason
@@ -137,7 +139,7 @@ tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0       # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of the open window
-tuicraft halt              # stop motion, cast, attack, tactics, navigation, follow
+tuicraft halt              # stop motion, cast, attack, tactics, navigation, follow, cycle
 tuicraft start             # start background daemon and connect
 tuicraft status            # daemon status
 tuicraft stop              # stop daemon
@@ -152,6 +154,16 @@ daemon's `TYPESAFE_API_KEY` as described in
 The narrow Jev spell kit requires observed normal form, including protocol-defined
 zero fields in a complete server CREATE. Absent entities remain unknown.
 Unsupported kits stop with a reason and retain terminal observations; cooldown and server-response waits do not. Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases); the observation carries target separation and facing.
+
+`cycle` runs `fight` over an explicit GUID queue, auto-looting each kill
+before advancing to the next target. A target that dies, is unreachable, or
+fails to fight is skipped with a recorded cause instead of stopping the
+loop; a mid-fight death runs bounded recovery (release, corpse query,
+reclaim-delay wait, one direct travel leg) before resuming. `--max` caps
+tactics-loop starts for the whole run (positive integer, default 10). The
+loop stops on queue exhaustion, the starts cap, `halt`, a denied or blocked
+loot window, or an unrecovered death — inspect `cycling --json` for the
+stop cause and per-target queue detail.
 
 `follow` requests a bounded ground route behind an observed unit on map 530.
 The optional distance is 1–20 yards along the ground route, with a default of 3.
