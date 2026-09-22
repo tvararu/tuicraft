@@ -262,7 +262,6 @@ export class EncounterCycleRuntime {
         try {
           loot.close();
         } catch {
-          /* window already empty and closed server-side */
         }
         this.recordLoot(guid, [], 0, coinageBefore, coinageBefore);
         return true;
@@ -316,7 +315,6 @@ export class EncounterCycleRuntime {
       try {
         loot.close();
       } catch {
-        /* best-effort close after confirmed takes */
       }
       const coinageAfter = loot.snapshot().inventory.coinage;
       this.recordLoot(
