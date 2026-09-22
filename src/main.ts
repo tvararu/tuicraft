@@ -1,32 +1,146 @@
-import { parseArgs } from "cli/args";
-import { sendToSocket, ensureDaemon } from "cli/ipc";
 import {
-  formatSendOutput,
+  parseArgs,
+  hasJsonOption,
+  commandNameFromArgs,
+  type CliAction,
+} from "cli/args";
+import { sendToSocket as sendRawToSocket, ensureDaemon } from "cli/ipc";
+import {
+  decodeReply,
+  resultEnvelope,
+  errorEnvelope,
   daemonCommandFailed,
   walkCommandFailed,
+  type ReplyKind,
+  type OutputEnvelope,
+  type OutputStage,
 } from "cli/send-output";
+import { access } from "node:fs/promises";
+import { socketPath } from "lib/paths";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
 };
 
-const action = parseArgs(Bun.argv.slice(2));
+const argv = Bun.argv.slice(2);
+let action: CliAction | undefined;
+let failureStage: OutputStage = "arguments";
 
-async function waitForEvents(
-  wait: number | undefined,
-  json: boolean,
-): Promise<void> {
+function jsonRequested(): boolean {
+  if (action) return "json" in action && action.json === true;
+  return hasJsonOption(argv);
+}
+
+function publicCommand(): string | null {
+  if (!action) return commandNameFromArgs(argv);
+  switch (action.mode) {
+    case "say":
+    case "slash":
+    case "yell":
+    case "guild":
+    case "party":
+    case "whisper":
+      return "send";
+    default:
+      return action.mode.replaceAll("_", "-");
+  }
+}
+
+function emit(reply: OutputEnvelope): void {
+  console.log(JSON.stringify(reply));
+  if (reply.error) process.exitCode = 1;
+}
+
+async function sendToSocket(command: string): Promise<string[]> {
+  failureStage = "command";
+  return sendRawToSocket(command);
+}
+
+async function waitForEvents(wait: number | undefined): Promise<void> {
   if (wait == null) return;
-  const cmd = json ? "READ_WAIT_JSON" : "READ_WAIT";
-  const lines = await sendToSocket(`${cmd} ${wait * 1000}`);
+  const lines = await sendToSocket(`READ_WAIT ${wait * 1000}`);
   for (const line of lines) console.log(line);
+}
+
+function printReply(
+  lines: string[],
+  kind: ReplyKind,
+  checkHumanErrors = false,
+): OutputEnvelope | undefined {
+  if (jsonRequested()) {
+    const reply = decodeReply(publicCommand() ?? "", kind, lines);
+    emit(reply);
+    return reply;
+  }
+  for (const line of lines) console.log(line);
+  if (checkHumanErrors && daemonCommandFailed(lines)) process.exitCode = 1;
 }
 
 function printControlReply(lines: string[]): void {
+  printReply(lines, "intent", true);
+}
+function printWalkReply(lines: string[]): void {
+  if (jsonRequested()) {
+    const reply = decodeReply(publicCommand() ?? "", "json", lines);
+    if (
+      !reply.error &&
+      (typeof reply.data !== "object" ||
+        reply.data === null ||
+        !("status" in reply.data) ||
+        reply.data["status"] !== "completed")
+    ) {
+      emit(
+        errorEnvelope(
+          publicCommand(),
+          "command",
+          "walk stopped without completion",
+          reply,
+        ),
+      );
+    } else emit(reply);
+    return;
+  }
   for (const line of lines) console.log(line);
-  if (daemonCommandFailed(lines)) process.exit(1);
+  if (walkCommandFailed(lines)) process.exitCode = 1;
+}
+
+
+async function printSendReply(
+  lines: string[],
+  slash: boolean,
+  wait: number | undefined,
+): Promise<void> {
+  if (!jsonRequested()) {
+    for (const line of lines) console.log(line);
+    await waitForEvents(wait);
+    return;
+  }
+
+  let reply = decodeReply("send", slash ? "slash" : "intent", lines);
+  if (!reply.error && wait != null) {
+    try {
+      const waited = decodeReply(
+        "read",
+        "events",
+        await sendToSocket(`READ_WAIT_JSON ${wait * 1000}`),
+      );
+      reply = waited.error
+        ? errorEnvelope("send", "wait", waited.error.message, reply)
+        : { ...reply, events: waited.events };
+    } catch (error) {
+      reply = errorEnvelope(
+        "send",
+        "wait",
+        error instanceof Error ? error.message : String(error),
+        reply,
+      );
+    }
+  }
+  emit(reply);
 }
 
 async function main() {
+  action = parseArgs(argv);
+  failureStage = "startup";
   switch (action.mode) {
     case "interactive": {
       const { authWithRetry } = await import("wow/auth");
@@ -93,17 +207,13 @@ async function main() {
       await ensureDaemon();
       const cmd = `${action.mode.toUpperCase()} ${action.message}`;
       const lines = await sendToSocket(cmd);
-      for (const line of formatSendOutput(lines, action.json, false))
-        console.log(line);
-      await waitForEvents(action.wait, action.json);
+      await printSendReply(lines, false, action.wait);
       break;
     }
     case "slash": {
       await ensureDaemon();
       const lines = await sendToSocket(action.input);
-      for (const line of formatSendOutput(lines, action.json, true))
-        console.log(line);
-      await waitForEvents(action.wait, action.json);
+      await printSendReply(lines, true, action.wait);
       break;
     }
     case "whisper": {
@@ -111,9 +221,7 @@ async function main() {
       const lines = await sendToSocket(
         `WHISPER ${action.target} ${action.message}`,
       );
-      for (const line of formatSendOutput(lines, action.json, false))
-        console.log(line);
-      await waitForEvents(action.wait, action.json);
+      await printSendReply(lines, false, action.wait);
       break;
     }
     case "read": {
@@ -124,7 +232,7 @@ async function main() {
           ? `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`
           : base;
       const lines = await sendToSocket(cmd);
-      for (const line of lines) console.log(line);
+      printReply(lines, "events");
       break;
     }
     case "tail": {
@@ -132,38 +240,98 @@ async function main() {
       const verb = action.json ? "READ_WAIT_JSON" : "READ_WAIT";
       while (true) {
         const lines = await sendToSocket(`${verb} 1000`);
-        for (const line of lines) console.log(line);
+        if (action.json) {
+          for (const line of lines) {
+            const reply = decodeReply("tail", "events", [line]);
+            emit(reply);
+            if (reply.error) return;
+          }
+        } else for (const line of lines) console.log(line);
       }
-      break;
     }
     case "start": {
       try {
         const lines = await sendToSocket("STATUS");
         if (lines.includes("CONNECTED")) {
-          console.log("Daemon is already running.");
+          if (jsonRequested())
+            emit(
+              resultEnvelope("start", { socket: "responsive", started: false }),
+            );
+          else console.log("Daemon is already running.");
           break;
         }
       } catch {}
+      failureStage = "startup";
       await ensureDaemon();
       const lines = await sendToSocket("STATUS");
-      for (const line of lines) console.log(line);
+      if (jsonRequested()) {
+        if (lines.length === 1 && lines[0] === "CONNECTED")
+          emit(
+            resultEnvelope("start", { socket: "responsive", started: true }),
+          );
+        else
+          emit(
+            errorEnvelope(
+              "start",
+              "command",
+              lines[0]?.startsWith("ERR ")
+                ? lines[0].slice(4)
+                : "Unexpected daemon reply",
+            ),
+          );
+      } else for (const line of lines) console.log(line);
       break;
     }
     case "status": {
       try {
         const lines = await sendToSocket("STATUS");
-        for (const line of lines) console.log(line);
+        if (jsonRequested()) {
+          if (lines.length === 1 && lines[0] === "CONNECTED")
+            emit(resultEnvelope("status", { socket: "responsive" }));
+          else
+            emit(
+              errorEnvelope(
+                "status",
+                "command",
+                lines[0]?.startsWith("ERR ")
+                  ? lines[0].slice(4)
+                  : "Unexpected daemon reply",
+              ),
+            );
+        } else for (const line of lines) console.log(line);
       } catch {
-        console.log("Daemon is not running.");
+        if (jsonRequested())
+          emit(resultEnvelope("status", { socket: "not_running" }));
+        else console.log("Daemon is not running.");
       }
       break;
     }
     case "stop": {
       try {
         const lines = await sendToSocket("STOP");
-        for (const line of lines) console.log(line);
-      } catch {
-        console.log("Daemon is not running.");
+        if (jsonRequested()) emit(decodeReply("stop", "intent", lines));
+        else for (const line of lines) console.log(line);
+      } catch (error) {
+        if (!jsonRequested()) console.log("Daemon is not running.");
+        else {
+          const absent = await access(socketPath())
+            .then(() => false)
+            .catch(
+              (probeError: unknown) =>
+                probeError instanceof Error &&
+                "code" in probeError &&
+                probeError.code === "ENOENT",
+            );
+          if (absent) emit(resultEnvelope("stop", { socket: "not_running" }));
+          else
+            emit(
+              errorEnvelope(
+                "stop",
+                "command",
+                error instanceof Error ? error.message : String(error),
+              ),
+            );
+        }
       }
       break;
     }
@@ -172,14 +340,14 @@ async function main() {
       const verb = action.json ? "WHO_JSON" : "WHO";
       const cmd = action.filter ? `${verb} ${action.filter}` : verb;
       const lines = await sendToSocket(cmd);
-      for (const line of lines) console.log(line);
+      printReply(lines, "json");
       break;
     }
     case "control": {
       await ensureDaemon();
       const cmd = action.json ? "CONTROL_JSON" : "CONTROL";
       const lines = await sendToSocket(cmd);
-      for (const line of lines) console.log(line);
+      printReply(lines, "json");
       break;
     }
     case "move": {
@@ -210,8 +378,7 @@ async function main() {
       const lines = await sendToSocket(
         `WALK_TOWARD ${action.yards} ${destination}`,
       );
-      for (const line of lines) console.log(line);
-      if (walkCommandFailed(lines)) process.exit(1);
+      printWalkReply(lines);
       break;
     }
     case "target": {
@@ -231,7 +398,7 @@ async function main() {
       const base = action.json ? "NEARBY_JSON" : "NEARBY";
       const cmd = action.all ? `${base} all` : base;
       const lines = await sendToSocket(cmd);
-      for (const line of lines) console.log(line);
+      printReply(lines, "nearby");
       break;
     }
     case "combat":
@@ -247,7 +414,7 @@ async function main() {
       await ensureDaemon();
       const verb = `${action.mode.toUpperCase()}${action.json ? "_JSON" : ""}`;
       const lines = await sendToSocket(verb);
-      printControlReply(lines);
+      printReply(lines, "json", true);
       break;
     }
     case "cast": {
@@ -407,7 +574,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exit(1);
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  if (jsonRequested())
+    emit(errorEnvelope(publicCommand(), failureStage, message));
+  else console.error(message);
+  process.exitCode = 1;
 });

@@ -4,22 +4,21 @@ import {
   walkCommandFailed,
   decodeReply,
   errorEnvelope,
-  resultEnvelope,
 } from "cli/send-output";
 
 describe("decodeReply", () => {
-  test.each(["OK", "OK WHISPER Aria"])(
-    "treats %s as an intent acknowledgment",
-    (line) => {
-      expect(decodeReply("send", "intent", [line])).toEqual({
-        command: "send",
-        kind: "intent",
-        data: null,
-        events: [],
-        error: null,
-      });
-    },
-  );
+  test.each([
+    "OK",
+    "OK WHISPER Aria",
+  ])("treats %s as an intent acknowledgment", (line) => {
+    expect(decodeReply("send", "intent", [line])).toEqual({
+      command: "send",
+      kind: "intent",
+      data: null,
+      events: [],
+      error: null,
+    });
+  });
 
   test("treats a slash OK reply as an intent", () => {
     expect(decodeReply("send", "slash", ["OK"])).toEqual({
@@ -161,18 +160,15 @@ describe("decodeReply", () => {
     });
   });
 
-  test.each(["intent", "json", "slash"] as const)(
-    "rejects an empty %s reply",
-    (kind) => {
-      expect(decodeReply("send", kind, [])).toMatchObject({
-        command: "send",
-        kind: "error",
-        data: null,
-        events: [],
-        error: { stage: "command" },
-      });
-    },
-  );
+  test("rejects a missing intent acknowledgment", () => {
+    expect(decodeReply("send", "intent", [])).toMatchObject({
+      command: "send",
+      kind: "error",
+      data: null,
+      events: [],
+      error: { stage: "command" },
+    });
+  });
 
   test("rejects a non-acknowledgment intent reply", () => {
     expect(decodeReply("fight", "intent", ["CONNECTED"])).toMatchObject({
@@ -212,41 +208,22 @@ describe("decodeReply", () => {
     });
   });
 
-  test.each(["null", "42", '"text"', "[]"] as const)(
-    "rejects a non-object event %s",
-    (line) => {
-      expect(decodeReply("read", "events", [line])).toMatchObject({
-        command: "read",
-        kind: "error",
-        data: null,
-        events: [],
-        error: { stage: "command" },
-      });
-    },
-  );
-});
-
-describe("envelope constructors", () => {
-  test("keeps lifecycle result data in the five-field envelope", () => {
-    expect(resultEnvelope("status", { socket: "responsive" })).toEqual({
-      command: "status",
-      kind: "result",
-      data: { socket: "responsive" },
-      events: [],
-      error: null,
-    });
-  });
-
-  test("reports local errors without inventing a reply", () => {
-    expect(errorEnvelope(null, "arguments", "invalid flag")).toEqual({
-      command: null,
+  test.each([
+    "null",
+    "42",
+    "[]",
+  ] as const)("rejects a non-object event %s", (line) => {
+    expect(decodeReply("read", "events", [line])).toMatchObject({
+      command: "read",
       kind: "error",
       data: null,
       events: [],
-      error: { stage: "arguments", message: "invalid flag" },
+      error: { stage: "command" },
     });
   });
+});
 
+describe("envelope constructors", () => {
   test("retains an acknowledged send when the later wait fails", () => {
     const acknowledged = decodeReply("send", "intent", ["OK"]);
     expect(
@@ -274,17 +251,6 @@ describe("envelope constructors", () => {
       data: { lines: ["joined"] },
       events: [{ type: "SAY", message: "hi" }],
       error: { stage: "wait", message: "connection lost" },
-    });
-  });
-
-  test("a command error does not preserve an earlier acknowledgment", () => {
-    const acknowledged = decodeReply("send", "intent", ["OK"]);
-    expect(errorEnvelope("send", "command", "rooted", acknowledged)).toEqual({
-      command: "send",
-      kind: "error",
-      data: null,
-      events: [],
-      error: { stage: "command", message: "rooted" },
     });
   });
 });

@@ -463,6 +463,37 @@ const SETUP_VALUE_FLAGS: Record<string, true> = {
   "--timeout_minutes": true,
 };
 
+export function hasJsonOption(args: string[]): boolean {
+  if (args[0] !== "setup") return args.includes("--json");
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--json" && !SETUP_VALUE_FLAGS[args[i - 1]!]) return true;
+  }
+  return false;
+}
+
+export function commandNameFromArgs(args: string[]): string | null {
+  const first = args.find((arg) => arg !== "--json");
+  if (!first) return null;
+  if (SUBCOMMANDS.has(first)) return first;
+  switch (first) {
+    case "-w":
+    case "-y":
+    case "-g":
+    case "-p":
+      return "send";
+    case "-h":
+    case "--help":
+      return "help";
+    case "-v":
+    case "--version":
+      return "version";
+    case "--daemon":
+      return "daemon";
+    default:
+      return null;
+  }
+}
+
 function withJson(action: CliAction, json: boolean): CliAction {
   if (!json) return action;
   switch (action.mode) {
@@ -482,14 +513,12 @@ function withJson(action: CliAction, json: boolean): CliAction {
 export function parseArgs(args: string[]): CliAction {
   if (args.length === 0) return { mode: "interactive" };
   if (args[0] === "setup") {
-    for (let i = 1; i < args.length; i++) {
-      if (args[i] === "--json" && !SETUP_VALUE_FLAGS[args[i - 1]!])
-        throw new Error("--json is not supported for setup");
-    }
+    if (hasJsonOption(args))
+      throw new Error("--json is not supported for setup");
     return { mode: "setup", args: args.slice(1) };
   }
 
-  const json = hasFlag(args, "--json");
+  const json = hasJsonOption(args);
   const withoutJson = json ? args.filter((arg) => arg !== "--json") : args;
   const sub = parseSubcommand(withoutJson);
   if (sub) return withJson(sub, json);

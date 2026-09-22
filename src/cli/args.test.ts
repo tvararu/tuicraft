@@ -808,10 +808,7 @@ describe("daemon JSON arguments", () => {
       },
     ],
     [["goto", "1.5", "2", "3"], { mode: "goto", x: 1.5, y: 2, z: 3 }],
-    [
-      ["follow", "0xa", "2.5"],
-      { mode: "follow", guid: 10n, distance: 2.5 },
-    ],
+    [["follow", "0xa", "2.5"], { mode: "follow", guid: 10n, distance: 2.5 }],
     [["query-corpse"], { mode: "query_corpse" }],
     [["release-spirit"], { mode: "release_spirit" }],
     [["reclaim-corpse"], { mode: "reclaim_corpse" }],
