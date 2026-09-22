@@ -406,6 +406,7 @@ export type WorldConn = {
   tactics?: TacticsLoop;
   onControlEvent?: (event: ControlEvent) => void;
   onRecoveryEvent?: (event: RecoveryEvent) => void;
+  onRewardsEvent?: (event: RewardsEvent) => void;
 };
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -677,6 +678,7 @@ export function worldSession(
     const rewards = new RewardsRuntime(runtimeDeps);
     conn.rewards = rewards;
     let cycleRecoveryListener: ((event: RecoveryEvent) => void) | undefined;
+    let cycleLootListener: ((event: RewardsEvent) => void) | undefined;
     const cycleTactics: CycleTactics = {
       start: (context, signal) =>
         tactics.start(
@@ -696,7 +698,9 @@ export function worldSession(
       take: (slot) => rewards.take(slot),
       takeMoney: () => rewards.takeMoney(),
       close: () => rewards.close(),
-      onEvent: (callback) => rewards.onEvent(callback),
+      onEvent: (callback) => {
+        cycleLootListener = callback;
+      },
     };
     const cycleRecovery: CycleRecovery = {
       snapshot: () => recovery.snapshot(),
@@ -735,6 +739,10 @@ export function worldSession(
       }
       conn.onRecoveryEvent?.(event);
       cycleRecoveryListener?.(event);
+    });
+    rewards.onEvent((event) => {
+      conn.onRewardsEvent?.(event);
+      cycleLootListener?.(event);
     });
     conn.dispatch.on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
       recovery.handleCorpseQuery(r),
@@ -788,6 +796,7 @@ export function worldSession(
       conn.onDuelEvent = undefined;
       conn.onControlEvent = undefined;
       conn.onRecoveryEvent = undefined;
+      conn.onRewardsEvent = undefined;
       follow.onEvent(undefined);
       recovery.onEvent(undefined);
       quests.onEvent(undefined);
@@ -797,6 +806,7 @@ export function worldSession(
       tactics.onEvent(undefined);
       cycle.onEvent(undefined);
       cycleRecoveryListener = undefined;
+      cycleLootListener = undefined;
       if (sendStop) rawHalt();
       disposed = true;
       control.dispose();
@@ -1529,7 +1539,7 @@ export function worldSession(
           rewards.close();
         },
         onRewardsEvent(cb) {
-          rewards.onEvent(cb);
+          conn.onRewardsEvent = cb;
         },
         async startCycle(guids, instruction, maxStarts) {
           override();

@@ -127,6 +127,7 @@ function makeMockClient(): {
         onRewardsEvent: jest.fn(),
         startCycle: jest.fn(),
         stopCycle: jest.fn(),
+        getCycleState: jest.fn(),
         onCycleEvent: jest.fn(),
       }),
     ),
