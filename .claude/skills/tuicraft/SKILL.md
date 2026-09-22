@@ -194,21 +194,23 @@ IPC: FOLLOW <guid> [distance], FOLLOWING, FOLLOWING_JSON.
     tuicraft resurrect accept
     tuicraft resurrect decline
 
-Rules:
+Use this four-step corpse run. Inspect state between requests. An `OK` reply records intent, not an observed life change.
 
-- Read observed life first. Positive ghost health does not mean alive. Release intent and graveyard markers do not establish ghost state.
-- `release-spirit` requires authoritative dead state. Do not issue it when the state already says ghost.
-- `query-corpse` is readonly for control ownership. Only one unanswered query is allowed.
-- Unknown corpse information is not an absent corpse. A stale query or old offer cannot authorize a new death.
-- `reclaim-corpse` takes no GUID. It requires observed ghost state, a freshly queried found corpse, and matching actual/displayed/pose maps.
-- Corpse `mapId` is the displayed map. `corpseMapId` is the actual map. An instance entrance is not the corpse location.
-- Reclaim distance must be at most 39 yards in three dimensions. Inspect `reclaim.pose.source` before treating its position as observed.
-- A known future delay blocks reclaim. Missing `remainingMs` is unknown, never zero.
-- With other guards satisfied, one explicit reclaim request can use unknown timing. `readiness=unverified` does not mean ready.
-- `resurrect accept|decline` answers the current offer once. A known offer delay blocks accept but does not block decline.
-- Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations but cannot reverse a sent request.
-- `OK` is request intent, not ghost/alive confirmation. Inspect subsequent authoritative life and ghost flags for the outcome.
-- Do not retry unanswered actions automatically. Command and inspection errors print `ERR` and exit with status 1.
+1. Inspect `recovery --json`. Read `life`, `epoch`, `query`, `corpse`, `reclaim`, and `request`. Ghost flags outrank positive health. A release request or graveyard marker does not prove ghost state. If `life=unknown`, stop and report it.
+2. If `life=dead`, issue `release-spirit` once. Wait for observed `life=ghost`. If already ghost, skip release. Never retry an unanswered release request.
+3. Check `query` before calling `query-corpse`. If it is `unanswered` or `stale`, wait for the reply or report the unresolved query. If `corpse.status=found` in this epoch, use it without another query. If `corpse.status=absent`, stop. Otherwise, query once and await a found corpse for the same `epoch`. `corpse.status=unknown` is not `absent`. A stale reply cannot authorize this death. `query-corpse` does not change control ownership.
+   - Check `corpse.mapId` against `corpse.corpseMapId` before travel. The first is the displayed map; the second is the actual corpse map. Stop if they differ.
+   - Check `reclaim.pose.mapId` against `corpse.corpseMapId`. Stop on a map mismatch or an unknown pose.
+   - If out of range, use short `face` and `move forward` legs toward the queried position. Recompute the heading from the current pose after each leg. Read `recovery --json` again. Stop if movement makes no progress or ground is unsafe. Do not use `goto` from a ghost; the ground planner has refused ghost poses.
+4. Before reclaim, require observed ghost and a found corpse from this epoch. Require matching displayed, actual, and pose maps. Require `reclaim.distance <= 39` yards in 3D. A known positive `remainingMs` blocks reclaim. Missing `remainingMs` means unknown timing, not zero. When other guards pass, `reclaim.canRequest=true` with `readiness=unverified` permits one explicit request. This does not prove readiness. A `predicted` pose is not server confirmation. Its source alone does not block the request.
+   - Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim. Its distance may use a stale self position after walking. Compare killer coordinates with the current `reclaim.pose`. If the killer is near, choose a clear escape heading. If no clear heading is known, report the risk rather than repeat a death loop.
+   - Issue `reclaim-corpse` once, without a GUID. If the killer is near, issue `face` and a short `move forward` away immediately after `OK`. Do not pause to cast or inspect state first. Then inspect `recovery --json` for observed `life=alive`. If life is not observed, report the unanswered outcome. Do not retry reclaim automatically.
+
+A current unanswered resurrection offer is a separate choice. Answer `resurrect accept|decline` once only for that offer. A known future offer delay blocks accept, not decline. Confirm observed life after an accept request.
+
+Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1.
+
+After reconnect, all learned spells in `combat --json` may appear in `unknownLearned` while the catalog is cold. Run `spells` once, then inspect `combat --json` again before diagnosing a broken spell kit.
 
 IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, RESURRECT accept|decline.
 

@@ -175,14 +175,14 @@ stops following without retries. `halt` also stops following.
 `control --json` for stop reasons and separate predicted versus server poses.
 The `holding` state is predicted standoff, not server-confirmed arrival.
 
-Recovery commands use observed life and corpse facts. `query-corpse` requests
-information without changing control ownership. Reclaim requires observed ghost
-state, matching actual/displayed corpse maps, and a position within 39 yards in 3D.
-A known remaining delay blocks reclaim. Missing timing remains unknown, not zero.
-An explicitly requested reclaim can proceed with unknown timing if the other guards pass.
-`resurrect accept|decline` answers only the current offer. `OK` is request intent,
-not proof of release or resurrection. Inspect `recovery --json` and subsequent
-observed life updates. Do not retry unanswered requests automatically.
+Use the existing commands for an agent-guided corpse run:
+
+1. Inspect `recovery --json`. Trust observed life, not positive ghost health or an `OK` response.
+2. If dead, request `release-spirit` once. Wait for observed ghost state. Skip release if already ghost.
+3. Check for an unanswered or stale corpse query before `query-corpse`. Reuse a found corpse from the current death epoch. Do not query again. Stop on an absent reply. Otherwise query once and await a found corpse. Compare the displayed corpse map, actual corpse map, and pose map. Travel with short `face` and `move` legs, not `goto` from a ghost. Stop if ground movement makes no progress.
+4. Reclaim only within 39 yards in 3D when `reclaim.canRequest=true`. A known future delay blocks reclaim. Unknown delay permits one explicit request but does not prove readiness. Reclaim may restore life beside the killer at partial health. Plan an escape heading before reclaim near a killer. If no safe heading is known, report the risk. After `OK`, flee immediately, then inspect for observed life. Do not retry an unanswered request.
+
+`resurrect accept|decline` answers only a current offer. After reconnect, run `spells` once if `combat --json` lists every learned spell as `unknownLearned`. Then inspect combat again.
 
 Quest actions use the current server-offered dialog and giver. Inspect `quests`
 between actions instead of assuming that a sent request changed the quest log.

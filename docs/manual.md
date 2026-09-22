@@ -248,6 +248,15 @@ This command takes no corpse GUID. The server finds the authenticated player's c
 :: Answer the current server-observed resurrection offer once. No offer means the command fails.
 A known future offer delay blocks acceptance, but not decline. Response intent does not establish resurrection.
 
+Guided corpse run:
+
+1. Inspect `recovery --json`. Use observed `life` and `epoch`, not health alone. Stop if life is unknown.
+2. If dead, issue `release-spirit` once and wait for observed ghost state. If already ghost, skip release.
+3. Check `query` before requesting the corpse. Wait if a query is unanswered or stale. Use a found corpse from this epoch without another query. Stop if the reply says absent. Otherwise issue `query-corpse` once and require a found corpse from this epoch. Check displayed `corpse.mapId` against actual `corpse.corpseMapId` and `reclaim.pose.mapId`. If the maps match but the corpse is distant, use short `face` and `move forward` legs. Recheck `recovery --json` after each leg. Do not use `goto` from a ghost; the ground planner has refused ghost poses. Stop if motion makes no progress.
+4. Require `reclaim.canRequest=true` and a 3D distance of at most 39 yards. Wait out a known positive `remainingMs`. Unknown timing permits one explicit request but does not prove readiness. A predicted pose is not server confirmation. It does not by itself block reclaim. Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim near a killer. Its distance may use a stale self position after walking. Compare killer coordinates with the current `reclaim.pose` and choose a clear escape heading. If no clear heading is known, report the risk. After `reclaim-corpse` returns `OK`, flee with `face` and a short `move forward` before inspecting life. Require observed `life=alive`. Never treat `OK` as proof or retry an unanswered request.
+
+After reconnect, `combat --json` may list every learned spell in `unknownLearned` while the catalog is cold. Run `spells` once. Inspect `combat --json` again before diagnosing a broken spell kit.
+
 Mutating recovery actions stop prior tactics, follow, and motion through the manual override path.
 `OK` acknowledges intent only. Confirm recovery through subsequent authoritative life/ghost-flag observations.
 Do not retry unanswered actions automatically. Recovery command and inspection errors print `ERR` and exit with status 1.

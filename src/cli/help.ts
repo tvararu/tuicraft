@@ -22,6 +22,7 @@ USAGE
   tuicraft nearby [--all] [--json]  List nearby entities (nearest first; --all disables distance filter)
   tuicraft combat [--json]   Combat state
   tuicraft spells [--json]   Learned spellbook
+                            After reconnect, run once if all learned spells appear in unknownLearned
   tuicraft cast <id> <guid>  Cast a learned spell
   tuicraft attack <guid>     Start auto-attack
   tuicraft cancel-cast       Interrupt current cast
@@ -37,11 +38,13 @@ USAGE
                             Map 530; maximum 30s; OK is intent, not arrival
   tuicraft following [--json]  Follow state, provenance and stop reason
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
-  tuicraft query-corpse       Request current corpse information
   tuicraft release-spirit     Request release from observed dead state
+  tuicraft query-corpse       Request current corpse information
   tuicraft reclaim-corpse     Request guarded corpse reclaim
   tuicraft resurrect accept|decline  Answer the current resurrection offer
                             OK is request intent, not confirmed recovery
+                            Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim
+                            Near a killer: plan an exit, flee after OK, then inspect observed life
   tuicraft quests [--json]    Offered dialog, quest log and pending intent
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization)
