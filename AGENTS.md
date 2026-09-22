@@ -14,6 +14,8 @@
   goal allows it. Do not substitute server-data edits for client capabilities.
 - If the coordinator lacks CLI access, delegate execution to a capable agent.
   Keep one gameplay owner per character to prevent conflicting actions.
+- omp is the main harness. Orca worktrees spawn agents with `--agent omp`;
+  "omp worktree" means `orca-ide worktree create --agent omp`.
 
 ## Commands
 
@@ -29,9 +31,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
-- `orca-ide worktree create --name <name>` — create a worktree. Setup runs by
-  default; no flags needed, and a nested agent creating its own worktree
-  inherits both setup and lineage.
+- `orca-ide worktree create --name <name> --agent omp` — create a worktree.
+  Setup runs by default; no other flags needed, and a nested agent creating
+  its own worktree inherits both setup and lineage.
 - `orca-ide worktree rm --worktree name:<name>` — remove a worktree and its
   branch. No `--run-hooks`: there is no archive hook and passing it only adds
   a way for removal to fail.
