@@ -26,7 +26,7 @@ function fakeTactics(
       if (next instanceof Error) throw next;
     },
     stop: (_r: string) => {},
-    lastOutcome: () => undefined,
+    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
     selfDead: () => lastCallIndex === config.deadOn,
   };
 }
@@ -452,6 +452,52 @@ test("lost target records cause and advances, loop stops at end of queue", async
   ]);
 });
 
+test("blocked outcome skips without loot and advances", async () => {
+  let starts = 0;
+  const tactics = {
+    start: async (
+      _ctx: { targetGuid: bigint; instruction: string },
+      _signal: AbortSignal,
+    ) => {
+      starts++;
+    },
+    stop: (_reason: string) => {},
+    lastOutcome: () => ({ status: "blocked" as const, reason: "obstructed" }),
+    selfDead: () => false,
+  };
+  const loot = fakeLoot({});
+  const openedGuids: bigint[] = [];
+  const innerOpen = loot.open;
+  loot.open = (guid) => {
+    openedGuids.push(guid);
+    innerOpen(guid);
+  };
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const events: string[] = [];
+  runtime.onEvent((event) => events.push(event.type));
+  await runtime.start({ guids: [1n, 2n], instruction: "fight", maxStarts: 5 });
+  const state = runtime.snapshot();
+  expect(state.queue[0]).toMatchObject({
+    status: "skipped",
+    cause: "obstructed",
+  });
+  expect(state.queue[1]).toMatchObject({
+    status: "skipped",
+    cause: "obstructed",
+  });
+  expect(starts).toBe(2);
+  expect(openedGuids).toEqual([]);
+  expect(events).toEqual(["started", "target_done", "target_done", "stopped"]);
+  expect(state.lastLoot).toBeUndefined();
+  expect(state.stopCause).toBe("queue_exhausted");
+});
+
 test("stops at max starts with cause", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
@@ -501,7 +547,7 @@ test("second start replaces the first", async () => {
       await gate;
     },
     stop: (_r: string) => {},
-    lastOutcome: () => undefined,
+    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
     selfDead: () => false,
   };
   const loot = fakeLoot({});
@@ -882,7 +928,7 @@ test("phase resets to fighting at the start of each target", async () => {
       seen.push(runtime.snapshot().phase);
     },
     stop: (_r: string) => {},
-    lastOutcome: () => undefined,
+    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
     selfDead: () => false,
   };
   runtime = new EncounterCycleRuntime({

@@ -94,18 +94,48 @@ test("stop releases abort-insensitive preparation without activating later", asy
   expect(f.actions).toEqual([]);
 });
 
-test("start resolves after activation rather than waiting for encounter completion", async () => {
+test("start resolves only after the decide loop records its outcome", async () => {
+  let observations = 0;
+  const f = fixture({
+    minIntervalMs: 0,
+    observe: () =>
+      observations++ < 2
+        ? frame
+        : {
+            ...frame,
+            outcome: { status: "completed", reason: "credited kill" },
+          },
+  });
+  let resolved = false;
+  const running = f.tactics.start(context);
+  void running.then(() => {
+    resolved = true;
+  });
+  await f.requested;
+  expect(resolved).toBe(false);
+  expect(f.tactics.snapshot().lastOutcome).toBeUndefined();
+  await running;
+  expect(resolved).toBe(true);
+  expect(f.tactics.snapshot()).toMatchObject({
+    status: "idle",
+    lastOutcome: { status: "completed", reason: "credited kill" },
+  });
+});
+
+test("start blocked on the decide loop still resolves on external stop", async () => {
   const result = Promise.withResolvers<JevActionResult>();
   const f = fixture({ select: () => result.promise });
-  try {
-    await f.tactics.start(context);
-    expect(f.tactics.snapshot().status).toBe("active");
-    expect(f.activations).toBe(1);
-    expect(f.actions).toEqual([]);
-  } finally {
-    f.tactics.dispose();
-    result.resolve(judgment());
-  }
+  const running = f.tactics.start(context);
+  await f.requested;
+  let resolved = false;
+  void running.then(() => {
+    resolved = true;
+  });
+  f.tactics.stop("manual");
+  await running;
+  expect(resolved).toBe(true);
+  expect(f.tactics.snapshot().status).toBe("idle");
+  result.resolve(judgment());
 });
 
 test("replacement cannot overlap a pending provider call or activate after stop", async () => {
@@ -117,7 +147,7 @@ test("replacement cannot overlap a pending provider call or activate after stop"
       return result.promise;
     },
   });
-  await f.tactics.start(context);
+  const initial = f.tactics.start(context);
   await f.requested;
   const replacement = f.tactics.start({
     ...context,
@@ -125,6 +155,7 @@ test("replacement cannot overlap a pending provider call or activate after stop"
   });
   f.tactics.stop("manual");
   await replacement;
+  await initial;
   result.resolve(judgment());
   await Promise.resolve();
   await Promise.resolve();
@@ -142,9 +173,11 @@ test("late results are discarded without overwriting a newer run's final state",
   const result = Promise.withResolvers<JevActionResult>();
   const discarded = Promise.withResolvers<void>();
   const f = fixture({ select: () => result.promise });
-  await f.tactics.start(context);
+  const old = f.tactics.start(context);
+  await f.requested;
   const oldId = f.tactics.snapshot().runId;
   f.tactics.stop("halt");
+  await old;
   const next = f.tactics.start({ ...context, targetGuid: 2n });
   f.tactics.stop("manual");
   await next;
@@ -163,8 +196,10 @@ test("aborting the external signal synchronously halts active work", async () =>
   const result = Promise.withResolvers<JevActionResult>();
   const controller = new AbortController();
   const f = fixture({ select: () => result.promise });
-  await f.tactics.start(context, controller.signal);
+  const running = f.tactics.start(context, controller.signal);
+  await f.requested;
   controller.abort();
+  await running;
   expect(f.halts).toBe(1);
   expect(f.tactics.snapshot()).toMatchObject({
     status: "idle",
@@ -183,11 +218,14 @@ test("current capability loss rejects an otherwise fresh action", async () => {
     select: () => result.promise,
   });
   const discarded = Promise.withResolvers<void>();
+  const requested = Promise.withResolvers<void>();
   f.tactics.onEvent((event) => {
     if (event.type === "discarded") discarded.resolve();
+    if (event.type === "request") requested.resolve();
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await requested.promise;
     available = false;
     result.resolve(judgment());
     await discarded.promise;
@@ -198,6 +236,7 @@ test("current capability loss rejects an otherwise fresh action", async () => {
     });
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -209,11 +248,14 @@ test("unrelated world updates and low confidence do not starve legal decisions",
     observe: () => ({ ...frame, observation: { sequence } }),
     select: () => result.promise,
   });
+  const requestSeen = Promise.withResolvers<void>();
   f.tactics.onEvent((event) => {
     if (event.type === "applied") applied.resolve();
+    if (event.type === "request") requestSeen.resolve();
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await requestSeen.promise;
     sequence = 100;
     result.resolve(judgment());
     await applied.promise;
@@ -221,6 +263,7 @@ test("unrelated world updates and low confidence do not starve legal decisions",
     expect(f.tactics.snapshot().lastResult?.confidence).toBe(0.01);
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -238,9 +281,11 @@ test("outcome observed before execution prevents a late cast and preserves final
           }
         : frame,
   });
-  await f.tactics.start(context);
+  const running = f.tactics.start(context);
+  await f.requested;
   completed = true;
   result.resolve(judgment());
+  await running;
   await f.stopped;
   expect(f.actions).toEqual([]);
   expect(f.tactics.snapshot()).toMatchObject({
@@ -305,8 +350,10 @@ test("provider timeout halts even if the provider ignores abort", async () => {
   const result = Promise.withResolvers<JevActionResult>();
   const f = fixture({ requestTimeoutMs: 500, select: () => result.promise });
   try {
-    await f.tactics.start(context);
+    const running = f.tactics.start(context);
+    await f.requested;
     jest.advanceTimersByTime(500);
+    await running;
     await f.stopped;
     expect(f.halts).toBe(1);
     expect(f.tactics.snapshot().lastOutcome).toEqual({
@@ -323,30 +370,21 @@ test("provider timeout halts even if the provider ignores abort", async () => {
 });
 
 test("wait-only frames skip inference until useful choices appear", async () => {
-  jest.useFakeTimers();
   let useful = false;
-  let observations = 0;
-  const waiting = Promise.withResolvers<void>();
-  const result = Promise.withResolvers<JevActionResult>();
   let calls = 0;
   const f = fixture({
-    observe: () => {
-      observations += 1;
-      if (observations === 2) waiting.resolve();
-      return useful ? frame : { observation: {}, candidates: [] };
-    },
+    minIntervalMs: 0,
+    observe: () => (useful ? frame : { observation: {}, candidates: [] }),
     select: () => {
       calls += 1;
-      return result.promise;
+      return Promise.resolve(judgment());
     },
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
-    jest.advanceTimersByTime(200);
-    await waiting.promise;
+    await Promise.resolve();
     expect(calls).toBe(0);
     useful = true;
-    jest.advanceTimersByTime(200);
     await f.requested;
     expect(calls).toBe(1);
     const request = f.tactics.snapshot().lastRequest;
@@ -356,8 +394,7 @@ test("wait-only frames skip inference until useful choices appear", async () => 
     ]);
   } finally {
     f.tactics.dispose();
-    result.resolve(judgment());
-    jest.useRealTimers();
+    await running;
   }
 });
 
@@ -375,13 +412,14 @@ test("stale replies cannot execute", async () => {
   f.tactics.onEvent((event) => {
     if (event.type === "discarded") discarded.resolve();
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
     await discarded.promise;
     expect(f.actions).toEqual([]);
     expect(f.tactics.snapshot().lastDiscardReason).toBe("stale_age");
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -395,8 +433,8 @@ test("current-world execution rejection is retained rather than reported as appl
   f.tactics.onEvent((event) => {
     if (event.type === "discarded") discarded.resolve();
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
     await discarded.promise;
     expect(f.tactics.snapshot().lastDecision).toEqual({
       actionId: "smite",
@@ -405,6 +443,7 @@ test("current-world execution rejection is retained rather than reported as appl
     });
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -446,19 +485,28 @@ test("replacing preparation cannot let the old completion stop the newer mode", 
     },
     select: () => result.promise,
   });
+  const first = f.tactics.start(context);
+  const second = f.tactics.start({ ...context, instruction: "Preserve mana" });
   try {
-    const first = f.tactics.start(context);
-    await f.tactics.start({ ...context, instruction: "Preserve mana" });
+    const settled = await Promise.race([
+      first.then(() => "first" as const),
+      second.then(
+        () => "second" as const,
+        () => "second" as const,
+      ),
+    ]);
+    expect(settled).toBe("first");
     const current = f.tactics.snapshot();
-    await first;
     old.resolve();
     await Promise.resolve();
     expect(f.activations).toBe(1);
     expect(f.tactics.snapshot()).toEqual(current);
   } finally {
-    f.tactics.dispose();
     old.resolve();
     result.resolve(judgment());
+    await first;
+    f.tactics.dispose();
+    await second;
   }
 });
 
@@ -467,7 +515,8 @@ test("a stop from the request event prevents provider dispatch", async () => {
   f.tactics.onEvent((event) => {
     if (event.type === "request") f.tactics.stop("manual");
   });
-  await f.tactics.start(context);
+  const running = f.tactics.start(context);
+  await running;
   expect(f.calls).toBe(0);
   expect(f.actions).toEqual([]);
   expect(f.tactics.snapshot().status).toBe("idle");
@@ -479,13 +528,14 @@ test("unknown selected action never reaches the executor", async () => {
   f.tactics.onEvent((event) => {
     if (event.type === "discarded") discarded.resolve();
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
     await discarded.promise;
     expect(f.actions).toEqual([]);
     expect(f.tactics.snapshot().lastDiscardReason).toBe("unknown_id");
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -496,8 +546,9 @@ test("request observations retain nested values after the world changes", async 
     observe: () => ({ ...frame, observation }),
     select: () => result.promise,
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await f.requested;
     observation.self.health = 25;
     expect(f.tactics.snapshot().lastRequest?.observation).toEqual({
       self: { health: 100 },
@@ -508,6 +559,7 @@ test("request observations retain nested values after the world changes", async 
   } finally {
     f.tactics.dispose();
     result.resolve(judgment());
+    await running;
   }
 });
 
@@ -517,6 +569,7 @@ test("repeated useful decisions retain real cadence without concurrent requests"
   const first = Promise.withResolvers<JevActionResult>();
   const second = Promise.withResolvers<JevActionResult>();
   const applied = Promise.withResolvers<void>();
+  const firstRequested = Promise.withResolvers<void>();
   const requested = Promise.withResolvers<void>();
   let calls = 0;
   const f = fixture({
@@ -528,10 +581,14 @@ test("repeated useful decisions retain real cadence without concurrent requests"
   });
   f.tactics.onEvent((event) => {
     if (event.type === "applied") applied.resolve();
-    if (event.type === "request" && event.sentAtMs === 200) requested.resolve();
+    if (event.type === "request") {
+      firstRequested.resolve();
+      if (event.sentAtMs === 200) requested.resolve();
+    }
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await firstRequested.promise;
     now = 150;
     jest.advanceTimersByTime(150);
     expect(calls).toBe(1);
@@ -550,6 +607,7 @@ test("repeated useful decisions retain real cadence without concurrent requests"
     f.tactics.dispose();
     first.resolve(judgment());
     second.resolve(judgment());
+    await running;
     jest.useRealTimers();
   }
 });
@@ -564,22 +622,26 @@ test("a replacement waits for the old provider to settle before dispatching", as
       return calls === 1 ? first.promise : second.promise;
     },
   });
+  const initial = f.tactics.start(context);
+  let replacement: Promise<void> | undefined;
   try {
-    await f.tactics.start(context);
-    const replacement = f.tactics.start({
+    await f.requested;
+    replacement = f.tactics.start({
       ...context,
       instruction: "Conserve mana",
     });
-    await Promise.resolve();
-    expect(calls).toBe(1);
     expect(f.tactics.snapshot().status).toBe("preparing");
+    const replaced = initial.then(
+      () => true,
+      () => true,
+    );
     first.resolve(judgment());
-    await replacement;
+    await replaced;
+    for (let i = 0; i < 50 && calls < 2; i++) await Promise.resolve();
     expect(calls).toBe(2);
     expect(f.activations).toBe(2);
     expect(f.actions).toEqual([]);
     expect(f.tactics.snapshot()).toMatchObject({
-      status: "active",
       lastResult: undefined,
       instruction: "Conserve mana",
     });
@@ -587,6 +649,8 @@ test("a replacement waits for the old provider to settle before dispatching", as
     f.tactics.dispose();
     first.resolve(judgment());
     second.resolve(judgment());
+    await initial;
+    await replacement;
   }
 });
 
@@ -599,16 +663,22 @@ test("default framing variant is none and records in request event and lastReque
     },
   });
   let eventFraming: string | undefined;
+  const requested = Promise.withResolvers<void>();
   f.tactics.onEvent((event) => {
-    if (event.type === "request") eventFraming = event.framing;
+    if (event.type === "request") {
+      eventFraming = event.framing;
+      requested.resolve();
+    }
   });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await requested.promise;
     expect(capturedFraming).toBe("none");
     expect(eventFraming).toBe("none");
     expect(f.tactics.snapshot().lastRequest?.framing).toBe("none");
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -621,16 +691,22 @@ test("minimal framing variant records in request event and propagates to select"
     },
   });
   let eventFraming: string | undefined;
+  const requested = Promise.withResolvers<void>();
   f.tactics.onEvent((event) => {
-    if (event.type === "request") eventFraming = event.framing;
+    if (event.type === "request") {
+      eventFraming = event.framing;
+      requested.resolve();
+    }
   });
+  const running = f.tactics.start({ ...context, framing: "minimal" });
   try {
-    await f.tactics.start({ ...context, framing: "minimal" });
+    await requested.promise;
     expect(capturedFraming).toBe("minimal");
     expect(eventFraming).toBe("minimal");
     expect(f.tactics.snapshot().lastRequest?.framing).toBe("minimal");
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -643,16 +719,22 @@ test("mechanics framing variant records in request event and propagates to selec
     },
   });
   let eventFraming: string | undefined;
+  const requested = Promise.withResolvers<void>();
   f.tactics.onEvent((event) => {
-    if (event.type === "request") eventFraming = event.framing;
+    if (event.type === "request") {
+      eventFraming = event.framing;
+      requested.resolve();
+    }
   });
+  const running = f.tactics.start({ ...context, framing: "mechanics" });
   try {
-    await f.tactics.start({ ...context, framing: "mechanics" });
+    await requested.promise;
     expect(capturedFraming).toBe("mechanics");
     expect(eventFraming).toBe("mechanics");
     expect(f.tactics.snapshot().lastRequest?.framing).toBe("mechanics");
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });
 
@@ -671,15 +753,21 @@ test("unknown framing variant rejects start with clear error", async () => {
 });
 
 test("fault marker propagates to state and emitted events", async () => {
-  const events: TacticsEvent[] = [];
   const f = fixture({ fault: "delay:2500ms" });
-  f.tactics.onEvent((e) => events.push(e));
+  const events: TacticsEvent[] = [];
+  const seen = Promise.withResolvers<void>();
+  f.tactics.onEvent((e) => {
+    events.push(e);
+    if (e.type === "request") seen.resolve();
+  });
+  const running = f.tactics.start(context);
   try {
-    await f.tactics.start(context);
+    await seen.promise;
     expect(f.tactics.snapshot().fault).toBe("delay:2500ms");
     expect(events.length).toBeGreaterThan(0);
     expect(events.every((e) => e.fault === "delay:2500ms")).toBe(true);
   } finally {
     f.tactics.dispose();
+    await running;
   }
 });

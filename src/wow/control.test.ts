@@ -896,6 +896,31 @@ test("consecutive moves into an obstruction remain non-fatal and leave pose unch
   }
 });
 
+test("explicit halt clears stale obstruction while obstruction halt preserves it", () => {
+  jest.useFakeTimers();
+  try {
+    const { runtime, advance } = setup({
+      findHeight: (_mapId, x, _y, from) => {
+        if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
+        return undefined;
+      },
+    });
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBe("obstructed");
+    runtime.halt();
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBeUndefined();
+    runtime.move("forward", 1000);
+    advance(500);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().blockedReason).toBe("obstructed");
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("classifyNavigationRefusal distinguishes wait, pick_destination, and stop", () => {
   expect(
     classifyNavigationRefusal("position disagrees with ground height"),

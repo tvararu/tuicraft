@@ -144,8 +144,8 @@ decimal. `0` is self/none.
 :: Stop auto-attack.
 
 `tuicraft fight` [`--framing` _none_|_minimal_|_mechanics_] _guid_ [_instruction_...]
-:: Start Jev tactics. Default instruction is to defeat the selected target while
-keeping the character alive. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
+::: Run Jev tactics to its terminal outcome. Default instruction is to defeat the selected target while
+keeping the character alive. The command returns after the encounter completes, blocks, fails, or is halted; use `halt` to stop a running fight. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
 `minimal` frames the game, class and observed level; `mechanics` adds non-refilling
 resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
 fails with `ERR`.

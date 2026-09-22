@@ -211,11 +211,15 @@ export class TacticsLoop {
       if (!this.live(run)) return;
       this.state.status = "active";
       this.emit({ type: "activated", runId: run.runId });
-      void this.decide(run).catch((error: unknown) => this.fail(run, error));
     } catch (error) {
       if (!this.live(run)) return;
       this.fail(run, error);
       throw error;
+    }
+    try {
+      await this.decide(run);
+    } catch (error) {
+      this.fail(run, error);
     }
   }
 

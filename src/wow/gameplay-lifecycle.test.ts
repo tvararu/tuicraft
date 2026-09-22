@@ -288,7 +288,7 @@ describe("gameplay forced-close lifecycle", () => {
     try {
       jest.useFakeTimers();
       f = await fixture(3);
-      await f.handle.startTactics(
+      const running = f.handle.startTactics(
         BigInt(targetGuid),
         "Hold this observed hostile target",
       );
@@ -310,6 +310,7 @@ describe("gameplay forced-close lifecycle", () => {
       send.mockImplementation(() => {});
       f.stop();
       await expect(bounded(f.handle.closed)).resolves.toBeUndefined();
+      await expect(bounded(running)).resolves.toBeUndefined();
       expectInactive(f.handle);
       const duringClose = send.mock.calls.map(([, opcode]) => opcode);
       jest.advanceTimersByTime(60_000);

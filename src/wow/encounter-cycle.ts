@@ -208,8 +208,16 @@ export class EncounterCycleRuntime {
         await this.onDeath(generation);
         return;
       }
+      const outcome = this.deps.tactics.lastOutcome();
+      if (!outcome || outcome.status !== "completed") {
+        record.status = "skipped";
+        record.cause = outcome?.reason ?? "fight_failed";
+        record.outcome = outcome;
+        this.advance();
+        continue;
+      }
       record.status = "done";
-      record.outcome = this.deps.tactics.lastOutcome();
+      record.outcome = outcome;
       const proceed = await this.runLoot(record.guid, generation);
       if (!proceed) return;
       if (!this.live(generation)) return;

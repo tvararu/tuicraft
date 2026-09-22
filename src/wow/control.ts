@@ -629,7 +629,11 @@ export class ControlRuntime {
   }
 
   private haltMovement(reason: string, sendStop: boolean): void {
-    if (!this.moving && this.owner === "none") return;
+    if (!this.moving && this.owner === "none") {
+      if (reason !== "obstructed" && reason !== "height_unresolved")
+        this.blockedReason = undefined;
+      return;
+    }
     this.clearTimers();
     this.endNavigation(reason);
     const wasMoving = this.moving;
