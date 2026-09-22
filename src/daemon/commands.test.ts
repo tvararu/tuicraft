@@ -3820,9 +3820,7 @@ describe("IPC round-trip", () => {
 
   test("HALT drops older CYCLE", async () => {
     startTestServer();
-    const lines = await sendRawUntilClose(sockPath, [
-      "CYCLE 0xa\nHALT\n",
-    ]);
+    const lines = await sendRawUntilClose(sockPath, ["CYCLE 0xa\nHALT\n"]);
     expect(handle.startCycle).not.toHaveBeenCalled();
     expect(handle.halt).toHaveBeenCalled();
     expect(lines).toEqual(["OK"]);
