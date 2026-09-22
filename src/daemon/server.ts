@@ -106,6 +106,7 @@ function isStaleControl(type: string | undefined): boolean {
     type === "fight" ||
     type === "goto" ||
     type === "follow" ||
+    type === "cycle" ||
     type === "release_spirit" ||
     type === "reclaim_corpse" ||
     type === "resurrect" ||

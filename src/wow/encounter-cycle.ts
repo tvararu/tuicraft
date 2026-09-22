@@ -182,6 +182,7 @@ export class EncounterCycleRuntime {
       this.live(generation) &&
       this.state.currentIndex < this.state.queue.length
     ) {
+      this.state.phase = "fighting";
       if (this.state.startsUsed >= this.state.maxStarts) {
         this.stop("max_starts_reached");
         return;
@@ -380,7 +381,7 @@ export class EncounterCycleRuntime {
       }
       return true;
     } finally {
-      recovery.onEvent(undefined);
+      if (this.live(generation)) recovery.onEvent(undefined);
     }
   }
 
@@ -557,7 +558,7 @@ export class EncounterCycleRuntime {
       );
       return true;
     } finally {
-      loot.onEvent(undefined);
+      if (this.live(generation)) loot.onEvent(undefined);
     }
   }
 

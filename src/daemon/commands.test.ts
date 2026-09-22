@@ -3818,6 +3818,16 @@ describe("IPC round-trip", () => {
     expect(lines).toEqual(["OK", "OK"]);
   });
 
+  test("HALT drops older CYCLE", async () => {
+    startTestServer();
+    const lines = await sendRawUntilClose(sockPath, [
+      "CYCLE 0xa\nHALT\n",
+    ]);
+    expect(handle.startCycle).not.toHaveBeenCalled();
+    expect(handle.halt).toHaveBeenCalled();
+    expect(lines).toEqual(["OK"]);
+  });
+
   test("HALT drops older recovery mutations but retains a corpse query and newer response", async () => {
     startTestServer();
     const actions: string[] = [];

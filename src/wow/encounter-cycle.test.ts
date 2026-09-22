@@ -873,3 +873,109 @@ test("reclaim restores life and resumes next target", async () => {
     jest.useRealTimers();
   }
 });
+
+test("phase resets to fighting at the start of each target", async () => {
+  const seen: string[] = [];
+  let runtime!: EncounterCycleRuntime;
+  const tactics = {
+    start: async () => {
+      seen.push(runtime.snapshot().phase);
+    },
+    stop: (_r: string) => {},
+    lastOutcome: () => undefined,
+    selfDead: () => false,
+  };
+  runtime = new EncounterCycleRuntime({
+    tactics,
+    loot: fakeLoot({ items: [], money: 0, coinageBefore: 5, coinageAfter: 5 }),
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  await runtime.start({ guids: [1n, 2n], instruction: "fight" });
+  expect(seen).toEqual(["fighting", "fighting"]);
+  expect(runtime.snapshot()).toMatchObject({
+    phase: "stopped",
+    stopCause: "queue_exhausted",
+  });
+});
+
+test("stale generation loot cleanup keeps the newer listener", async () => {
+  jest.useFakeTimers();
+  try {
+    const emptyOpen = (): RewardsState => ({
+      loot: {
+        phase: "open",
+        guid: 2n,
+        lootType: 1,
+        money: 0,
+        items: [],
+        openedAt: 0,
+        invalidatedReason: undefined,
+      },
+      pending: undefined,
+      inventory: {
+        selfGuid: 1n,
+        scope: "carried",
+        status: "complete",
+        coinage: 0,
+        slots: [],
+        bags: [],
+        freeSlots: undefined,
+        issues: [],
+      },
+      lastLootError: undefined,
+      lastInventoryError: undefined,
+      lastItemPush: undefined,
+      lastMoneyNotice: undefined,
+      lastRelease: undefined,
+      disposed: false,
+    });
+    let listener: ((event: RewardsEvent) => void) | undefined;
+    const loot = {
+      open(_guid: bigint) {},
+      take(_slot: number) {},
+      takeMoney() {},
+      close() {},
+      onEvent(cb: ((event: RewardsEvent) => void) | undefined) {
+        listener = cb;
+      },
+      snapshot(): RewardsState {
+        return { ...emptyOpen(), loot: { phase: "closed" } };
+      },
+    };
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([]),
+      loot,
+      recovery: fakeRecovery({ life: ["ghost"] }),
+      control: fakeControl(),
+      now: () => 0,
+    });
+    const flush = async (rounds: number) => {
+      for (let i = 0; i < rounds; i++) await Promise.resolve();
+    };
+    const tick = async (ms: number, stepMs = 250) => {
+      for (let elapsed = 0; elapsed < ms; elapsed += stepMs) {
+        await flush(5);
+        jest.advanceTimersByTime(stepMs);
+      }
+      await flush(20);
+    };
+    const first = runtime.start({ guids: [1n], instruction: "a" });
+    await flush(20);
+    await tick(2500);
+    const second = runtime.start({ guids: [2n], instruction: "b" });
+    await flush(20);
+    await tick(2500);
+    listener?.({ type: "loot_opened", at: 0, state: emptyOpen() });
+    await flush(20);
+    await tick(5000);
+    await Promise.all([first, second]);
+    expect(runtime.snapshot()).toMatchObject({
+      stopCause: "queue_exhausted",
+      lastLoot: { slotsTaken: [], moneyTaken: 0 },
+    });
+  } finally {
+    jest.useRealTimers();
+  }
+});
