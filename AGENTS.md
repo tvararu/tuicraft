@@ -12,8 +12,12 @@
 - Play as soon as a useful loop works, use failures to guide development, and
   continue normal gameplay and leveling on the user's server when the active
   goal allows it. Do not substitute server-data edits for client capabilities.
-- If the coordinator lacks CLI access, delegate execution to a capable agent.
-  Keep one gameplay owner per character to prevent conflicting actions.
+- Delegate multi-step live gameplay and gameplay debugging to one omp worker,
+  even when the coordinator has CLI access.
+- Assign one agent exclusive CLI ownership per character. The coordinator must
+  not use that character's CLI while a worker owns it.
+- Transfer ownership explicitly before another agent controls the character.
+  If the coordinator lacks CLI access, delegate even one-off live commands.
 - omp is the main harness. Orca worktrees spawn agents with `--agent omp`;
   "omp worktree" means `orca-ide worktree create --agent omp`.
 
