@@ -53,9 +53,7 @@ blocked branches reported as blocked, never inferred.
 
 ## Still open (per roadmap exit evidence)
 
-- Multi-encounter run chaining fights back-to-back with per-window gain
-  proof: the paired 2026-09-24 run proves it for two 2-slot windows
-  (each offered item maps to a +1 raw stack gain, window2 opening after
-  window1 release); money was 0 in every open so far, so coinage gain
-  proof is still unmet.
-- Denied/full/empty loot and current-offer resurrection branches.
+- Coinage gain: every observed loot offer contained zero money, so raw
+  coinage stayed at 6164. The paired run above proves two fights, item
+  storage, and the next-window release barrier, not money gain.
+- Denied/full/empty loot and current-offer resurrection were unexercised.
