@@ -103,7 +103,6 @@ function printWalkReply(lines: string[]): void {
   if (walkCommandFailed(lines)) process.exitCode = 1;
 }
 
-
 async function printSendReply(
   lines: string[],
   slash: boolean,
