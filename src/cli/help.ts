@@ -10,10 +10,10 @@ USAGE
   tuicraft send -g "message"  Guild chat
   tuicraft send -p "message"  Party chat
   tuicraft who [filter]       Who query
-  tuicraft read [--wait N]    Read buffered events
-  tuicraft tail               Continuous event stream
-  tuicraft start              Start background daemon and connect
-  tuicraft status             Show daemon status
+  tuicraft read [--wait N] [--json]  Read buffered events
+  tuicraft tail [--json]      Continuous event stream
+  tuicraft start [--json]    Start background daemon and connect
+  tuicraft status [--json]   Show daemon socket status
   tuicraft control [--json]  Current pose estimate, last server pose, refusal guidance
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
   tuicraft face <radians>    Set facing in radians
@@ -30,14 +30,14 @@ USAGE
   tuicraft attack <guid>     Start auto-attack
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack
-  tuicraft fight [--framing <variant>] <guid> [instruction...]  Jev tactics (default: stay alive and defeat target)
+  tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target)
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
   tuicraft cycle <guid...> [--instruction ...] [--max N]  Explicit nearby GUID queue; no auto-acquire
   tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
-  tuicraft goto <x> <y> <z>  Walk a ground route
+  tuicraft goto <x> <y> <z> [--json]  Walk a ground route
   tuicraft navigation [--json]  Navigation state and refusal next step
-  tuicraft follow <guid> [distance]  Bounded ground follow (1-20 yards, default 3)
+  tuicraft follow <guid> [distance] [--json]  Bounded ground follow (1-20 yards, default 3)
                             Map 530; maximum 30s; OK is intent, not arrival
   tuicraft following [--json]  Follow state, provenance and stop reason
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
@@ -70,7 +70,7 @@ USAGE
                             OK/slot removal is not stored gain
                             Item-push slot 0xFFFFFFFF means stacking, not a bag slot
                             Release-only opening stays unanswered; reconnect explicitly
-  tuicraft stop               Stop the daemon
+  tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft skill              Print SKILL.md for AI agents
   tuicraft version            Print version and exit
@@ -79,10 +79,25 @@ USAGE
 FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
-  --json          Output as JSON (read, tail, chat, who, control, nearby, combat, spells, tactics, cycling, navigation, following, recovery, quests, inventory, loot)
+  --json          All daemon-backed commands: chat, queries, gameplay actions, start, status, stop, read, tail
   --all           Output all tracked entities without distance filter (nearby)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
+
+JSON OUTPUT
+  Finite --json commands print one envelope and newline, including empty results and errors:
+    {"command":"fight","kind":"intent","data":null,"events":[],"error":null}
+  tail --json prints JSONL: one envelope per event, no line for an empty poll:
+    {"command":"tail","kind":"events","data":null,"events":[{"type":"SAY","sender":"A","message":"hi"}],"error":null}
+  Every envelope has command, kind, data, events, error. Chat aliases use command=send.
+  kind=intent|result|events|error; data contains query JSON; events holds event objects.
+  read returns events (events:[] when empty); nearby returns data:[] when empty.
+  send --wait --json returns one envelope with waited events, not separate lines.
+  kind=intent acknowledges a request, not its game-world outcome. Inspect state/events.
+  Errors use error.stage=arguments|startup|command|wait and exit 1; a wait error
+  keeps the original kind and data. All JSON errors print to stdout.
+  logs and skill remain raw; --json is unsupported for them, setup, help, version,
+  interactive mode and internal daemon mode. Human output remains unchanged.
 
 SETUP FLAGS
   --account NAME  Account name (required)

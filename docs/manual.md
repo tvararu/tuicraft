@@ -6,11 +6,11 @@ WoW 3.3.5a chat client
 
 ```
 tuicraft
-tuicraft <message>
-tuicraft [-w <name> | -y | -g | -p] <message>
+tuicraft <message> [--json]
+tuicraft [-w <name> | -y | -g | -p] <message> [--json]
 tuicraft [--who [filter]] [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME]
-tuicraft start | status | stop
+tuicraft start [--json] | status [--json] | stop [--json]
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
 tuicraft control [--json] | nearby [--all] [--json]
@@ -29,6 +29,9 @@ tuicraft inventory [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 ```
+
+All daemon-backed commands above accept optional `--json`, including mutating
+gameplay actions. `logs` and `skill` keep their raw output and reject `--json`.
 
 ## Description
 
@@ -69,26 +72,37 @@ manual casting by learned spell ID do not require these data paths or a Jev key.
 `tuicraft setup` [*flags*]
 : Configure account credentials. With no flags, runs an interactive wizard.
 
-`tuicraft start`
+`tuicraft start` [`--json`]
 :: Start the background daemon explicitly.
-If the daemon is already running, prints `Daemon is already running.` and exits with status 0.
-On a successful new daemon start, prints `CONNECTED` and exits with status 0. Note that `CONNECTED` verifies only that the daemon IPC socket answered the STATUS probe, not that the server-side world session is healthy.
-If the daemon fails to connect (missing configuration, invalid credentials, unreachable server, or startup timeout), prints the error and exits with status 1.
+Without `--json`, an existing daemon prints `Daemon is already running.` and exits
+with status 0. A new daemon prints `CONNECTED` and exits with status 0.
+`CONNECTED` confirms that the daemon socket answered its probe, not that the
+world session is healthy. Startup failure (missing configuration, invalid
+credentials, unreachable server, or timeout) prints an error in human mode
+and exits with status 1. With `--json`, `data` is
+`{"socket":"responsive","started":true}` for a new daemon, or
+`{"socket":"responsive","started":false}` for an existing daemon.
 
 `tuicraft read` [`--wait` *N*] [`--json`]
-: Read buffered events. With `--json`, emits JSONL (one JSON object per event, or empty). `--wait` polls for _N_ seconds before returning.
+:: Read buffered events. With `--json`, returns one envelope with event objects
+in `events`, including `events: []` when empty. `--wait` polls for _N_ seconds.
 
 `tuicraft tail` [`--json`]
-: Continuous event stream. Blocks and prints events as they arrive. With `--json`, emits JSONL (one JSON object per line).
+:: Continuous event stream. Blocks and prints events as they arrive. With
+`--json`, emits JSONL with one envelope per event and no line for an empty poll.
 
-`tuicraft status`
-: Print daemon connection status (`CONNECTED` or `Daemon is not running.`).
+`tuicraft status` [`--json`]
+:: Print daemon socket status. Human output is `CONNECTED` or
+`Daemon is not running.`. With `--json`, `data.socket` is `responsive` or
+`not_running`; this does not verify world-session health.
 
-`tuicraft stop`
-:: Graceful daemon shutdown. Disconnects the session.
+`tuicraft stop` [`--json`]
+:: Graceful daemon shutdown. Disconnects the session. With `--json`, a
+successful stop is intent; an absent daemon returns a result with
+`data: {"socket":"not_running"}`.
 
 `tuicraft control` [`--json`]
-:: Print control state. JSON includes `pose`, `serverPose`, `target`, `requestedTarget`, motion, and `blockedReason`. `pose` is the current control estimate. Its `source` is `predicted` after local movement or `server` after a server observation.
+:: Print control state. JSON `data` includes `pose`, `serverPose`, `target`, `requestedTarget`, motion, and `blockedReason`. `pose` is the current control estimate. Its `source` is `predicted` after local movement or `server` after a server observation.
 `serverPose` is the last server-observed pose, not the current position after ordinary movement. Each pose has `updatedAt`, the time that pose was last updated; a recent prediction is not server confirmation. Text labels these poses as current and last server. `nextStep` is conservative guidance when a known ground refusal occurs, or `null`.
 `target` is the last server-observed self target; `requestedTarget` is the last GUID this client sent. For either field, `0x0` means a clear and `null` means no observation or request yet. A sent selection is not server confirmation. Matching values alone do not acknowledge a new request: the observation may predate it.
 Ordinary self movement is not echoed. A server correction can update the observed pose; relog to confirm the position the server accepted after a walk.
@@ -96,10 +110,10 @@ Ordinary self movement is not echoed. A server correction can update the observe
 `tuicraft nearby` [`--all`] [`--json`]
 :: List nearby entities ordered by raw 3D distance from the current `control.pose`, before display rounding. When no control pose exists, the last self-entity position is a fallback. By default, entities beyond 100 yards or on another map are filtered when self position is known; `--all` lists all tracked entities, including map-wide transports.
 Text lists each GUID, 3D and XY yards, absolute face angle, signed turn angle, and origin source. The self row uses the current control pose when available, not its older entity position.
-With `--json`, output is JSONL, one object per entity or none. `distance` is 3D yards and `horizontalDistance` is XY yards, both rounded to two decimals for output. Self has 3D distance zero by identity, and XY distance zero only when self position is known; its angles are `null`.
+With `--json`, `data` is an array of entity objects, or `[]` when empty. `distance` is 3D yards and `horizontalDistance` is XY yards, both rounded to two decimals for output. Self has 3D distance zero by identity, and XY distance zero only when self position is known; its angles are `null`.
 `bearingRadians` is the absolute angle from +X toward +Y in [0, 2π); use it with `face`. `turnRadians` is the shortest signed rotation from current facing in [-π, π); positive rotates from +X toward +Y. Both angles are `null` when direction is undefined, including zero XY displacement.
 Non-self distances and angles are `null` if either position is unknown or off-map. `originSource` is `predicted`, `server`, `self_entity`, or `null`. `originUpdatedAt` is the control pose update time, or `null` for fallback. Other entity positions are last observations, not guaranteed current. `mapId` is the map at entity parsing, not a server field per entity. Straight-line distance and bearing do not prove a safe or reachable route.
-For `fight` and `cycle`, choose current non-self creature GUIDs from this JSONL output. A stored GUID or an old spawn position does not establish a current target.
+For `fight` and `cycle`, choose current non-self creature GUIDs from this JSON output. A stored GUID or an old spawn position does not establish a current target.
 
 `tuicraft move` _direction_ [*ms*]
 :: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.
@@ -155,10 +169,10 @@ An enemy already attacking can continue after `halt`; stopping client actions
 does not disengage combat.
 
 `tuicraft combat` [`--json`]
-:: Print combat state. With `--json`, emits a single JSON object. GUIDs are hex. Predicted poses keep `source=predicted`.
+:: Print combat state. With `--json`, `data` is an object. GUIDs are hex. Predicted poses keep `source=predicted`.
 
 `tuicraft spells` [`--json`]
-:: Print the learned spellbook joined to client metadata. With `--json`, emits a single JSON array of spell objects.
+:: Print the learned spellbook joined to client metadata. With `--json`, `data` is an array of spell objects.
 
 `tuicraft cast` _id_ _guid_
 :: Cast a learned spell. _id_ is a positive integer. _guid_ is uint64 hex or
@@ -267,7 +281,8 @@ Use `halt` to stop follow while keeping the daemon connected.
 `observedAt` is the original motion receive time, not a refreshed prediction timestamp.
 `OK` confirms request intent only. `holding` means predicted grounded standoff, not server-confirmed arrival.
 Use `control --json` to compare the current predicted pose with the last server pose.
-Both command failures and inspection failures print `ERR` and exit with status 1.
+Both command failures and inspection failures exit with status 1. Human mode
+prints `ERR`; JSON mode returns one error envelope.
 
 `tuicraft recovery` [`--json`]
 :: Print observed life, health, flags, death epoch, corpse/query state, reclaim guards, delay, offer, and pending request intent.
@@ -307,7 +322,8 @@ After reconnect, `combat --json` may list every learned spell in `unknownLearned
 
 Mutating recovery actions stop prior tactics, follow, and motion through the manual override path.
 `OK` acknowledges intent only. Confirm recovery through subsequent authoritative life/ghost-flag observations.
-Do not retry unanswered actions automatically. Recovery command and inspection errors print `ERR` and exit with status 1.
+Do not retry unanswered actions automatically. Recovery command and inspection
+errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 `tuicraft quests` [`--json`]
 :: Print the current offered dialog/giver, observed quest log, metadata queries, pending/uncertain intent, errors, progress, and reward facts.
@@ -355,7 +371,8 @@ Wait for observed close or a confirmed world reset before another mutation. Late
 
 All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending.
 `OK` is request intent only. It does not establish acceptance, completion, reward, abandonment, or cancellation success.
-Quest action and inspection errors print `ERR` and exit with status 1. Do not retry an unanswered interaction automatically.
+Quest action and inspection errors exit with status 1. Human mode prints `ERR`;
+JSON mode returns an error envelope. Do not retry an unanswered interaction automatically.
 
 `tuicraft inventory` [`--json`]
 :: Print observed carried inventory, coinage, slots, equipped bags, physical free slots, and observation issues.
@@ -365,7 +382,7 @@ An observed item identity does not imply count 1. Slot state distinguishes unkno
 
 `tuicraft loot` [`--json`]
 :: Print loot phase/offer, unanswered intent, inventory observations, inventory/loot errors, and item/money/release notices.
-The JSON object separates `loot`, `pending`, `inventory`, `lastItemPush`, `lastMoneyNotice`, and `lastRelease`.
+The `data` object separates `loot`, `pending`, `inventory`, `lastItemPush`, `lastMoneyNotice`, and `lastRelease`.
 Slot removal proves removal from the offer, not inventory gain. Window money clearance is not an observed coinage increment.
 An item-push slot of `0xFFFFFFFF` means stacking, not a physical slot. Compare actual slot/count/coinage observations before claiming gain.
 
@@ -393,13 +410,14 @@ If no full response follows, explicitly reconnect using `tuicraft stop`, then `t
 The ordinary reconnect creates a new runtime. It does not prove what happened to the previous request.
 
 Loot mutations use the manual override path. Readonly inventory/loot inspections do not change control ownership.
-All acknowledgements are intent only. Action and inspection errors print `ERR` and exit with status 1.
+All acknowledgements are intent only. Action and inspection errors exit with status 1.
+Human mode prints `ERR`; JSON mode returns an error envelope.
 
 `tuicraft logs`
-:: Print the JSONL session log to stdout.
+:: Print the raw JSONL session log to stdout. Does not accept `--json`.
 
 `tuicraft skill`
-: Print a SKILL.md reference for AI agents. Includes command usage, event types, and integration examples.
+: Print the raw SKILL.md reference for AI agents. Includes command usage, event types, and integration examples. Does not accept `--json`.
 
 `tuicraft help`
 : Print usage summary.
@@ -424,18 +442,25 @@ All acknowledgements are intent only. Action and inspection errors print `ERR` a
 ## Options
 
 `--json`
-:: Output as structured JSON. Commands require different parsing strategies:
+:: Request a five-field JSON envelope. Every finite daemon-backed command
+prints exactly one document, including empty results, waited events, and errors.
+Parse complete stdout with `JSON.parse` or `json.loads`. Only `tail --json` is
+continuous JSONL: parse one envelope per line. See [Output Format](#output-format).
 
-- **Single document (parse full stdout with `JSON.parse` / `json.loads`):**
-  - Object: `control`, `combat`, `tactics`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who` (`{"type":"WHO","count":N,"results":[...]}`), and `chat` / `send` without `--wait` (`{"status":"ok"}`).
-  - Array: `spells` (`[{"spellId":...,"name":...},...]`).
-- **Line-by-line / JSONL (parse line-by-line):**
-  `nearby`, `read`, and `tail`. Each line is a separate JSON object (or 0 lines if empty). `read --wait N` emits pure JSONL without an acknowledgment line. Parsing full output as a single JSON document will fail with `Extra data`.
-- **Mixed shape trap (`send --wait N --json`, `-w`, `-y`, `-g`, `-p`):**
-  Emits an acknowledgment object `{"status":"ok"}` on line 1, followed by 0 or more JSONL event lines received during the wait window. Parsing full stdout as a single document fails if any event arrives during the wait. Parse line-by-line: line 1 is the acknowledgment object, and lines 2+ are event objects.
+Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
+`spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`,
+`inventory`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
+All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
+`target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
+`goto`, `follow`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `resurrect`,
+`talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
+`complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
+`cancel-interaction`, `open-loot`, `take-loot`, `take-money`, and `release-loot`.
+`logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
+`help`, `version`, interactive mode, and internal daemon mode.
 
 `--wait` _N_
-: Wait _N_ seconds for events before returning. For use with `read`.
+: Wait _N_ seconds for events before returning. For use with `read` and `send`.
 
 `--help`
 : Print usage summary.
@@ -527,12 +552,44 @@ Human-readable (default):
 [ignore] Spammer removed from ignore list
 ```
 
-JSONL (`--json`):
+With `--json`, every finite command prints exactly one JSON object and a
+newline on stdout. It has exactly five top-level fields:
 
-```jsonl
-{"type":"SAY","sender":"Xi","message":"hello world"}
-{"type":"WHISPER_FROM","sender":"Xiara","message":"Following Deity"}
+| Field | Value |
+| ----- | ----- |
+| `command` | Public command name; chat aliases use `send`. `null` if argument parsing cannot identify it. |
+| `kind` | `intent`, `result`, `events`, or `error`. |
+| `data` | Inspection JSON object or array, slash-command text `{"lines":[...]}`, or `null`. |
+| `events` | Array of event objects; never encoded JSON strings. |
+| `error` | `null` or an object with `stage` and `message`. |
+
+An empty `nearby --json` has `data: []`. An empty `read --json` has
+`events: []`. Both print a complete envelope. `send --wait N --json` includes
+its waited event objects in the same envelope, not on separate lines.
+`kind: "intent"` means daemon acknowledgment, not server acceptance or a
+game-world outcome. Inspect later state and events. A result does not turn
+predicted or unknown state into server-observed state.
+
+Finite request:
+
+```json
+{"command":"fight","kind":"intent","data":null,"events":[],"error":null}
 ```
+
+Only `tail --json` is continuous JSONL. It writes one envelope for each event,
+and none for an empty poll:
+
+```json
+{"command":"tail","kind":"events","data":null,"events":[{"type":"SAY","sender":"Xi","message":"hello world"}],"error":null}
+```
+
+An error uses `stage: "arguments"`, `"startup"`, `"command"`, or `"wait"` and
+exits with status 1. An error before acknowledgment has `kind: "error"`.
+After a `send --wait` acknowledgment, a wait error keeps the initial `kind`
+and `data`; it sets `error.stage: "wait"` and exits with status 1.
+JSON errors print to stdout as one envelope. Human output remains unchanged.
+`logs` prints the raw JSONL session log. `skill` prints the raw reference text.
+Neither command accepts `--json`.
 
 ## Files
 
@@ -589,5 +646,6 @@ The server does not echo your own movement. Treat `pose.source=predicted` as a
 local estimate. After `stop` and a new login, `control` shows the last
 server-accepted pose.
 
-Control commands and combat/spellbook/tactics/navigation/following/recovery/quest/inventory/loot inspections print daemon
-`ERR` lines and exit with status 1.
+Without `--json`, control commands and combat/spellbook/tactics/navigation/following/recovery/quest/inventory/loot inspections print daemon
+`ERR` lines and exit with status 1. With `--json`, they emit one error envelope
+on stdout and exit with status 1.

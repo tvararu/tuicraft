@@ -12,60 +12,78 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
     tuicraft start                # connect daemon explicitly
     tuicraft status               # show connection status
     tuicraft stop                 # disconnect and stop daemon
+    tuicraft start --json         # socket result (not world-session health)
+    tuicraft status --json        # socket responsive or not_running
+    tuicraft stop --json          # stop intent, or not_running result
 
-- `start` starts the background daemon and connects its IPC socket. If already running, prints `Daemon is already running.` and exits with status 0. On fresh start, prints `CONNECTED` and exits with status 0. Note that `CONNECTED` confirms only that the daemon socket answered the probe; it does not verify that the server-side world session is healthy. On failure, prints the error and exits with status 1.
-- `status` returns `CONNECTED` (socket answered) or `Daemon is not running.`
-- `stop` gracefully disconnects the session and terminates the daemon.
+- Without `--json`, `start` prints `Daemon is already running.` or `CONNECTED` on success. `CONNECTED` confirms only that the daemon socket answered the probe. It does not verify the world session. Startup failure exits with status 1.
+- Without `--json`, `status` returns `CONNECTED` or `Daemon is not running.`
+- `stop` gracefully disconnects the session and terminates the daemon. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
 
-## JSON parsing rules
+## JSON output
 
-Commands supporting `--json` require different parsing strategies. Do not assume all `--json` output can be parsed with a single `JSON.parse` call.
+Use `--json` with these daemon-backed commands:
 
-### How to parse each command
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`.
+- Chat and events: `send`, chat flags, `read`, `tail`.
+- Movement and combat actions: `move`, `face`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`, `follow`.
+- Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
+- Daemon lifecycle: `start`, `status`, `stop`.
 
-| Command | Parsing strategy | Top-level type | Notes |
-|---|---|---|---|
-| `control` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `combat` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `spells` | Single document | Array | Parse full stdout with `JSON.parse` / `json.loads` |
-| `tactics` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `cycling` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `navigation` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `following` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `recovery` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `quests` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `inventory` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `loot` | Single document | Object | Parse full stdout with `JSON.parse` / `json.loads` |
-| `who` | Single document | Object | Envelope `{"type":"WHO","count":N,"results":[...]}` |
-| `nearby` | Line-by-line (JSONL) | Object per line | 0 lines if empty. Parsing full stdout as single document fails with `Extra data` |
-| `read` | Line-by-line (JSONL) | Object per line | 0 lines if empty. Emits pure JSONL even when `--wait N` is passed |
-| `tail` | Line-by-line (JSONL) | Object per line | Continuous event stream |
-| `send` (no `--wait`) | Single document | Object | Emits `{"status":"ok"}` (also applies to `-w`, `-y`, `-g`, `-p`) |
-| `send --wait N` | Mixed (Ack + JSONL) | Object + Objects | **TRAP**: Line 1 is `{"status":"ok"}`, lines 2+ are event objects |
+`logs` prints the raw session log. `skill` prints the raw reference document.
+Neither accepts `--json`. `setup`, `help`, `version`, interactive mode, and
+internal daemon mode do not accept `--json`.
 
-### Parsing methods
+For a finite `--json` command, parse complete stdout once with
+`json.loads(stdout)` or `JSON.parse(stdout)`. The command prints one JSON object
+and one newline. Empty results and errors also print one object.
+`read --wait N --json` returns one envelope. `send --wait N --json` returns
+one envelope with the waited events. Chat flags (`-w`, `-y`, `-g`, `-p`) use
+`command: "send"`.
 
-1. **Single document commands (`control`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`, `who`, and `send` without `--wait`):**
-   Parse the complete stdout at once:
-   ```python
-   data = json.loads(stdout)  # Returns dict, or list for spells
-   ```
+Each envelope has exactly these five top-level fields:
 
-2. **Line-by-line / JSONL commands (`nearby`, `read`, `tail`):**
-   Read line-by-line. Never parse the full string as one document. Note that `read --wait N` emits pure JSONL (no acknowledgment header).
-   ```python
-   events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
-   ```
+| Field | Meaning |
+| ----- | ------- |
+| `command` | Public command name, or `null` when argument parsing cannot identify it. |
+| `kind` | `intent`, `result`, `events`, or `error`. |
+| `data` | Inspection/query JSON value (object or array), slash-text `{"lines":[...]}`, or `null`. |
+| `events` | Array of event objects, never encoded JSON strings. |
+| `error` | `null`, or an object such as `{"stage":"command","message":"..."}`. |
 
-3. **Mixed shape trap (`send --wait N --json`, `-w`, `-y`, `-g`, `-p`):**
-   `send --wait N --json` prints an acknowledgment object `{"status":"ok"}` on line 1, and then streams any events received during the wait window on subsequent lines as JSONL.
-   If zero events arrive during wait, stdout is 1 line (`{"status":"ok"}`), and `json.loads(stdout)` appears to work. But as soon as any event occurs, stdout has 2+ lines and `json.loads(stdout)` crashes with `JSONDecodeError: Extra data: line 2 column 1`.
-   When `--wait` is passed to `send` or chat flags, parse line-by-line:
-   ```python
-   lines = [line.strip() for line in stdout.splitlines() if line.strip()]
-   ack = json.loads(lines[0]) if lines else None
-   events = [json.loads(line) for line in lines[1:]]
-   ```
+The `error.stage` value is `arguments`, `startup`, `command`, or `wait`.
+A non-null error exits with status 1. Before acknowledgment, an error uses
+`kind: "error"`. After a `send --wait` acknowledgment, a wait failure keeps
+the original `kind` and `data` and sets `error.stage: "wait"`. Human mode
+prints daemon `ERR` messages. JSON mode prints one error envelope on stdout.
+
+`kind: "intent"` means that the daemon acknowledged a request. The server
+may reject the request or never apply it. Inspect subsequent state and server
+events before claiming an outcome. `kind: "result"` returns data without
+upgrading predicted or unknown facts to observations. `kind: "events"` returns
+events. Read inspection fields in `data`, nearby entities in `data[]`, and
+event fields in `events[]`.
+
+Finite request example:
+
+```json
+{"command":"fight","kind":"intent","data":null,"events":[],"error":null}
+```
+
+An empty `nearby --json` returns `{"command":"nearby","kind":"result","data":[],"events":[],"error":null}`.
+An empty `read --json` returns `{"command":"read","kind":"events","data":null,"events":[],"error":null}`.
+Neither returns empty stdout. `spells` also stores its array in `data`.
+
+Only `tail --json` is continuous JSONL. Parse one line at a time.
+It prints one envelope per event and nothing for empty polls:
+
+```json
+{"command":"tail","kind":"events","data":null,"events":[{"type":"PARTY","sender":"PlayerName","message":"hello"}],"error":null}
+```
+
+`status --json` returns `data.socket` as `responsive` or `not_running`.
+`start --json` returns `data.socket: "responsive"` and `data.started: true|false`.
+These values describe the daemon socket, not world-session health.
 
 ## Direct control
 
@@ -113,10 +131,10 @@ Rules:
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
 - A valid GUID can still be stale. `target` sends it without checking entity age. Refresh `nearby --json` before acting. `requestedTarget` is sent intent; `target` is the last server observation. Equal values do not prove a fresh acknowledgment.
 - `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. On one IPC socket it interrupts pending work and drops older queued mutating control, recovery, quest, and loot commands, including `cycle`, plus older read waits. It retains state inspections, corpse and metadata queries, and newer requests. It cannot undo a sent request or disengage an attacking enemy. `status` remains CONNECTED.
-- Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1.
+- Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 - A terminal `stopped` result from WALK_TOWARD also makes the CLI exit with status 1.
 
-`control --json` fields you must not mix up:
+`control --json` fields in `data` you must not mix up:
 
 | Field | Meaning |
 | ----- | ------- |
@@ -161,7 +179,11 @@ IPC verbs on the daemon socket:
     STOP
     STATUS
 
-Control events appear in `read` / `tail` with JSON `type` `CONTROL`. The `event` field is one of `movement_started`, `movement_stopped`, `facing_changed`, `target_requested`, `target_observed`, `server_correction`, `control_changed`, `control_error`. The payload includes the same state fields as `control --json`.
+Control events appear in `read --json` and `tail --json` under `events[]` with
+`type: "CONTROL"`. Their `event` field is `movement_started`,
+`movement_stopped`, `facing_changed`, `target_requested`, `target_observed`,
+`server_correction`, `control_changed`, or `control_error`. The payload
+includes the same state fields as `control --json` in `data`.
 
 ## Combat and tactics
 
@@ -198,7 +220,7 @@ Rules:
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
-- `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded.
+- `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded. With `--json`, the error is an envelope on stdout.
 - `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column`, choose a destination with one ground height. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
 
@@ -224,7 +246,7 @@ Rules:
 - `OK` acknowledges intent only. `following.status=holding` means predicted standoff, not server-confirmed arrival.
 - Inspect `following.reason` after stopping. Compare `targetPose.source`, original `observedAt`, and `control.serverPose` before claiming arrival.
 - `following.separation` is 3D pose distance, not the requested horizontal route distance. GUIDs use hex in JSON.
-- FOLLOW and FOLLOWING inspection errors print `ERR` and make the CLI exit with status 1.
+- FOLLOW and FOLLOWING inspection errors exit the CLI with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: FOLLOW <guid> [distance], FOLLOWING, FOLLOWING_JSON.
 
@@ -251,7 +273,7 @@ Use this four-step corpse run. Inspect state between requests. An `OK` reply rec
 
 A current unanswered resurrection offer is a separate choice. Answer `resurrect accept|decline` once only for that offer. A known future offer delay blocks accept, not decline. Confirm observed life after an accept request.
 
-Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1.
+Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 After reconnect, all learned spells in `combat --json` may appear in `unknownLearned` while the catalog is cold. Run `spells` once, then inspect `combat --json` again before diagnosing a broken spell kit.
 
@@ -291,7 +313,7 @@ Rules:
 - HALT drops older queued conversational mutations, abandonment and cancellation. It retains quest metadata queries and newer requests.
 - HALT cannot undo an already-sent request and is not proof of dialog closure.
 - `OK` always means intent, never accepted/completed/rewarded/removed state. Inspect actual log and server notifications for those facts.
-- Quest action and inspection errors print `ERR` and exit with status 1.
+- Quest action and inspection errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: QUESTS, QUESTS_JSON, TALK, QUERY_QUEST, SELECT_OPTION, SELECT_QUEST, ACCEPT_QUEST, COMPLETE_QUEST, REQUEST_REWARD, CHOOSE_REWARD, ABANDON_QUEST, CANCEL_INTERACTION.
 
@@ -324,7 +346,7 @@ Rules:
 - `release-loot` cannot close an unanswered opening. Reconnect does not prove the previous request outcome.
 - HALT drops older queued loot mutations but retains inspections and newer requests. It cannot undo an already-sent request.
 - Mutations stop prior control ownership through the manual override path. Inspections are readonly.
-- Action and inspection errors print `ERR` and exit with status 1.
+- Action and inspection errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONEY, RELEASE_LOOT.
 
@@ -354,7 +376,9 @@ Slash commands work too:
     tuicraft read --wait 5         # wait 5 seconds, then return events
     tuicraft tail                  # continuous stream (blocks)
 
-Add `--json` for structured output. Each JSON line:
+Add `--json` for structured output. `read --json` returns one envelope with
+all event objects in `events[]`, including `events: []` when empty.
+`tail --json` returns one envelope per event. Example event in `events[]`:
 
     {"type":"PARTY","sender":"PlayerName","message":"hello"}
 
@@ -499,7 +523,7 @@ Rules:
 - When player position is unestablished, distance filtering is suspended.
 - Use `guid` with `tuicraft target`.
 
-`nearby --json` fields:
+`nearby --json` fields in each `data[]` entity:
 
 | Field | Meaning |
 | ----- | ------- |
@@ -533,7 +557,8 @@ background so the pipeline doesn't block.
 
     tuicraft tail --json \
       | jq -r --unbuffered '
-          select((.type == "PARTY" or .type == "PARTY_LEADER")
+          .events[]
+          | select((.type == "PARTY" or .type == "PARTY_LEADER")
             and .sender != "Xia")
           | "\(.sender): \(.message)"' \
       | while IFS= read -r line; do
@@ -545,10 +570,10 @@ background so the pipeline doesn't block.
 Replace `Xia` with the agent's WoW character name and `x` with the openclaw
 agent id. The agent can respond in-game with `tuicraft send -p "message"`.
 
-To watch different event types, change the jq `select` filter:
+To watch different event types, change the jq `select` filter after `.events[]`:
 
-| Filter               | Events                         |
-| -------------------- | ------------------------------ |
-| `.type == "WHISPER"` | Incoming whispers only         |
-| `.type == "GUILD"`   | Guild chat only                |
-| `.type != "SYSTEM"`  | Everything except system noise |
+| Filter                    | Events                         |
+| ------------------------- | ------------------------------ |
+| `.type == "WHISPER"`      | Incoming whispers only         |
+| `.type == "GUILD"`        | Guild chat only                |
+| `.type != "SYSTEM"`       | Everything except system noise |

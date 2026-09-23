@@ -30,8 +30,8 @@ filtered from chat
 🖥️ **Interactive TUI** - Full terminal UI with slash commands and channel
 switching
 
-🤖 **CLI & Daemon** - Background daemon, pipe mode, and JSONL output for
-scripting
+🤖 **CLI & Daemon** - Background daemon, pipe mode, finite JSON envelopes, and
+JSONL envelopes from `tail --json` for scripting
 
 **Direct control and spatial observation** - Bounded walk, face, target, and
 halt through the CLI. `control` separates the current pose (server-observed
@@ -113,7 +113,7 @@ tuicraft read --wait 5     # read events, wait up to 5s
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
 tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin
-tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
+tuicraft move forward 1000 [--json] # walk 1-10000ms (default 1000); left/right strafe
 tuicraft face 1.57         # facing in radians
 tuicraft face-guid 0xabc   # face a currently observed entity on this map
 tuicraft walk-toward 3 0xabc # direct bounded leg toward one sampled GUID
@@ -123,7 +123,7 @@ tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
-tuicraft fight 0xabc       # Jev tactics; optional --framing none|minimal|mechanics
+tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
 tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycling --json        # phase, per-target cause, loot requests, stop cause
 tuicraft goto 1 2 3        # ground route
@@ -144,19 +144,65 @@ tuicraft cancel-interaction # request dialog close; wait for observed closure
 tuicraft inventory --json # observed carried items, counts and coinage
 tuicraft loot --json       # current offer, pending requests and reward notices
 tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
-tuicraft take-loot 0       # request a slot actually present in that offer
+tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of the open window
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, follow, cycle
-tuicraft start             # start background daemon and connect
-tuicraft status            # daemon status
-tuicraft stop              # stop daemon
+tuicraft start [--json]    # start background daemon and connect
+tuicraft status [--json]   # daemon socket status, not world-session health
+tuicraft stop [--json]     # stop daemon
 tuicraft skill             # print SKILL.md for AI agents
 ```
 
 The GUIDs in these examples are placeholders. Copy current creature GUIDs from
 `nearby --json` before `fight` or `cycle`; `target` also accepts a stale GUID
 and `control --json` separates the sent request from the observed selection.
+
+## JSON CLI output
+
+Add `--json` to any daemon-backed command. This includes `send`, chat flags,
+`who`, `read`, `nearby`, gameplay inspections and actions, and `start`, `status`,
+`stop`. Examples: `tuicraft fight 0xabc --json`,
+`tuicraft take-loot 0 --json`, and `tuicraft status --json`.
+
+Every finite `--json` invocation prints exactly one JSON object and a newline
+to stdout, including empty results, `send --wait` results, and errors. Parse
+the complete stdout as one document. Each envelope has exactly five fields:
+`command` (public command name or `null`), `kind` (`intent`, `result`,
+`events`, or `error`), `data` (query JSON value or `null`), `events` (array of
+event objects), and `error` (object with `stage` and `message`, or `null`).
+Chat aliases use `command: "send"`. Inspect query fields inside `data`.
+
+```json
+{"command":"fight","kind":"intent","data":null,"events":[],"error":null}
+```
+
+An empty `nearby --json` returns `data: []`; an empty `read --json` returns
+`events: []`. Both print one envelope. `send --wait N --json` returns one
+envelope with waited events in `events`, not an acknowledgment plus event lines.
+`kind: "intent"` confirms that the daemon acknowledged the request. It does
+not prove the game server accepted or completed it. Inspect later state and
+events for outcomes; predicted and unknown facts do not become observed facts.
+
+Only `tail --json` is continuous JSONL. Parse each line as an envelope. It
+emits one envelope per event and no line for an empty poll:
+
+```json
+{"command":"tail","kind":"events","data":null,"events":[{"type":"SAY","sender":"Xi","message":"hello"}],"error":null}
+```
+
+JSON errors print one envelope on stdout and exit with status 1. `error.stage`
+is `arguments`, `startup`, `command`, or `wait`. A failure after a
+`send --wait` acknowledgment preserves its `kind` and `data` and sets
+`error.stage: "wait"`. `status --json` reports whether the daemon socket
+responds, not whether the world session is healthy. `start --json` reports
+whether a daemon started or already existed. `stop --json` reports intent when
+it stops a daemon and a `not_running` result when none exists.
+`logs` keeps its raw JSONL session log; `skill` keeps its raw reference text.
+Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
+internal daemon mode. Human output remains unchanged.
+
+## Gameplay notes
 
 Spellbook/tactics require compatible client tables; ground routes require
 Namigator data and its native library. Set their optional config paths and the
