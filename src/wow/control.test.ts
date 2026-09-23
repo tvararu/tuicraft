@@ -509,9 +509,7 @@ describe("ControlRuntime", () => {
       const { runtime, sent, events } = setup();
       runtime.move("forward", 2000);
       sent.length = 0;
-      const w = new PacketWriter();
-      w.packedGuid(0x0764, 0);
-      writeMovementInfo(w, {
+      runtime.handleNearTeleport({
         flags: 0,
         extraFlags: 0,
         time: 1,
@@ -521,9 +519,6 @@ describe("ControlRuntime", () => {
         orientation: 1,
         fallTime: 0,
       });
-      const reader = new PacketReader(w.finish());
-      runtime.handleNearTeleport(reader);
-      expect(reader.remaining).toBe(0);
       expect(runtime.snapshot().moving).toBe(false);
       expect(runtime.snapshot().pose?.source).toBe("server");
       expect(runtime.snapshot().pose?.x).toBe(100);

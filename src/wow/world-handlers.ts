@@ -865,11 +865,11 @@ export function handleGuildInvitePacket(
 
 export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
   const guid = readGuidBigint(r);
+  const info = parseMovementInfo(r);
   if (guid === selfGuid(conn)) {
-    conn.control?.handleNearTeleport(r);
+    conn.control?.handleNearTeleport(info);
     return;
   }
-  const info = parseMovementInfo(r);
   const position = {
     mapId: conn.control?.currentMapId() ?? 0,
     x: info.x,

@@ -18,6 +18,7 @@ import {
   handleChatMessage,
   registerMovementHandlers,
 } from "wow/world-handlers";
+import { ControlRuntime } from "wow/control";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
@@ -3991,17 +3992,44 @@ describe("handleNearTeleport", () => {
     } as unknown as WorldConn;
   }
 
-  test("0x0C5 routes self teleport to control", () => {
+  test("0x0C5 routes self teleport to control with exact pose", () => {
     const store = new EntityStore();
-    let handled = 0;
-    const conn = fakeConn({ handleNearTeleport: () => { handled++; } }, store);
+    const sent: { opcode: number; body: Uint8Array }[] = [];
+    const runtime = new ControlRuntime({
+      send: (opcode, body) => {
+        sent.push({ opcode, body: body ?? new Uint8Array() });
+      },
+      ticks: () => 0,
+      now: () => 10_000,
+      guidLow: () => 0x0764,
+      guidHigh: () => 0,
+      selfGuid: () => 0x0764n,
+      findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
+    });
+    const login = new PacketWriter();
+    login.uint32LE(530);
+    login.floatLE(8709.46);
+    login.floatLE(-6671.76);
+    login.floatLE(70.34);
+    login.floatLE(0.5);
+    runtime.applyLoginVerify(new PacketReader(login.finish()));
+    sent.length = 0;
+    const conn = fakeConn(runtime, store);
     registerMovementHandlers(conn);
     expect(conn.dispatch.has(GameOpcode.MSG_MOVE_TELEPORT)).toBe(true);
     conn.dispatch.handle(
       GameOpcode.MSG_MOVE_TELEPORT,
       new PacketReader(nearTeleportBody(0x0764)),
     );
-    expect(handled).toBe(1);
+    expect(runtime.snapshot().moving).toBe(false);
+    expect(runtime.snapshot().pose?.source).toBe("server");
+    expect(runtime.snapshot().serverPose).toMatchObject({
+      x: 100,
+      y: 200,
+      z: 50,
+      orientation: 1,
+    });
+    expect(sent.length).toBe(0);
   });
 
   test("0x0C5 from another unit updates the entity store", () => {
