@@ -506,7 +506,6 @@ export class EncounterCycleRuntime {
         return true;
       }
       const slotsTaken: number[] = [];
-      let pendingConfirmations = 0;
       for (const slot of offeredSlots) {
         try {
           loot.take(slot);
@@ -515,7 +514,16 @@ export class EncounterCycleRuntime {
           return false;
         }
         slotsTaken.push(slot);
-        pendingConfirmations++;
+        const confirmed = await this.awaitTakeConfirmation(
+          next,
+          generation,
+          slot,
+        );
+        if (confirmed === undefined) return false;
+        if (!confirmed) {
+          slotsTaken.pop();
+          continue;
+        }
       }
       let moneyTaken = 0;
       if (offeredMoney > 0) {
@@ -526,33 +534,13 @@ export class EncounterCycleRuntime {
           return false;
         }
         moneyTaken = offeredMoney;
-        pendingConfirmations++;
-      }
-      while (pendingConfirmations > 0) {
-        const event = await next(LOOT_SETTLE_MS);
-        if (!this.live(generation)) return false;
-        if (!event) {
-          this.stop("loot_denied:timeout");
-          return false;
-        }
-        if (
-          event.type === "inventory_error" &&
-          event.state.lastInventoryError?.inventoryFull
-        ) {
-          this.stop("loot_inventory_full");
-          return false;
-        }
-        if (event.type === "loot_error") {
-          this.stop(
-            `loot_denied:${event.state.lastLootError ? String(event.state.lastLootError.error) : "unknown"}`,
-          );
-          return false;
-        }
-        if (
-          event.type === "loot_removed" ||
-          event.type === "loot_money_cleared"
-        )
-          pendingConfirmations--;
+        const confirmed = await this.awaitTakeConfirmation(
+          next,
+          generation,
+          undefined,
+        );
+        if (confirmed === undefined) return false;
+        if (!confirmed) moneyTaken = 0;
       }
       if (!(await this.closeLoot(next, generation))) return false;
       const coinageAfter = loot.snapshot().inventory.coinage;
@@ -593,6 +581,46 @@ export class EncounterCycleRuntime {
     }
     this.stop("loot_release_unconfirmed");
     return false;
+  }
+  private async awaitTakeConfirmation(
+    next: (timeoutMs: number) => Promise<RewardsEvent | undefined>,
+    generation: number,
+    slot: number | undefined,
+  ): Promise<boolean | undefined> {
+    while (this.live(generation)) {
+      const event = await next(LOOT_SETTLE_MS);
+      if (!this.live(generation)) return undefined;
+      if (!event) {
+        this.stop("loot_denied:timeout");
+        return undefined;
+      }
+      if (
+        event.type === "inventory_error" &&
+        event.state.lastInventoryError?.inventoryFull
+      ) {
+        this.stop("loot_inventory_full");
+        return undefined;
+      }
+      if (event.type === "loot_error") {
+        this.stop(
+          `loot_denied:${event.state.lastLootError ? String(event.state.lastLootError.error) : "unknown"}`,
+        );
+        return undefined;
+      }
+      if (slot === undefined) {
+        if (event.type === "loot_money_cleared") return true;
+        continue;
+      }
+      if (event.type === "loot_removed") {
+        const removed = event.state.loot;
+        if (removed.phase === "open" || removed.phase === "closing") {
+          if (!removed.items.some((item) => item.slot === slot)) return true;
+        }
+        continue;
+      }
+      if (event.type === "loot_release_observed") return false;
+    }
+    return undefined;
   }
 
   private recordLoot(
