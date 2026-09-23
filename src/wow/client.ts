@@ -1434,7 +1434,12 @@ export function worldSession(
             } else {
               if (![target.x, target.y, target.z].every(Number.isFinite))
                 throw new Error("invalid_destination");
-              const z = navigation.height(pose.mapId, target.x, target.y);
+              let z: number;
+              try {
+                z = navigation.height(pose.mapId, target.x, target.y);
+              } catch {
+                z = navigation.height(pose.mapId, target.x, target.y, pose);
+              }
               if (Math.abs(z - target.z) > 0.25)
                 throw new Error("destination_not_grounded");
               destination = { x: target.x, y: target.y, z };
