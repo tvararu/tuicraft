@@ -254,6 +254,10 @@ describe("parseArgs", () => {
     );
   });
 
+  test("rejects --json where --wait requires a value", () => {
+    expect(() => parseArgs(["send", "hi", "--wait", "--json"])).toThrow();
+  });
+
   test("--json does not leak into yell message", () => {
     expect(parseArgs(["-y", "--json", "hello"])).toEqual({
       mode: "yell",

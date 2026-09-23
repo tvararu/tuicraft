@@ -13,6 +13,7 @@ export async function sendToSocket(
 ): Promise<string[]> {
   const sock = path ?? (await import("lib/paths")).socketPath();
   let buffer = "";
+  let complete = false;
   return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
       unix: sock,
@@ -24,12 +25,13 @@ export async function sendToSocket(
         data(socket, data) {
           buffer += Buffer.from(data).toString();
           if (buffer.endsWith("\n\n") || buffer === "\n") {
+            complete = true;
             socket.end();
             resolve(parseResponseLines(buffer));
           }
         },
         close() {
-          resolve(parseResponseLines(buffer));
+          if (!complete) reject(new Error("Incomplete daemon response"));
         },
         error(_socket, err) {
           reject(err);

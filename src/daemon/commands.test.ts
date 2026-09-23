@@ -4625,6 +4625,26 @@ describe("IPC round-trip", () => {
     });
   });
 
+  test("missing wait value fails before sending JSON chat", async () => {
+    handle = attachControl(createMockHandle());
+    const { code, out, error } = await runMain([
+      "send",
+      "hi",
+      "--wait",
+      "--json",
+    ]);
+    expect(code).toBe(1);
+    expect(error).toBe("");
+    expect(handle.sendSay).not.toHaveBeenCalled();
+    expect(JSON.parse(out)).toMatchObject({
+      command: "send",
+      kind: "error",
+      data: null,
+      events: [],
+      error: { stage: "arguments" },
+    });
+  });
+
   test("malformed JSON-mode arguments return one error envelope", async () => {
     handle = attachControl(createMockHandle());
     const { code, out, error } = await runMain([

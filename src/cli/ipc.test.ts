@@ -83,6 +83,29 @@ afterEach(async () => {
   await rm(sockPath, { recursive: true, force: true });
 });
 
+type ClosingSocket = { end(): void };
+type ClosingResponse = {
+  socket: {
+    data(socket: ClosingSocket, data: Uint8Array): void;
+    close(): void;
+  };
+};
+
+async function replyThenClose(reply: string): Promise<string[]> {
+  const originalConnect = Bun.connect;
+  Bun.connect = jest.fn(async (options: ClosingResponse) => {
+    const socket: ClosingSocket = { end() {} };
+    if (reply) options.socket.data(socket, Buffer.from(reply));
+    options.socket.close();
+    return socket;
+  }) as unknown as typeof Bun.connect;
+  try {
+    return await sendToSocket("STATUS", "./tmp/closing.sock");
+  } finally {
+    Bun.connect = originalConnect;
+  }
+}
+
 describe("sendToSocket", () => {
   test("rejects on stale socket file", async () => {
     const path = `./tmp/stale-sock-${Date.now()}.sock`;
@@ -114,20 +137,27 @@ describe("sendToSocket", () => {
     }
   });
 
-  test("resolves buffered lines on socket close without terminator", async () => {
-    const path = `./tmp/test-close-${Date.now()}.sock`;
+  test("rejects a partial reply when the socket closes", async () => {
+    await expect(replyThenClose("OK\n")).rejects.toThrow();
+  });
+
+  test("rejects an empty reply when the socket closes", async () => {
+    await expect(replyThenClose("")).rejects.toThrow();
+  });
+
+  test("accepts a terminated empty response frame", async () => {
+    const path = `./tmp/test-empty-${Date.now()}.sock`;
     const server = Bun.listen({
       unix: path,
       socket: {
         data(socket) {
-          socket.write("OK\n");
-          socket.end();
+          socket.write("\n");
+          socket.flush();
         },
       },
     });
     try {
-      const lines = await sendToSocket("STATUS", path);
-      expect(lines).toEqual(["OK"]);
+      expect(await sendToSocket("READ_JSON", path)).toEqual([]);
     } finally {
       server.stop(true);
       await unlink(path).catch(() => {});

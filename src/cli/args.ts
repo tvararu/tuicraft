@@ -158,14 +158,11 @@ function hasFlag(args: string[], flag: string): boolean {
   return args.includes(flag);
 }
 
-function flagValue(args: string[], flag: string): string | undefined {
-  const idx = args.indexOf(flag);
-  return idx !== -1 ? args[idx + 1] : undefined;
-}
-
 function parseWaitFlag(args: string[]): number | undefined {
-  const raw = flagValue(args, "--wait");
-  if (raw === undefined) return undefined;
+  const idx = args.indexOf("--wait");
+  if (idx === -1) return undefined;
+  const raw = args[idx + 1];
+  if (raw === undefined) throw new Error("Invalid --wait value: missing");
   const n = parseFloat(raw);
   if (!Number.isFinite(n) || n < 0)
     throw new Error(`Invalid --wait value: ${raw}`);
@@ -519,7 +516,11 @@ export function parseArgs(args: string[]): CliAction {
   }
 
   const json = hasJsonOption(args);
-  const withoutJson = json ? args.filter((arg) => arg !== "--json") : args;
+  const withoutJson = json
+    ? args.filter(
+        (arg, index) => arg !== "--json" || args[index - 1] === "--wait",
+      )
+    : args;
   const sub = parseSubcommand(withoutJson);
   if (sub) return withJson(sub, json);
 
