@@ -41,6 +41,4 @@ blocked branches reported as blocked, never inferred.
   proof (one single-slot window shows kill->take->push->ack->inventory
   gain; the multi-slot take-all shows ordering + ack but no new-item gain,
   and money was 0 in all six opens).
-- A complete death/ghost/reclaim/life cycle with no developer repair —
-  two clean cycles recorded above; a third live replication strengthens it.
 - Denied/full/empty loot and current-offer resurrection branches.
