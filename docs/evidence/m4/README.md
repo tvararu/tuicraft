@@ -34,11 +34,28 @@ blocked branches reported as blocked, never inferred.
   timestamps; log totals drift as the daemon appends) crossed with
   operator journal `tmp/m4-live/README.md` (gitignored, read from the
   main-checkout disk copy — absent from a fresh worktree).
+- [encounter-cycles-paired-2026-09-24.json](encounter-cycles-paired-2026-09-24.json) —
+  outcome `positive-partial`. One `cycle --max 2` run
+  (startedAt 1790161478424, `queue_exhausted` at 1790161509957, log
+  lines 43203–43646 of 43669 at audit time): two distinct Stalker GUIDs
+  both `server_kill_credit` with `lastXp` total 108 kind kill
+  (0xf130003d2302679a at 1790161494955, outcome 1790161495201 hp 123;
+  0xf130003d23026691 at 1790161509623, outcome 1790161509853 hp 147).
+  Both windows offered two slots with serial take->removed->item_push
+  per slot and close->release observed; window2 open_requested
+  (1790161509854) follows window1 release_observed (1790161495251).
+  Raw carried-slot diffs: 4814 4->5, 27668 4->6 across the run, 20772
+  1->2, coinage 6164 unchanged (money 0 both opens). No death, ghost,
+  resurrect, corpse, or reclaim lines in the window; Xiara alive
+  throughout. Epoch 3, server `.gps` pose, and walk-toward legs are
+  journal-sourced worker claims, not log observations. Unexercised:
+  denied/full/empty loot, coinage gain, current-offer resurrection.
 
 ## Still open (per roadmap exit evidence)
 
 - Multi-encounter run chaining fights back-to-back with per-window gain
-  proof (one single-slot window shows kill->take->push->ack->inventory
-  gain; the multi-slot take-all shows ordering + ack but no new-item gain,
-  and money was 0 in all six opens).
+  proof: the paired 2026-09-24 run proves it for two 2-slot windows
+  (each offered item maps to a +1 raw stack gain, window2 opening after
+  window1 release); money was 0 in every open so far, so coinage gain
+  proof is still unmet.
 - Denied/full/empty loot and current-offer resurrection branches.
