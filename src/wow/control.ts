@@ -588,6 +588,14 @@ export class ControlRuntime {
     this.applyForcedPose(dest, "teleport");
   }
 
+  handleNearTeleport(r: PacketReader): void {
+    r.packedGuid();
+    const dest = parseMovementInfo(r);
+    this.teleporting = false;
+    this.abortUnsafe("near_teleport");
+    this.applyForcedPose(dest, "near_teleport");
+  }
+
   handleTransferPending(): void {
     this.teleporting = true;
     this.abortUnsafe("teleport");

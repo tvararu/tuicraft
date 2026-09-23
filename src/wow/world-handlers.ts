@@ -26,7 +26,8 @@ import {
   parseGroupList,
   parsePartyMemberStats,
 } from "wow/protocol/group";
-import { parseUpdateObject } from "wow/protocol/update-object";
+import { parseMovementInfo } from "wow/protocol/movement";
+import { readGuidBigint, parseUpdateObject } from "wow/protocol/update-object";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -862,6 +863,24 @@ export function handleGuildInvitePacket(
   });
 }
 
+export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
+  const guid = readGuidBigint(r);
+  if (guid === selfGuid(conn)) {
+    conn.control?.handleNearTeleport(r);
+    return;
+  }
+  const info = parseMovementInfo(r);
+  const position = {
+    mapId: conn.control?.currentMapId() ?? 0,
+    x: info.x,
+    y: info.y,
+    z: info.z,
+    orientation: info.orientation,
+  };
+  conn.entityStore.setPosition(guid, position);
+  conn.combat?.observePosition(guid, position);
+}
+
 export function handleTeleportAckRequest(
   conn: WorldConn,
   r: PacketReader,
@@ -913,6 +932,9 @@ export function registerMovementHandlers(conn: WorldConn): void {
   conn.dispatch.on(GameOpcode.SMSG_LOGIN_VERIFY_WORLD, (r) => {
     conn.control?.applyLoginVerify(r);
   });
+  conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT, (r) =>
+    handleNearTeleport(conn, r),
+  );
   conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT_ACK, (r) =>
     handleTeleportAckRequest(conn, r),
   );
