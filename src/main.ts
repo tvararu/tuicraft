@@ -11,6 +11,8 @@ import {
   errorEnvelope,
   daemonCommandFailed,
   walkCommandFailed,
+  formatHumanInspection,
+  formatHumanIntent,
   type ReplyKind,
   type OutputEnvelope,
   type OutputStage,
@@ -76,7 +78,22 @@ function printReply(
 }
 
 function printControlReply(lines: string[]): void {
-  printReply(lines, "intent", true);
+  if (jsonRequested()) printReply(lines, "intent", true);
+  else {
+    for (const line of formatHumanIntent(publicCommand() ?? "", lines))
+      console.log(line);
+    if (daemonCommandFailed(lines)) process.exitCode = 1;
+  }
+}
+function printHumanInspection(command: string, lines: string[]): void {
+  const reply = decodeReply(command, "json", lines);
+  if (reply.error) {
+    console.log(`ERR ${reply.error.message}`);
+    process.exitCode = 1;
+    return;
+  }
+  for (const line of formatHumanInspection(command, reply.data))
+    console.log(line);
 }
 function printWalkReply(lines: string[]): void {
   if (jsonRequested()) {
@@ -411,9 +428,13 @@ async function main() {
     case "inventory":
     case "loot": {
       await ensureDaemon();
-      const verb = `${action.mode.toUpperCase()}${action.json ? "_JSON" : ""}`;
+      const humanSummary =
+        !action.json &&
+        ["cycling", "recovery", "inventory", "loot"].includes(action.mode);
+      const verb = `${action.mode.toUpperCase()}${action.json || humanSummary ? "_JSON" : ""}`;
       const lines = await sendToSocket(verb);
-      printReply(lines, "json", true);
+      if (humanSummary) printHumanInspection(action.mode, lines);
+      else printReply(lines, "json", true);
       break;
     }
     case "cast": {
