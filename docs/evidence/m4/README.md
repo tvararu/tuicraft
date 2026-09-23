@@ -50,26 +50,48 @@ blocked branches reported as blocked, never inferred.
   throughout. Epoch 3, server `.gps` pose, and walk-toward legs are
   journal-sourced worker claims, not log observations. Unexercised:
   denied/full/empty loot, coinage gain, current-offer resurrection.
+- [money-gain-positive-2026-09-23.json](money-gain-positive-2026-09-23.json) —
+  outcome `positive-partial`. Four server kill credits with xp (three
+  Springpaw Stalkers: 0xf130003d23012e5b xp 56, 0xf130003d23012e39 xp 84,
+  0xf130003d23000965 xp 56; Wretched Hooligan 0xf130003f220197ce xp 56;
+  outcomes 1790167003924–1790167215810, log lines 49030–49626), four
+  windows all opened->released with ack. The three Stalker offers were
+  money 0 (coinage 6164); the Hooligan offer was money 10 + item 27668.
+  Explicit take-money request (1790167231036) -> money cleared 10->0
+  (1790167231067) with money_notice, then raw carried-scope
+  inventory_observed coinage 6164->6174 (line 49639), held through
+  close (line 49643) and release ack (line 49644, coinage 6174) and
+  confirmed by a later snapshot (line 49723, coinage 6174). No
+  loot_removed/item_push/take line for the Hooligan GUID in
+  49631–49644; carried slots identical across open/observed/release
+  (bag 20 slot 16 entry 27668 count 12 unchanged), so the item was
+  left untaken and item storage is NOT claimed for this window. No
+  death, ghost, corpse, reclaim, denied/full/empty, or RESURRECT line
+  in 49030–49655. Route/waypoints/GPS poses are journal-sourced
+  worker claims (in-window poses are predicted-source), not log
+  observations. The prior blocked coinage record below stands as
+  history; this record covers only the later run after line 47114.
 - [money-loot-blocked-2026-09-23.json](money-loot-blocked-2026-09-23.json) —
-  outcome `blocked`. Nine server kill credits with xp (distinct Stalker
-  GUIDs, xp lines 43905–46416, opens 43912–46425, releases 43928–46441,
-  log lines 43800–47114 of 47114 at audit time), all nine loot offers
-  money=0 with coinage 6164 in every inventory snapshot, so take-money
-  was never offered and coinage proof stays OPEN. Two later normal
-  death/ghost/healer/alive cycles (dead 46477/47017, ghost 46492/47033,
-  corpse found 46527/47064, healer request unanswered 46528/47065 with
-  guid 0xf13000195b0009f1, alive epoch 2 46570/47107) with reclaim
-  blocked corpse_out_of_range (421.44yd water corpse, 184.15yd corridor
-  corpse). SQL candidates 15968/16162/15645 verified in
-  creature_template.sql (mingold/maxgold 5-12/5-11/6-13, map-530 spawns
-  5/18/15) as offline reference only: Scout spawn approached but never
-  observed live, Wretched ground never reached — no live absence
-  claimed. Denied/full/empty and current-offer resurrection unexercised
-  (no such lines in 43800–47114).
+   outcome `blocked`. Nine server kill credits with xp (distinct Stalker
+   GUIDs, xp lines 43905–46416, opens 43912–46425, releases 43928–46441,
+   log lines 43800–47114 of 47114 at audit time), all nine loot offers
+   money=0 with coinage 6164 in every inventory snapshot, so take-money
+   was never offered and coinage proof stays OPEN. Two later normal
+   death/ghost/healer/alive cycles (dead 46477/47017, ghost 46492/47033,
+   corpse found 46527/47064, healer request unanswered 46528/47065 with
+   guid 0xf13000195b0009f1, alive epoch 2 46570/47107) with reclaim
+   blocked corpse_out_of_range (421.44yd water corpse, 184.15yd corridor
+   corpse). SQL candidates 15968/16162/15645 verified in
+   creature_template.sql (mingold/maxgold 5-12/5-11/6-13, map-530 spawns
+   5/18/15) as offline reference only: Scout spawn approached but never
+   observed live, Wretched ground never reached — no live absence
+   claimed. Denied/full/empty and current-offer resurrection unexercised
+   (no such lines in 43800–47114).
 
 ## Still open (per roadmap exit evidence)
 
-- Coinage gain: every observed loot offer contained zero money, so raw
-  coinage stayed at 6164. The paired run above proves two fights, item
-  storage, and the next-window release barrier, not money gain.
+- Coinage gain: proved by the money-gain run above (offer money 10,
+  explicit take, raw carried coinage 6164->6174 held through release
+  ack and confirmed later). Stalker money-0 offers show coinage only
+  moves when money is offered and taken.
 - Denied/full/empty loot and current-offer resurrection were unexercised.

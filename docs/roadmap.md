@@ -636,6 +636,12 @@ reconnect; this is a functional limitation, not completed denial/retry support.
 Prove offered-item storage with raw slot/count changes, money with raw coinage,
 and another valid window after closure. Retain the unanswered boundary in reports.
 
+2026-09-23 money proof: four live kills (three Stalkers, one Wretched
+Hooligan) with a money-10 offer, explicit take, and raw carried coinage
+6164->6174 held through release ack (`docs/evidence/m4/`). The Hooligan
+item was left untaken, and denied/full/empty loot plus current-offer
+resurrection remain unexercised, so this milestone is not closed.
+
 ### 5. A selected questing loop
 
 Add the NPC interactions, quest state, inventory, and other capabilities required
