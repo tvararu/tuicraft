@@ -184,6 +184,7 @@ export class RecoveryRuntime {
 
   snapshot(): RecoveryState {
     const life = this.life();
+    const request = this.request ?? this.spiritHealerPending;
     return {
       ...life,
       selfGuid: this.deps.selfGuid(),
@@ -200,11 +201,7 @@ export class RecoveryRuntime {
       reclaim: this.reclaimState(life.life),
       graveyard: copyGraveyard(this.graveyard),
       resurrection: this.resurrectionState(),
-      request: this.request
-        ? { ...this.request }
-        : this.spiritHealerPending
-          ? { ...this.spiritHealerPending }
-          : undefined,
+      request: request ? { ...request } : undefined,
       disposed: this.disposed,
     };
   }
