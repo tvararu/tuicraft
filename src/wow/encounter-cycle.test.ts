@@ -40,6 +40,8 @@ function fakeLoot(config: {
   takeError?: string;
   inventoryFull?: boolean;
   releaseOnly?: boolean;
+  deferClose?: boolean;
+  deferTake?: boolean;
 }) {
   const offeredSlots = config.items ?? [];
   const takenSlots: number[] = [];
@@ -51,6 +53,8 @@ function fakeLoot(config: {
   let lastLootError: RewardsState["lastLootError"];
   let lastInventoryError: RewardsState["lastInventoryError"];
   let listener: ((event: RewardsEvent) => void) | undefined;
+  let lastRelease: RewardsState["lastRelease"];
+  const closeRequested = Promise.withResolvers<void>();
 
   function state(): RewardsState {
     const loot: RewardsState["loot"] =
@@ -97,7 +101,7 @@ function fakeLoot(config: {
       lastInventoryError,
       lastItemPush: undefined,
       lastMoneyNotice: undefined,
-      lastRelease: undefined,
+      lastRelease,
       disposed: false,
     };
   }
@@ -105,9 +109,16 @@ function fakeLoot(config: {
   function emit(type: RewardsEvent["type"]): void {
     listener?.({ type, at: 0, state: state() });
   }
+  function acknowledgeClose(): void {
+    phase = "closed";
+    lastRelease = { guid: 2n, status: 1, observedAt: 0 };
+    emit("loot_release_observed");
+  }
 
   return {
     taken: () => takenSlots,
+    closing: closeRequested.promise,
+    acknowledgeClose,
     moneyTaken: () => moneyRequested,
     onEvent(callback: ((event: RewardsEvent) => void) | undefined) {
       listener = callback;
@@ -134,8 +145,9 @@ function fakeLoot(config: {
     },
     take(slot: number) {
       if (config.takeError) throw new Error(config.takeError);
-      remainingItems.delete(slot);
       takenSlots.push(slot);
+      if (config.deferTake) return;
+      remainingItems.delete(slot);
       queueMicrotask(() => {
         if (config.inventoryFull) {
           lastInventoryError = {
@@ -166,7 +178,9 @@ function fakeLoot(config: {
       });
     },
     close() {
-      phase = "closed";
+      phase = "closing";
+      closeRequested.resolve();
+      if (!config.deferClose) queueMicrotask(acknowledgeClose);
     },
   };
 }
@@ -619,6 +633,53 @@ test("empty offer closes and advances without stopping", async () => {
   });
 });
 
+test("cycle waits for the loot release before completing", async () => {
+  const loot = fakeLoot({ items: [4], deferClose: true });
+  const runtime = new EncounterCycleRuntime({
+    tactics: fakeTactics([]),
+    loot,
+    recovery: fakeRecovery({ life: ["ghost"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const running = runtime.start({ guids: [2n], instruction: "fight" });
+  await loot.closing;
+  expect(runtime.snapshot()).toMatchObject({
+    active: true,
+    phase: "looting",
+    currentIndex: 0,
+  });
+  expect(runtime.snapshot().lastLoot).toBeUndefined();
+  loot.acknowledgeClose();
+  await running;
+  expect(runtime.snapshot()).toMatchObject({
+    stopCause: "queue_exhausted",
+    lastLoot: { slotsTaken: [4] },
+  });
+});
+
+test("unanswered loot take stops rather than reporting success", async () => {
+  jest.useFakeTimers();
+  try {
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([]),
+      loot: fakeLoot({ items: [4], deferTake: true }),
+      recovery: fakeRecovery({ life: ["ghost"] }),
+      control: fakeControl(),
+      now: () => 0,
+    });
+    const running = runtime.start({ guids: [2n], instruction: "fight" });
+    await advanceUntilSettled(running, 6000);
+    expect(runtime.snapshot()).toMatchObject({
+      phase: "stopped",
+      stopCause: "loot_denied:timeout",
+    });
+    expect(runtime.snapshot().lastLoot).toBeUndefined();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("denied offer stops with loot_denied cause", async () => {
   const loot = fakeLoot({ openError: 4 });
   const runtime = new EncounterCycleRuntime({
@@ -982,7 +1043,19 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
       open(_guid: bigint) {},
       take(_slot: number) {},
       takeMoney() {},
-      close() {},
+      close() {
+        queueMicrotask(() =>
+          listener?.({
+            type: "loot_release_observed",
+            at: 0,
+            state: {
+              ...emptyOpen(),
+              loot: { phase: "closed" },
+              lastRelease: { guid: 2n, status: 1, observedAt: 0 },
+            },
+          }),
+        );
+      },
       onEvent(cb: ((event: RewardsEvent) => void) | undefined) {
         listener = cb;
       },

@@ -501,9 +501,7 @@ export class EncounterCycleRuntime {
       const offeredSlots = offer.items.map((item) => item.slot);
       const offeredMoney = offer.money;
       if (offeredSlots.length === 0 && offeredMoney === 0) {
-        try {
-          loot.close();
-        } catch {}
+        if (!(await this.closeLoot(next, generation))) return false;
         this.recordLoot(guid, [], 0, coinageBefore, coinageBefore);
         return true;
       }
@@ -533,7 +531,10 @@ export class EncounterCycleRuntime {
       while (pendingConfirmations > 0) {
         const event = await next(LOOT_SETTLE_MS);
         if (!this.live(generation)) return false;
-        if (!event) break;
+        if (!event) {
+          this.stop("loot_denied:timeout");
+          return false;
+        }
         if (
           event.type === "inventory_error" &&
           event.state.lastInventoryError?.inventoryFull
@@ -553,9 +554,7 @@ export class EncounterCycleRuntime {
         )
           pendingConfirmations--;
       }
-      try {
-        loot.close();
-      } catch {}
+      if (!(await this.closeLoot(next, generation))) return false;
       const coinageAfter = loot.snapshot().inventory.coinage;
       this.recordLoot(
         guid,
@@ -568,6 +567,32 @@ export class EncounterCycleRuntime {
     } finally {
       if (this.live(generation)) loot.onEvent(undefined);
     }
+  }
+
+  private async closeLoot(
+    next: (timeoutMs: number) => Promise<RewardsEvent | undefined>,
+    generation: number,
+  ): Promise<boolean> {
+    try {
+      this.deps.loot.close();
+    } catch (error) {
+      this.stop(`loot_denied:${describeLootFailure(error)}`);
+      return false;
+    }
+    while (this.live(generation)) {
+      const event = await next(LOOT_SETTLE_MS);
+      if (!this.live(generation)) return false;
+      if (!event) break;
+      if (event.type !== "loot_release_observed") continue;
+      if (
+        event.state.loot.phase === "closed" &&
+        event.state.lastRelease?.status === 1
+      )
+        return true;
+      break;
+    }
+    this.stop("loot_release_unconfirmed");
+    return false;
   }
 
   private recordLoot(
