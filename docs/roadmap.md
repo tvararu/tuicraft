@@ -636,11 +636,14 @@ reconnect; this is a functional limitation, not completed denial/retry support.
 Prove offered-item storage with raw slot/count changes, money with raw coinage,
 and another valid window after closure. Retain the unanswered boundary in reports.
 
-2026-09-23 money proof: four live kills (three Stalkers, one Wretched
-Hooligan) with a money-10 offer, explicit take, and raw carried coinage
-6164->6174 held through release ack (`docs/evidence/m4/`). The Hooligan
-item was left untaken, and denied/full/empty loot plus current-offer
-resurrection remain unexercised, so this milestone is not closed.
+2026-09-23 exit evidence met: one `cycle --max 2` completed two Stalker
+fights, two acknowledged loot windows, and raw item-stack gains. A later
+Wretched Hooligan fight offered 10 money; an explicit take raised observed
+coinage 6164->6174 and release was acknowledged. Two separate
+death/ghost/reclaim/life cycles needed no developer repair. See
+`docs/evidence/m4/`. Denied/full/empty loot and current-offer resurrection
+were unexercised live; this milestone does not claim those branches pass.
+Release-only opening denial still requires an ordinary reconnect.
 
 ### 5. A selected questing loop
 

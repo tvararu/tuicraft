@@ -88,10 +88,13 @@ blocked branches reported as blocked, never inferred.
    claimed. Denied/full/empty and current-offer resurrection unexercised
    (no such lines in 43800–47114).
 
-## Still open (per roadmap exit evidence)
+## Exit evidence and limits
 
-- Coinage gain: proved by the money-gain run above (offer money 10,
-  explicit take, raw carried coinage 6164->6174 held through release
-  ack and confirmed later). Stalker money-0 offers show coinage only
-  moves when money is offered and taken.
-- Denied/full/empty loot and current-offer resurrection were unexercised.
+- The paired cycle proved two fights, two item-gain windows, and a valid
+  second window after the first release. Two earlier no-repair corpse
+  reclaims proved ordinary death recovery. The Wretched window proved
+  money gain with raw coinage 6164->6174 after an explicit take and
+  release acknowledgment.
+- Denied/full/empty loot and current-offer resurrection were unexercised
+  live. Release-only opening denial still requires an ordinary reconnect;
+  none of these records proves denial/retry support.
