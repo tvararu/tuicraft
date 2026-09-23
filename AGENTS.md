@@ -121,9 +121,6 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - Existing `docs/plans/` files are historical design/protocol references, not
   instructions to execute old tasks. When a durable design note is useful, use
   `docs/plans/YYYY-MM-DD-<topic>-{design,plan}.md`; not every change needs one.
-- Use the `/entire` skill and the `entire` CLI to investigate why past changes
-  were made — it recovers full agent session context (prompts, decisions,
-  trade-offs) from checkpoints linked to commits
 
 ## Branches and archives
 
