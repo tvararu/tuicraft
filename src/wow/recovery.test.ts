@@ -45,6 +45,7 @@ function fixture(health = 0, flags = 0) {
     getEntity: (guid) => (guid === 1n ? self : others.get(guid)),
     pose: () => pose,
   });
+  runtime.onEvent((event) => events.push(event));
   function life(nextHealth: number, nextFlags: number): void {
     self.rawFields.set(0x18, nextHealth);
     self.rawFields.set(0x96, nextFlags);
@@ -300,6 +301,62 @@ describe("ordinary-player recovery", () => {
       request: { action: "spirit-healer", status: "unanswered" },
     });
     expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow();
+    ghost.life(100, 0);
+    expect(ghost.runtime.snapshot().request).toBeUndefined();
+  });
+
+  test("spirit-healer duplicate activation is rejected across corpse queries", () => {
+    const ghost = fixture(1, 0x10);
+    const healer = {
+      guid: healerGuid,
+      objectType: ObjectType.UNIT,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      npcFlags: 0x4000,
+      health: 100,
+      maxHealth: 100,
+      level: 1,
+      factionTemplate: 0,
+      displayId: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [],
+      maxPower: [],
+      name: undefined,
+    } as const;
+    ghost.others.set(healerGuid, healer as unknown as Entity);
+    ghost.runtime.observeEntity({
+      type: "appear",
+      entity: healer as unknown as Entity,
+    });
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    expect(ghost.sent).toHaveLength(1);
+    expect(ghost.sent[0]!.opcode).toBe(0x21c);
+
+    ghost.runtime.queryCorpse();
+    expect(ghost.sent).toHaveLength(2);
+    expect(ghost.sent[1]!.opcode).toBe(0x216);
+
+    expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
+      "Previous spirit-healer request remains unanswered",
+    );
+    expect(ghost.sent.filter((p) => p.opcode === 0x21c)).toHaveLength(1);
+
+    ghost.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
+      "Previous spirit-healer request remains unanswered",
+    );
+    expect(ghost.sent.filter((p) => p.opcode === 0x21c)).toHaveLength(1);
+    expect(ghost.runtime.snapshot()).toMatchObject({
+      life: "ghost",
+      request: { action: "spirit-healer", status: "unanswered" },
+    });
+
     ghost.life(100, 0);
     expect(ghost.runtime.snapshot().request).toBeUndefined();
   });

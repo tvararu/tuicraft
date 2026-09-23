@@ -303,14 +303,14 @@ A new death invalidates old corpse authorization. A stale unanswered reply canno
 Inspect subsequent life facts instead of treating `OK` as a confirmed release.
 
 `tuicraft reclaim-corpse`
-::: Request reclaim while observed ghost, using a freshly queried found corpse and the current labeled pose.
+:: Request reclaim while observed ghost, using a freshly queried found corpse and the current labeled pose.
 The actual and displayed corpse maps must match the pose map. Distance must be at most 39 yards in three dimensions.
 A known future delay blocks the request. Missing delay remains unknown.
 If all other guards pass, one explicit request is allowed with unknown timing and retains `request.timing=unknown`.
 This command takes no corpse GUID. The server finds the authenticated player's corpse.
 
 `tuicraft spirit-healer` `<guid>`
-::: Request resurrection from one observed creature whose unit flags carry the healer bit (0x4000). Requires observed ghost state and rejects an unanswered duplicate request. Never auto-activates and never reports success on intent. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
+:: Request resurrection from one observed creature whose NPC flags carry the healer bit (0x4000). Requires observed ghost state and rejects an unanswered duplicate request. Never auto-activates and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
 `tuicraft resurrect` `accept`|`decline`
 

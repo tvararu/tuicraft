@@ -157,6 +157,15 @@ export class RecoveryRuntime {
   private delay: RecoveryDelay | undefined;
   private graveyard: DeathReleaseLocation | undefined;
   private request: RecoveryRequest | undefined;
+  private spiritHealerPending:
+    | {
+        action: "spirit-healer";
+        status: "unanswered";
+        epoch: number;
+        requestedAt: number;
+        guid: bigint;
+      }
+    | undefined;
   private offer:
     | {
         packet: ResurrectRequest;
@@ -191,7 +200,11 @@ export class RecoveryRuntime {
       reclaim: this.reclaimState(life.life),
       graveyard: copyGraveyard(this.graveyard),
       resurrection: this.resurrectionState(),
-      request: this.request ? { ...this.request } : undefined,
+      request: this.request
+        ? { ...this.request }
+        : this.spiritHealerPending
+          ? { ...this.spiritHealerPending }
+          : undefined,
       disposed: this.disposed,
     };
   }
@@ -219,12 +232,14 @@ export class RecoveryRuntime {
     const requestedAt = this.deps.now();
     this.deps.send(GameOpcode.MSG_CORPSE_QUERY);
     this.queryPending = { epoch: this.epoch, requestedAt };
-    this.request = {
-      action: "query",
-      status: "unanswered",
-      epoch: this.epoch,
-      requestedAt,
-    };
+    if (!this.spiritHealerPending) {
+      this.request = {
+        action: "query",
+        status: "unanswered",
+        epoch: this.epoch,
+        requestedAt,
+      };
+    }
     return this.emit("corpse_query_requested");
   }
 
@@ -267,7 +282,7 @@ export class RecoveryRuntime {
     this.observeLife();
     if (this.life().life !== "ghost")
       throw new Error("Spirit-healer activation requires observed ghost state");
-    if (this.request?.action === "spirit-healer")
+    if (this.spiritHealerPending || this.request?.action === "spirit-healer")
       throw new Error("Previous spirit-healer request remains unanswered");
     if (guid === 0n) throw new Error("Spirit-healer GUID is unknown");
     const healer = this.deps.getEntity(guid);
@@ -280,13 +295,14 @@ export class RecoveryRuntime {
       GameOpcode.CMSG_SPIRIT_HEALER_ACTIVATE,
       buildSpiritHealerActivate(guid),
     );
-    this.request = {
+    this.spiritHealerPending = {
       action: "spirit-healer",
       status: "unanswered",
       epoch: this.epoch,
       requestedAt,
       guid,
     };
+    this.request = this.spiritHealerPending;
     return this.emit("spirit_healer_requested");
   }
 
@@ -346,7 +362,9 @@ export class RecoveryRuntime {
           observedAt,
         }
       : { status: "absent", observedAt };
-    if (this.request?.action === "query") this.request = undefined;
+    if (this.request?.action === "query") {
+      this.request = this.spiritHealerPending;
+    }
     this.emit("corpse_observed");
   }
 
@@ -413,8 +431,10 @@ export class RecoveryRuntime {
       this.newEpoch();
     if (this.request?.action === "release" && life === "ghost")
       this.request = undefined;
-    if (this.request?.action === "spirit-healer" && life === "alive")
-      this.request = undefined;
+    if (life === "alive") {
+      this.spiritHealerPending = undefined;
+      if (this.request?.action === "spirit-healer") this.request = undefined;
+    }
     this.lastLife = life;
     this.emit("life_observed");
   }
@@ -425,6 +445,7 @@ export class RecoveryRuntime {
     this.graveyard = undefined;
     this.offer = undefined;
     this.request = undefined;
+    this.spiritHealerPending = undefined;
   }
 
   private resurrectionState(): RecoveryResurrection | undefined {

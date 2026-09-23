@@ -273,7 +273,7 @@ Use this four-step corpse run. Inspect state between requests. An `OK` reply rec
    - Issue `reclaim-corpse` once, without a GUID. If the killer is near, issue `face` and a short `move forward` away immediately after `OK`. Do not pause to cast or inspect state first. Then inspect `recovery --json` for observed `life=alive`. If life is not observed, report the unanswered outcome. Do not retry reclaim automatically.
 A current unanswered resurrection offer is a separate choice. Answer `resurrect accept|decline` once only for that offer. A known future offer delay blocks accept, not decline. Confirm observed life after an accept request.
 
-`spirit-healer <guid>` is the explicit spirit-healer path. It requires observed ghost state and one observed creature whose unit flags carry the healer bit (0x4000). It rejects an unanswered duplicate request, never auto-activates, and never reports success on intent. Gossip option 0 stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
+`spirit-healer <guid>` is the explicit spirit-healer path. It requires observed ghost state and one observed creature whose NPC flags carry the healer bit (0x4000). It rejects an unanswered duplicate request, never auto-activates, and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip option 0 stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
 Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
