@@ -50,6 +50,22 @@ blocked branches reported as blocked, never inferred.
   throughout. Epoch 3, server `.gps` pose, and walk-toward legs are
   journal-sourced worker claims, not log observations. Unexercised:
   denied/full/empty loot, coinage gain, current-offer resurrection.
+- [money-loot-blocked-2026-09-23.json](money-loot-blocked-2026-09-23.json) —
+  outcome `blocked`. Nine server kill credits with xp (distinct Stalker
+  GUIDs, xp lines 43905–46416, opens 43912–46425, releases 43928–46441,
+  log lines 43800–47114 of 47114 at audit time), all nine loot offers
+  money=0 with coinage 6164 in every inventory snapshot, so take-money
+  was never offered and coinage proof stays OPEN. Two later normal
+  death/ghost/healer/alive cycles (dead 46477/47017, ghost 46492/47033,
+  corpse found 46527/47064, healer request unanswered 46528/47065 with
+  guid 0xf13000195b0009f1, alive epoch 2 46570/47107) with reclaim
+  blocked corpse_out_of_range (421.44yd water corpse, 184.15yd corridor
+  corpse). SQL candidates 15968/16162/15645 verified in
+  creature_template.sql (mingold/maxgold 5-12/5-11/6-13, map-530 spawns
+  5/18/15) as offline reference only: Scout spawn approached but never
+  observed live, Wretched ground never reached — no live absence
+  claimed. Denied/full/empty and current-offer resurrection unexercised
+  (no such lines in 43800–47114).
 
 ## Still open (per roadmap exit evidence)
 
