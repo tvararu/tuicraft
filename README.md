@@ -134,6 +134,7 @@ tuicraft recovery --json  # observed life, corpse, delay and pending intent
 tuicraft query-corpse      # request corpse information
 tuicraft release-spirit    # request release while observed dead
 tuicraft reclaim-corpse    # request guarded reclaim near the actual corpse
+tuicraft spirit-healer 0xabc  # request resurrection from an observed healer-flagged creature
 tuicraft resurrect accept # answer a current offer; decline is also supported
 tuicraft quests --json     # offered dialog, observed log and unanswered intent
 tuicraft talk 0xabc        # request conversation with an observed giver
@@ -247,12 +248,12 @@ stops following without retries. `halt` also stops following.
 The `holding` state is predicted standoff, not server-confirmed arrival.
 
 Use the existing commands for an agent-guided corpse run:
-
 1. Inspect `recovery --json`. Trust observed life, not positive ghost health or an `OK` response.
 2. If dead, request `release-spirit` once. Wait for observed ghost state. Skip release if already ghost.
 3. Check for an unanswered or stale corpse query before `query-corpse`. Reuse a found corpse from the current death epoch. Do not query again. Stop on an absent reply. Otherwise query once and await a found corpse. Compare the displayed corpse map, actual corpse map, and pose map. Travel with short `face` and `move` legs, not `goto` from a ghost. Stop if ground movement makes no progress.
 4. Reclaim only within 39 yards in 3D when `reclaim.canRequest=true`. A known future delay blocks reclaim. Unknown delay permits one explicit request but does not prove readiness. Reclaim may restore life beside the killer at partial health. Plan an escape heading before reclaim near a killer. If no safe heading is known, report the risk. After `OK`, flee immediately, then inspect for observed life. Do not retry an unanswered request.
 
+`spirit-healer <guid>` requests resurrection from one observed creature whose unit flags carry the healer bit (0x4000). It requires observed ghost state, rejects an unanswered duplicate request, never auto-activates, and never reports success on intent. Gossip option 0 stays silent. After `OK`, inspect `recovery --json` for observed `life=alive`.
 `resurrect accept|decline` answers only a current offer. After reconnect, run `spells` once if `combat --json` lists every learned spell as `unknownLearned`. Then inspect combat again.
 
 Quest actions use the current server-offered dialog and giver. Inspect `quests`

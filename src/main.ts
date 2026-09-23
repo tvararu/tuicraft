@@ -533,6 +533,13 @@ async function main() {
       printControlReply(await sendToSocket(action.mode.toUpperCase()));
       break;
     }
+    case "spirit_healer": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`SPIRIT_HEALER 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
     case "resurrect": {
       await ensureDaemon();
       printControlReply(

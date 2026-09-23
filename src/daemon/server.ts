@@ -119,6 +119,7 @@ function isStaleControl(type: string | undefined): boolean {
     type === "cycle" ||
     type === "release_spirit" ||
     type === "reclaim_corpse" ||
+    type === "spirit_healer" ||
     type === "resurrect" ||
     type === "talk" ||
     type === "select_option" ||

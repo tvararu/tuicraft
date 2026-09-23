@@ -40,6 +40,7 @@ test("help text includes all subcommands", () => {
     "query-corpse",
     "release-spirit",
     "reclaim-corpse",
+    "spirit-healer",
     "resurrect",
     "quests",
     "talk",

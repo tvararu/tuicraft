@@ -35,16 +35,16 @@ function fixture(health = 0, flags = 0) {
   };
   const sent: { opcode: number; body: Uint8Array | undefined }[] = [];
   const events: RecoveryEvent[] = [];
+  const others = new Map<bigint, Entity>();
   const runtime = new RecoveryRuntime({
     send: (opcode, body) => {
       sent.push({ opcode, body });
     },
     now: () => clock.now,
     selfGuid: () => 1n,
-    getEntity: (guid) => (guid === 1n ? self : undefined),
+    getEntity: (guid) => (guid === 1n ? self : others.get(guid)),
     pose: () => pose,
   });
-  runtime.onEvent((event) => events.push(event));
   function life(nextHealth: number, nextFlags: number): void {
     self.rawFields.set(0x18, nextHealth);
     self.rawFields.set(0x96, nextFlags);
@@ -54,11 +54,12 @@ function fixture(health = 0, flags = 0) {
       changed: ["rawFields"],
     });
   }
-  return { runtime, self, clock, pose, sent, events, life };
+  return { runtime, self, clock, pose, sent, events, life, others };
 }
 
 const corpse = "01 12020000 00000000 00000000 00000000 12020000 00000000";
 const offer = "6300000000000000 01000000 00 00 00";
+const healerGuid = 0x0102030405060708n;
 
 describe("ordinary-player recovery", () => {
   test("release and graveyard packets do not invent ghost or alive state", () => {
@@ -254,5 +255,52 @@ describe("ordinary-player recovery", () => {
     expect(() => runtime.releaseSpirit()).toThrow("socket closed");
     expect(runtime.snapshot().request).toBeUndefined();
     expect(runtime.snapshot().life).toBe("dead");
+  });
+
+  test("spirit-healer activation requires observed ghost and healer flag", () => {
+    const alive = fixture(100, 0);
+    expect(() => alive.runtime.activateSpiritHealer(healerGuid)).toThrow();
+    const ghost = fixture(1, 0x10);
+    expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow();
+    expect(ghost.sent).toEqual([]);
+    const healer = {
+      guid: healerGuid,
+      objectType: ObjectType.UNIT,
+      entry: 0,
+      scale: 1,
+      position: undefined,
+      rawFields: new Map(),
+      npcFlags: 0x4000,
+      health: 100,
+      maxHealth: 100,
+      level: 1,
+      factionTemplate: 0,
+      displayId: 0,
+      unitFlags: 0,
+      target: 0n,
+      race: 0,
+      class_: 0,
+      gender: 0,
+      power: [],
+      maxPower: [],
+      name: undefined,
+    } as const;
+    ghost.others.set(healerGuid, healer as unknown as Entity);
+    ghost.runtime.observeEntity({
+      type: "appear",
+      entity: healer as unknown as Entity,
+    });
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    expect(ghost.sent.at(-1)).toEqual({
+      opcode: 0x21c,
+      body: bytes("0807060504030201"),
+    });
+    expect(ghost.runtime.snapshot()).toMatchObject({
+      life: "ghost",
+      request: { action: "spirit-healer", status: "unanswered" },
+    });
+    expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow();
+    ghost.life(100, 0);
+    expect(ghost.runtime.snapshot().request).toBeUndefined();
   });
 });

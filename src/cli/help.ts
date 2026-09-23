@@ -44,6 +44,7 @@ USAGE
   tuicraft release-spirit     Request release from observed dead state
   tuicraft query-corpse       Request current corpse information
   tuicraft reclaim-corpse     Request guarded corpse reclaim
+  tuicraft spirit-healer <guid>  Request resurrection from an observed healer-flagged creature
   tuicraft resurrect accept|decline  Answer the current resurrection offer
                             OK is request intent, not confirmed recovery
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim

@@ -48,6 +48,13 @@ export function buildResurrectResponse(
   return writer.finish();
 }
 
+export function buildSpiritHealerActivate(guid: bigint): Uint8Array {
+  checkGuid(guid);
+  const writer = new PacketWriter(8);
+  writer.uint64LE(guid);
+  return writer.finish();
+}
+
 export function parseCorpseQuery(reader: PacketReader): CorpseQuery {
   const found = reader.uint8();
   if (found === 0) {

@@ -344,6 +344,7 @@ export type WorldHandle = {
   queryCorpse(): void;
   releaseSpirit(): void;
   reclaimCorpse(): void;
+  activateSpiritHealer(guid: bigint): void;
   respondResurrection(accept: boolean): void;
   onRecoveryEvent(cb: ((event: RecoveryEvent) => void) | undefined): void;
   getQuestState(): QuestState;
@@ -1568,6 +1569,10 @@ export function worldSession(
         reclaimCorpse() {
           override();
           recovery.reclaimCorpse();
+        },
+        activateSpiritHealer(guid) {
+          override();
+          recovery.activateSpiritHealer(guid);
         },
         respondResurrection(accept) {
           override();

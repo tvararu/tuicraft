@@ -20,7 +20,7 @@ tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
 tuicraft cycle <guid...> [--instruction ...] [--max N] | cycling [--json]
 tuicraft follow <guid> [distance] | following [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
-tuicraft resurrect accept|decline
+tuicraft spirit-healer <guid> | resurrect accept|decline
 tuicraft quests [--json] | talk <guid> | query-quest <id>
 tuicraft select-option <id> [code] | select-quest <id> | accept-quest
 tuicraft complete-quest <id> | request-reward | choose-reward <index>
@@ -159,8 +159,7 @@ server observation.
 `tuicraft halt`
 :: Stop motion, cast, attack, tactics, navigation, follow, and cycle. The daemon stays connected.
 HALT on one IPC socket interrupts pending work and drops older queued
-MOVE/FACE/FACE_GUID/WALK_TOWARD/TARGET/CAST/ATTACK/CANCEL_CAST/STOP_ATTACK/FIGHT/CYCLE/GOTO/
-FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Older queued read waits
+FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
 HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT commands as well.
@@ -304,15 +303,16 @@ A new death invalidates old corpse authorization. A stale unanswered reply canno
 Inspect subsequent life facts instead of treating `OK` as a confirmed release.
 
 `tuicraft reclaim-corpse`
-:: Request reclaim while observed ghost, using a freshly queried found corpse and the current labeled pose.
+::: Request reclaim while observed ghost, using a freshly queried found corpse and the current labeled pose.
 The actual and displayed corpse maps must match the pose map. Distance must be at most 39 yards in three dimensions.
 A known future delay blocks the request. Missing delay remains unknown.
 If all other guards pass, one explicit request is allowed with unknown timing and retains `request.timing=unknown`.
 This command takes no corpse GUID. The server finds the authenticated player's corpse.
 
+`tuicraft spirit-healer` `<guid>`
+::: Request resurrection from one observed creature whose unit flags carry the healer bit (0x4000). Requires observed ghost state and rejects an unanswered duplicate request. Never auto-activates and never reports success on intent. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
+
 `tuicraft resurrect` `accept`|`decline`
-:: Answer the current server-observed resurrection offer once. No offer means the command fails.
-A known future offer delay blocks acceptance, but not decline. Response intent does not establish resurrection.
 
 Guided corpse run:
 
@@ -455,7 +455,7 @@ Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
 `inventory`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
-`goto`, `follow`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `resurrect`,
+`goto`, `follow`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
 `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, and `release-loot`.

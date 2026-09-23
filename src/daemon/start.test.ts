@@ -111,6 +111,7 @@ function makeMockClient(): {
         queryCorpse: jest.fn(),
         releaseSpirit: jest.fn(),
         reclaimCorpse: jest.fn(),
+        activateSpiritHealer: jest.fn(),
         respondResurrection: jest.fn(),
         onRecoveryEvent: jest.fn(),
         talk: jest.fn(),

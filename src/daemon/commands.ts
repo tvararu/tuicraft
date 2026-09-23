@@ -132,6 +132,7 @@ export type IpcCommand =
   | { type: "query_corpse" }
   | { type: "release_spirit" }
   | { type: "reclaim_corpse" }
+  | { type: "spirit_healer"; guid: bigint }
   | { type: "resurrect"; accept: boolean }
   | { type: "quests" }
   | { type: "quests_json" }
@@ -401,6 +402,12 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return rest.trim()
         ? { type: "invalid", reason: "invalid reclaim-corpse" }
         : { type: "reclaim_corpse" };
+    case "SPIRIT_HEALER": {
+      const guid = parseGuid(rest.trim());
+      return guid && guid > 0n
+        ? { type: "spirit_healer", guid }
+        : { type: "invalid", reason: "invalid guid" };
+    }
     case "RESURRECT": {
       const decision = rest.trim();
       if (decision !== "accept" && decision !== "decline")
@@ -916,6 +923,10 @@ export async function dispatchCommand(
     case "reclaim_corpse":
       return runControlAction(socket, () => {
         handle.reclaimCorpse();
+      });
+    case "spirit_healer":
+      return runControlAction(socket, () => {
+        handle.activateSpiritHealer(cmd.guid);
       });
     case "resurrect":
       return runControlAction(socket, () => {

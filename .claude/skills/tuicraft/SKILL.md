@@ -27,7 +27,7 @@ Use `--json` with these daemon-backed commands:
 - Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`, `follow`.
-- Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
+- Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
 `logs` prints the raw session log. `skill` prints the raw reference document.
@@ -256,6 +256,7 @@ IPC: FOLLOW <guid> [distance], FOLLOWING, FOLLOWING_JSON.
     tuicraft query-corpse
     tuicraft release-spirit
     tuicraft reclaim-corpse
+    tuicraft spirit-healer <guid>
     tuicraft resurrect accept
     tuicraft resurrect decline
 
@@ -270,14 +271,13 @@ Use this four-step corpse run. Inspect state between requests. An `OK` reply rec
 4. Before reclaim, require observed ghost and a found corpse from this epoch. Require matching displayed, actual, and pose maps. Require `reclaim.distance <= 39` yards in 3D. A known positive `remainingMs` blocks reclaim. Missing `remainingMs` means unknown timing, not zero. When other guards pass, `reclaim.canRequest=true` with `readiness=unverified` permits one explicit request. This does not prove readiness. A `predicted` pose is not server confirmation. Its source alone does not block the request.
    - Reclaim can restore life beside the killer at partial health. Check `nearby --all --json` before reclaim. Its distances use the current control pose when available, but creature positions are last observations. Compare killer coordinates with the current `reclaim.pose`. If the killer is near, choose a clear escape heading. If no clear heading is known, report the risk rather than repeat a death loop.
    - Issue `reclaim-corpse` once, without a GUID. If the killer is near, issue `face` and a short `move forward` away immediately after `OK`. Do not pause to cast or inspect state first. Then inspect `recovery --json` for observed `life=alive`. If life is not observed, report the unanswered outcome. Do not retry reclaim automatically.
-
 A current unanswered resurrection offer is a separate choice. Answer `resurrect accept|decline` once only for that offer. A known future offer delay blocks accept, not decline. Confirm observed life after an accept request.
+
+`spirit-healer <guid>` is the explicit spirit-healer path. It requires observed ghost state and one observed creature whose unit flags carry the healer bit (0x4000). It rejects an unanswered duplicate request, never auto-activates, and never reports success on intent. Gossip option 0 stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
 Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
-After reconnect, all learned spells in `combat --json` may appear in `unknownLearned` while the catalog is cold. Run `spells` once, then inspect `combat --json` again before diagnosing a broken spell kit.
-
-IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, RESURRECT accept|decline.
+IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, SPIRIT_HEALER <guid>, RESURRECT accept|decline.
 
 ## Offered quest interactions
 

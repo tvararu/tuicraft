@@ -273,6 +273,7 @@ export function createMockHandle(): WorldHandle & {
     queryCorpse: jest.fn(),
     releaseSpirit: jest.fn(),
     reclaimCorpse: jest.fn(),
+    activateSpiritHealer: jest.fn(),
     respondResurrection: jest.fn(),
     onRecoveryEvent(cb) {
       recoveryEventCb = cb;

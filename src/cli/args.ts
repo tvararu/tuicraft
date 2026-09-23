@@ -71,6 +71,7 @@ export type CliAction =
   | { mode: "query_corpse"; json?: true }
   | { mode: "release_spirit"; json?: true }
   | { mode: "reclaim_corpse"; json?: true }
+  | { mode: "spirit_healer"; guid: bigint; json?: true }
   | { mode: "resurrect"; accept: boolean; json?: true }
   | { mode: "quests"; json: boolean }
   | { mode: "talk"; guid: bigint; json?: true }
@@ -134,6 +135,7 @@ const SUBCOMMANDS = new Set([
   "query-corpse",
   "release-spirit",
   "reclaim-corpse",
+  "spirit-healer",
   "resurrect",
   "quests",
   "talk",
@@ -320,6 +322,13 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       if (args.length !== 1)
         throw new Error("Invalid reclaim-corpse arguments");
       return { mode: "reclaim_corpse" };
+    case "spirit-healer": {
+      if (args.length !== 2) throw new Error("Invalid spirit-healer arguments");
+      const guid = parseGuid(args[1]!);
+      if (guid === undefined || guid === 0n)
+        throw new Error("Invalid spirit-healer guid");
+      return { mode: "spirit_healer", guid };
+    }
     case "resurrect":
       if (args.length !== 2 || (args[1] !== "accept" && args[1] !== "decline"))
         throw new Error("Invalid resurrect arguments");

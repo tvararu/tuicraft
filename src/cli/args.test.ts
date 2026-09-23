@@ -675,6 +675,19 @@ describe("recovery arguments", () => {
     ])
       expect(() => parseArgs(args)).toThrow();
   });
+
+  test("parses an explicit spirit-healer GUID and rejects bare or zero GUIDs", () => {
+    expect(parseArgs(["spirit-healer", "0xa"])).toEqual({
+      mode: "spirit_healer",
+      guid: 10n,
+    });
+    for (const args of [
+      ["spirit-healer"],
+      ["spirit-healer", "0"],
+      ["spirit-healer", "0xa", "extra"],
+    ])
+      expect(() => parseArgs(args)).toThrow();
+  });
 });
 
 describe("quest arguments", () => {
@@ -816,6 +829,7 @@ describe("daemon JSON arguments", () => {
     [["query-corpse"], { mode: "query_corpse" }],
     [["release-spirit"], { mode: "release_spirit" }],
     [["reclaim-corpse"], { mode: "reclaim_corpse" }],
+    [["spirit-healer", "0xa"], { mode: "spirit_healer", guid: 10n }],
     [["resurrect", "accept"], { mode: "resurrect", accept: true }],
     [["talk", "0xa"], { mode: "talk", guid: 10n }],
     [["query-quest", "7"], { mode: "query_quest", questId: 7 }],

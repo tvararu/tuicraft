@@ -5442,6 +5442,10 @@ describe("recovery IPC boundary", () => {
   test("requires exact recovery action syntax", () => {
     expect(parseIpcCommand("RECOVERY_JSON")).toEqual({ type: "recovery_json" });
     expect(parseIpcCommand("QUERY_CORPSE")).toEqual({ type: "query_corpse" });
+    expect(parseIpcCommand("SPIRIT_HEALER 0xa")).toEqual({
+      type: "spirit_healer",
+      guid: 10n,
+    });
     expect(parseIpcCommand("RESURRECT accept")).toEqual({
       type: "resurrect",
       accept: true,
@@ -5454,6 +5458,9 @@ describe("recovery IPC boundary", () => {
       "QUERY_CORPSE 1",
       "RELEASE_SPIRIT now",
       "RECLAIM_CORPSE 0",
+      "SPIRIT_HEALER",
+      "SPIRIT_HEALER 0",
+      "SPIRIT_HEALER 0xa extra",
       "RESURRECT",
       "RESURRECT yes",
       "RESURRECT accept extra",
@@ -5494,6 +5501,25 @@ describe("recovery IPC boundary", () => {
       jest.fn(),
     );
     expect(socket.written()).toBe("ERR Cannot request reclaim: wrong_map\n\n");
+  });
+
+  test("spirit-healer guard refusal is ERR without success", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      activateSpiritHealer: () => {
+        throw new Error("Observed creature is not a spirit healer");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { type: "spirit_healer", guid: 10n },
+      handle,
+      new RingBuffer<EventEntry>(10),
+      socket,
+      jest.fn(),
+    );
+    expect(socket.written()).toBe(
+      "ERR Observed creature is not a spirit healer\n\n",
+    );
   });
 
   test("recovery JSON preserves unknown timing, pose provenance and distinct corpse maps", async () => {

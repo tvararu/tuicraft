@@ -4,6 +4,7 @@ import {
   buildReclaimCorpse,
   buildRepopRequest,
   buildResurrectResponse,
+  buildSpiritHealerActivate,
   parseCorpseQuery,
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
@@ -36,6 +37,12 @@ describe("death requests", () => {
   test("resurrection acceptance and rejection are explicit wire decisions", () => {
     expect([...buildResurrectResponse(guid, true)]).toEqual([...guidBytes, 1]);
     expect([...buildResurrectResponse(guid, false)]).toEqual([...guidBytes, 0]);
+  });
+
+  test("spirit-healer activation carries the observed healer GUID", () => {
+    expect([...buildSpiritHealerActivate(guid)]).toEqual(guidBytes);
+    expect(() => buildSpiritHealerActivate(-1n)).toThrow(RangeError);
+    expect(() => buildSpiritHealerActivate(1n << 64n)).toThrow(RangeError);
   });
 
   test("invalid request fields cannot wrap into a different corpse or flag", () => {

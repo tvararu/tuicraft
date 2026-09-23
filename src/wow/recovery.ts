@@ -1,5 +1,6 @@
 import type { ControlPose } from "wow/control";
-import type { EntityEvent } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
+import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import {
   readLife,
   type EntityLookup,
@@ -12,6 +13,7 @@ import {
   buildReclaimCorpse,
   buildRepopRequest,
   buildResurrectResponse,
+  buildSpiritHealerActivate,
   parseCorpseQuery,
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
@@ -20,6 +22,8 @@ import {
   type DeathReleaseLocation,
   type ResurrectRequest,
 } from "wow/protocol/death";
+
+export const SPIRIT_HEALER_NPC_FLAG = 0x4000;
 
 export type RecoveryDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
@@ -58,6 +62,7 @@ export type RecoveryRequest = RequestBase &
     | { action: "query" }
     | { action: "release" }
     | { action: "reclaim"; timing: "known" | "unknown" }
+    | { action: "spirit-healer"; guid: bigint }
     | {
         action: "resurrection";
         guid: bigint;
@@ -65,7 +70,6 @@ export type RecoveryRequest = RequestBase &
         timing: "known" | "unknown";
       }
   );
-
 export type ResurrectionResponse =
   | "unanswered"
   | "accept_requested"
@@ -110,6 +114,7 @@ export type RecoveryEvent = {
     | "resurrection_offered"
     | "release_requested"
     | "reclaim_requested"
+    | "spirit_healer_requested"
     | "resurrection_response_requested";
   at: number;
   state: RecoveryState;
@@ -257,6 +262,34 @@ export class RecoveryRuntime {
     return this.emit("reclaim_requested");
   }
 
+  activateSpiritHealer(guid: bigint): RecoveryState {
+    this.active();
+    this.observeLife();
+    if (this.life().life !== "ghost")
+      throw new Error("Spirit-healer activation requires observed ghost state");
+    if (this.request?.action === "spirit-healer")
+      throw new Error("Previous spirit-healer request remains unanswered");
+    if (guid === 0n) throw new Error("Spirit-healer GUID is unknown");
+    const healer = this.deps.getEntity(guid);
+    if (!healer || healer.objectType !== ObjectType.UNIT)
+      throw new Error("Observed creature is not a spirit healer");
+    if (((healer as UnitEntity).npcFlags & SPIRIT_HEALER_NPC_FLAG) === 0)
+      throw new Error("Observed creature is not a spirit healer");
+    const requestedAt = this.deps.now();
+    this.deps.send(
+      GameOpcode.CMSG_SPIRIT_HEALER_ACTIVATE,
+      buildSpiritHealerActivate(guid),
+    );
+    this.request = {
+      action: "spirit-healer",
+      status: "unanswered",
+      epoch: this.epoch,
+      requestedAt,
+      guid,
+    };
+    return this.emit("spirit_healer_requested");
+  }
+
   respondResurrection(accept: boolean): RecoveryState {
     this.active();
     this.observeLife();
@@ -380,10 +413,11 @@ export class RecoveryRuntime {
       this.newEpoch();
     if (this.request?.action === "release" && life === "ghost")
       this.request = undefined;
+    if (this.request?.action === "spirit-healer" && life === "alive")
+      this.request = undefined;
     this.lastLife = life;
     this.emit("life_observed");
   }
-
   private newEpoch(): void {
     this.epoch++;
     this.corpse = { status: "unknown" };
