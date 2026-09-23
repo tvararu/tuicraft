@@ -91,7 +91,7 @@ These commands move, face, or select.
 
     tuicraft control              # human text
     tuicraft control --json       # structured state
-    tuicraft nearby [--all]       # nearby units and objects (nearest first, or --all)
+    tuicraft nearby [--all]       # nearby units and objects (nearest first; transports and >100yd require --all)
     tuicraft nearby [--all] --json
     tuicraft move forward         # 1000ms default
     tuicraft move left 400        # strafe 400ms
@@ -517,7 +517,7 @@ Rules:
 - Output is ordered nearest first.
 - The `self` row is included at distance `0`.
 - By default, entities beyond 100 yards or on a different map are filtered out when player position is known.
-- 100 yards is the server's own visibility range, `DEFAULT_VISIBILITY_DISTANCE` in AzerothCore `src/server/game/Entities/Object/ObjectDefines.h:39`, not an arbitrary choice. That constant is documented as the continent value and `Map::GetVisibilityRange()` is configurable per map, so the default may not match an instance or battleground.
+- 100 yards is the server's own visibility range, `DEFAULT_VISIBILITY_DISTANCE` in AzerothCore `src/server/game/Entities/Object/ObjectDefines.h:39`, not an arbitrary choice. That constant is documented as the continent value and `Map::GetVisibilityRange()` is configurable per map (e.g. 170 yards in instances, 250 yards in battlegrounds and arenas), so the default may not match an instance or battleground.
 - The server sends transports for the whole map at login regardless of distance, and never culls them. They are the bulk of what `--all` reveals. Use `--all` to see a zeppelin, boat or elevator before it is within visibility range.
 - Pass `--all` to output all tracked entities without distance or map filtering.
 - When player position is unestablished, distance filtering is suspended.
@@ -538,7 +538,7 @@ Rules:
 | `z` | World Z coordinate in yards. |
 | `mapId` | The map **this client was on when the entity was parsed**, stamped onto every entity by `handleUpdateObject`. It is not a per-entity property the server states, so do not treat it as authority for where an entity is. It differs from the player's current map only for entities left over from a previous map. |
 | `orientation` | Facing angle in radians. |
-| `gameObjectType` | Numeric GameObject type (e.g. 11 transport, 19 mailbox), present on gameobjects. |
+| `gameObjectType` | Numeric GameObject type (e.g. 11 transport, 19 mailbox), present on gameobjects. Initialized to `0` at create time until `CMSG_GAMEOBJECT_QUERY` resolves. |
 
 TUI: `/tuicraft entities on|off` toggles entity event display.
 

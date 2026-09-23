@@ -80,7 +80,7 @@ FLAGS
   -v, --version   Print version and exit
   -h, --help      Show this help
   --json          All daemon-backed commands: chat, queries, gameplay actions, start, status, stop, read, tail
-  --all           Output all tracked entities without distance filter (nearby)
+  --all           Output all tracked entities without distance filter (nearby), including transports and off-map (>100yd)
   --wait N        Wait N seconds for events (for read and send commands)
   --daemon        Start as background daemon (internal)
 
