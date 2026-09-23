@@ -397,6 +397,26 @@ describe("ground destinations", () => {
       /ambiguous ground column/,
     );
   });
+  test("primes the origin tile before the connected height query", () => {
+    const loaded: Array<[number, number]> = [];
+    const map = native({
+      loadAdtAt: (x, y) => {
+        loaded.push([x, y]);
+      },
+      findHeight: () => {
+        throw groundError("pathfind_find_height failed (UNKNOWN_HEIGHT)");
+      },
+      findHeights: () => [70.34],
+    });
+    const nav = navigation(map);
+    expect(nav.height(530, 10, 0, { x: 0, y: 0, z: 70.336 })).toBeCloseTo(
+      70.34,
+    );
+    expect(loaded).toEqual([
+      [0, 0],
+      [10, 0],
+    ]);
+  });
 
   test("reports whether a straight path is clear via a real line-of-sight query", () => {
     const map = native({

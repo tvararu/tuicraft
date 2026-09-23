@@ -127,6 +127,10 @@ export function createNavigation(
       requireMap(mapId);
       validateNativeXY(x, y);
       map ??= openMap(dataPath, libraryPath, "Expansion01");
+      if (from) {
+        validateNativePoint(from);
+        map.loadAdtAt(from.x, from.y);
+      }
       map.loadAdtAt(x, y);
       if (from) {
         try {
