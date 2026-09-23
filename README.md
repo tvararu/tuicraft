@@ -223,7 +223,7 @@ completed target. A target that dies, is unreachable, or fails to fight is
 skipped with a recorded cause instead of stopping the loop. A mid-fight death
 runs bounded recovery before resuming. `--max` caps tactics-loop starts for
 the whole run (positive integer, default 10). Inspect `cycling --json` for
-each target's status and an open-ended `stopCause` with `stopDetail`.
+each target's status and an open-ended `stopCause` with `stopDetail`. The loop waits for the server release acknowledgement after close; `loot_denied:timeout` and `loot_release_unconfirmed` stop without recording a gain.
 `lastLoot.slotsTaken` and `moneyTaken` report requests and offered money, not
 verified item gains. Confirm storage from `inventory --json` slot/count changes.
 

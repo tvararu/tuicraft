@@ -229,9 +229,12 @@ if recovery does not clear.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
 (`loot_denied:*`, `loot_inventory_full`,
-`loot_release_only_reconnect_required`), or an unrecovered death
+`loot_release_only_reconnect_required`, `loot_release_unconfirmed`), an
+unanswered loot take (`loot_denied:timeout`), or an unrecovered death
 (`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
-`corpse_unreachable`, among other recovery causes). Inspect `cycling` for
+`corpse_unreachable`, among other recovery causes). The loop waits for the
+server release acknowledgement after close before recording loot; an
+unconfirmed close stops instead of reporting a gain. Inspect `cycling` for
 the stop cause, detail, and per-target queue status.
 `stopCause` is not a closed list: `loot_denied:*` includes a reason, and
 recovery can report other causes. Inspect `stopDetail` instead of guessing.
