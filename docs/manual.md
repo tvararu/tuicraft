@@ -17,7 +17,7 @@ tuicraft control [--json] | nearby [--all] [--json]
 tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--json]
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
-tuicraft cycle <guid...> [--instruction ...] [--max N] | cycling [--json]
+tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycling [--json]
 tuicraft follow <guid> [distance] | following [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft spirit-healer <guid> | resurrect accept|decline
@@ -210,7 +210,7 @@ carries target separation and facing for those choices.
 terminal observation when one was available, including blocks before inference.
 `lastRequest` is not populated without a real Jev request.
 
-`tuicraft cycle` _guid..._ [`--instruction` _text_] [`--max` _N_]
+`tuicraft cycle` _guid..._ [`--instruction` _text_] [`--max` _N_] [`--json`]
 :: Run the fight-loot-next-target loop over an explicit GUID queue: `fight`
 each target in order, auto-loot any offered items and money, then advance.
 `--instruction` applies to every target and defaults to the same instruction
@@ -247,6 +247,9 @@ snapshot the `CYCLE` event carries in `read`/`tail`.
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
 record observed values when known. Confirm stored items through actual
 inventory slot or count changes.
+Without `--json`, `cycling` prints the cycle phase, each target outcome,
+server kill XP when observed, requested loot, observed coinage changes, and
+the stop reason. A request for money or an item slot does not prove a gain.
 
 `tuicraft goto` _x_ _y_ _z_
 :: Request a ground route. Missing navigation data fails with `ERR`.
@@ -388,6 +391,9 @@ An observed item identity does not imply count 1. Slot state distinguishes unkno
 The `data` object separates `loot`, `pending`, `inventory`, `lastItemPush`, `lastMoneyNotice`, and `lastRelease`.
 Slot removal proves removal from the offer, not inventory gain. Window money clearance is not an observed coinage increment.
 An item-push slot of `0xFFFFFFFF` means stacking, not a physical slot. Compare actual slot/count/coinage observations before claiming gain.
+Without `--json`, `inventory` lists occupied item stacks, coinage, free
+slots, and unknown slot counts. `loot` shows the offer, pickup permission,
+pending request, and carried coinage. Use `--json` for all observation fields.
 
 `tuicraft open-loot` _guid_
 :: Request loot from an observed UNIT corpse with an explicitly observed lootable flag while self is authoritatively alive.
@@ -649,6 +655,8 @@ The server does not echo your own movement. Treat `pose.source=predicted` as a
 local estimate. After `stop` and a new login, `control` shows the last
 server-accepted pose.
 
-Without `--json`, control commands and combat/spellbook/tactics/navigation/following/recovery/quest/inventory/loot inspections print daemon
-`ERR` lines and exit with status 1. With `--json`, they emit one error envelope
-on stdout and exit with status 1.
+Without `--json`, control commands and inspections print daemon `ERR` lines
+and exit with status 1. With `--json`, they print one error envelope on stdout
+and exit with status 1. Human control actions print daemon request acceptance,
+not a server result. `cycling`, `recovery`, `inventory`, and `loot` print
+readable summaries.

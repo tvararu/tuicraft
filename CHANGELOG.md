@@ -7,6 +7,8 @@
 * Add bounded movement, facing, target selection, and control-state inspection.
 * Keep predicted movement separate from the last server-observed position.
 * Make HALT preempt pending IPC reads and discard older queued control actions.
+* Show readable encounter, loot, recovery, and inventory summaries without `--json`.
+* Distinguish daemon request acceptance from server-confirmed results in human output.
 
 ## [0.4.2](https://github.com/tvararu/tuicraft/compare/tuicraft-v0.4.1...tuicraft-v0.4.2) (2026-03-03)
 

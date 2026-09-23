@@ -125,12 +125,12 @@ tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
 tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
 tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
-tuicraft cycling --json        # phase, per-target cause, loot requests, stop cause
+tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 3        # ground route
 tuicraft navigation --json # route state, refusal and conservative next step
 tuicraft follow 0xabc 3    # bounded follow of an observed unit
 tuicraft following --json # follow state and terminal reason
-tuicraft recovery --json  # observed life, corpse, delay and pending intent
+tuicraft recovery        # observed life and corpse-reclaim conditions
 tuicraft query-corpse      # request corpse information
 tuicraft release-spirit    # request release while observed dead
 tuicraft reclaim-corpse    # request guarded reclaim near the actual corpse
@@ -142,8 +142,8 @@ tuicraft query-quest 42    # request metadata, not permission to accept
 tuicraft select-quest 42   # choose only a currently offered quest
 tuicraft accept-quest      # request acceptance of current offered details
 tuicraft cancel-interaction # request dialog close; wait for observed closure
-tuicraft inventory --json # observed carried items, counts and coinage
-tuicraft loot --json       # current offer, pending requests and reward notices
+tuicraft inventory       # carried item stacks, free slots and coinage
+tuicraft loot            # current offer and unanswered requests
 tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
@@ -201,7 +201,11 @@ whether a daemon started or already existed. `stop --json` reports intent when
 it stops a daemon and a `not_running` result when none exists.
 `logs` keeps its raw JSONL session log; `skill` keeps its raw reference text.
 Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
-internal daemon mode. Human output remains unchanged.
+internal daemon mode.
+
+Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` print readable
+summaries. Control actions report daemon request acceptance, not server success.
+Use `--json` for the full observed state and for scripts.
 
 ## Gameplay notes
 

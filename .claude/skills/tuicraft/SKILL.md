@@ -85,6 +85,11 @@ It prints one envelope per event and nothing for empty polls:
 `start --json` returns `data.socket: "responsive"` and `data.started: true|false`.
 These values describe the daemon socket, not world-session health.
 
+Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` show human
+summaries. Use `--json` for all fields and automated parsing. A human action
+acknowledgment means that the daemon accepted a request. It does not confirm
+that the server completed the action.
+
 ## Direct control
 
 These commands move, face, or select.
@@ -150,12 +155,12 @@ Rules:
 
 Self movement is not echoed by the server. After a walk, `pose` is predicted. Relog (`stop`, then connect again) and read `control` to see the server-accepted position.
 
-Use `nearby --json` for relative geometry. Each JSONL row has 3D `distance`
-and XY `horizontalDistance` in yards, `bearingRadians` for `face`, and
-`turnRadians` from current facing. Angles are `null` when direction is
-unknown or XY displacement is zero. For non-self rows, off-map or
-missing positions give `null` distances and angles. The self row uses
-the control pose when available, or the last self-entity position.
+Use `nearby --json` for relative geometry. Each entity in the envelope's
+`data[]` array has 3D `distance` and XY `horizontalDistance` in yards,
+`bearingRadians` for `face`, and `turnRadians` from current facing.
+Angles are `null` when direction is unknown or XY displacement is zero.
+For non-self rows, off-map or missing positions give `null` distances and angles.
+The self row uses the control pose when available, or the last self-entity position.
 Its 3D distance is zero even if neither position is known. Its XY
 distance is `null` only if neither position is known. `originSource`
 identifies `predicted`, `server`, or fallback `self_entity`;
@@ -197,7 +202,7 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft fight [--framing none|minimal|mechanics] <observed-hostile-guid>
     tuicraft fight <observed-hostile-guid> conserve mana and stay alive
     tuicraft tactics [--json]
-    tuicraft cycle <guid...> [--instruction ...] [--max N]
+    tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]
     tuicraft cycling [--json]
     tuicraft goto <grounded-x> <grounded-y> <grounded-z>
     tuicraft navigation [--json]
@@ -212,7 +217,7 @@ Rules:
 - `no_supported_combat_actions` blocks when there is no supported spell and no current melee or attack progress. Cooldowns and pending server responses remain waits; supported melee and facing remain available.
 - For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
 - Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases, standing-required spells halt first). The observation carries target separation and facing.
-- Choose current creature GUIDs from `nearby --json` (JSONL) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; `cycle` has no `--framing`. `--max N` caps tactics-loop starts (positive integer, default 10).
+- Choose current creature GUIDs from `nearby --json` (`data[]`) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; `cycle` has no `--framing`. `--max N` caps tactics-loop starts (positive integer, default 10).
 - A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery (release, corpse query, reclaim-delay wait, one direct travel leg) before resuming.
 - Inspect `cycling --json` for `phase`, per-target `queue` status/cause, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_release_only_reconnect_required`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
 - `lastLoot.slotsTaken` records requested slots, `moneyTaken` records offered money, and before/after coinage is observed when known. None of these proves item storage. Check raw inventory slot/count changes before claiming a gain.

@@ -33,7 +33,7 @@ USAGE
   tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target)
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
-  tuicraft cycle <guid...> [--instruction ...] [--max N]  Explicit nearby GUID queue; no auto-acquire
+  tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire
   tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
   tuicraft goto <x> <y> <z> [--json]  Walk a ground route
   tuicraft navigation [--json]  Navigation state and refusal next step
@@ -98,7 +98,9 @@ JSON OUTPUT
   Errors use error.stage=arguments|startup|command|wait and exit 1; a wait error
   keeps the original kind and data. All JSON errors print to stdout.
   logs and skill remain raw; --json is unsupported for them, setup, help, version,
-  interactive mode and internal daemon mode. Human output remains unchanged.
+  interactive mode and internal daemon mode.
+  Without --json, cycling, recovery, inventory and loot print readable summaries.
+  Control actions print daemon request acceptance, not a server result.
 
 SETUP FLAGS
   --account NAME  Account name (required)
