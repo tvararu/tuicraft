@@ -4041,7 +4041,9 @@ describe("handleNearTeleport", () => {
     const conn = fakeConn(
       {
         currentMapId: () => 530,
-        handleNearTeleport: () => { handled++; },
+        handleNearTeleport: () => {
+          handled++;
+        },
       },
       store,
     );
