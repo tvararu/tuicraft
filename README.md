@@ -115,6 +115,9 @@ tuicraft control [--json]  # current vs server pose, requested vs observed targe
 tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin
 tuicraft move forward 1000 # walk 1-10000ms (default 1000); left/right strafe
 tuicraft face 1.57         # facing in radians
+tuicraft face-guid 0xabc   # face a currently observed entity on this map
+tuicraft walk-toward 3 0xabc # direct bounded leg toward one sampled GUID
+tuicraft walk-toward 2 <grounded-x> <grounded-y> <grounded-z> # direct leg toward known ground
 tuicraft target 0xabc      # request selection (0 clears); uint64 hex or decimal
 tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
@@ -177,6 +180,15 @@ the whole run (positive integer, default 10). Inspect `cycling --json` for
 each target's status and an open-ended `stopCause` with `stopDetail`.
 `lastLoot.slotsTaken` and `moneyTaken` report requests and offered money, not
 verified item gains. Confirm storage from `inventory --json` slot/count changes.
+
+Repeated `move` in the same direction renews active manual movement without a
+stop; taking control from Jev, follow, or cycle still stops the old owner.
+`walk-toward` travels at most 20 yards in one direct leg and returns terminal
+JSON with predicted distance, pose, and a reason if stopped. It exits with
+status 1 on a stop. An observed GUID is sampled once, not tracked; use
+`follow` to track movement. Coordinates require unambiguous native ground.
+Ground refusal, correction, HALT, or takeover stops the leg rather than
+steering blindly. A `completed` result is not server-confirmed arrival.
 
 `follow` requests a bounded ground route behind an observed unit on map 530.
 The optional distance is 1–20 yards along the ground route, with a default of 3.

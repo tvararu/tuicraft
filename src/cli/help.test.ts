@@ -17,6 +17,8 @@ test("help text includes all subcommands", () => {
     "control",
     "move",
     "face",
+    "face-guid",
+    "walk-toward",
     "target",
     "halt",
     "nearby",

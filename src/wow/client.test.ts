@@ -6,6 +6,7 @@ import { startMockAuthServer } from "test/mock-auth-server";
 import { startMockWorldServer } from "test/mock-world-server";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketWriter } from "wow/protocol/packet";
+import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
 import type { QuestEvent } from "wow/quests";
 import {
   FIXTURE_ACCOUNT,
@@ -31,6 +32,20 @@ function fakeAuth(port: number): AuthResult {
     realmPort: port,
     realmId: 1,
   };
+}
+function observedObject(x: number, y: number, z: number): Uint8Array {
+  const packet = new PacketWriter();
+  packet.uint32LE(1);
+  packet.uint8(UpdateType.CREATE_OBJECT);
+  packet.packedGuid(0x99, 0);
+  packet.uint8(ObjectType.GAMEOBJECT);
+  packet.uint16LE(UpdateFlag.HAS_POSITION);
+  packet.floatLE(x);
+  packet.floatLE(y);
+  packet.floatLE(z);
+  packet.floatLE(0);
+  packet.uint8(0);
+  return packet.finish();
 }
 
 describe("session lifecycle", () => {
@@ -151,6 +166,178 @@ describe("session lifecycle", () => {
       await handle.closed;
     } finally {
       worldServer.stop();
+    }
+  });
+
+  test("manual reissue extends the same direction without stopping", async () => {
+    const server = await startMockWorldServer({ coalesceSelfCreate: true });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        const events: string[] = [];
+        handle.onControlEvent((event) => events.push(event.type));
+        handle.move("forward", 1000);
+        handle.move("forward", 1000);
+        expect(events.filter((type) => type === "movement_started")).toEqual([
+          "movement_started",
+        ]);
+        expect(events).not.toContain("movement_stopped");
+        expect(handle.getControlState().moving).toBe(true);
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("manual move takes control from an active encounter cycle", async () => {
+    const server = await startMockWorldServer({ coalesceSelfCreate: true });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        const running = handle.startCycle([0x99n], "stay alive", 1);
+        expect(handle.getCycleState().active).toBe(true);
+        handle.move("forward", 1000);
+        expect(handle.getCycleState()).toMatchObject({
+          active: false,
+          stopCause: "manual_override",
+        });
+        expect(handle.getControlState().owner).toBe("manual");
+        await running;
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
+    }
+  });
+  test("face-guid turns toward a currently observed object and refuses a lost GUID", async () => {
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        const appeared = Promise.withResolvers<void>();
+        handle.onEntityEvent((event) => {
+          if (event.type === "appear" && event.entity.guid === 0x99n)
+            appeared.resolve();
+        });
+        server.inject(GameOpcode.SMSG_UPDATE_OBJECT, observedObject(1, 12, 3));
+        await appeared.promise;
+        handle.faceGuid(0x99n);
+        expect(handle.getControlState().pose?.orientation).toBeCloseTo(
+          Math.PI / 2,
+          4,
+        );
+        expect(() => handle.faceGuid(0x123n)).toThrow("target_not_observed");
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("walk-toward reports ungrounded destination without cancelling manual motion", async () => {
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        handle.move("forward", 1000);
+        const outcome = await handle.walkToward(
+          { kind: "point", x: 4, y: 2, z: 3 },
+          2,
+        );
+        expect(outcome).toMatchObject({
+          status: "stopped",
+          traveled: 0,
+          reason: "missing_navigation",
+        });
+        expect(handle.getControlState().moving).toBe(true);
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("walk-toward refuses an observed GUID without navigation before any motion packet", async () => {
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        const appeared = Promise.withResolvers<void>();
+        handle.onEntityEvent((event) => {
+          if (event.type === "appear" && event.entity.guid === 0x99n)
+            appeared.resolve();
+        });
+        server.inject(GameOpcode.SMSG_UPDATE_OBJECT, observedObject(1, 12, 3));
+        await appeared.promise;
+        const speed = new PacketWriter();
+        speed.packedGuid(0x42, 0);
+        speed.uint32LE(1);
+        speed.uint8(0);
+        speed.floatLE(7);
+        server.inject(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE, speed.finish());
+        await server.waitForCapture(
+          (packet) =>
+            packet.opcode === GameOpcode.CMSG_FORCE_RUN_SPEED_CHANGE_ACK,
+        );
+        const sentBefore = server.captured.length;
+        const result = await handle.walkToward(
+          { kind: "guid", guid: 0x99n },
+          3,
+        );
+        expect(result).toMatchObject({
+          status: "stopped",
+          reason: "missing_navigation",
+          traveled: 0,
+          pose: { source: "server" },
+        });
+        const motion = server.captured
+          .slice(sentBefore)
+          .filter(
+            (packet) =>
+              packet.opcode === GameOpcode.MSG_MOVE_SET_FACING ||
+              packet.opcode === GameOpcode.MSG_MOVE_START_FORWARD,
+          );
+        expect(motion).toEqual([]);
+        expect(handle.getControlState().moving).toBe(false);
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
     }
   });
 

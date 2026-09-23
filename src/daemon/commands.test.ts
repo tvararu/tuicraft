@@ -500,6 +500,27 @@ describe("parseIpcCommand", () => {
     expect(parseIpcCommand("FACE 1 2")?.type).toBe("invalid");
   });
 
+  test("FACE_GUID and WALK_TOWARD preserve typed destinations", () => {
+    expect(parseIpcCommand("FACE_GUID 0x42")).toEqual({
+      type: "face_guid",
+      guid: 0x42n,
+    });
+    expect(parseIpcCommand("WALK_TOWARD 3 GUID 0x42")).toEqual({
+      type: "walk_toward",
+      yards: 3,
+      target: { kind: "guid", guid: 0x42n },
+    });
+    expect(parseIpcCommand("WALK_TOWARD 2.5 POINT 1 -2 3")).toEqual({
+      type: "walk_toward",
+      yards: 2.5,
+      target: { kind: "point", x: 1, y: -2, z: 3 },
+    });
+    expect(parseIpcCommand("WALK_TOWARD 21 GUID 0x42")?.type).toBe("invalid");
+    expect(parseIpcCommand("WALK_TOWARD 2 POINT NaN 0 0")?.type).toBe(
+      "invalid",
+    );
+  });
+
   test("TARGET accepts hex and decimal uint64", () => {
     expect(parseIpcCommand("TARGET 0x1")).toEqual({ type: "target", guid: 1n });
     expect(parseIpcCommand("TARGET 0")).toEqual({ type: "target", guid: 0n });
@@ -3904,6 +3925,71 @@ describe("IPC round-trip", () => {
     expect(handle.goTo).toHaveBeenCalledWith(1, 2, 3);
     expect(lines).toContain("OK");
   });
+
+  test("HALT discards older directed commands before a newer walk", async () => {
+    startTestServer();
+    const actions: string[] = [];
+    handle.halt.mockImplementation(() => {
+      actions.push("halt");
+    });
+    Object.assign(handle, {
+      faceGuid: () => actions.push("face"),
+      walkToward: async (_target: unknown, yards: number) => {
+        actions.push(`walk:${yards}`);
+        return {
+          status: "completed",
+          traveled: yards,
+          pose: {
+            mapId: 530,
+            x: 0,
+            y: 0,
+            z: 0,
+            orientation: 0,
+            source: "predicted",
+            updatedAt: 0,
+          },
+        };
+      },
+    });
+    await sendRawUntilClose(sockPath, [
+      "FACE_GUID 1\nWALK_TOWARD 1 GUID 1\nHALT\nWALK_TOWARD 2 GUID 2\n",
+    ]);
+    expect(actions).toEqual(["halt", "walk:2"]);
+  });
+
+  test("disconnect aborts an active directed walk", async () => {
+    startTestServer();
+    const started = Promise.withResolvers<void>();
+    const aborted = Promise.withResolvers<void>();
+    Object.assign(handle, {
+      walkToward: (_target: unknown, _yards: number, signal?: AbortSignal) => {
+        signal?.addEventListener("abort", () => aborted.resolve(), {
+          once: true,
+        });
+        started.resolve();
+        return new Promise<never>(() => {});
+      },
+    });
+    const closed = Promise.withResolvers<void>();
+    const client = await Bun.connect({
+      unix: sockPath,
+      socket: {
+        data() {},
+        close() {
+          closed.resolve();
+        },
+        error(_socket, error) {
+          closed.reject(error);
+        },
+      },
+    });
+    client.write("WALK_TOWARD 10 GUID 1\n");
+    client.flush();
+    await started.promise;
+    client.terminate();
+    await closed.promise;
+    await aborted.promise;
+  }, 2_000);
 
   test("HALT drops older FOLLOW but preserves a newer follow request", async () => {
     startTestServer();

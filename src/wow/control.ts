@@ -25,6 +25,26 @@ export type ControlPose = Position & {
   updatedAt: number;
 };
 
+export type WalkOutcome = {
+  status: "completed" | "stopped";
+  traveled: number;
+  pose: ControlPose;
+  reason?: string;
+};
+
+type DirectedWalk = {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  distance: number;
+  traveled: number;
+  lastProgressAt: number;
+  signal?: AbortSignal;
+  abort: () => void;
+  resolve: (outcome: WalkOutcome) => void;
+};
+
 export type ControlMode = "none" | "jev" | "follow";
 export type ControlOwner = ControlMode | "manual";
 
@@ -207,6 +227,7 @@ export class ControlRuntime {
   private mode: ControlMode = "none";
   private route: GroundRoute | undefined;
   private routeDistance = 0;
+  private walk: DirectedWalk | undefined;
   private navigation: NavigationState = {
     active: false,
     destination: undefined,
@@ -336,10 +357,91 @@ export class ControlRuntime {
     );
   }
 
+  walkActive(): boolean {
+    return this.walk !== undefined;
+  }
+
+  walkToward(
+    target: NavPoint,
+    yards: number,
+    signal?: AbortSignal,
+  ): Promise<WalkOutcome> {
+    const { x: targetX, y: targetY, z: targetZ } = target;
+    if (
+      !Number.isFinite(targetX) ||
+      !Number.isFinite(targetY) ||
+      !Number.isFinite(targetZ)
+    )
+      throw new Error("invalid_destination");
+    if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
+      throw new Error("invalid_distance");
+    const speed = this.speedFor("forward");
+    if (speed === undefined || !Number.isFinite(speed) || speed <= 0)
+      throw new Error("missing_speed");
+    this.guardMove("forward");
+    if (signal?.aborted)
+      return Promise.resolve({
+        status: "stopped",
+        traveled: 0,
+        pose: this.requirePose(),
+        reason: "abort",
+      });
+
+    this.setMode("none");
+    this.stopMoving("walk_replaced", true);
+    const pose = this.requirePose();
+    const dx = targetX - pose.x;
+    const dy = targetY - pose.y;
+    const separation = Math.hypot(dx, dy);
+    const distance = Math.min(yards, separation);
+    if (distance === 0)
+      return Promise.resolve({ status: "completed", traveled: 0, pose });
+
+    this.applyFacing(Math.atan2(dy, dx));
+    const { promise, resolve } = Promise.withResolvers<WalkOutcome>();
+    const walk: DirectedWalk = {
+      x: pose.x,
+      y: pose.y,
+      dx: dx / separation,
+      dy: dy / separation,
+      distance,
+      traveled: 0,
+      lastProgressAt: this.deps.now(),
+      signal,
+      abort: () => {
+        if (this.walk !== walk) return;
+        if (this.moving) this.stopMoving("abort", true);
+        else this.endWalk("abort");
+      },
+      resolve,
+    };
+    this.walk = walk;
+    signal?.addEventListener("abort", walk.abort, { once: true });
+    if (signal?.aborted) {
+      if (this.walk === walk) this.endWalk("abort");
+      return promise;
+    }
+    try {
+      this.startMoving("forward", MAX_DURATION_MS);
+    } catch (error) {
+      if (this.walk === walk) {
+        this.clearTimers();
+        this.moving = false;
+        this.direction = undefined;
+        this.owner = "none";
+        this.moveFlags &= ~MovementFlag.FORWARD;
+        this.endWalk("start_failed");
+      }
+      throw error;
+    }
+    return promise;
+  }
+
   move(direction: MovementDirection, durationMs: number): void {
     this.assertDirection(direction);
     this.assertDuration(durationMs);
     if (this.mode === "follow") this.setMode("none");
+    if (this.walk) this.stopMoving("manual_move", true);
     if (this.route) this.stopMoving("manual_move", true);
     if (this.moving && this.direction === direction) {
       this.guardMove(direction);
@@ -356,6 +458,7 @@ export class ControlRuntime {
     const reason = this.blockReason();
     if (reason) throw new Error(reason);
     if (this.mode === "follow") this.setMode("none");
+    if (this.walk) this.stopMoving("face", true);
     this.applyFacing(orientation);
   }
 
@@ -622,7 +725,7 @@ export class ControlRuntime {
     this.armLease(durationMs);
     this.heartbeatTimer = setInterval(
       () => this.heartbeat(),
-      this.route ? 100 : HEARTBEAT_MS,
+      this.route || this.walk ? 100 : HEARTBEAT_MS,
     );
     this.emit("movement_started");
     this.emit("control_changed");
@@ -651,6 +754,7 @@ export class ControlRuntime {
       MovementFlag.STRAFE_LEFT |
       MovementFlag.STRAFE_RIGHT;
     this.moveFlags &= ~movingBits;
+    this.endWalk(reason);
     if (sendStop && wasMoving) this.sendMove(GameOpcode.MSG_MOVE_STOP);
     if (wasMoving) this.emit("movement_stopped", reason);
     if (ownerChanged) this.emit("control_changed", reason);
@@ -676,6 +780,7 @@ export class ControlRuntime {
       MovementFlag.STRAFE_LEFT |
       MovementFlag.STRAFE_RIGHT
     );
+    this.endWalk(reason);
     if (wasMoving) this.emit("movement_stopped", reason);
     if (ownerChanged) this.emit("control_changed", reason);
   }
@@ -723,18 +828,41 @@ export class ControlRuntime {
       }
       return;
     }
+    const walk = this.walk;
+    if (walk) {
+      const distance = Math.min(walk.distance, walk.traveled + speed * dt);
+      while (walk.traveled < distance) {
+        const next = Math.min(distance, walk.traveled + 0.5);
+        if (
+          !this.integrateGroundStep(
+            walk.x + walk.dx * next,
+            walk.y + walk.dy * next,
+            now,
+          )
+        )
+          return;
+        walk.traveled = next;
+        walk.lastProgressAt = now;
+      }
+      if (walk.traveled >= walk.distance) this.haltMovement("arrived", true);
+      return;
+    }
     const heading = this.predicted.orientation + DIR_HEADING[this.direction];
     const newX = this.predicted.x + Math.cos(heading) * speed * dt;
     const newY = this.predicted.y + Math.sin(heading) * speed * dt;
+    this.integrateGroundStep(newX, newY, now);
+  }
+
+  private integrateGroundStep(
+    newX: number,
+    newY: number,
+    now: number,
+  ): boolean {
+    const pose = this.predicted!;
     let newZ: number | undefined;
     if (this.deps.findHeight) {
       try {
-        newZ = this.deps.findHeight(
-          this.predicted.mapId,
-          newX,
-          newY,
-          this.predicted,
-        );
+        newZ = this.deps.findHeight(pose.mapId, newX, newY, pose);
       } catch {
         newZ = undefined;
       }
@@ -743,12 +871,7 @@ export class ControlRuntime {
       let currentZ: number | undefined;
       if (this.deps.findHeight) {
         try {
-          currentZ = this.deps.findHeight(
-            this.predicted.mapId,
-            this.predicted.x,
-            this.predicted.y,
-            this.predicted,
-          );
+          currentZ = this.deps.findHeight(pose.mapId, pose.x, pose.y, pose);
         } catch {
           currentZ = undefined;
         }
@@ -757,15 +880,11 @@ export class ControlRuntime {
         let clear: boolean | undefined;
         if (this.deps.isPathClear) {
           try {
-            clear = this.deps.isPathClear(
-              this.predicted.mapId,
-              this.predicted,
-              {
-                x: newX,
-                y: newY,
-                z: currentZ,
-              },
-            );
+            clear = this.deps.isPathClear(pose.mapId, pose, {
+              x: newX,
+              y: newY,
+              z: currentZ,
+            });
           } catch {
             clear = undefined;
           }
@@ -774,23 +893,75 @@ export class ControlRuntime {
           clear === true ? "height_unresolved" : "obstructed",
           true,
         );
-        return;
+        return false;
       }
       this.abortUnsafe("ground_height_unavailable");
       this.sendMove(GameOpcode.MSG_MOVE_STOP);
       this.emit("control_error", "ground_height_unavailable");
-      return;
+      return false;
     }
-    this.predicted.x = newX;
-    this.predicted.y = newY;
-    this.predicted.z = newZ;
-    this.predicted.source = "predicted";
-    this.predicted.updatedAt = now;
+    if (this.walk && !this.directedStepClear(pose, newX, newY, newZ))
+      return false;
+    pose.x = newX;
+    pose.y = newY;
+    pose.z = newZ;
+    pose.source = "predicted";
+    pose.updatedAt = now;
+    return true;
+  }
+
+  private directedStepClear(
+    pose: ControlPose,
+    x: number,
+    y: number,
+    z: number,
+  ): boolean {
+    let back: number | undefined;
+    try {
+      back = this.deps.findHeight?.(pose.mapId, pose.x, pose.y, { x, y, z });
+    } catch {}
+    if (
+      back === undefined ||
+      !Number.isFinite(back) ||
+      Math.abs(back - pose.z) > 0.25
+    ) {
+      this.haltMovement("height_unresolved", true);
+      return false;
+    }
+    const clear = this.deps.isPathClear;
+    if (!clear) {
+      this.haltMovement("obstructed", true);
+      return false;
+    }
+    const fromLow = { x: pose.x, y: pose.y, z: pose.z + 0.25 };
+    const toLow = { x, y, z: z + 0.25 };
+    const fromHigh = { x: pose.x, y: pose.y, z: pose.z + 1.6 };
+    const toHigh = { x, y, z: z + 1.6 };
+    let pass = false;
+    try {
+      pass =
+        clear(pose.mapId, fromLow, toLow) === true &&
+        clear(pose.mapId, fromHigh, toHigh) === true &&
+        clear(pose.mapId, toLow, toHigh) === true;
+    } catch {}
+    if (pass) return true;
+    this.haltMovement("obstructed", true);
+    return false;
   }
 
   private armLease(durationMs: number): void {
     if (this.leaseTimer !== undefined) clearTimeout(this.leaseTimer);
     this.leaseTimer = setTimeout(() => {
+      const walk = this.walk;
+      if (walk) {
+        this.heartbeat();
+        if (this.walk !== walk || !this.moving) return;
+        const remaining =
+          MAX_DURATION_MS - (this.deps.now() - walk.lastProgressAt);
+        if (remaining <= 0) this.stopMoving("lease", true);
+        else this.armLease(remaining);
+        return;
+      }
       if (!this.route) {
         this.stopMoving("lease", true);
         return;
@@ -808,6 +979,20 @@ export class ControlRuntime {
           ),
         );
     }, durationMs);
+  }
+
+  private endWalk(reason: string): void {
+    const walk = this.walk;
+    if (!walk) return;
+    this.walk = undefined;
+    walk.signal?.removeEventListener("abort", walk.abort);
+    const outcome: WalkOutcome = {
+      status: reason === "arrived" ? "completed" : "stopped",
+      traveled: walk.traveled,
+      pose: this.requirePose(),
+    };
+    if (reason !== "arrived") outcome.reason = reason;
+    walk.resolve(outcome);
   }
 
   private endNavigation(reason: string): void {

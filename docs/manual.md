@@ -104,10 +104,36 @@ For `fight` and `cycle`, choose current non-self creature GUIDs from this JSONL 
 `tuicraft move` _direction_ [*ms*]
 :: Walk `forward`, `backward`, `left`, or `right` for *ms* milliseconds.
 `left`/`right` strafe. *ms* is an integer 1–10000. Default 1000. The walk
-ends when the duration ends. Repeating the same direction renews the duration.
+ends when the duration ends. Repeating the same direction while manual movement
+is active renews the lease without a stop. A manual command takes over from
+Jev, follow, or cycle immediately instead of refreshing their movement.
 
 `tuicraft face` _radians_
 :: Set facing. The value is a finite number in radians. Empty input is rejected.
+
+`tuicraft face-guid` _guid_
+:: Face a currently observed entity on the same map without selecting it.
+The GUID must have a usable observed position; a missing, unsupported, or stale
+unit pose is refused. A moving GUID is sampled once, not tracked.
+
+`tuicraft walk-toward` _yards_ _guid_
+`tuicraft walk-toward` _yards_ _x_ _y_ _z_
+:: Walk a direct leg toward one sampled observed GUID or an explicitly
+grounded coordinate, for at most _yards_ (finite, greater than 0 and at most
+20). The leg stops at the closer of the distance limit and target position.
+A coordinate needs a native ground-height match within 0.25 yards; ambiguous,
+missing, or mismatched ground refuses before movement. The daemon checks the
+starting ground, connected heights in both directions, and low/headroom rays
+at each step of at most 0.5 yards. It stops on an obstruction, unsafe state,
+correction, client disconnect, `halt`, or takeover. The 10-second safety lease
+renews only while the leg makes progress; a stalled leg stops. It does not
+route around obstacles; use `goto` for a checked route or `follow` to track
+a moving GUID.
+The command waits for a terminal JSON object: `status` is `completed` or
+`stopped`, `traveled` is predicted horizontal yards, `pose` has
+`source=predicted` for motion, and a stop has `reason`. Exit status is 1 on
+`stopped` or `ERR`, 0 on predicted completion. Completion is not server
+confirmation; ordinary self movement is not echoed by the server.
 
 `tuicraft target` _guid_
 :: Request selection of a unit. *guid* is an unsigned 64-bit integer in `0x`
@@ -119,7 +145,7 @@ server observation.
 `tuicraft halt`
 :: Stop motion, cast, attack, tactics, navigation, follow, and cycle. The daemon stays connected.
 HALT on one IPC socket interrupts pending work and drops older queued
-MOVE/FACE/TARGET/CAST/ATTACK/CANCEL_CAST/STOP_ATTACK/FIGHT/CYCLE/GOTO/
+MOVE/FACE/FACE_GUID/WALK_TOWARD/TARGET/CAST/ATTACK/CANCEL_CAST/STOP_ATTACK/FIGHT/CYCLE/GOTO/
 FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.

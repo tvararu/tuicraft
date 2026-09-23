@@ -230,6 +230,10 @@ export function createMockHandle(): WorldHandle & {
     getControlState: jest.fn((): ControlState => controlState),
     move: jest.fn(),
     face: jest.fn(),
+    faceGuid: jest.fn(),
+    walkToward: jest.fn(async () => {
+      throw new Error("mock_walk_unavailable");
+    }),
     selectTarget: jest.fn(),
     halt: jest.fn(() => {
       cycle.stop("halt");

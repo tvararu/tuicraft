@@ -17,6 +17,8 @@ USAGE
   tuicraft control [--json]  Current pose estimate, last server pose, refusal guidance
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
   tuicraft face <radians>    Set facing in radians
+  tuicraft face-guid <guid>  Face a currently observed GUID
+  tuicraft walk-toward <yards> <guid>|<x> <y> <z>  Bounded direct leg (>0 to 20yd); JSON terminal outcome
   tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
   tuicraft halt              Cancel motion, cast, attack, tactics, follow, cycle
                             Drop older queued mutations on this socket; not sent requests

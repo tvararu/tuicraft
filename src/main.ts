@@ -1,6 +1,10 @@
 import { parseArgs } from "cli/args";
 import { sendToSocket, ensureDaemon } from "cli/ipc";
-import { formatSendOutput, daemonCommandFailed } from "cli/send-output";
+import {
+  formatSendOutput,
+  daemonCommandFailed,
+  walkCommandFailed,
+} from "cli/send-output";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
 };
@@ -188,6 +192,26 @@ async function main() {
     case "face": {
       await ensureDaemon();
       printControlReply(await sendToSocket(`FACE ${action.orientation}`));
+      break;
+    }
+    case "face_guid": {
+      await ensureDaemon();
+      printControlReply(
+        await sendToSocket(`FACE_GUID 0x${action.guid.toString(16)}`),
+      );
+      break;
+    }
+    case "walk_toward": {
+      await ensureDaemon();
+      const destination =
+        action.target.kind === "guid"
+          ? `GUID 0x${action.target.guid.toString(16)}`
+          : `POINT ${action.target.x} ${action.target.y} ${action.target.z}`;
+      const lines = await sendToSocket(
+        `WALK_TOWARD ${action.yards} ${destination}`,
+      );
+      for (const line of lines) console.log(line);
+      if (walkCommandFailed(lines)) process.exit(1);
       break;
     }
     case "target": {

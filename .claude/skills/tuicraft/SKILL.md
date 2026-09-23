@@ -78,6 +78,9 @@ These commands move, face, or select.
     tuicraft move forward         # 1000ms default
     tuicraft move left 400        # strafe 400ms
     tuicraft face 1.57            # radians
+    tuicraft face-guid 0xabc      # turn toward a currently observed entity
+    tuicraft walk-toward 3 0xabc # bounded direct leg toward one sampled pose
+    tuicraft walk-toward 2 <grounded-x> <grounded-y> <grounded-z> # replace all three placeholders
     tuicraft target 0xf130003f520009e5
     tuicraft target 0             # clear target, do not attack
     tuicraft halt                 # stop motion, stay connected
@@ -85,14 +88,33 @@ These commands move, face, or select.
 
 Rules:
 
-- `move` direction is exactly `forward`, `backward`, `left`, or `right`. `left` and `right` strafe.
-- Duration is an integer millisecond value from 1 through 10000. Omit it to use 1000. Values outside that range are rejected and send no packets.
+- `move` accepts only `forward`, `backward`, `left`, or `right`. The last two directions strafe.
+- Duration is an integer from 1 through 10000 milliseconds. The default is 1000 milliseconds.
+- Invalid duration sends no movement packet.
+- Repeating the same direction extends an active manual lease without a stop.
+- A manual command stops Jev, follow, or cycle before it takes control.
 - `face` takes one finite radian number.
+- `face-guid` needs a nonzero GUID with an observed position on the current map.
+- Reject a missing GUID, an unsupported unit position, or a stale unit observation.
+- `face-guid` samples a moving unit once. It does not track the unit.
+- `walk-toward` needs a finite distance greater than 0 and at most 20 yards.
+- Supply one observed GUID or three finite coordinates. The GUID position is sampled once.
+- For a coordinate, the supplied height must match native ground height within 0.25 yards.
+- The daemon walks no farther than the distance limit or the sampled target position.
+- The daemon checks ground continuity and collision at each step of at most 0.5 yards.
+- The daemon stops on unsafe ground, correction, client disconnect, manual takeover, or HALT.
+- A 10-second safety lease renews only while the character makes progress.
+- The daemon does not make a blind detour or retry automatically. Use `follow` to track a moving GUID.
+- `walk-toward` returns one JSON object with `status`, `traveled`, and `pose`.
+- A stopped result also contains `reason` and makes the CLI exit with status 1.
+- `completed` is a predicted endpoint. It is not server confirmation.
+- Ground sampling requires compatible navigation data.
 - `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
 - A valid GUID can still be stale. `target` sends it without checking entity age. Refresh `nearby --json` before acting. `requestedTarget` is sent intent; `target` is the last server observation. Equal values do not prove a fresh acknowledgment.
 - `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. On one IPC socket it interrupts pending work and drops older queued mutating control, recovery, quest, and loot commands, including `cycle`, plus older read waits. It retains state inspections, corpse and metadata queries, and newer requests. It cannot undo a sent request or disengage an attacking enemy. `status` remains CONNECTED.
 - Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1.
+- A terminal `stopped` result from WALK_TOWARD also makes the CLI exit with status 1.
 
 `control --json` fields you must not mix up:
 
@@ -129,6 +151,9 @@ IPC verbs on the daemon socket:
     CONTROL_JSON
     MOVE <forward|backward|left|right> [milliseconds]
     FACE <radians>
+    FACE_GUID <guid>
+    WALK_TOWARD <yards> GUID <guid>
+    WALK_TOWARD <yards> POINT <x> <y> <z>
     TARGET <guid>
     HALT
     NEARBY [all]

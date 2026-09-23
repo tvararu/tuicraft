@@ -1,4 +1,5 @@
 import type { MovementDirection } from "wow/control";
+import type { WalkTarget } from "wow/client";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 
@@ -30,6 +31,8 @@ export type CliAction =
   | { mode: "control"; json: boolean }
   | { mode: "move"; direction: MovementDirection; durationMs: number }
   | { mode: "face"; orientation: number }
+  | { mode: "face_guid"; guid: bigint }
+  | { mode: "walk_toward"; yards: number; target: WalkTarget }
   | { mode: "target"; guid: bigint }
   | { mode: "halt" }
   | { mode: "nearby"; json: boolean; all?: boolean }
@@ -97,6 +100,8 @@ const SUBCOMMANDS = new Set([
   "control",
   "move",
   "face",
+  "face-guid",
+  "walk-toward",
   "target",
   "halt",
   "nearby",
@@ -263,6 +268,10 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseMove(args);
     case "face":
       return parseFace(args);
+    case "face-guid":
+      return parseFaceGuid(args);
+    case "walk-toward":
+      return parseWalkToward(args);
     case "target":
       return parseTarget(args);
     case "halt":
@@ -511,6 +520,31 @@ function parseFace(args: string[]): CliAction {
     throw new Error(`Invalid facing: ${raw}`);
   }
   return { mode: "face", orientation };
+}
+function parseFaceGuid(args: string[]): CliAction {
+  const guid = args.length === 2 ? parseGuid(args[1]!) : undefined;
+  if (guid === undefined || guid === 0n)
+    throw new Error("Invalid face-guid arguments");
+  return { mode: "face_guid", guid };
+}
+
+function parseWalkToward(args: string[]): CliAction {
+  const yards = args[1] === undefined ? undefined : parseFiniteNumber(args[1]);
+  if (yards === undefined || yards <= 0 || yards > 20)
+    throw new Error("Invalid walk-toward distance");
+  if (args.length === 3) {
+    const guid = parseGuid(args[2]!);
+    if (guid === undefined || guid === 0n)
+      throw new Error("Invalid walk-toward target");
+    return { mode: "walk_toward", yards, target: { kind: "guid", guid } };
+  }
+  if (args.length !== 5) throw new Error("Invalid walk-toward destination");
+  const x = parseFiniteNumber(args[2]!);
+  const y = parseFiniteNumber(args[3]!);
+  const z = parseFiniteNumber(args[4]!);
+  if (x === undefined || y === undefined || z === undefined)
+    throw new Error("Invalid walk-toward destination");
+  return { mode: "walk_toward", yards, target: { kind: "point", x, y, z } };
 }
 
 function parseTarget(args: string[]): CliAction {

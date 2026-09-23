@@ -451,6 +451,29 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["face", "   "])).toThrow("Invalid face arguments");
   });
 
+  test("face-guid preserves a current entity GUID", () => {
+    expect(parseArgs(["face-guid", "0xffffffffffffffff"])).toEqual({
+      mode: "face_guid",
+      guid: 0xffff_ffff_ffff_ffffn,
+    });
+    expect(() => parseArgs(["face-guid", "0"])).toThrow();
+  });
+
+  test("walk-toward accepts a bounded observed GUID or grounded point", () => {
+    expect(parseArgs(["walk-toward", "3", "0x42"])).toEqual({
+      mode: "walk_toward",
+      yards: 3,
+      target: { kind: "guid", guid: 0x42n },
+    });
+    expect(parseArgs(["walk-toward", "2.5", "1", "-2", "3"])).toEqual({
+      mode: "walk_toward",
+      yards: 2.5,
+      target: { kind: "point", x: 1, y: -2, z: 3 },
+    });
+    expect(() => parseArgs(["walk-toward", "21", "0x42"])).toThrow();
+    expect(() => parseArgs(["walk-toward", "2", "NaN", "0", "0"])).toThrow();
+  });
+
   test("target accepts hex and decimal uint64", () => {
     expect(parseArgs(["target", "0x1"])).toEqual({ mode: "target", guid: 1n });
     expect(parseArgs(["target", "0"])).toEqual({ mode: "target", guid: 0n });

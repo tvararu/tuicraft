@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-23",
+  "scope": "Directed movement in the ux-directed-movement worktree; no Xiara or M4 actions",
+  "safetyContract": {
+    "manualRefresh": "A second manual MOVE in the same direction extends its lease without a stop; a new manual action preempts Jev, follow, and cycle.",
+    "directedWalk": "A GUID is sampled once. A coordinate must have one native ground height matching its Z within 0.25 yards. The daemon checks initial ground, forward and reverse ground continuity, and collision rays at each step of at most 0.5 yards. It caps the direct leg at the smaller of requested yards and sampled horizontal separation. The 10-second safety lease renews only during progress. Unsafe ground, correction, disconnect, HALT, and takeover stop it with a reason.",
+    "outcomeAuthority": "A completed pose is local prediction, not server-confirmed arrival. A stopped result exits the CLI with code 1."
+  },
+  "mockWorldSmoke": {
+    "method": "Isolated mock world and daemon sockets with the real local Expansion01 native navigation library; actual src/main.ts CLI processes; no real game login",
+    "faceGuid": { "command": "face-guid 0x99", "exitCode": 0, "response": "OK" },
+    "groundedPoint": {
+      "command": "walk-toward 2 <grounded-x> <grounded-y> <grounded-z>",
+      "exitCode": 0,
+      "status": "completed",
+      "traveled": 2,
+      "pose": { "x": 8710.6599609375, "y": -6670.159765625, "z": 70.33597564697266, "source": "predicted" }
+    },
+    "wrongFloor": { "method": "Repeat the point command with destination Z raised 10 yards", "exitCode": 1, "status": "stopped", "reason": "destination_not_grounded", "traveled": 0 },
+    "halt": { "method": "Send HALT over another IPC socket after observing MSG_MOVE_START_FORWARD for an active walk", "exitCode": 1, "status": "stopped", "reason": "halt", "movingAfter": false }
+  },
+  "nativeHeightInvestigation": {
+    "method": "Read-only offline openNativeMap and Navigation.plan queries against /home/deity/wow-data/nav/Expansion01.map and /home/deity/wow-data/libnamigator.so; no account connection",
+    "mapId": 530,
+    "origin": { "x": 8709.46, "y": -6671.76, "z": 70.34, "column": [70.33597564697266] },
+    "destination": { "x": 8801.13, "y": -6550.23, "z": 53.19, "column": [53.194244384765625] },
+    "result": "Native FindPath returned a corridor. Navigation.plan failed with pathfind_find_height failed (UNKNOWN_HEIGHT).",
+    "firstDirectSampleFailure": { "from": [8717.274491803279, -6661.400065573771, 70.3658676147461], "toXY": [8717.575049180326, -6661.001606557377], "sourceColumn": [70.3658676147461], "destinationColumn": [70.3658676147461] },
+    "funnelCornerFailure": { "from": [8722.991129557291, -6666.0596110026045, 70.25395965576172], "toXY": [8722.619140625, -6666.36962890625], "sourceColumn": [70.25395965576172], "destinationColumn": [70.25194549560547], "neighboringQueries": "Four XY offsets of 0.02 yards all returned a height; the exact corner returned UNKNOWN_HEIGHT." },
+    "interpretation": "A polygon-edge height query is plausible, but status 84 also covers nearest-poly, raycast, tile, and ADT failures. The failing native stage was not observed. No coordinate jitter, height substitution, or unsafe planner patch was added. Genuinely ambiguous columns still refuse movement."
+  },
+  "verification": {
+    "miseCi": "1782 tests passed across 70 files; typecheck and biome format passed",
+    "miseTestLive": "Attempted. 0 passed and 12 failed at authentication challenge status 0x4 before world login. The dedicated WOW_ACCOUNT_1/2, WOW_PASSWORD_1/2, and WOW_CHARACTER_1/2 environment variables were not available. This is not live gameplay evidence.",
+    "limits": "No real-server movement or server-position confirmation was performed. Xiara was not operated. A safe native height repair still needs the specific failing stage in namigator and an upstream change."
+  }
+}

@@ -79,6 +79,14 @@ function getSocketState(socket: IpcSocket): SocketState {
   socketStates.set(socket, state);
   return state;
 }
+function onSocketClose(socket: IpcSocket): void {
+  const state = getSocketState(socket);
+  if (state.ended) return;
+  state.ended = true;
+  state.buffer = "";
+  state.queue.length = 0;
+  state.abort?.abort();
+}
 
 function enqueueCompleteLines(state: SocketState): void {
   while (true) {
@@ -98,6 +106,8 @@ function isStaleControl(type: string | undefined): boolean {
   return (
     type === "move" ||
     type === "face" ||
+    type === "face_guid" ||
+    type === "walk_toward" ||
     type === "target" ||
     type === "cast" ||
     type === "attack" ||
@@ -246,7 +256,11 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   const ctx: ServerCtx = { handle, events, cleanup, onActivity, onStop };
   const server = Bun.listen({
     unix: sock,
-    socket: { data: (socket, data) => onSocketData(ctx, socket, data) },
+    socket: {
+      data: (socket, data) => onSocketData(ctx, socket, data),
+      close: (socket) => onSocketClose(socket),
+      error: (socket) => onSocketClose(socket),
+    },
   });
 
   return { server, events, cleanup };

@@ -66,6 +66,7 @@ import {
   type ControlState,
   type MovementDirection,
   type NavigationState,
+  type WalkOutcome,
 } from "wow/control";
 import { CombatRuntime, type CombatEvent, type CombatState } from "wow/combat";
 import type { SpellDefinition } from "wow/spell-catalog";
@@ -178,6 +179,7 @@ export type ClientConfig = {
 };
 
 import type { AuthResult } from "wow/auth";
+import { ObjectType } from "wow/protocol/entity-fields";
 
 export type ChatMessage = {
   type: number;
@@ -246,6 +248,9 @@ export type ChatMode =
   | { type: "emote" }
   | { type: "whisper"; target: string }
   | { type: "channel"; channel: string };
+export type WalkTarget =
+  | { kind: "guid"; guid: bigint }
+  | { kind: "point"; x: number; y: number; z: number };
 
 export type WorldHandle = {
   closed: Promise<void>;
@@ -306,6 +311,12 @@ export type WorldHandle = {
   getControlState(): ControlState;
   move(direction: MovementDirection, durationMs: number): void;
   face(orientation: number): void;
+  faceGuid(guid: bigint): void;
+  walkToward(
+    target: WalkTarget,
+    yards: number,
+    signal?: AbortSignal,
+  ): Promise<WalkOutcome>;
   selectTarget(guid: bigint): void;
   halt(): void;
   onControlEvent(cb: ((event: ControlEvent) => void) | undefined): void;
@@ -781,7 +792,37 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
       rewards.handleInventoryChangeFailure(r),
     );
+    function observedTarget(guid: bigint): { x: number; y: number; z: number } {
+      const entity = conn.entityStore.get(guid);
+      if (!entity || guid === selfGuid(conn))
+        throw new Error("target_not_observed");
+      const self = control.snapshot().pose;
+      if (!self) throw new Error("no_pose");
+      const unit =
+        entity.objectType === ObjectType.UNIT ||
+        entity.objectType === ObjectType.PLAYER
+          ? combat.unit(guid)
+          : undefined;
+      if (unit?.motion?.unsupportedReason)
+        throw new Error(unit.motion.unsupportedReason);
+      if (
+        unit?.motion &&
+        (Date.now() - unit.motion.observedAt < 0 ||
+          Date.now() - unit.motion.observedAt > 5000)
+      )
+        throw new Error("target_stale");
+      const position = unit?.serverPose ?? entity.position;
+      if (
+        !position ||
+        ![position.x, position.y, position.z].every(Number.isFinite)
+      )
+        throw new Error("target_not_observed");
+      if (position.mapId !== self.mapId) throw new Error("target_map_changed");
+      return { x: position.x, y: position.y, z: position.z };
+    }
+
     function override(): void {
+      cycle.stop("manual_override");
       follow.stop("manual_override");
       tactics.stop("manual_override");
       rawHalt();
@@ -1352,14 +1393,73 @@ export function worldSession(
           );
         },
         move(direction, durationMs) {
-          override();
-          if (!conn.control) throw new Error("no_control");
-          conn.control.move(direction, durationMs);
+          const state = control.snapshot();
+          if (
+            state.owner !== "manual" ||
+            !state.moving ||
+            state.direction !== direction ||
+            control.walkActive() ||
+            follow.snapshot().active ||
+            tactics.snapshot().status !== "idle" ||
+            cycle.snapshot().active
+          )
+            override();
+          control.move(direction, durationMs);
         },
         face(orientation) {
           override();
           if (!conn.control) throw new Error("no_control");
           conn.control.face(orientation);
+        },
+        faceGuid(guid) {
+          const target = observedTarget(guid);
+          override();
+          const pose = control.snapshot().pose!;
+          if (pose.x === target.x && pose.y === target.y)
+            throw new Error("target_coincident");
+          control.face(Math.atan2(target.y - pose.y, target.x - pose.x));
+        },
+        async walkToward(target, yards, signal) {
+          if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
+            throw new Error("invalid_distance");
+          const pose = control.snapshot().pose;
+          if (!pose) throw new Error("no_pose");
+          if (signal?.aborted)
+            return { status: "stopped", reason: "abort", traveled: 0, pose };
+          let destination: { x: number; y: number; z: number };
+          try {
+            const navigation = getNavigation();
+            if (target.kind === "guid") {
+              destination = observedTarget(target.guid);
+            } else {
+              if (![target.x, target.y, target.z].every(Number.isFinite))
+                throw new Error("invalid_destination");
+              const z = navigation.height(pose.mapId, target.x, target.y);
+              if (Math.abs(z - target.z) > 0.25)
+                throw new Error("destination_not_grounded");
+              destination = { x: target.x, y: target.y, z };
+            }
+            const ground = navigation.height(pose.mapId, pose.x, pose.y, pose);
+            if (Math.abs(ground - pose.z) > 0.25)
+              throw new Error("self_not_grounded");
+          } catch (error) {
+            const reason =
+              error instanceof Error ? error.message : "target_unavailable";
+            return { status: "stopped", reason, traveled: 0, pose };
+          }
+          override();
+          try {
+            return await control.walkToward(destination, yards, signal);
+          } catch (error) {
+            const reason =
+              error instanceof Error ? error.message : "movement_unavailable";
+            return {
+              status: "stopped",
+              reason,
+              traveled: 0,
+              pose: control.snapshot().pose ?? pose,
+            };
+          }
         },
         selectTarget(guid) {
           override();

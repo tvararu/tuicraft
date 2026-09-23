@@ -146,6 +146,220 @@ describe("ControlRuntime", () => {
       jest.useRealTimers();
     }
   });
+  test("directed walk stops at the requested distance without overshooting", async () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime, sent, advance } = setup({ isPathClear: () => true });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 10, y: start.y, z: start.z },
+        3,
+      );
+      advance(500);
+      const result = await walk;
+      expect(result).toMatchObject({
+        status: "completed",
+        traveled: 3,
+        pose: { source: "predicted" },
+      });
+      expect(result.pose.x).toBeCloseTo(start.x + 3, 4);
+      expect(result.pose.y).toBeCloseTo(start.y, 4);
+      expect(runtime.snapshot().moving).toBe(false);
+      expect(sent.at(-1)?.opcode).toBe(GameOpcode.MSG_MOVE_STOP);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+  test("directed walk stops at a nearer sampled target", async () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime, advance } = setup({ isPathClear: () => true });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 1, y: start.y, z: start.z },
+        5,
+      );
+      advance(200);
+      const outcome = await walk;
+      expect(outcome).toMatchObject({ status: "completed", traveled: 1 });
+      expect(outcome.pose.x).toBeCloseTo(start.x + 1, 4);
+      expect(runtime.snapshot().moving).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("directed walk halts on abort and cannot cancel a later manual owner", async () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime, sent, advance } = setup({ isPathClear: () => true });
+      const start = runtime.snapshot().pose!;
+      const abort = new AbortController();
+      const walk = runtime.walkToward(
+        { x: start.x + 12, y: start.y, z: start.z },
+        10,
+        abort.signal,
+      );
+      advance(200);
+      abort.abort();
+      expect(await walk).toMatchObject({ status: "stopped", reason: "abort" });
+      expect(runtime.snapshot().moving).toBe(false);
+      expect(sent.at(-1)?.opcode).toBe(GameOpcode.MSG_MOVE_STOP);
+      runtime.move("forward", 500);
+      abort.abort();
+      expect(runtime.snapshot().moving).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("directed walk checks intervening ground after a delayed timer", async () => {
+    jest.useFakeTimers();
+    try {
+      let now = 10_000;
+      const startX = 8709.46;
+      const { runtime, advance } = setup({
+        now: () => now,
+        ticks: () => now - 10_000,
+        findHeight: (_map, x, _y, from) => {
+          if (x > startX + 0.5 && x < startX + 1.5)
+            throw new Error("UNKNOWN_HEIGHT");
+          return from?.z ?? 70.34;
+        },
+      });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 4, y: start.y, z: start.z },
+        4,
+      );
+      now += 600;
+      advance(100);
+      const result = await walk;
+      expect(result).toMatchObject({
+        status: "stopped",
+        reason: "obstructed",
+      });
+      expect(result.traveled).toBeLessThanOrEqual(0.5);
+      expect(result.pose.x).toBeLessThanOrEqual(startX + 0.5);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+  test("directed walk refuses a wall despite valid ground heights", async () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime, advance } = setup({
+        findHeight: () => 70.34,
+        isPathClear: () => false,
+      });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 4, y: start.y, z: start.z },
+        4,
+      );
+      advance(1000);
+      const result = await walk;
+      expect(result).toMatchObject({
+        status: "stopped",
+        reason: "obstructed",
+        traveled: 0,
+      });
+      expect(result.pose.x).toBeCloseTo(start.x, 4);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("directed walk refuses ground that cannot connect back to the origin", async () => {
+    jest.useFakeTimers();
+    try {
+      const originX = 8709.46;
+      const { runtime, advance } = setup({
+        findHeight: (_map, x, _y, from) =>
+          from && from.x > originX && x === originX ? 71.34 : 70.34,
+        isPathClear: () => true,
+      });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 4, y: start.y, z: start.z },
+        4,
+      );
+      advance(1000);
+      const result = await walk;
+      expect(result).toMatchObject({
+        status: "stopped",
+        traveled: 0,
+      });
+      expect(result.pose.x).toBeCloseTo(start.x, 4);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("slow but progressing directed walk outlives the safety lease", async () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime, advance } = setup({ isPathClear: () => true });
+      runtime.observeSelf({ runSpeed: 1 });
+      const start = runtime.snapshot().pose!;
+      const walk = runtime.walkToward(
+        { x: start.x + 15, y: start.y, z: start.z },
+        15,
+      );
+      advance(10_000);
+      expect(runtime.snapshot().moving).toBe(true);
+      advance(5_000);
+      expect(await walk).toMatchObject({ status: "completed", traveled: 15 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a failed movement send does not retain an active directed walk", () => {
+    jest.useFakeTimers();
+    try {
+      const { runtime } = setup({
+        send: (opcode) => {
+          if (opcode === GameOpcode.MSG_MOVE_START_FORWARD)
+            throw new Error("connection_failed");
+        },
+      });
+      const start = runtime.snapshot().pose!;
+      expect(() =>
+        runtime.walkToward({ x: start.x + 4, y: start.y, z: start.z }, 4),
+      ).toThrow("connection_failed");
+      expect(runtime.walkActive()).toBe(false);
+      expect(runtime.snapshot().moving).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+  test("directed walk refuses zero speed instead of hanging under a lease", () => {
+    jest.useFakeTimers();
+    const { runtime, sent } = setup();
+    try {
+      runtime.observeSelf({ runSpeed: 0 });
+      const pose = runtime.snapshot().pose!;
+      sent.length = 0;
+      let failure: unknown;
+      try {
+        const pending = runtime.walkToward(
+          { x: pose.x + 4, y: pose.y, z: pose.z },
+          4,
+        );
+        runtime.halt();
+        void pending;
+      } catch (error) {
+        failure = error;
+      }
+      expect(failure).toEqual(new Error("missing_speed"));
+      expect(runtime.walkActive()).toBe(false);
+      expect(sent).toHaveLength(0);
+    } finally {
+      runtime.halt();
+      jest.useRealTimers();
+    }
+  });
 
   test("changing direction stops then starts without resetting pose", () => {
     jest.useFakeTimers();

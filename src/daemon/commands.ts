@@ -29,6 +29,7 @@ import type {
   ChatMessage,
   GroupEvent,
   DuelEvent,
+  WalkTarget,
 } from "wow/client";
 import type {
   ControlEvent,
@@ -92,6 +93,8 @@ export type IpcCommand =
   | { type: "control_json" }
   | { type: "move"; direction: MovementDirection; durationMs: number }
   | { type: "face"; orientation: number }
+  | { type: "face_guid"; guid: bigint }
+  | { type: "walk_toward"; yards: number; target: WalkTarget }
   | { type: "target"; guid: bigint }
   | { type: "halt" }
   | { type: "combat" }
@@ -334,6 +337,10 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return parseMoveCommand(rest);
     case "FACE":
       return parseFaceCommand(rest);
+    case "FACE_GUID":
+      return parseFaceGuidCommand(rest);
+    case "WALK_TOWARD":
+      return parseWalkTowardCommand(rest);
     case "TARGET":
       return parseTargetCommand(rest);
     case "HALT":
@@ -813,6 +820,19 @@ export async function dispatchCommand(
       return runControlAction(socket, () => {
         handle.face(cmd.orientation);
       });
+    case "face_guid":
+      return runControlAction(socket, () => {
+        handle.faceGuid(cmd.guid);
+      });
+    case "walk_toward":
+      try {
+        const result = await handle.walkToward(cmd.target, cmd.yards, abort);
+        writeLines(socket, [JSON.stringify(result)]);
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : "internal";
+        writeLines(socket, [`ERR ${reason}`]);
+      }
+      return false;
     case "target":
       return runControlAction(socket, () => {
         handle.selectTarget(cmd.guid);
@@ -1756,6 +1776,34 @@ function parseGotoCommand(rest: string): IpcCommand {
     return { type: "invalid", reason: "invalid goto" };
   }
   return { type: "goto", x, y, z };
+}
+function parseFaceGuidCommand(rest: string): IpcCommand {
+  const parts = rest.trim().split(/\s+/);
+  const guid = parts.length === 1 ? parseGuid(parts[0]!) : undefined;
+  return guid && guid > 0n
+    ? { type: "face_guid", guid }
+    : { type: "invalid", reason: "invalid guid" };
+}
+
+function parseWalkTowardCommand(rest: string): IpcCommand {
+  const parts = rest.trim().split(/\s+/);
+  const yards = parseFiniteNumber(parts[0] ?? "");
+  if (yards === undefined || yards <= 0 || yards > 20)
+    return { type: "invalid", reason: "invalid walk distance" };
+  if (parts.length === 3 && parts[1] === "GUID") {
+    const guid = parseGuid(parts[2]!);
+    return guid && guid > 0n
+      ? { type: "walk_toward", yards, target: { kind: "guid", guid } }
+      : { type: "invalid", reason: "invalid guid" };
+  }
+  if (parts.length !== 5 || parts[1] !== "POINT")
+    return { type: "invalid", reason: "invalid walk target" };
+  const x = parseFiniteNumber(parts[2]!);
+  const y = parseFiniteNumber(parts[3]!);
+  const z = parseFiniteNumber(parts[4]!);
+  if (x === undefined || y === undefined || z === undefined)
+    return { type: "invalid", reason: "invalid walk target" };
+  return { type: "walk_toward", yards, target: { kind: "point", x, y, z } };
 }
 
 function parseFollowCommand(rest: string): IpcCommand {
