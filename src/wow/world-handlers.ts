@@ -31,7 +31,10 @@ import {
   parseGroupList,
   parsePartyMemberStats,
 } from "wow/protocol/group";
-import { parseUpdateObject } from "wow/protocol/update-object";
+import {
+  parseUpdateObject,
+  type UpdateEntry,
+} from "wow/protocol/update-object";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -411,128 +414,103 @@ export function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
   conn.onGroupEvent?.({ type: "invite_declined", name });
 }
 
+type TypeFields = Partial<UnitFieldsResult> & Partial<GameObjectFieldsResult>;
+type Entry<T extends UpdateEntry["type"]> = Extract<UpdateEntry, { type: T }>;
+
 export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
-  const mapId = conn.control?.currentMapId() ?? 0;
-  const entries = parseUpdateObject(r, mapId);
-  const self = selfGuid(conn);
-  for (const entry of entries) {
-    switch (entry.type) {
-      case "create": {
-        const { _changed: _co, ...objFields } = extractObjectFields(
-          entry.fields,
-        );
-        let extraFields: Partial<UnitFieldsResult> &
-          Partial<GameObjectFieldsResult> = {};
-        if (
-          entry.objectType === ObjectType.UNIT ||
-          entry.objectType === ObjectType.PLAYER
-        ) {
-          const { _changed: _cu, ...rest } = extractUnitFields(entry.fields);
-          extraFields = rest;
-        } else if (entry.objectType === ObjectType.GAMEOBJECT) {
-          const { _changed: _cg, ...rest } = extractGameObjectFields(
-            entry.fields,
-          );
-          extraFields = rest;
-        }
-        const cachedName = lookupCachedName(
-          conn,
-          entry.guid,
-          entry.objectType,
-          objFields.entry,
-        );
-        conn.entityStore.create(entry.guid, entry.objectType, {
-          ...objFields,
-          ...extraFields,
-          ...(cachedName ? { name: cachedName } : {}),
-          ...(entry.position ? { position: entry.position } : {}),
-          rawFields: new Map(entry.fields),
-          createComplete: true,
-        } as any);
-        if (entry.guid === self) {
-          const created = conn.entityStore.get(self);
-          if (created) conn.quests?.observeSelfCreate(created);
-        }
-        if (entry.position)
-          conn.combat?.observePosition(
-            entry.guid,
-            entry.position,
-            entry.spline,
-          );
-        if (!cachedName)
-          queryEntityName(conn, entry.guid, entry.objectType, objFields.entry);
-        if (
-          entry.guid === self ||
-          (entry.updateFlags & UpdateFlag.SELF) !== 0
-        ) {
-          conn.control?.observeSelf({
-            position: entry.position,
-            movementFlags: entry.movementFlags,
-            runSpeed: entry.runSpeed,
-            runBackSpeed: entry.runBackSpeed,
-            target: extraFields.target as bigint | undefined,
-            unitFlags: extraFields.unitFlags as number | undefined,
-          });
-        }
-        break;
-      }
-      case "values": {
-        const entity = conn.entityStore.get(entry.guid);
-        if (!entity) break;
-        const objFields = extractObjectFields(entry.fields, entity.rawFields);
-        let extraFields: Partial<UnitFieldsResult> &
-          Partial<GameObjectFieldsResult> = {};
-        if (
-          entity.objectType === ObjectType.UNIT ||
-          entity.objectType === ObjectType.PLAYER
-        ) {
-          extraFields = extractUnitFields(entry.fields, entity.rawFields);
-        } else if (entity.objectType === ObjectType.GAMEOBJECT) {
-          extraFields = extractGameObjectFields(entry.fields);
-        }
-        const allChanged = [
-          ...(objFields._changed || []),
-          ...((extraFields as any)._changed || []),
-        ];
-        const merged: Record<string, unknown> = {};
-        for (const key of allChanged) {
-          if (key in extraFields) merged[key] = (extraFields as any)[key];
-          else if (key in objFields) merged[key] = (objFields as any)[key];
-        }
-        for (const [k, v] of entry.fields) entity.rawFields.set(k, v);
-        merged["rawFields"] = entity.rawFields;
-        conn.entityStore.update(entry.guid, merged);
-        if (entry.guid === self) {
-          conn.control?.observeSelf({
-            target: extraFields.target as bigint | undefined,
-            unitFlags: extraFields.unitFlags as number | undefined,
-          });
-        }
-        break;
-      }
-      case "movement": {
-        conn.entityStore.setPosition(entry.guid, entry.position);
-        conn.combat?.observePosition(entry.guid, entry.position, entry.spline);
-        if (entry.guid === self) {
-          conn.control?.observeSelf({
-            position: entry.position,
-            movementFlags: entry.movementFlags,
-            runSpeed: entry.runSpeed,
-            runBackSpeed: entry.runBackSpeed,
-          });
-        }
-        break;
-      }
-      case "outOfRange": {
-        for (const guid of entry.guids) conn.entityStore.destroy(guid);
-        break;
-      }
-      case "nearObjects": {
-        break;
-      }
-    }
-  }
+  const entries = parseUpdateObject(r, conn.control?.currentMapId() ?? 0);
+  for (const entry of entries) applyEntry(conn, entry);
   conn.quests?.observeQuestLog();
+}
+
+function applyEntry(conn: WorldConn, entry: UpdateEntry): void {
+  switch (entry.type) {
+    case "create":
+      return applyCreate(conn, entry);
+    case "values":
+      return applyValues(conn, entry);
+    case "movement":
+      return applyMovement(conn, entry);
+    case "outOfRange":
+      for (const guid of entry.guids) conn.entityStore.destroy(guid);
+      return;
+    case "nearObjects":
+      return;
+  }
+}
+
+function typeFields(
+  objectType: ObjectType,
+  fields: Map<number, number>,
+  previous?: Map<number, number>,
+): TypeFields {
+  if (objectType === ObjectType.UNIT || objectType === ObjectType.PLAYER)
+    return extractUnitFields(fields, previous);
+  if (objectType === ObjectType.GAMEOBJECT)
+    return extractGameObjectFields(fields);
+  return {};
+}
+
+function applyCreate(conn: WorldConn, entry: Entry<"create">): void {
+  const { guid, objectType, fields, position } = entry;
+  const { _changed: _o, ...object } = extractObjectFields(fields);
+  const { _changed: _t, ...extra } = typeFields(objectType, fields);
+  const name = lookupCachedName(conn, guid, objectType, object.entry);
+  conn.entityStore.create(guid, objectType, {
+    ...object,
+    ...extra,
+    ...(name ? { name } : {}),
+    ...(position ? { position } : {}),
+    rawFields: new Map(fields),
+    createComplete: true,
+  });
+  const self = selfGuid(conn);
+  const created = guid === self ? conn.entityStore.get(self) : undefined;
+  if (created) conn.quests?.observeSelfCreate(created);
+  if (position) conn.combat?.observePosition(guid, position, entry.spline);
+  if (!name) queryEntityName(conn, guid, objectType, object.entry);
+  if (guid !== self && (entry.updateFlags & UpdateFlag.SELF) === 0) return;
+  conn.control?.observeSelf({
+    position,
+    movementFlags: entry.movementFlags,
+    runSpeed: entry.runSpeed,
+    runBackSpeed: entry.runBackSpeed,
+    target: extra.target,
+    unitFlags: extra.unitFlags,
+  });
+}
+
+function applyValues(conn: WorldConn, entry: Entry<"values">): void {
+  const entity = conn.entityStore.get(entry.guid);
+  if (!entity) return;
+  const object = extractObjectFields(entry.fields, entity.rawFields);
+  const extra = typeFields(entity.objectType, entry.fields, entity.rawFields);
+  const changed = new Set([...object._changed, ...(extra._changed ?? [])]);
+  const merged = Object.fromEntries(
+    Object.entries({ ...object, ...extra }).filter(([key]) => changed.has(key)),
+  );
+  for (const [k, v] of entry.fields) entity.rawFields.set(k, v);
+  conn.entityStore.update(entry.guid, {
+    ...merged,
+    rawFields: entity.rawFields,
+  });
+  if (entry.guid === selfGuid(conn))
+    conn.control?.observeSelf({
+      target: extra.target,
+      unitFlags: extra.unitFlags,
+    });
+}
+
+function applyMovement(conn: WorldConn, entry: Entry<"movement">): void {
+  conn.entityStore.setPosition(entry.guid, entry.position);
+  conn.combat?.observePosition(entry.guid, entry.position, entry.spline);
+  if (entry.guid !== selfGuid(conn)) return;
+  conn.control?.observeSelf({
+    position: entry.position,
+    movementFlags: entry.movementFlags,
+    runSpeed: entry.runSpeed,
+    runBackSpeed: entry.runBackSpeed,
+  });
 }
 
 export function handleCompressedUpdateObject(
