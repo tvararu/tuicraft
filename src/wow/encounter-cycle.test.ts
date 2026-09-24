@@ -573,6 +573,27 @@ test("stop alone ends the running fight", async () => {
   });
 });
 
+test("a stop during loot_done emits nothing after stopped", async () => {
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
+    loot: fakeLoot({ items: [], money: 0 }),
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const events: string[] = [];
+  runtime.onEvent((event) => {
+    events.push(event.type);
+    if (event.type === "loot_done") runtime.stop("halt");
+  });
+  await runtime.start({ guids: [1n, 2n], instruction: "fight" });
+  expect(events).toEqual(["started", "loot_done", "stopped"]);
+  expect(runtime.snapshot()).toMatchObject({
+    currentIndex: 0,
+    stopCause: "halt",
+  });
+});
+
 test("stops at max starts with cause", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});

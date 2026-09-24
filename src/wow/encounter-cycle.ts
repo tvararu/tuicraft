@@ -175,6 +175,7 @@ export class EncounterCycleRuntime {
       const record = queue[this.state.currentIndex]!;
       const failed = await this.engage(record, signal);
       if (failed) return this.stop(failed.cause, failed.detail);
+      signal.throwIfAborted();
       this.state.currentIndex++;
       this.emit("target_done");
     }
