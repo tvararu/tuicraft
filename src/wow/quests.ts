@@ -5,11 +5,9 @@ import {
   UNIT_FIELDS,
 } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
-import type { PacketReader } from "wow/protocol/packet";
 import {
   buildGossipHello,
   buildGossipSelectOption,
-  parseGossipMessage,
   type GossipMessage,
 } from "wow/protocol/gossip";
 import {
@@ -18,12 +16,6 @@ import {
   buildQuestgiverCompleteQuest,
   buildQuestgiverRequestReward,
   buildQuestgiverChooseReward,
-  parseQuestgiverStatus,
-  parseQuestgiverQuestList,
-  parseQuestgiverQuestDetails,
-  parseQuestgiverRequestItems,
-  parseQuestgiverOfferReward,
-  parseQuestgiverQuestComplete,
   type QuestgiverStatus,
   type QuestgiverQuestList,
   type QuestgiverQuestDetails,
@@ -33,41 +25,13 @@ import {
 } from "wow/protocol/questgiver";
 import {
   buildQuestQuery,
-  parseQuestQueryResponse,
   type QuestQueryResponse,
 } from "wow/protocol/quest-query";
 import {
   buildQuestLogRemoveQuest,
-  parseQuestUpdateAddKill,
-  parseQuestUpdateAddItem,
-  parseQuestUpdateComplete,
-  parseQuestInvalid,
-  parseQuestFailed,
-  parseQuestUpdateFailed,
-  parseQuestUpdateFailedTimer,
   type QuestUpdateAddKill,
   type QuestUpdateAddItem,
 } from "wow/protocol/quest-log";
-
-export const QuestServerOpcode = {
-  SMSG_GOSSIP_MESSAGE: GameOpcode.SMSG_GOSSIP_MESSAGE,
-  SMSG_GOSSIP_COMPLETE: GameOpcode.SMSG_GOSSIP_COMPLETE,
-  SMSG_QUESTGIVER_STATUS: GameOpcode.SMSG_QUESTGIVER_STATUS,
-  SMSG_QUESTGIVER_QUEST_LIST: GameOpcode.SMSG_QUESTGIVER_QUEST_LIST,
-  SMSG_QUESTGIVER_QUEST_DETAILS: GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS,
-  SMSG_QUESTGIVER_REQUEST_ITEMS: GameOpcode.SMSG_QUESTGIVER_REQUEST_ITEMS,
-  SMSG_QUESTGIVER_OFFER_REWARD: GameOpcode.SMSG_QUESTGIVER_OFFER_REWARD,
-  SMSG_QUEST_QUERY_RESPONSE: GameOpcode.SMSG_QUEST_QUERY_RESPONSE,
-  SMSG_QUESTGIVER_QUEST_COMPLETE: GameOpcode.SMSG_QUESTGIVER_QUEST_COMPLETE,
-  SMSG_QUESTGIVER_QUEST_FAILED: GameOpcode.SMSG_QUESTGIVER_QUEST_FAILED,
-  SMSG_QUESTUPDATE_COMPLETE: GameOpcode.SMSG_QUESTUPDATE_COMPLETE,
-  SMSG_QUESTUPDATE_ADD_KILL: GameOpcode.SMSG_QUESTUPDATE_ADD_KILL,
-  SMSG_QUESTGIVER_QUEST_INVALID: GameOpcode.SMSG_QUESTGIVER_QUEST_INVALID,
-  SMSG_QUESTLOG_FULL: GameOpcode.SMSG_QUESTLOG_FULL,
-  SMSG_QUESTUPDATE_FAILED: GameOpcode.SMSG_QUESTUPDATE_FAILED,
-  SMSG_QUESTUPDATE_FAILEDTIMER: GameOpcode.SMSG_QUESTUPDATE_FAILEDTIMER,
-  SMSG_QUESTUPDATE_ADD_ITEM: GameOpcode.SMSG_QUESTUPDATE_ADD_ITEM,
-} as const;
 
 export type QuestLogSlot = {
   slot: number;
@@ -123,7 +87,6 @@ export type QuestQuery =
 
 export type QuestError = {
   kind:
-    | "packet"
     | "stale_dialog"
     | "invalid"
     | "log_full"
@@ -131,16 +94,16 @@ export type QuestError = {
     | "failed"
     | "timer_failed";
   at: number;
-  opcode?: number;
   questId?: number;
   reason?: number;
-  message?: string;
 };
 
-export type QuestProgress =
-  | { kind: "kill"; at: number; data: QuestUpdateAddKill }
-  | { kind: "item"; at: number; data: QuestUpdateAddItem }
-  | { kind: "complete"; at: number; questId: number };
+export type QuestProgressUpdate =
+  | { kind: "kill"; data: QuestUpdateAddKill }
+  | { kind: "item"; data: QuestUpdateAddItem }
+  | { kind: "complete"; questId: number };
+
+export type QuestProgress = QuestProgressUpdate & { at: number };
 
 export type QuestState = {
   dialog: QuestDialog | undefined;
@@ -182,31 +145,6 @@ export type QuestDeps = {
   selfGuid: () => bigint;
   getEntity: (guid: bigint) => Entity | undefined;
 };
-
-type QuestPacket =
-  | { kind: "dialog"; dialog: QuestDialog }
-  | { kind: "close" }
-  | { kind: "query"; data: QuestQueryResponse }
-  | { kind: "reward"; data: QuestgiverQuestComplete }
-  | { kind: "status"; data: QuestgiverStatus }
-  | {
-      kind: "progress";
-      data:
-        | Omit<Extract<QuestProgress, { kind: "kill" }>, "at">
-        | Omit<Extract<QuestProgress, { kind: "item" }>, "at">
-        | Omit<Extract<QuestProgress, { kind: "complete" }>, "at">;
-    }
-  | { kind: "error"; error: Omit<QuestError, "at"> };
-
-const packetOpcodes = new Set<number>(Object.values(QuestServerOpcode));
-const dialogOpcodes = new Set<number>([
-  QuestServerOpcode.SMSG_GOSSIP_MESSAGE,
-  QuestServerOpcode.SMSG_GOSSIP_COMPLETE,
-  QuestServerOpcode.SMSG_QUESTGIVER_QUEST_LIST,
-  QuestServerOpcode.SMSG_QUESTGIVER_QUEST_DETAILS,
-  QuestServerOpcode.SMSG_QUESTGIVER_REQUEST_ITEMS,
-  QuestServerOpcode.SMSG_QUESTGIVER_OFFER_REWARD,
-]);
 
 function field(entity: Entity | undefined, offset: number): number | undefined {
   return (
@@ -272,103 +210,6 @@ function sameSlot(a: QuestLogSlot, b: QuestLogSlot): boolean {
 function positiveId(id: number): void {
   if (!Number.isInteger(id) || id <= 0 || id > 0xffffffff)
     throw new Error("invalid_quest_id");
-}
-
-function empty(reader: PacketReader): void {
-  if (reader.remaining !== 0) throw new RangeError("Unexpected quest payload");
-}
-
-function decodeDialog(opcode: number, reader: PacketReader): QuestPacket {
-  switch (opcode) {
-    case QuestServerOpcode.SMSG_GOSSIP_MESSAGE:
-      return {
-        kind: "dialog",
-        dialog: { kind: "gossip", data: parseGossipMessage(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTGIVER_QUEST_LIST:
-      return {
-        kind: "dialog",
-        dialog: { kind: "list", data: parseQuestgiverQuestList(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTGIVER_QUEST_DETAILS:
-      return {
-        kind: "dialog",
-        dialog: { kind: "details", data: parseQuestgiverQuestDetails(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTGIVER_REQUEST_ITEMS:
-      return {
-        kind: "dialog",
-        dialog: {
-          kind: "requestItems",
-          data: parseQuestgiverRequestItems(reader),
-        },
-      };
-    case QuestServerOpcode.SMSG_QUESTGIVER_OFFER_REWARD:
-      return {
-        kind: "dialog",
-        dialog: { kind: "offer", data: parseQuestgiverOfferReward(reader) },
-      };
-    default:
-      empty(reader);
-      return { kind: "close" };
-  }
-}
-
-function decodeError(opcode: number, reader: PacketReader): QuestPacket {
-  switch (opcode) {
-    case QuestServerOpcode.SMSG_QUESTGIVER_QUEST_INVALID:
-      return {
-        kind: "error",
-        error: { kind: "invalid", ...parseQuestInvalid(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTGIVER_QUEST_FAILED:
-      return {
-        kind: "error",
-        error: { kind: "quest_failed", ...parseQuestFailed(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTUPDATE_FAILED:
-      return {
-        kind: "error",
-        error: { kind: "failed", ...parseQuestUpdateFailed(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTUPDATE_FAILEDTIMER:
-      return {
-        kind: "error",
-        error: { kind: "timer_failed", ...parseQuestUpdateFailedTimer(reader) },
-      };
-    default:
-      empty(reader);
-      return { kind: "error", error: { kind: "log_full" } };
-  }
-}
-
-function decodePacket(opcode: number, reader: PacketReader): QuestPacket {
-  if (dialogOpcodes.has(opcode)) return decodeDialog(opcode, reader);
-  switch (opcode) {
-    case QuestServerOpcode.SMSG_QUEST_QUERY_RESPONSE:
-      return { kind: "query", data: parseQuestQueryResponse(reader) };
-    case QuestServerOpcode.SMSG_QUESTGIVER_QUEST_COMPLETE:
-      return { kind: "reward", data: parseQuestgiverQuestComplete(reader) };
-    case QuestServerOpcode.SMSG_QUESTGIVER_STATUS:
-      return { kind: "status", data: parseQuestgiverStatus(reader) };
-    case QuestServerOpcode.SMSG_QUESTUPDATE_ADD_KILL:
-      return {
-        kind: "progress",
-        data: { kind: "kill", data: parseQuestUpdateAddKill(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTUPDATE_ADD_ITEM:
-      return {
-        kind: "progress",
-        data: { kind: "item", data: parseQuestUpdateAddItem(reader) },
-      };
-    case QuestServerOpcode.SMSG_QUESTUPDATE_COMPLETE:
-      return {
-        kind: "progress",
-        data: { kind: "complete", ...parseQuestUpdateComplete(reader) },
-      };
-    default:
-      return decodeError(opcode, reader);
-  }
 }
 
 export class QuestRuntime {
@@ -579,26 +420,6 @@ export class QuestRuntime {
     this.emit("intent", "request");
   }
 
-  handlePacket(opcode: number, reader: PacketReader): boolean {
-    if (this.disposed || !packetOpcodes.has(opcode)) return false;
-    let packet: QuestPacket;
-    try {
-      packet = decodePacket(opcode, reader);
-    } catch (error) {
-      if (dialogOpcodes.has(opcode)) this.dialog = undefined;
-      this.lastError = {
-        kind: "packet",
-        opcode,
-        at: this.deps.now(),
-        message: error instanceof Error ? error.message : String(error),
-      };
-      this.emit("error", "packet");
-      return true;
-    }
-    this.receive(packet);
-    return true;
-  }
-
   observeSelfCreate(entity: Entity): void {
     if (
       this.disposed ||
@@ -708,42 +529,8 @@ export class QuestRuntime {
     throw new Error("quest_not_offered");
   }
 
-  private receive(packet: QuestPacket): void {
-    switch (packet.kind) {
-      case "dialog":
-        this.receiveDialog(packet.dialog);
-        return;
-      case "close":
-        this.closeDialog();
-        return;
-      case "query":
-        this.queries.set(packet.data.questId, {
-          questId: packet.data.questId,
-          status: "known",
-          receivedAt: this.deps.now(),
-          data: packet.data,
-        });
-        this.emit("query", "packet", packet.data.questId);
-        return;
-      case "reward":
-        this.lastReward = { ...packet.data, at: this.deps.now() };
-        this.resolve("chooseReward", packet.data.questId);
-        this.emit("rewarded", "packet", packet.data.questId);
-        return;
-      case "status":
-        this.lastStatus = packet.data;
-        this.emit("status", "packet");
-        return;
-      case "progress":
-        this.receiveProgress(packet.data);
-        return;
-      case "error":
-        this.receiveError(packet.error);
-        return;
-    }
-  }
-
-  private receiveDialog(dialog: QuestDialog): void {
+  openDialog(dialog: QuestDialog): void {
+    if (this.disposed) return;
     const expected = this.pending;
     const wrongQuest =
       expected?.questId !== undefined &&
@@ -767,7 +554,8 @@ export class QuestRuntime {
     );
   }
 
-  private closeDialog(): void {
+  closeDialog(): void {
+    if (this.disposed) return;
     this.dialog = undefined;
     this.giver = undefined;
     if (this.pending?.action !== "abandon") {
@@ -800,9 +588,32 @@ export class QuestRuntime {
     }
   }
 
-  private receiveProgress(
-    progress: Extract<QuestPacket, { kind: "progress" }>["data"],
-  ): void {
+  receiveQuery(data: QuestQueryResponse): void {
+    if (this.disposed) return;
+    this.queries.set(data.questId, {
+      questId: data.questId,
+      status: "known",
+      receivedAt: this.deps.now(),
+      data,
+    });
+    this.emit("query", "packet", data.questId);
+  }
+
+  receiveReward(data: QuestgiverQuestComplete): void {
+    if (this.disposed) return;
+    this.lastReward = { ...data, at: this.deps.now() };
+    this.resolve("chooseReward", data.questId);
+    this.emit("rewarded", "packet", data.questId);
+  }
+
+  receiveStatus(data: QuestgiverStatus): void {
+    if (this.disposed) return;
+    this.lastStatus = data;
+    this.emit("status", "packet");
+  }
+
+  receiveProgress(progress: QuestProgressUpdate): void {
+    if (this.disposed) return;
     this.lastProgress = { ...progress, at: this.deps.now() };
     let questId: number | undefined;
     if (progress.kind === "kill") questId = progress.data.questId;
@@ -814,7 +625,8 @@ export class QuestRuntime {
     );
   }
 
-  private receiveError(error: Omit<QuestError, "at">): void {
+  receiveError(error: Omit<QuestError, "at">): void {
+    if (this.disposed) return;
     this.lastError = { ...error, at: this.deps.now() };
     if (
       this.pending?.action !== "cancel" &&

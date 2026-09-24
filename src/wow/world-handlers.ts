@@ -64,6 +64,26 @@ import {
   parseSupersededSpell,
 } from "wow/protocol/spell";
 import { parseMonsterMove } from "wow/protocol/monster-move";
+import { parseGossipMessage } from "wow/protocol/gossip";
+import {
+  parseQuestgiverOfferReward,
+  parseQuestgiverQuestComplete,
+  parseQuestgiverQuestDetails,
+  parseQuestgiverQuestList,
+  parseQuestgiverRequestItems,
+  parseQuestgiverStatus,
+} from "wow/protocol/questgiver";
+import { parseQuestQueryResponse } from "wow/protocol/quest-query";
+import {
+  parseQuestFailed,
+  parseQuestInvalid,
+  parseQuestUpdateAddItem,
+  parseQuestUpdateAddKill,
+  parseQuestUpdateComplete,
+  parseQuestUpdateFailed,
+  parseQuestUpdateFailedTimer,
+} from "wow/protocol/quest-log";
+import type { QuestDialog } from "wow/quests";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -1060,5 +1080,78 @@ export function registerCombatHandlers(conn: WorldConn): void {
       parseMonsterMove(r),
       conn.control?.currentMapId() ?? 0,
     ),
+  );
+}
+
+export function registerQuestHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  const dialog = (opcode: number, read: (r: PacketReader) => QuestDialog) =>
+    on(opcode, (r) => conn.quests?.openDialog(read(r)));
+  dialog(GameOpcode.SMSG_GOSSIP_MESSAGE, (r) => ({
+    kind: "gossip",
+    data: parseGossipMessage(r),
+  }));
+  dialog(GameOpcode.SMSG_QUESTGIVER_QUEST_LIST, (r) => ({
+    kind: "list",
+    data: parseQuestgiverQuestList(r),
+  }));
+  dialog(GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS, (r) => ({
+    kind: "details",
+    data: parseQuestgiverQuestDetails(r),
+  }));
+  dialog(GameOpcode.SMSG_QUESTGIVER_REQUEST_ITEMS, (r) => ({
+    kind: "requestItems",
+    data: parseQuestgiverRequestItems(r),
+  }));
+  dialog(GameOpcode.SMSG_QUESTGIVER_OFFER_REWARD, (r) => ({
+    kind: "offer",
+    data: parseQuestgiverOfferReward(r),
+  }));
+  on(GameOpcode.SMSG_GOSSIP_COMPLETE, () => conn.quests?.closeDialog());
+  on(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, (r) =>
+    conn.quests?.receiveQuery(parseQuestQueryResponse(r)),
+  );
+  on(GameOpcode.SMSG_QUESTGIVER_QUEST_COMPLETE, (r) =>
+    conn.quests?.receiveReward(parseQuestgiverQuestComplete(r)),
+  );
+  on(GameOpcode.SMSG_QUESTGIVER_STATUS, (r) =>
+    conn.quests?.receiveStatus(parseQuestgiverStatus(r)),
+  );
+  on(GameOpcode.SMSG_QUESTUPDATE_ADD_KILL, (r) =>
+    conn.quests?.receiveProgress({
+      kind: "kill",
+      data: parseQuestUpdateAddKill(r),
+    }),
+  );
+  on(GameOpcode.SMSG_QUESTUPDATE_ADD_ITEM, (r) =>
+    conn.quests?.receiveProgress({
+      kind: "item",
+      data: parseQuestUpdateAddItem(r),
+    }),
+  );
+  on(GameOpcode.SMSG_QUESTUPDATE_COMPLETE, (r) =>
+    conn.quests?.receiveProgress({
+      kind: "complete",
+      ...parseQuestUpdateComplete(r),
+    }),
+  );
+  on(GameOpcode.SMSG_QUESTGIVER_QUEST_INVALID, (r) =>
+    conn.quests?.receiveError({ kind: "invalid", ...parseQuestInvalid(r) }),
+  );
+  on(GameOpcode.SMSG_QUESTGIVER_QUEST_FAILED, (r) =>
+    conn.quests?.receiveError({ kind: "quest_failed", ...parseQuestFailed(r) }),
+  );
+  on(GameOpcode.SMSG_QUESTUPDATE_FAILED, (r) =>
+    conn.quests?.receiveError({ kind: "failed", ...parseQuestUpdateFailed(r) }),
+  );
+  on(GameOpcode.SMSG_QUESTUPDATE_FAILEDTIMER, (r) =>
+    conn.quests?.receiveError({
+      kind: "timer_failed",
+      ...parseQuestUpdateFailedTimer(r),
+    }),
+  );
+  on(GameOpcode.SMSG_QUESTLOG_FULL, () =>
+    conn.quests?.receiveError({ kind: "log_full" }),
   );
 }

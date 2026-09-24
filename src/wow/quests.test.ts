@@ -7,12 +7,10 @@ import {
 } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import {
-  QuestRuntime,
-  QuestServerOpcode,
-  readQuestLog,
-  type QuestEvent,
-} from "wow/quests";
+import { QuestRuntime, readQuestLog, type QuestEvent } from "wow/quests";
+import { OpcodeDispatch } from "wow/protocol/world";
+import { registerQuestHandlers } from "wow/world-handlers";
+import type { WorldConn } from "wow/client";
 
 const self = 1n;
 const giver = 2n;
@@ -48,7 +46,9 @@ function setup() {
 }
 
 function packet(runtime: QuestRuntime, opcode: number, data: Uint8Array): void {
-  runtime.handlePacket(opcode, new PacketReader(data));
+  const dispatch = new OpcodeDispatch();
+  registerQuestHandlers({ dispatch, quests: runtime } as unknown as WorldConn);
+  dispatch.handle(opcode, new PacketReader(data));
 }
 
 function menu(guid = giver, id = questId): Uint8Array {
@@ -355,7 +355,7 @@ describe("quest packet and lifecycle failures", () => {
     packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
     expect(runtime.snapshot().dialog).toBeUndefined();
     expect(() => runtime.talk(3n)).toThrow("quest_reply_unanswered");
-    packet(runtime, QuestServerOpcode.SMSG_QUESTGIVER_QUEST_INVALID, words(7));
+    packet(runtime, GameOpcode.SMSG_QUESTGIVER_QUEST_INVALID, words(7));
     packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
     expect(runtime.snapshot().dialog).toBeUndefined();
     expect(() => runtime.talk(3n)).toThrow("quest_reply_unanswered");
@@ -464,31 +464,16 @@ describe("quest packet and lifecycle failures", () => {
     expect(events.some((event) => event.type === "intent")).toBe(false);
   });
 
-  test("malformed replacement invalidates the old menu, records error and permits later packets", () => {
-    const { runtime } = setup();
-    show(runtime, "details");
-    packet(
-      runtime,
-      GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS,
-      new Uint8Array([1]),
-    );
-    expect(runtime.snapshot().lastError?.kind).toBe("packet");
-    expect(() => runtime.accept()).toThrow("quest_details_not_open");
-    packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
-    runtime.selectQuest(questId);
-    expect(runtime.snapshot().lastIntent?.action).toBe("selectQuest");
-  });
-
   test("server invalid and quest-log-full replies expose errors, never acceptance", () => {
     const { runtime, events } = setup();
     show(runtime, "details");
     runtime.accept();
-    packet(runtime, QuestServerOpcode.SMSG_QUESTGIVER_QUEST_INVALID, words(7));
+    packet(runtime, GameOpcode.SMSG_QUESTGIVER_QUEST_INVALID, words(7));
     expect(runtime.snapshot().lastError).toMatchObject({
       kind: "invalid",
       reason: 7,
     });
-    packet(runtime, QuestServerOpcode.SMSG_QUESTLOG_FULL, new Uint8Array());
+    packet(runtime, GameOpcode.SMSG_QUESTLOG_FULL, new Uint8Array());
     expect(runtime.snapshot().lastError?.kind).toBe("log_full");
     expect(events.some((event) => event.type === "accepted")).toBe(false);
   });
@@ -503,11 +488,7 @@ describe("quest packet and lifecycle failures", () => {
       kind: "kill",
       data: { npcOrGoId: -321, currentCount: 1, requiredCount: 3 },
     });
-    packet(
-      runtime,
-      QuestServerOpcode.SMSG_QUESTUPDATE_ADD_ITEM,
-      new Uint8Array(),
-    );
+    packet(runtime, GameOpcode.SMSG_QUESTUPDATE_ADD_ITEM, new Uint8Array());
     expect(runtime.snapshot().lastProgress).toMatchObject({
       kind: "item",
       data: { kind: "notification" },

@@ -91,12 +91,7 @@ import {
   type RecoveryState,
   type RecoveryEvent,
 } from "wow/recovery";
-import {
-  QuestRuntime,
-  QuestServerOpcode,
-  type QuestState,
-  type QuestEvent,
-} from "wow/quests";
+import { QuestRuntime, type QuestState, type QuestEvent } from "wow/quests";
 import {
   RewardsRuntime,
   type RewardsState,
@@ -155,6 +150,7 @@ import {
   handleGuildInvitePacket,
   registerMovementHandlers,
   registerCombatHandlers,
+  registerQuestHandlers,
   selfGuid,
 } from "wow/world-handlers";
 
@@ -766,10 +762,6 @@ export function worldSession(
     conn.dispatch.on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
       recovery.handleResurrectRequest(r),
     );
-    for (const opcode of Object.values(QuestServerOpcode))
-      conn.dispatch.on(opcode, (r) => {
-        quests.handlePacket(opcode, r);
-      });
     conn.dispatch.on(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
       rewards.handleLootResponse(r),
     );
@@ -989,6 +981,7 @@ export function worldSession(
 
     registerMovementHandlers(conn);
     registerCombatHandlers(conn);
+    registerQuestHandlers(conn);
 
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;
