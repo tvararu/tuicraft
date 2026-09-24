@@ -19,8 +19,13 @@ import {
   type JsonValue,
 } from "cli/send-output";
 import { access } from "node:fs/promises";
+import {
+  isInspection,
+  inspectionLine,
+  requestLine,
+  type Inspection,
+} from "cli/request";
 import { messageOf } from "lib/errors";
-import { formatGuid } from "ui/format";
 import { socketPath } from "lib/paths";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
@@ -132,6 +137,15 @@ function printStatus(command: string, lines: string[], data: JsonValue): void {
   }
 }
 
+async function printInspection(action: Inspection): Promise<void> {
+  const summary =
+    !action.json &&
+    ["cycling", "recovery", "inventory", "loot"].includes(action.mode);
+  const line = inspectionLine(summary ? { ...action, json: true } : action);
+  const lines = await sendToSocket(line);
+  if (summary) printHumanInspection(action.mode, lines);
+  else printReply(lines, "json", true);
+}
 async function printSendReply(
   lines: string[],
   slash: boolean,
@@ -314,56 +328,6 @@ async function main() {
       printReply(lines, "json");
       break;
     }
-    case "control": {
-      await ensureDaemon();
-      const cmd = action.json ? "CONTROL_JSON" : "CONTROL";
-      const lines = await sendToSocket(cmd);
-      printReply(lines, "json");
-      break;
-    }
-    case "move": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`MOVE ${action.direction} ${action.durationMs}`),
-      );
-      break;
-    }
-    case "face": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(`FACE ${action.orientation}`));
-      break;
-    }
-    case "face_guid": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`FACE_GUID ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "walk_toward": {
-      await ensureDaemon();
-      const destination =
-        action.target.kind === "guid"
-          ? `${formatGuid(action.target.guid)}`
-          : `${action.target.x} ${action.target.y} ${action.target.z}`;
-      const lines = await sendToSocket(
-        `WALK_TOWARD ${action.yards} ${destination}`,
-      );
-      printWalkReply(lines);
-      break;
-    }
-    case "target": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`TARGET ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "halt": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket("HALT"));
-      break;
-    }
     case "nearby": {
       await ensureDaemon();
       const base = action.json ? "NEARBY_JSON" : "NEARBY";
@@ -372,155 +336,9 @@ async function main() {
       printReply(lines, "nearby");
       break;
     }
-    case "combat":
-    case "spells":
-    case "tactics":
-    case "cycling":
-    case "navigation":
-    case "recovery":
-    case "quests":
-    case "inventory":
-    case "loot": {
+    case "walk_toward": {
       await ensureDaemon();
-      const humanSummary =
-        !action.json &&
-        ["cycling", "recovery", "inventory", "loot"].includes(action.mode);
-      const verb = `${action.mode.toUpperCase()}${action.json || humanSummary ? "_JSON" : ""}`;
-      const lines = await sendToSocket(verb);
-      if (humanSummary) printHumanInspection(action.mode, lines);
-      else printReply(lines, "json", true);
-      break;
-    }
-    case "cast": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`CAST ${action.spellId} ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "attack": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`ATTACK ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "cancel_cast": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket("CANCEL_CAST"));
-      break;
-    }
-    case "stop_attack": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket("STOP_ATTACK"));
-      break;
-    }
-    case "fight": {
-      await ensureDaemon();
-      const framingPart =
-        action.framing && action.framing !== "none"
-          ? `--framing ${action.framing} `
-          : "";
-      printControlReply(
-        await sendToSocket(
-          `FIGHT ${framingPart}${formatGuid(action.guid)} ${action.instruction}`,
-        ),
-      );
-      break;
-    }
-    case "cycle": {
-      await ensureDaemon();
-      const guidsPart = action.guids.map(formatGuid).join(" ");
-      printControlReply(
-        await sendToSocket(
-          `CYCLE ${guidsPart}${action.maxStarts ? ` --max ${action.maxStarts}` : ""} --instruction ${action.instruction}`,
-        ),
-      );
-      break;
-    }
-    case "open_loot": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`OPEN_LOOT ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "take_loot": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(`TAKE_LOOT ${action.slot}`));
-      break;
-    }
-    case "take_money":
-    case "release_loot": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(action.mode.toUpperCase()));
-      break;
-    }
-    case "talk": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(`TALK ${formatGuid(action.guid)}`));
-      break;
-    }
-    case "query_quest":
-    case "select_quest":
-    case "complete_quest": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`${action.mode.toUpperCase()} ${action.questId}`),
-      );
-      break;
-    }
-    case "select_option": {
-      await ensureDaemon();
-      const code = JSON.stringify(action.code ?? null);
-      printControlReply(
-        await sendToSocket(`SELECT_OPTION ${action.optionId} ${code}`),
-      );
-      break;
-    }
-    case "choose_reward": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(`CHOOSE_REWARD ${action.index}`));
-      break;
-    }
-    case "abandon_quest": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(`ABANDON_QUEST ${action.slot}`));
-      break;
-    }
-    case "accept_quest":
-    case "request_reward":
-    case "cancel_interaction": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(action.mode.toUpperCase()));
-      break;
-    }
-    case "query_corpse":
-    case "release_spirit":
-    case "reclaim_corpse": {
-      await ensureDaemon();
-      printControlReply(await sendToSocket(action.mode.toUpperCase()));
-      break;
-    }
-    case "spirit_healer": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`SPIRIT_HEALER ${formatGuid(action.guid)}`),
-      );
-      break;
-    }
-    case "resurrect": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`RESURRECT ${action.accept ? "accept" : "decline"}`),
-      );
-      break;
-    }
-    case "goto": {
-      await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`GOTO ${action.x} ${action.y} ${action.z}`),
-      );
+      printWalkReply(await sendToSocket(requestLine(action)));
       break;
     }
     case "skill": {
@@ -536,6 +354,11 @@ async function main() {
         console.log("No session log found.");
       }
       break;
+    }
+    default: {
+      await ensureDaemon();
+      if (isInspection(action)) await printInspection(action);
+      else printControlReply(await sendToSocket(requestLine(action)));
     }
   }
 }
