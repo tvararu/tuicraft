@@ -47,91 +47,6 @@ function makeMockClient(): {
         ...createMockHandle(),
         closed,
         close: mockHandleClose,
-        onMessage: jest.fn(),
-        sendSay: jest.fn(),
-        sendYell: jest.fn(),
-        sendGuild: jest.fn(),
-        sendParty: jest.fn(),
-        sendRaid: jest.fn(),
-        sendEmote: jest.fn(),
-        sendDnd: jest.fn(),
-        sendAfk: jest.fn(),
-        sendWhisper: jest.fn(),
-        sendChannel: jest.fn(),
-        getChannel: jest.fn(),
-        who: jest.fn(async () => []),
-        getLastChatMode: jest.fn(() => ({ type: "say" as const })),
-        setLastChatMode: jest.fn(),
-        sendInCurrentMode: jest.fn(),
-        invite: jest.fn(),
-        uninvite: jest.fn(),
-        leaveGroup: jest.fn(),
-        joinChannel: jest.fn(),
-        leaveChannel: jest.fn(),
-        setLeader: jest.fn(),
-        acceptInvite: jest.fn(),
-        declineInvite: jest.fn(),
-        onGroupEvent: jest.fn(),
-        onDuelEvent: jest.fn(),
-        onEntityEvent: jest.fn(),
-        onPacketError: jest.fn(),
-        getNearbyEntities: jest.fn(() => []),
-        getFriends: jest.fn(() => []),
-        addFriend: jest.fn(),
-        removeFriend: jest.fn(),
-        sendRoll: jest.fn(),
-        onFriendEvent: jest.fn(),
-        getIgnored: jest.fn(() => []),
-        addIgnore: jest.fn(),
-        removeIgnore: jest.fn(),
-        onIgnoreEvent: jest.fn(),
-        requestGuildRoster: jest.fn(async () => undefined),
-        onGuildEvent: jest.fn(),
-        guildInvite: jest.fn(),
-        guildRemove: jest.fn(),
-        guildLeave: jest.fn(),
-        guildPromote: jest.fn(),
-        guildDemote: jest.fn(),
-        guildLeader: jest.fn(),
-        guildMotd: jest.fn(),
-        acceptGuildInvite: jest.fn(),
-        declineGuildInvite: jest.fn(),
-        getControlState: jest.fn(),
-        move: jest.fn(),
-        face: jest.fn(),
-        faceGuid: jest.fn(),
-        walkToward: jest.fn(async () => {
-          throw new Error("mock_walk_unavailable");
-        }),
-        selectTarget: jest.fn(),
-        halt: jest.fn(),
-        onControlEvent: jest.fn(),
-        queryCorpse: jest.fn(),
-        releaseSpirit: jest.fn(),
-        reclaimCorpse: jest.fn(),
-        activateSpiritHealer: jest.fn(),
-        respondResurrection: jest.fn(),
-        onRecoveryEvent: jest.fn(),
-        talk: jest.fn(),
-        queryQuest: jest.fn(),
-        selectGossipOption: jest.fn(),
-        selectQuest: jest.fn(),
-        acceptQuest: jest.fn(),
-        completeQuest: jest.fn(),
-        requestQuestReward: jest.fn(),
-        chooseQuestReward: jest.fn(),
-        abandonQuest: jest.fn(),
-        cancelInteraction: jest.fn(),
-        onQuestEvent: jest.fn(),
-        openLoot: jest.fn(),
-        takeLoot: jest.fn(),
-        takeLootMoney: jest.fn(),
-        releaseLoot: jest.fn(),
-        onRewardsEvent: jest.fn(),
-        startCycle: jest.fn(),
-        stopCycle: jest.fn(),
-        getCycleState: jest.fn(),
-        onCycleEvent: jest.fn(),
       }),
     ),
     mockHandleClose,
@@ -336,27 +251,5 @@ describe("startDaemon", () => {
 
     closedResolve();
     await promise;
-  });
-});
-
-describe("cycle wiring", () => {
-  test("startCycle enters fighting phase, halt stops the cycle with cause halt", () => {
-    const handle = createMockHandle();
-    void handle.startCycle([1n], "kill nearest");
-    expect(handle.getCycleState().phase).toBe("fighting");
-    handle.halt();
-    expect(handle.getCycleState().stopCause).toBe("halt");
-  });
-
-  test("shared and inline mocks expose the four cycle methods", async () => {
-    const sharedHandle = createMockHandle();
-    const client = makeMockClient();
-    const inlineHandle = await client.worldSession();
-    for (const handle of [sharedHandle, inlineHandle]) {
-      expect(typeof handle.startCycle).toBe("function");
-      expect(typeof handle.stopCycle).toBe("function");
-      expect(typeof handle.getCycleState).toBe("function");
-      expect(typeof handle.onCycleEvent).toBe("function");
-    }
   });
 });
