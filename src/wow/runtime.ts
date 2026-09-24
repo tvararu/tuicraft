@@ -15,16 +15,10 @@ import {
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
-import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
+import { RecoveryRuntime } from "wow/recovery";
 import { QuestRuntime } from "wow/quests";
-import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
-import {
-  EncounterCycleRuntime,
-  type CycleTactics,
-  type CycleLoot,
-  type CycleRecovery,
-  type CycleControl,
-} from "wow/encounter-cycle";
+import { RewardsRuntime } from "wow/rewards";
+import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { sendPacket, selfGuid } from "wow/world-handlers";
 
@@ -166,51 +160,11 @@ export function createRuntimes(
   conn.quests = quests;
   const rewards = new RewardsRuntime(runtimeDeps);
   conn.rewards = rewards;
-  let cycleRecoveryListener: ((event: RecoveryEvent) => void) | undefined;
-  let cycleLootListener: ((event: RewardsEvent) => void) | undefined;
-  const cycleTactics: CycleTactics = {
-    start: (context, signal) =>
-      tactics.start(
-        { targetGuid: context.targetGuid, instruction: context.instruction },
-        signal,
-      ),
-    stop: (reason) => tactics.stop(reason),
-    lastOutcome: () => tactics.snapshot().lastOutcome,
-    selfDead: () => {
-      const life = recovery.snapshot().life;
-      return life === "dead" || life === "ghost";
-    },
-  };
-  const cycleLoot: CycleLoot = {
-    snapshot: () => rewards.snapshot(),
-    open: (guid) => rewards.open(guid),
-    take: (slot) => rewards.take(slot),
-    takeMoney: () => rewards.takeMoney(),
-    close: () => rewards.close(),
-    onEvent: (callback) => {
-      cycleLootListener = callback;
-    },
-  };
-  const cycleRecovery: CycleRecovery = {
-    snapshot: () => recovery.snapshot(),
-    releaseSpirit: () => recovery.releaseSpirit(),
-    queryCorpse: () => recovery.queryCorpse(),
-    reclaimCorpse: () => recovery.reclaimCorpse(),
-    respondResurrection: (accept) => recovery.respondResurrection(accept),
-    onEvent: (callback) => {
-      cycleRecoveryListener = callback;
-    },
-  };
-  const cycleControl: CycleControl = {
-    pose: () => control.snapshot().pose,
-    face: (orientation) => control.face(orientation),
-    move: (direction, durationMs) => control.move(direction, durationMs),
-  };
   const cycle = new EncounterCycleRuntime({
-    tactics: cycleTactics,
-    loot: cycleLoot,
-    recovery: cycleRecovery,
-    control: cycleControl,
+    tactics,
+    rewards,
+    recovery,
+    control,
     now: runtimeDeps.now,
   });
   control.onEvent((event) => {
@@ -225,11 +179,11 @@ export function createRuntimes(
       tactics.stop(`self_${event.state.life}`);
     }
     conn.onRecoveryEvent?.(event);
-    cycleRecoveryListener?.(event);
+    cycle.observeRecovery(event);
   });
   rewards.onEvent((event) => {
     conn.onRewardsEvent?.(event);
-    cycleLootListener?.(event);
+    cycle.observeRewards(event);
   });
   function observedTarget(guid: bigint): { x: number; y: number; z: number } {
     const entity = conn.entityStore.get(guid);
@@ -274,8 +228,6 @@ export function createRuntimes(
     combat.onEvent(undefined);
     tactics.onEvent(undefined);
     cycle.onEvent(undefined);
-    cycleRecoveryListener = undefined;
-    cycleLootListener = undefined;
     if (sendStop) rawHalt();
     disposed = true;
     control.dispose();

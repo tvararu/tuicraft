@@ -1,5 +1,5 @@
 import { test, expect, jest } from "bun:test";
-import { EncounterCycleRuntime } from "wow/encounter-cycle";
+import { EncounterCycleRuntime, type CycleDeps } from "wow/encounter-cycle";
 import type { RewardsEvent, RewardsState } from "wow/rewards";
 import type {
   RecoveryEvent,
@@ -9,25 +9,21 @@ import type {
 import type { ControlPose, MovementDirection } from "wow/control";
 import type { PlayerLife } from "wow/player-state";
 
-function fakeTactics(
-  outcomes: (string | Error)[],
-  config: { deadOn?: number } = {},
-) {
+function fakeTactics(outcomes: (string | Error)[]) {
   let calls = 0;
-  let lastCallIndex = -1;
   return {
     calls: () => calls,
     start: async (
       _ctx: { targetGuid: bigint; instruction: string },
-      _s: AbortSignal,
+      _s?: AbortSignal,
     ) => {
-      lastCallIndex = calls;
       const next = outcomes[calls++];
       if (next instanceof Error) throw next;
     },
     stop: (_r: string) => {},
-    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
-    selfDead: () => lastCallIndex === config.deadOn,
+    snapshot: () => ({
+      lastOutcome: { status: "completed" as const, reason: "killed" },
+    }),
   };
 }
 
@@ -126,7 +122,7 @@ function fakeLoot(config: {
     snapshot(): RewardsState {
       return state();
     },
-    open(_guid: bigint) {
+    open(_guid: bigint): RewardsState {
       phase = "opening";
       queueMicrotask(() => {
         if (config.releaseOnly) {
@@ -142,11 +138,12 @@ function fakeLoot(config: {
         phase = "open";
         emit("loot_opened");
       });
+      return state();
     },
-    take(slot: number) {
+    take(slot: number): RewardsState {
       if (config.takeError) throw new Error(config.takeError);
       takenSlots.push(slot);
-      if (config.deferTake) return;
+      if (config.deferTake) return state();
       remainingItems.delete(slot);
       queueMicrotask(() => {
         if (config.inventoryFull) {
@@ -168,19 +165,22 @@ function fakeLoot(config: {
         }
         emit("loot_removed");
       });
+      return state();
     },
-    takeMoney() {
+    takeMoney(): RewardsState {
       moneyRequested = true;
       windowMoney = 0;
       queueMicrotask(() => {
         coinage = config.coinageAfter;
         emit("loot_money_cleared");
       });
+      return state();
     },
-    close() {
+    close(): RewardsState {
       phase = "closing";
       closeRequested.resolve();
       if (!config.deferClose) queueMicrotask(acknowledgeClose);
+      return state();
     },
   };
 }
@@ -212,6 +212,7 @@ function fakeControl(
     faced: () => faced,
     moves: () => moves,
     pose: (): ControlPose | undefined => (pose ? { ...pose } : undefined),
+    snapshot: () => ({ pose: pose ? { ...pose } : undefined }),
     face(orientation: number) {
       faced.push(orientation);
       if (pose) pose = { ...pose, orientation };
@@ -402,13 +403,16 @@ function fakeRecovery(config: {
     releaseSpirit() {
       lifeIndex++;
       emit("life_observed");
+      return snapshot();
     },
     queryCorpse() {
       emit("corpse_observed");
+      return snapshot();
     },
     reclaimCorpse() {
       lifeIndex++;
       emit("life_observed");
+      return snapshot();
     },
     respondResurrection(accept: boolean) {
       answered = true;
@@ -417,8 +421,25 @@ function fakeRecovery(config: {
         lifeIndex++;
         emit("life_observed");
       }
+      return snapshot();
     },
   };
+}
+
+type Wired<E> = {
+  onEvent(callback: ((event: E) => void) | undefined): void;
+};
+
+function makeCycle(
+  deps: Omit<CycleDeps, "rewards"> & {
+    loot: CycleDeps["rewards"] & Wired<RewardsEvent>;
+    recovery: CycleDeps["recovery"] & Wired<RecoveryEvent>;
+  },
+): EncounterCycleRuntime {
+  const runtime = new EncounterCycleRuntime({ ...deps, rewards: deps.loot });
+  deps.loot.onEvent((event) => runtime.observeRewards(event));
+  deps.recovery.onEvent((event) => runtime.observeRecovery(event));
+  return runtime;
 }
 
 async function advanceUntilSettled(
@@ -442,10 +463,10 @@ async function advanceUntilSettled(
 test("lost target records cause and advances, loop stops at end of queue", async () => {
   const tactics = fakeTactics([new Error("target_unreachable")]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -473,25 +494,26 @@ test("blocked outcome skips without loot and advances", async () => {
   const tactics = {
     start: async (
       _ctx: { targetGuid: bigint; instruction: string },
-      _signal: AbortSignal,
+      _signal?: AbortSignal,
     ) => {
       starts++;
     },
     stop: (_reason: string) => {},
-    lastOutcome: () => ({ status: "blocked" as const, reason: "obstructed" }),
-    selfDead: () => false,
+    snapshot: () => ({
+      lastOutcome: { status: "blocked" as const, reason: "obstructed" },
+    }),
   };
   const loot = fakeLoot({});
   const openedGuids: bigint[] = [];
   const innerOpen = loot.open;
   loot.open = (guid) => {
     openedGuids.push(guid);
-    innerOpen(guid);
+    return innerOpen(guid);
   };
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -520,20 +542,19 @@ test("stop alone ends the running fight", async () => {
   const tactics = {
     start: (
       _ctx: { targetGuid: bigint; instruction: string },
-      signal: AbortSignal,
+      signal?: AbortSignal,
     ) => {
       fighting.resolve();
       const ended = Promise.withResolvers<void>();
-      signal.addEventListener("abort", () => ended.resolve(), { once: true });
+      signal?.addEventListener("abort", () => ended.resolve(), { once: true });
       return ended.promise;
     },
     stop: (reason: string) => {
       stops.push(reason);
     },
-    lastOutcome: () => undefined,
-    selfDead: () => false,
+    snapshot: () => ({ lastOutcome: undefined }),
   };
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot: fakeLoot({}),
     recovery: fakeRecovery({ life: ["alive"] }),
@@ -555,10 +576,10 @@ test("stop alone ends the running fight", async () => {
 test("stops at max starts with cause", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -576,10 +597,10 @@ test("stops at max starts with cause", async () => {
 test("empty queue and bad max throw", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -601,14 +622,15 @@ test("second start replaces the first", async () => {
       await gate;
     },
     stop: (_r: string) => {},
-    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
-    selfDead: () => false,
+    snapshot: () => ({
+      lastOutcome: { status: "completed" as const, reason: "killed" },
+    }),
   };
   const loot = fakeLoot({});
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics,
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -627,10 +649,10 @@ test("loot takes every slot plus money and records deltas", async () => {
     coinageBefore: 10,
     coinageAfter: 19,
   });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -652,10 +674,10 @@ test("empty offer closes and advances without stopping", async () => {
     coinageBefore: 5,
     coinageAfter: 5,
   });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -675,10 +697,10 @@ test("empty offer closes and advances without stopping", async () => {
 
 test("cycle waits for the loot release before completing", async () => {
   const loot = fakeLoot({ items: [4], deferClose: true });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -701,10 +723,10 @@ test("cycle waits for the loot release before completing", async () => {
 test("unanswered loot take stops rather than reporting success", async () => {
   jest.useFakeTimers();
   try {
-    const runtime = new EncounterCycleRuntime({
+    const runtime = makeCycle({
       tactics: fakeTactics([]),
       loot: fakeLoot({ items: [4], deferTake: true }),
-      recovery: fakeRecovery({ life: ["ghost"] }),
+      recovery: fakeRecovery({ life: ["alive"] }),
       control: fakeControl(),
       now: () => 0,
     });
@@ -727,10 +749,10 @@ test("second take waits for first confirmation instead of racing", async () => {
     order.push(`take:${slot}`);
     return innerTake(slot);
   };
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -745,10 +767,10 @@ test("second take waits for first confirmation instead of racing", async () => {
 
 test("denied offer stops with loot_denied cause", async () => {
   const loot = fakeLoot({ openError: 4 });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -761,10 +783,10 @@ test("denied offer stops with loot_denied cause", async () => {
 
 test("refused take stops with cause", async () => {
   const loot = fakeLoot({ items: [4], takeError: "loot slot refused" });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -775,10 +797,10 @@ test("refused take stops with cause", async () => {
 
 test("full inventory stops with loot_inventory_full", async () => {
   const loot = fakeLoot({ items: [4, 7], inventoryFull: true });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -788,10 +810,10 @@ test("full inventory stops with loot_inventory_full", async () => {
 
 test("release-only denial stops with reconnect cause", async () => {
   const loot = fakeLoot({ releaseOnly: true });
-  const runtime = new EncounterCycleRuntime({
+  const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -806,8 +828,8 @@ test("current resurrection offer is accepted and loop resumes", async () => {
     offer: true,
     life: ["ghost", "alive"],
   });
-  const runtime = new EncounterCycleRuntime({
-    tactics: fakeTactics([], { deadOn: 0 }),
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
     loot: fakeLoot({ items: [], money: 0 }),
     recovery,
     control: fakeControl(),
@@ -854,8 +876,8 @@ test("reclaim delay waits bounded then retries once", async () => {
         { atMs: 6000, delayMs: 6000 },
       ],
     });
-    const runtime = new EncounterCycleRuntime({
-      tactics: fakeTactics([], { deadOn: 0 }),
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
       loot: fakeLoot({ items: [], money: 0 }),
       recovery,
       control,
@@ -894,8 +916,8 @@ test("cross-map corpse stops with pose and range", async () => {
     },
     pose: () => control.pose(),
   });
-  const runtime = new EncounterCycleRuntime({
-    tactics: fakeTactics([], { deadOn: 0 }),
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
     loot: fakeLoot({ items: [], money: 0 }),
     recovery,
     control,
@@ -935,8 +957,8 @@ test("ground refusal retries once at fixed angle then stops", async () => {
       },
       pose: () => control.pose(),
     });
-    const runtime = new EncounterCycleRuntime({
-      tactics: fakeTactics([], { deadOn: 0 }),
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
       loot: fakeLoot({ items: [], money: 0 }),
       recovery,
       control,
@@ -978,8 +1000,8 @@ test("a refused corpse-run move stops with its reason", async () => {
       },
       pose: () => control.pose(),
     });
-    const runtime = new EncounterCycleRuntime({
-      tactics: fakeTactics([], { deadOn: 0 }),
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
       loot: fakeLoot({ items: [], money: 0 }),
       recovery,
       control,
@@ -1022,8 +1044,8 @@ test("reclaim restores life and resumes next target", async () => {
       },
       pose: () => control.pose(),
     });
-    const runtime = new EncounterCycleRuntime({
-      tactics: fakeTactics([], { deadOn: 0 }),
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
       loot: fakeLoot({ items: [], money: 0 }),
       recovery,
       control,
@@ -1051,13 +1073,14 @@ test("phase resets to fighting at the start of each target", async () => {
       seen.push(runtime.snapshot().phase);
     },
     stop: (_r: string) => {},
-    lastOutcome: () => ({ status: "completed" as const, reason: "killed" }),
-    selfDead: () => false,
+    snapshot: () => ({
+      lastOutcome: { status: "completed" as const, reason: "killed" },
+    }),
   };
-  runtime = new EncounterCycleRuntime({
+  runtime = makeCycle({
     tactics,
     loot: fakeLoot({ items: [], money: 0, coinageBefore: 5, coinageAfter: 5 }),
-    recovery: fakeRecovery({ life: ["ghost"] }),
+    recovery: fakeRecovery({ life: ["alive"] }),
     control: fakeControl(),
     now: () => 0,
   });
@@ -1101,10 +1124,14 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
       disposed: false,
     });
     let listener: ((event: RewardsEvent) => void) | undefined;
+    const closed = (): RewardsState => ({
+      ...emptyOpen(),
+      loot: { phase: "closed" },
+    });
     const loot = {
-      open(_guid: bigint) {},
-      take(_slot: number) {},
-      takeMoney() {},
+      open: (_guid: bigint) => closed(),
+      take: (_slot: number) => closed(),
+      takeMoney: () => closed(),
       close() {
         queueMicrotask(() =>
           listener?.({
@@ -1117,18 +1144,17 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
             },
           }),
         );
+        return closed();
       },
       onEvent(cb: ((event: RewardsEvent) => void) | undefined) {
         listener = cb;
       },
-      snapshot(): RewardsState {
-        return { ...emptyOpen(), loot: { phase: "closed" } };
-      },
+      snapshot: closed,
     };
-    const runtime = new EncounterCycleRuntime({
+    const runtime = makeCycle({
       tactics: fakeTactics([]),
       loot,
-      recovery: fakeRecovery({ life: ["ghost"] }),
+      recovery: fakeRecovery({ life: ["alive"] }),
       control: fakeControl(),
       now: () => 0,
     });
