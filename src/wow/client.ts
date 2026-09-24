@@ -1314,7 +1314,6 @@ export function worldSession(
         },
         stopCycle() {
           cycle.stop("manual_override");
-          tactics.stop("manual_override");
         },
         getCycleState() {
           return cycle.snapshot();

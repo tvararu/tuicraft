@@ -93,7 +93,7 @@ const POSE_MOVED_EPS = 0.05;
 export class EncounterCycleRuntime {
   private readonly deps: CycleDeps;
   private listener: ((event: CycleEvent) => void) | undefined;
-  private generation = 0;
+  private run: AbortController | undefined;
   private disposed = false;
   private state: CycleState = {
     active: false,
@@ -134,7 +134,9 @@ export class EncounterCycleRuntime {
     const maxStarts = args.maxStarts ?? DEFAULT_MAX_STARTS;
     if (!Number.isInteger(maxStarts) || maxStarts < 1)
       throw new Error("cycle_invalid_max");
-    const generation = ++this.generation;
+    this.run?.abort();
+    const run = new AbortController();
+    this.run = run;
     this.state = {
       active: true,
       phase: "fighting",
@@ -149,12 +151,13 @@ export class EncounterCycleRuntime {
       lastLoot: undefined,
     };
     this.emit("started");
-    await this.drive(generation);
+    await this.drive(run.signal);
   }
 
   stop(reason: string, detail?: Record<string, unknown>): void {
     if (!this.state.active) return;
-    this.generation++;
+    this.deps.tactics.stop(reason);
+    this.run?.abort();
     this.state = {
       ...this.state,
       active: false,
@@ -167,19 +170,17 @@ export class EncounterCycleRuntime {
 
   dispose(): void {
     this.disposed = true;
-    this.generation++;
+    this.run?.abort();
     this.listener = undefined;
   }
 
-  protected live(generation: number): boolean {
-    return (
-      !this.disposed && generation === this.generation && this.state.active
-    );
+  protected live(signal: AbortSignal): boolean {
+    return !this.disposed && !signal.aborted && this.state.active;
   }
 
-  private async drive(generation: number): Promise<void> {
+  private async drive(signal: AbortSignal): Promise<void> {
     while (
-      this.live(generation) &&
+      this.live(signal) &&
       this.state.currentIndex < this.state.queue.length
     ) {
       this.state.phase = "fighting";
@@ -188,24 +189,23 @@ export class EncounterCycleRuntime {
         return;
       }
       const record = this.state.queue[this.state.currentIndex]!;
-      const controller = new AbortController();
       this.state.startsUsed++;
       try {
         await this.deps.tactics.start(
           { targetGuid: record.guid, instruction: this.state.instruction },
-          controller.signal,
+          signal,
         );
       } catch (error) {
-        if (!this.live(generation)) return;
+        if (!this.live(signal)) return;
         record.status = "skipped";
         record.cause = error instanceof Error ? error.message : "fight_failed";
         record.outcome = this.deps.tactics.lastOutcome();
         this.advance();
         continue;
       }
-      if (!this.live(generation)) return;
+      if (!this.live(signal)) return;
       if (this.deps.tactics.selfDead()) {
-        await this.onDeath(generation);
+        await this.onDeath(signal);
         return;
       }
       const outcome = this.deps.tactics.lastOutcome();
@@ -218,28 +218,28 @@ export class EncounterCycleRuntime {
       }
       record.status = "done";
       record.outcome = outcome;
-      const proceed = await this.runLoot(record.guid, generation);
+      const proceed = await this.runLoot(record.guid, signal);
       if (!proceed) return;
-      if (!this.live(generation)) return;
+      if (!this.live(signal)) return;
       this.advance();
     }
-    if (this.live(generation)) this.stop("queue_exhausted");
+    if (this.live(signal)) this.stop("queue_exhausted");
   }
 
-  protected async onDeath(generation: number): Promise<void> {
+  protected async onDeath(signal: AbortSignal): Promise<void> {
     const record = this.state.queue[this.state.currentIndex]!;
     record.status = "skipped";
     record.cause = "died";
     this.state.phase = "recovering";
     this.emit("recovery");
-    const recovered = await this.recover(generation);
-    if (!recovered || !this.live(generation)) return;
+    const recovered = await this.recover(signal);
+    if (!recovered || !this.live(signal)) return;
     this.advance();
-    if (!this.live(generation)) return;
-    await this.drive(generation);
+    if (!this.live(signal)) return;
+    await this.drive(signal);
   }
 
-  private async recover(generation: number): Promise<boolean> {
+  private async recover(signal: AbortSignal): Promise<boolean> {
     const recovery = this.deps.recovery;
     const control = this.deps.control;
     const pending: RecoveryEvent[] = [];
@@ -285,7 +285,7 @@ export class EncounterCycleRuntime {
       if (offer?.response === "unanswered") {
         recovery.respondResurrection(true);
         const revived = await awaitLife("alive");
-        if (!this.live(generation)) return false;
+        if (!this.live(signal)) return false;
         if (!revived) {
           this.stop("resurrection_not_confirmed");
           return false;
@@ -297,7 +297,7 @@ export class EncounterCycleRuntime {
       if (state.life === "dead") {
         recovery.releaseSpirit();
         const released = await awaitLife("ghost");
-        if (!this.live(generation)) return false;
+        if (!this.live(signal)) return false;
         if (!released) {
           this.stop("ghost_not_confirmed");
           return false;
@@ -313,7 +313,7 @@ export class EncounterCycleRuntime {
         (event) => event.type === "corpse_observed",
         RECOVERY_WAIT_MS,
       );
-      if (!this.live(generation)) return false;
+      if (!this.live(signal)) return false;
       if (!queried) {
         this.stop("corpse_query_timeout");
         return false;
@@ -328,7 +328,7 @@ export class EncounterCycleRuntime {
         const remaining = state.reclaim.remainingMs;
         if (remaining === undefined || remaining <= 0) break;
         await this.sleep(remaining + RECLAIM_MARGIN_MS);
-        if (!this.live(generation)) return false;
+        if (!this.live(signal)) return false;
         state = recovery.snapshot();
       }
       if (
@@ -355,18 +355,13 @@ export class EncounterCycleRuntime {
           this.stop("corpse_unreachable", describePoseRange(state.reclaim));
           return false;
         }
-        let outcome = await this.travelLeg(
-          generation,
-          0,
-          corpsePosition,
-          before,
-        );
+        let outcome = await this.travelLeg(signal, 0, corpsePosition, before);
         if (!outcome) return false;
         let retried = false;
         if (!outcome.arrived && !outcome.moved) {
           retried = true;
           outcome = await this.travelLeg(
-            generation,
+            signal,
             DETOUR_RAD,
             corpsePosition,
             outcome.pose ?? before,
@@ -382,19 +377,19 @@ export class EncounterCycleRuntime {
 
       recovery.reclaimCorpse();
       const revived = await awaitLife("alive");
-      if (!this.live(generation)) return false;
+      if (!this.live(signal)) return false;
       if (!revived) {
         this.stop("reclaim_not_confirmed");
         return false;
       }
       return true;
     } finally {
-      if (this.live(generation)) recovery.onEvent(undefined);
+      if (this.live(signal)) recovery.onEvent(undefined);
     }
   }
 
   private async travelLeg(
-    generation: number,
+    signal: AbortSignal,
     bearingOffset: number,
     corpsePosition: { x: number; y: number; z: number },
     before: ControlPose,
@@ -416,7 +411,7 @@ export class EncounterCycleRuntime {
       this.deps.control.move("forward", LEG_LEASE_MS);
     } catch {}
     await this.sleep(LEG_LEASE_MS);
-    if (!this.live(generation)) return undefined;
+    if (!this.live(signal)) return undefined;
     const after = this.deps.control.pose();
     const reclaim = this.deps.recovery.snapshot().reclaim;
     return {
@@ -438,7 +433,7 @@ export class EncounterCycleRuntime {
     this.emit("target_done");
   }
 
-  private async runLoot(guid: bigint, generation: number): Promise<boolean> {
+  private async runLoot(guid: bigint, signal: AbortSignal): Promise<boolean> {
     const loot = this.deps.loot;
     this.state.phase = "looting";
     const pending: RewardsEvent[] = [];
@@ -472,7 +467,7 @@ export class EncounterCycleRuntime {
       let opened: RewardsEvent | undefined;
       while (!opened) {
         const event = await next(LOOT_SETTLE_MS);
-        if (!this.live(generation)) return false;
+        if (!this.live(signal)) return false;
         if (!event) {
           this.stop("loot_denied:timeout");
           return false;
@@ -501,7 +496,7 @@ export class EncounterCycleRuntime {
       const offeredSlots = offer.items.map((item) => item.slot);
       const offeredMoney = offer.money;
       if (offeredSlots.length === 0 && offeredMoney === 0) {
-        if (!(await this.closeLoot(next, generation))) return false;
+        if (!(await this.closeLoot(next, signal))) return false;
         this.recordLoot(guid, [], 0, coinageBefore, coinageBefore);
         return true;
       }
@@ -514,11 +509,7 @@ export class EncounterCycleRuntime {
           return false;
         }
         slotsTaken.push(slot);
-        const confirmed = await this.awaitTakeConfirmation(
-          next,
-          generation,
-          slot,
-        );
+        const confirmed = await this.awaitTakeConfirmation(next, signal, slot);
         if (confirmed === undefined) return false;
         if (!confirmed) {
           slotsTaken.pop();
@@ -536,13 +527,13 @@ export class EncounterCycleRuntime {
         moneyTaken = offeredMoney;
         const confirmed = await this.awaitTakeConfirmation(
           next,
-          generation,
+          signal,
           undefined,
         );
         if (confirmed === undefined) return false;
         if (!confirmed) moneyTaken = 0;
       }
-      if (!(await this.closeLoot(next, generation))) return false;
+      if (!(await this.closeLoot(next, signal))) return false;
       const coinageAfter = loot.snapshot().inventory.coinage;
       this.recordLoot(
         guid,
@@ -553,13 +544,13 @@ export class EncounterCycleRuntime {
       );
       return true;
     } finally {
-      if (this.live(generation)) loot.onEvent(undefined);
+      if (this.live(signal)) loot.onEvent(undefined);
     }
   }
 
   private async closeLoot(
     next: (timeoutMs: number) => Promise<RewardsEvent | undefined>,
-    generation: number,
+    signal: AbortSignal,
   ): Promise<boolean> {
     try {
       this.deps.loot.close();
@@ -567,9 +558,9 @@ export class EncounterCycleRuntime {
       this.stop(`loot_denied:${describeLootFailure(error)}`);
       return false;
     }
-    while (this.live(generation)) {
+    while (this.live(signal)) {
       const event = await next(LOOT_SETTLE_MS);
-      if (!this.live(generation)) return false;
+      if (!this.live(signal)) return false;
       if (!event) break;
       if (event.type !== "loot_release_observed") continue;
       if (
@@ -584,12 +575,12 @@ export class EncounterCycleRuntime {
   }
   private async awaitTakeConfirmation(
     next: (timeoutMs: number) => Promise<RewardsEvent | undefined>,
-    generation: number,
+    signal: AbortSignal,
     slot: number | undefined,
   ): Promise<boolean | undefined> {
-    while (this.live(generation)) {
+    while (this.live(signal)) {
       const event = await next(LOOT_SETTLE_MS);
-      if (!this.live(generation)) return undefined;
+      if (!this.live(signal)) return undefined;
       if (!event) {
         this.stop("loot_denied:timeout");
         return undefined;

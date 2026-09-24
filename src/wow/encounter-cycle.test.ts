@@ -512,6 +512,44 @@ test("blocked outcome skips without loot and advances", async () => {
   expect(state.stopCause).toBe("queue_exhausted");
 });
 
+test("stop alone ends the running fight", async () => {
+  const stops: string[] = [];
+  const fighting = Promise.withResolvers<void>();
+  const tactics = {
+    start: (
+      _ctx: { targetGuid: bigint; instruction: string },
+      signal: AbortSignal,
+    ) => {
+      fighting.resolve();
+      const ended = Promise.withResolvers<void>();
+      signal.addEventListener("abort", () => ended.resolve(), { once: true });
+      return ended.promise;
+    },
+    stop: (reason: string) => {
+      stops.push(reason);
+    },
+    lastOutcome: () => undefined,
+    selfDead: () => false,
+  };
+  const runtime = new EncounterCycleRuntime({
+    tactics,
+    loot: fakeLoot({}),
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const running = runtime.start({ guids: [1n, 2n], instruction: "fight" });
+  await fighting.promise;
+  runtime.stop("halt");
+  await running;
+  expect(stops).toEqual(["halt"]);
+  expect(runtime.snapshot()).toMatchObject({
+    active: false,
+    stopCause: "halt",
+    startsUsed: 1,
+  });
+});
+
 test("stops at max starts with cause", async () => {
   const tactics = fakeTactics([]);
   const loot = fakeLoot({});
