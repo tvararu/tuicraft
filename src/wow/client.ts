@@ -17,6 +17,7 @@ import {
 import {
   buildWorldAuthPacket,
   parseCharacterList,
+  CLASS_NAMES,
   OpcodeDispatch,
   AccumulatorBuffer,
   INCOMING_HEADER_SIZE,
@@ -362,6 +363,7 @@ export type WorldConn = {
   lastChatMode: ChatMode;
   onMessage?: (msg: ChatMessage) => void;
   selfName: string;
+  selfClass?: string;
   selfGuidLow: number;
   selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
@@ -466,6 +468,7 @@ async function selectCharacter(
   }
 
   conn.selfName = char.name;
+  conn.selfClass = CLASS_NAMES[char.classId];
   conn.selfGuidLow = char.guidLow;
   conn.selfGuidHigh = char.guidHigh;
   conn.guildId = char.guildId;

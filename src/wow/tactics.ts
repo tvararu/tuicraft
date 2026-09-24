@@ -45,6 +45,7 @@ export type TacticsDeps = {
   minIntervalMs?: number;
   requestTimeoutMs?: number;
   fault?: string;
+  characterClass?: () => string | undefined;
 };
 
 type TacticsRequest = {
@@ -53,6 +54,7 @@ type TacticsRequest = {
   instruction: string;
   sentAtMs: number;
   framing: FramingVariant;
+  characterClass?: string;
 };
 
 export type TacticsState = {
@@ -297,6 +299,7 @@ export class TacticsLoop {
       instruction: run.context.instruction,
       sentAtMs: this.now(),
       framing: run.context.framing,
+      characterClass: this.deps.characterClass?.(),
     });
     this.state.lastRequest = request;
     this.emit({ type: "request", runId: run.runId, ...request });

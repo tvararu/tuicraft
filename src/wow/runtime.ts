@@ -133,6 +133,7 @@ export function createRuntimes(
   const tactics = new TacticsLoop({
     apiKey: config.jevApiKey,
     fault: fault && faultMarker(fault),
+    characterClass: () => conn.selfClass,
     select,
     async prepare(_context, signal) {
       signal.throwIfAborted();

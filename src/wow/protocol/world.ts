@@ -19,6 +19,19 @@ export interface CharacterInfo {
   guildId: number;
 }
 
+export const CLASS_NAMES: Record<number, string> = {
+  1: "Warrior",
+  2: "Paladin",
+  3: "Hunter",
+  4: "Rogue",
+  5: "Priest",
+  6: "Death Knight",
+  7: "Shaman",
+  8: "Mage",
+  9: "Warlock",
+  11: "Druid",
+};
+
 const ADDON_ENTRIES = [
   { name: "Blizzard_AchievementUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_ArenaUI", flags: 0, modulusCrc: 0, urlCrc: 0 },

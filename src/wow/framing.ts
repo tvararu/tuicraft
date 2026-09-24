@@ -21,7 +21,7 @@ export function parseFramingVariant(value: string | undefined): FramingVariant {
 export function buildFraming(
   variant: FramingVariant,
   observation: Readonly<Record<string, unknown>>,
-  characterClass = "Priest",
+  characterClass = "character",
 ): string | undefined {
   if (variant === "none") return undefined;
   const rawSelf = observation["self"];

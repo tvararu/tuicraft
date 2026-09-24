@@ -486,6 +486,7 @@ test("minimal framing variant includes observed level in state.framing", async (
     ...request,
     observation: { self: { level: 10 } },
     framing: "minimal",
+    characterClass: "Priest",
   };
 
   await selectJevAction(req, {

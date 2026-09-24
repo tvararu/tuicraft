@@ -687,6 +687,25 @@ for (const [given, sent] of [
   });
 }
 
+test("the character class reaches select with each request", async () => {
+  const sent = Promise.withResolvers<string | undefined>();
+  const f = fixture({
+    characterClass: () => "Warrior",
+    select: async (req) => {
+      sent.resolve(req.characterClass);
+      return judgment();
+    },
+  });
+  const running = f.tactics.start({ ...context, framing: "minimal" });
+  try {
+    expect(await sent.promise).toBe("Warrior");
+    expect(f.tactics.snapshot().lastRequest?.characterClass).toBe("Warrior");
+  } finally {
+    f.tactics.dispose();
+    await running;
+  }
+});
+
 test("fault marker is recorded once, on started and in state", async () => {
   const f = fixture({ fault: "delay:2500ms" });
   const started = Promise.withResolvers<TacticsEvent>();

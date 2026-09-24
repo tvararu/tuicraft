@@ -28,20 +28,20 @@ describe("buildFraming", () => {
     expect(buildFraming("none", { self: { level: 10 } })).toBeUndefined();
   });
 
-  test("builds minimal framing with observed level and default class", () => {
+  test("names no class when the class is unknown", () => {
     const text = buildFraming("minimal", { self: { level: 10 } });
     expect(text).toBe(
-      "In World of Warcraft 3.3.5a, you are a level 10 Priest fighting a hostile creature.",
+      "In World of Warcraft 3.3.5a, you are a level 10 character fighting a hostile creature.",
     );
   });
 
   test("uses dynamic observed level rather than fixed number", () => {
-    const text1 = buildFraming("minimal", { self: { level: 14 } });
+    const text1 = buildFraming("minimal", { self: { level: 14 } }, "Priest");
     expect(text1).toBe(
       "In World of Warcraft 3.3.5a, you are a level 14 Priest fighting a hostile creature.",
     );
 
-    const text2 = buildFraming("minimal", { self: { level: 60 } });
+    const text2 = buildFraming("minimal", { self: { level: 60 } }, "Priest");
     expect(text2).toBe(
       "In World of Warcraft 3.3.5a, you are a level 60 Priest fighting a hostile creature.",
     );
@@ -55,14 +55,14 @@ describe("buildFraming", () => {
   });
 
   test("handles missing level in observation safely", () => {
-    const text = buildFraming("minimal", {});
+    const text = buildFraming("minimal", {}, "Priest");
     expect(text).toBe(
       "In World of Warcraft 3.3.5a, you are a Priest fighting a hostile creature.",
     );
   });
 
   test("builds mechanics framing extending minimal with combat mechanics", () => {
-    const text = buildFraming("mechanics", { self: { level: 10 } });
+    const text = buildFraming("mechanics", { self: { level: 10 } }, "Priest");
     expect(text).toBe(
       "In World of Warcraft 3.3.5a, you are a level 10 Priest fighting a hostile creature. The resource pool does not refill during the fight. Some actions apply effects over time. Some actions take time and can be disrupted.",
     );

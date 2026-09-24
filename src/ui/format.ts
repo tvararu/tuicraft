@@ -9,6 +9,7 @@ import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { GuildRoster } from "wow/guild-store";
 import { GuildMemberStatus } from "wow/protocol/guild";
 import type { LogEntry } from "lib/session-log";
+import { CLASS_NAMES } from "wow/protocol/world";
 
 const CHAT_TYPE_LABELS: Record<number, string> = {
   [ChatType.SYSTEM]: "system",
@@ -259,19 +260,6 @@ export function formatEntityEventObj(
       return undefined;
   }
 }
-
-const CLASS_NAMES: Record<number, string> = {
-  1: "Warrior",
-  2: "Paladin",
-  3: "Hunter",
-  4: "Rogue",
-  5: "Priest",
-  6: "Death Knight",
-  7: "Shaman",
-  8: "Mage",
-  9: "Warlock",
-  11: "Druid",
-};
 
 function friendStatusLabel(status: number): string {
   if (status === FriendStatus.AFK) return "AFK";
