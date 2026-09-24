@@ -635,11 +635,11 @@ test("second start replaces the first", async () => {
     now: () => 0,
   });
   const first = runtime.start({ guids: [1n], instruction: "a" });
-  await Bun.sleep(0);
   const second = runtime.start({ guids: [2n], instruction: "b" });
   release();
   await Promise.all([first, second]);
   expect(runtime.snapshot().queue.map((r) => r.guid)).toEqual([2n]);
+  expect(tactics.calls).toBe(2);
 });
 
 test("loot takes every slot plus money and records deltas", async () => {
