@@ -2,6 +2,7 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildAttackSwing,
   type AttackStart,
+  type AttackSwingError,
   type AttackStop,
   type XpGain,
 } from "wow/protocol/combat";
@@ -68,6 +69,7 @@ export type CombatOutcome = {
   spellId?: number;
   target?: bigint;
   result?: number;
+  error?: AttackSwingError;
   at: number;
   hits?: bigint[];
   misses?: { guid: bigint; reason: number; reflect?: number }[];
@@ -557,16 +559,16 @@ export class CombatRuntime {
     this.emit("cast_started", "cast_delayed");
   }
 
-  applyAttackError(result: number): void {
+  applyAttackError(error: AttackSwingError): void {
     this.lastOutcome = {
       kind: "attack",
       status: "failed",
       target: this.attackTarget ?? this.pendingAttack,
-      result,
+      error,
       at: this.deps.now(),
     };
     this.pendingAttack = undefined;
-    this.emit("outcome", `attack_failed:${result}`);
+    this.emit("outcome", `attack_failed:${error}`);
   }
 
   applyCancelCombat(): void {

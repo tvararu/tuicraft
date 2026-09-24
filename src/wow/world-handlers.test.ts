@@ -17,8 +17,10 @@ import {
   handleGuildInvitePacket,
   handleChatMessage,
   registerMovementHandlers,
+  registerCombatHandlers,
 } from "wow/world-handlers";
 import { ControlRuntime } from "wow/control";
+import { CombatRuntime } from "wow/combat";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
@@ -4058,5 +4060,35 @@ describe("handleNearTeleport", () => {
       z: 50,
       orientation: 1,
     });
+  });
+});
+
+describe("registerCombatHandlers", () => {
+  test("attack swing errors are named, not opcode numbers", () => {
+    const combat = new CombatRuntime({
+      send() {},
+      now: () => 1,
+      selfGuid: () => 1n,
+      selectedGuid: () => 2n,
+      getEntity: () => undefined,
+      selfPose: () => undefined,
+    });
+    const conn = {
+      dispatch: new OpcodeDispatch(),
+      combat,
+    } as unknown as WorldConn;
+    registerCombatHandlers(conn);
+    combat.attack(2n);
+    conn.dispatch.handle(
+      GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
+      new PacketReader(new Uint8Array()),
+    );
+    const outcome = combat.snapshot().lastOutcome;
+    expect(outcome).toMatchObject({
+      kind: "attack",
+      status: "failed",
+      error: "not_in_range",
+    });
+    expect(outcome?.result).toBeUndefined();
   });
 });

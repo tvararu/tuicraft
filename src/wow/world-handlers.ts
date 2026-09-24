@@ -44,6 +44,7 @@ import {
 } from "wow/protocol/movement";
 import { parseUpdateObject } from "wow/protocol/update-object";
 import {
+  ATTACK_SWING_ERRORS,
   parseAttackStart,
   parseAttackStop,
   parseXpGain,
@@ -1039,13 +1040,8 @@ export function registerCombatHandlers(conn: WorldConn): void {
     conn.combat?.applySpellDelayed(parseSpellDelayed(r)),
   );
   on(GameOpcode.SMSG_CANCEL_COMBAT, () => conn.combat?.applyCancelCombat());
-  for (const opcode of [
-    GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
-    GameOpcode.SMSG_ATTACKSWING_BADFACING,
-    GameOpcode.SMSG_ATTACKSWING_DEADTARGET,
-    GameOpcode.SMSG_ATTACKSWING_CANT_ATTACK,
-  ])
-    on(opcode, () => conn.combat?.applyAttackError(opcode));
+  for (const [opcode, error] of ATTACK_SWING_ERRORS)
+    on(opcode, () => conn.combat?.applyAttackError(error));
   on(GameOpcode.SMSG_ATTACKSTART, (r) =>
     conn.combat?.applyAttackStart(parseAttackStart(r)),
   );

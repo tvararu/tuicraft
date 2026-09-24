@@ -154,6 +154,7 @@ export class CombatActions {
               status: state.lastOutcome.status,
               spellId: state.lastOutcome.spellId,
               result: state.lastOutcome.result,
+              error: state.lastOutcome.error,
               at: state.lastOutcome.at,
             }
           : null,
@@ -381,7 +382,7 @@ export class CombatActions {
     )
       return {
         status: "blocked",
-        reason: `server_action_rejected:${last.result ?? "interrupted"}`,
+        reason: `server_action_rejected:${last.error ?? last.result ?? "interrupted"}`,
       };
     const now = this.deps.now();
     if (state.pendingCast && now - state.pendingCast.startedAt > 5000)

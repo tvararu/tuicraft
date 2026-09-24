@@ -1,4 +1,14 @@
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { GameOpcode } from "wow/protocol/opcodes";
+
+export const ATTACK_SWING_ERRORS = [
+  [GameOpcode.SMSG_ATTACKSWING_NOTINRANGE, "not_in_range"],
+  [GameOpcode.SMSG_ATTACKSWING_BADFACING, "bad_facing"],
+  [GameOpcode.SMSG_ATTACKSWING_DEADTARGET, "dead_target"],
+  [GameOpcode.SMSG_ATTACKSWING_CANT_ATTACK, "cant_attack"],
+] as const;
+
+export type AttackSwingError = (typeof ATTACK_SWING_ERRORS)[number][1];
 
 export type AttackStart = { attacker: bigint; victim: bigint };
 export type AttackStop = { attacker: bigint; victim: bigint; dead: number };
