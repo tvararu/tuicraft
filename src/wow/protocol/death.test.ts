@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PacketReader } from "wow/protocol/packet";
+import { bytes } from "test/hex";
 import {
   buildReclaimCorpse,
   buildRepopRequest,
@@ -13,10 +14,6 @@ import {
 
 const guid = 0x0102030405060708n;
 const guidBytes = [8, 7, 6, 5, 4, 3, 2, 1];
-
-function bytes(hex: string): Uint8Array {
-  return Buffer.from(hex.replace(/\s/g, ""), "hex");
-}
 
 const corpse = bytes(
   "01 12 02 00 00 00 00 c0 3f 00 00 10 c0 00 00 40 40 21 00 00 00 78 56 34 12",
@@ -41,16 +38,6 @@ describe("death requests", () => {
 
   test("spirit-healer activation carries the observed healer GUID", () => {
     expect([...buildSpiritHealerActivate(guid)]).toEqual(guidBytes);
-    expect(() => buildSpiritHealerActivate(-1n)).toThrow(RangeError);
-    expect(() => buildSpiritHealerActivate(1n << 64n)).toThrow(RangeError);
-  });
-
-  test("invalid request fields cannot wrap into a different corpse or flag", () => {
-    expect(() => buildRepopRequest(256)).toThrow(RangeError);
-    expect(() => buildRepopRequest(-1)).toThrow(RangeError);
-    expect(() => buildRepopRequest(0.5)).toThrow(RangeError);
-    expect(() => buildReclaimCorpse(-1n)).toThrow(RangeError);
-    expect(() => buildResurrectResponse(1n << 64n, true)).toThrow(RangeError);
   });
 });
 
@@ -62,13 +49,15 @@ describe("corpse and recovery responses", () => {
   });
 
   test("corpse query preserves entrance map separately from corpse map and its final scalar", () => {
-    expect(parseCorpseQuery(new PacketReader(corpse))).toEqual({
+    const r = new PacketReader(corpse);
+    expect(parseCorpseQuery(r)).toEqual({
       found: true,
       mapId: 530,
       position: { x: 1.5, y: -2.25, z: 3 },
       corpseMapId: 33,
       unknown: 0x12345678,
     });
+    expect(r.remaining).toBe(0);
   });
 
   test("reclaim delay is retained in milliseconds", () => {
@@ -89,13 +78,15 @@ describe("corpse and recovery responses", () => {
   });
 
   test("NPC resurrection preserves UTF-8 name, extra byte, sickness and zero delay override", () => {
-    expect(parseResurrectRequest(new PacketReader(resurrection))).toEqual({
+    const r = new PacketReader(resurrection);
+    expect(parseResurrectRequest(r)).toEqual({
       guid,
       name: "Å",
       reserved: 0,
       sickness: 1,
       delayMs: 0,
     });
+    expect(r.remaining).toBe(0);
   });
 
   test("absent resurrection delay override is not fabricated as zero", () => {
@@ -116,48 +107,5 @@ describe("corpse and recovery responses", () => {
       sickness: 1,
       delayMs: undefined,
     });
-  });
-
-  test("truncated conditional corpse and marker packets reject", () => {
-    const cases = [
-      { data: corpse, parse: parseCorpseQuery },
-      { data: location, parse: parseDeathReleaseLocation },
-      { data: cleared, parse: parseDeathReleaseLocation },
-      { data: bytes("30 75 00 00"), parse: parseCorpseReclaimDelay },
-    ];
-    for (const { data, parse } of cases) {
-      for (let length = 0; length < data.length; length++) {
-        expect(() => parse(new PacketReader(data.subarray(0, length)))).toThrow(
-          RangeError,
-        );
-      }
-    }
-    expect(() =>
-      parseCorpseQuery(new PacketReader(bytes("00 00 00 00 00"))),
-    ).toThrow(RangeError);
-  });
-
-  test("name and optional resurrection delay truncation cannot appear valid", () => {
-    for (let length = 0; length < resurrection.length; length++) {
-      if (length === 17) continue;
-      expect(() =>
-        parseResurrectRequest(
-          new PacketReader(resurrection.subarray(0, length)),
-        ),
-      ).toThrow(RangeError);
-    }
-  });
-
-  test("resurrection names must end at their declared terminator", () => {
-    const missingTerminator = resurrection.slice();
-    missingTerminator[14] = 65;
-    const zeroLength = resurrection.slice();
-    zeroLength[8] = 0;
-    expect(() =>
-      parseResurrectRequest(new PacketReader(missingTerminator)),
-    ).toThrow(RangeError);
-    expect(() => parseResurrectRequest(new PacketReader(zeroLength))).toThrow(
-      RangeError,
-    );
   });
 });

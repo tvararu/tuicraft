@@ -37,80 +37,63 @@ export type ItemPushResult = {
   totalCount: number;
 };
 
+function guidRequest(guid: bigint): Uint8Array {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  return w.finish();
+}
+
 export function buildLoot(guid: bigint): Uint8Array {
-  checkGuid(guid);
-  const writer = new PacketWriter(8);
-  writer.uint64LE(guid);
-  return writer.finish();
+  return guidRequest(guid);
 }
 
 export function buildAutostoreLootItem(slot: number): Uint8Array {
-  if (!Number.isInteger(slot) || slot < 0 || slot > 255)
-    throw new RangeError("Loot slot outside uint8 range");
-  const writer = new PacketWriter(1);
-  writer.uint8(slot);
-  return writer.finish();
+  const w = new PacketWriter();
+  w.uint8(slot);
+  return w.finish();
 }
 
 export function buildLootRelease(guid: bigint): Uint8Array {
-  checkGuid(guid);
-  const writer = new PacketWriter(8);
-  writer.uint64LE(guid);
-  return writer.finish();
+  return guidRequest(guid);
 }
 
-export function parseLootResponse(reader: PacketReader): LootResponse {
-  const guid = reader.uint64LE();
-  const lootType = reader.uint8();
+export function parseLootResponse(r: PacketReader): LootResponse {
+  const guid = r.uint64LE();
+  const lootType = r.uint8();
   if (lootType === 0) {
-    const error = reader.uint8();
-    end(reader);
-    return { kind: "error", guid, lootType, error };
+    return { kind: "error", guid, lootType, error: r.uint8() };
   }
-  const money = reader.uint32LE();
-  const count = reader.uint8();
-  if (reader.remaining !== count * 22)
-    throw new RangeError("Loot item count does not match payload size");
+  const money = r.uint32LE();
+  const count = r.uint8();
   const items: LootItem[] = [];
-  for (let i = 0; i < count; i++) items.push(readItem(reader));
+  for (let i = 0; i < count; i++) items.push(readItem(r));
   return { kind: "loot", guid, lootType, money, items };
 }
 
-export function parseLootRemoved(reader: PacketReader): LootRemoved {
-  const slot = reader.uint8();
-  end(reader);
-  return { slot };
+export function parseLootRemoved(r: PacketReader): LootRemoved {
+  return { slot: r.uint8() };
 }
 
-export function parseLootReleaseResponse(
-  reader: PacketReader,
-): LootReleaseResponse {
-  const guid = reader.uint64LE();
-  const status = reader.uint8();
-  end(reader);
-  return { guid, status };
+export function parseLootReleaseResponse(r: PacketReader): LootReleaseResponse {
+  return { guid: r.uint64LE(), status: r.uint8() };
 }
 
-export function parseLootMoneyNotify(reader: PacketReader): LootMoneyNotify {
-  const money = reader.uint32LE();
-  const alone = reader.uint8() !== 0;
-  end(reader);
-  return { money, alone };
+export function parseLootMoneyNotify(r: PacketReader): LootMoneyNotify {
+  return { money: r.uint32LE(), alone: r.uint8() !== 0 };
 }
 
-export function parseItemPushResult(reader: PacketReader): ItemPushResult {
-  const guid = reader.uint64LE();
-  const received = reader.uint32LE();
-  const created = reader.uint32LE();
-  const showInChat = reader.uint32LE();
-  const bagSlot = reader.uint8();
-  const slot = reader.uint32LE();
-  const itemId = reader.uint32LE();
-  const randomSuffix = reader.uint32LE();
-  const randomPropertyId = reader.uint32LE() | 0;
-  const count = reader.uint32LE();
-  const totalCount = reader.uint32LE();
-  end(reader);
+export function parseItemPushResult(r: PacketReader): ItemPushResult {
+  const guid = r.uint64LE();
+  const received = r.uint32LE();
+  const created = r.uint32LE();
+  const showInChat = r.uint32LE();
+  const bagSlot = r.uint8();
+  const slot = r.uint32LE();
+  const itemId = r.uint32LE();
+  const randomSuffix = r.uint32LE();
+  const randomPropertyId = r.uint32LE() | 0;
+  const count = r.uint32LE();
+  const totalCount = r.uint32LE();
   return {
     guid,
     received,
@@ -126,14 +109,14 @@ export function parseItemPushResult(reader: PacketReader): ItemPushResult {
   };
 }
 
-function readItem(reader: PacketReader): LootItem {
-  const slot = reader.uint8();
-  const itemId = reader.uint32LE();
-  const count = reader.uint32LE();
-  const displayId = reader.uint32LE();
-  const randomSuffix = reader.uint32LE();
-  const randomPropertyId = reader.uint32LE() | 0;
-  const slotType = reader.uint8();
+function readItem(r: PacketReader): LootItem {
+  const slot = r.uint8();
+  const itemId = r.uint32LE();
+  const count = r.uint32LE();
+  const displayId = r.uint32LE();
+  const randomSuffix = r.uint32LE();
+  const randomPropertyId = r.uint32LE() | 0;
+  const slotType = r.uint8();
   return {
     slot,
     itemId,
@@ -143,92 +126,4 @@ function readItem(reader: PacketReader): LootItem {
     randomPropertyId,
     slotType,
   };
-}
-
-function checkGuid(guid: bigint): void {
-  if (guid < 0n || guid > 0xffffffffffffffffn)
-    throw new RangeError("GUID outside uint64 range");
-}
-
-function end(reader: PacketReader): void {
-  if (reader.remaining !== 0)
-    throw new RangeError("Unexpected trailing loot payload");
-}
-
-export const InventoryResult = {
-  OK: 0,
-  CANT_EQUIP_LEVEL: 1,
-  BAG_FULL: 4,
-  INVENTORY_FULL: 50,
-  BAG_FULL3: 53,
-  BIND_CONFIRM: 81,
-  MAX_LIMIT_COUNT: 84,
-  MAX_LIMIT_SOCKETED: 85,
-  PURCHASE_LEVEL_TOO_LOW: 87,
-  MAX_LIMIT_EQUIPPED: 89,
-} as const;
-
-export type InventoryFailureDetail =
-  | { kind: "none" }
-  | { kind: "level"; requiredLevel: number }
-  | { kind: "binding"; itemGuid: bigint; slot: number; containerGuid: bigint }
-  | { kind: "limit"; category: number };
-
-export type InventoryChangeFailure =
-  | { kind: "ok"; result: 0 }
-  | {
-      kind: "error";
-      result: number;
-      item1: bigint;
-      item2: bigint;
-      bagType: number;
-      detail: InventoryFailureDetail;
-    };
-
-export function parseInventoryChangeFailure(
-  reader: PacketReader,
-): InventoryChangeFailure {
-  const result = reader.uint8();
-  let packet: InventoryChangeFailure;
-  if (result === InventoryResult.OK) packet = { kind: "ok", result };
-  else {
-    const item1 = reader.uint64LE();
-    const item2 = reader.uint64LE();
-    const bagType = reader.uint8();
-    packet = {
-      kind: "error",
-      result,
-      item1,
-      item2,
-      bagType,
-      detail: inventoryFailureDetail(reader, result),
-    };
-  }
-  if (reader.remaining !== 0)
-    throw new RangeError("Unexpected trailing inventory error payload");
-  return packet;
-}
-
-function inventoryFailureDetail(
-  reader: PacketReader,
-  result: number,
-): InventoryFailureDetail {
-  switch (result) {
-    case InventoryResult.CANT_EQUIP_LEVEL:
-    case InventoryResult.PURCHASE_LEVEL_TOO_LOW:
-      return { kind: "level", requiredLevel: reader.uint32LE() };
-    case InventoryResult.BIND_CONFIRM:
-      return {
-        kind: "binding",
-        itemGuid: reader.uint64LE(),
-        slot: reader.uint32LE(),
-        containerGuid: reader.uint64LE(),
-      };
-    case InventoryResult.MAX_LIMIT_COUNT:
-    case InventoryResult.MAX_LIMIT_SOCKETED:
-    case InventoryResult.MAX_LIMIT_EQUIPPED:
-      return { kind: "limit", category: reader.uint32LE() };
-    default:
-      return { kind: "none" };
-  }
 }

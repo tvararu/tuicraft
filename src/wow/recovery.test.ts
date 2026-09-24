@@ -1,13 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { bytes } from "test/hex";
 import type { Entity } from "wow/entity-store";
 import type { ControlPose } from "wow/control";
 import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { PacketReader } from "wow/protocol/packet";
-
-function bytes(hex: string): Uint8Array {
-  return Buffer.from(hex.replace(/\s/g, ""), "hex");
-}
 
 function fixture(health = 0, flags = 0) {
   const self: Entity = {

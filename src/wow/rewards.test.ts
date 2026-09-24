@@ -1,12 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { bytes } from "test/hex";
 import type { Entity } from "wow/entity-store";
 import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { PacketReader } from "wow/protocol/packet";
-
-function bytes(hex: string): Uint8Array {
-  return Buffer.from(hex.replace(/\s/g, ""), "hex");
-}
 
 function entity(
   guid: bigint,

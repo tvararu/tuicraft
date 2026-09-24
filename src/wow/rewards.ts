@@ -8,19 +8,21 @@ import {
   buildAutostoreLootItem,
   buildLoot,
   buildLootRelease,
-  InventoryResult,
-  parseInventoryChangeFailure,
   parseItemPushResult,
   parseLootMoneyNotify,
   parseLootReleaseResponse,
   parseLootRemoved,
   parseLootResponse,
-  type InventoryChangeFailure,
   type ItemPushResult,
   type LootItem,
   type LootMoneyNotify,
   type LootReleaseResponse,
 } from "wow/protocol/loot";
+import {
+  InventoryResult,
+  parseInventoryChangeFailure,
+  type InventoryChangeFailure,
+} from "wow/protocol/inventory";
 
 export type RewardsDeps = {
   send: (opcode: number, body?: Uint8Array) => void;

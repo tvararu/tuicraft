@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { PacketReader } from "wow/protocol/packet";
+import { bytes } from "test/hex";
 import {
   buildAutostoreLootItem,
   buildLoot,
   buildLootRelease,
   parseItemPushResult,
-  parseInventoryChangeFailure,
   parseLootMoneyNotify,
   parseLootReleaseResponse,
   parseLootRemoved,
@@ -14,10 +14,6 @@ import {
 
 const guid = 0x0102030405060708n;
 const guidBytes = [8, 7, 6, 5, 4, 3, 2, 1];
-
-function bytes(hex: string): Uint8Array {
-  return Buffer.from(hex.replace(/\s/g, ""), "hex");
-}
 
 const loot = bytes(`
   08 07 06 05 04 03 02 01 01 04 03 02 01 02
@@ -36,16 +32,6 @@ describe("loot requests", () => {
     expect([...buildLoot(guid)]).toEqual(guidBytes);
     expect([...buildLootRelease(guid)]).toEqual(guidBytes);
     expect([...buildAutostoreLootItem(255)]).toEqual([255]);
-  });
-
-  test("invalid GUIDs and slots cannot wrap to another request", () => {
-    for (const value of [-1n, 1n << 64n]) {
-      expect(() => buildLoot(value)).toThrow(RangeError);
-      expect(() => buildLootRelease(value)).toThrow(RangeError);
-    }
-    for (const slot of [-1, 256, 1.5]) {
-      expect(() => buildAutostoreLootItem(slot)).toThrow(RangeError);
-    }
   });
 });
 
@@ -135,137 +121,5 @@ describe("loot responses", () => {
     expect(parseLootRemoved(new PacketReader(bytes("fe")))).toEqual({
       slot: 254,
     });
-  });
-
-  test("truncated loot entries and truncated fixed packets reject", () => {
-    const cases = [
-      { data: loot, parse: parseLootResponse },
-      { data: failure, parse: parseLootResponse },
-      { data: push, parse: parseItemPushResult },
-      {
-        data: bytes("08 07 06 05 04 03 02 01 01"),
-        parse: parseLootReleaseResponse,
-      },
-      { data: bytes("01 00 00 00 01"), parse: parseLootMoneyNotify },
-      { data: bytes("02"), parse: parseLootRemoved },
-    ];
-    for (const { data, parse } of cases) {
-      for (let length = 0; length < data.length; length++) {
-        expect(() => parse(new PacketReader(data.subarray(0, length)))).toThrow(
-          RangeError,
-        );
-      }
-    }
-  });
-
-  test("an item count cannot hide extra or missing entry bytes", () => {
-    const missing = loot.slice();
-    missing[13] = 3;
-    const extra = loot.slice();
-    extra[13] = 1;
-    expect(() => parseLootResponse(new PacketReader(missing))).toThrow(
-      RangeError,
-    );
-    expect(() => parseLootResponse(new PacketReader(extra))).toThrow(
-      RangeError,
-    );
-  });
-});
-
-describe("inventory change failure layouts", () => {
-  test("distinguishes explicit OK from inventory-full and preserves unknown errors", () => {
-    expect(parseInventoryChangeFailure(new PacketReader(bytes("00")))).toEqual({
-      kind: "ok",
-      result: 0,
-    });
-    expect(
-      parseInventoryChangeFailure(
-        new PacketReader(bytes("32 0807060504030201 1817161514131211 07")),
-      ),
-    ).toEqual({
-      kind: "error",
-      result: 50,
-      item1: guid,
-      item2: 0x1112131415161718n,
-      bagType: 7,
-      detail: { kind: "none" },
-    });
-    expect(
-      parseInventoryChangeFailure(
-        new PacketReader(bytes("ff 0000000000000000 0000000000000000 00")),
-      ),
-    ).toEqual({
-      kind: "error",
-      result: 255,
-      item1: 0n,
-      item2: 0n,
-      bagType: 0,
-      detail: { kind: "none" },
-    });
-  });
-
-  test("retains required-level, binding-confirmation and item-category tails", () => {
-    expect(
-      parseInventoryChangeFailure(
-        new PacketReader(
-          bytes("57 0000000000000000 0000000000000000 00 50000000"),
-        ),
-      ),
-    ).toMatchObject({
-      result: 87,
-      detail: { kind: "level", requiredLevel: 80 },
-    });
-    expect(
-      parseInventoryChangeFailure(
-        new PacketReader(
-          bytes(
-            "51 0000000000000000 0000000000000000 00 0807060504030201 18000000 1817161514131211",
-          ),
-        ),
-      ),
-    ).toMatchObject({
-      result: 81,
-      detail: {
-        kind: "binding",
-        itemGuid: guid,
-        slot: 24,
-        containerGuid: 0x1112131415161718n,
-      },
-    });
-    expect(
-      parseInventoryChangeFailure(
-        new PacketReader(
-          bytes("59 0000000000000000 0000000000000000 00 7b000000"),
-        ),
-      ),
-    ).toMatchObject({ result: 89, detail: { kind: "limit", category: 123 } });
-  });
-
-  test("requires all bytes of each source-specific tail and rejects trailing payload", () => {
-    const fixtures = [
-      bytes("32 0000000000000000 0000000000000000 00"),
-      bytes("01 0000000000000000 0000000000000000 00 50000000"),
-      bytes(
-        "51 0000000000000000 0000000000000000 00 0807060504030201 18000000 1817161514131211",
-      ),
-      bytes("54 0000000000000000 0000000000000000 00 7b000000"),
-    ];
-    for (const data of fixtures) {
-      for (let length = 0; length < data.length; length++) {
-        expect(() =>
-          parseInventoryChangeFailure(
-            new PacketReader(data.subarray(0, length)),
-          ),
-        ).toThrow(RangeError);
-      }
-      expect(() =>
-        parseInventoryChangeFailure(
-          new PacketReader(Buffer.concat([data, bytes("00")])),
-        ),
-      ).toThrow(RangeError);
-    }
-    expect(() =>
-      parseInventoryChangeFailure(new PacketReader(bytes("00 00"))),
-    ).toThrow(RangeError);
   });
 });

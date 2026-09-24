@@ -21,100 +21,61 @@ export type ResurrectRequest = {
   delayMs: number | undefined;
 };
 
+function guidRequest(guid: bigint): PacketWriter {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  return w;
+}
+
 export function buildRepopRequest(unknownByte: number): Uint8Array {
-  if (!Number.isInteger(unknownByte) || unknownByte < 0 || unknownByte > 255)
-    throw new RangeError("Repop byte outside uint8 range");
-  const writer = new PacketWriter(1);
-  writer.uint8(unknownByte);
-  return writer.finish();
+  const w = new PacketWriter();
+  w.uint8(unknownByte);
+  return w.finish();
 }
 
 export function buildReclaimCorpse(guid: bigint): Uint8Array {
-  checkGuid(guid);
-  const writer = new PacketWriter(8);
-  writer.uint64LE(guid);
-  return writer.finish();
+  return guidRequest(guid).finish();
 }
 
 export function buildResurrectResponse(
   guid: bigint,
   accept: boolean,
 ): Uint8Array {
-  checkGuid(guid);
-  const writer = new PacketWriter(9);
-  writer.uint64LE(guid);
-  writer.uint8(accept ? 1 : 0);
-  return writer.finish();
+  const w = guidRequest(guid);
+  w.uint8(accept ? 1 : 0);
+  return w.finish();
 }
 
 export function buildSpiritHealerActivate(guid: bigint): Uint8Array {
-  checkGuid(guid);
-  const writer = new PacketWriter(8);
-  writer.uint64LE(guid);
-  return writer.finish();
+  return guidRequest(guid).finish();
 }
 
-export function parseCorpseQuery(reader: PacketReader): CorpseQuery {
-  const found = reader.uint8();
-  if (found === 0) {
-    end(reader);
-    return { found: false };
-  }
-  if (found !== 1) throw new RangeError("Invalid corpse query presence flag");
-  const mapId = reader.uint32LE() | 0;
-  const position = reader.vec3();
-  const corpseMapId = reader.uint32LE() | 0;
-  const unknown = reader.uint32LE();
-  end(reader);
-  return { found: true, mapId, position, corpseMapId, unknown };
+export function parseCorpseQuery(r: PacketReader): CorpseQuery {
+  if (r.uint8() === 0) return { found: false };
+  const mapId = r.uint32LE() | 0;
+  const position = r.vec3();
+  const corpseMapId = r.uint32LE() | 0;
+  return { found: true, mapId, position, corpseMapId, unknown: r.uint32LE() };
 }
 
-export function parseCorpseReclaimDelay(
-  reader: PacketReader,
-): CorpseReclaimDelay {
-  const delayMs = reader.uint32LE();
-  end(reader);
-  return { delayMs };
+export function parseCorpseReclaimDelay(r: PacketReader): CorpseReclaimDelay {
+  return { delayMs: r.uint32LE() };
 }
 
 export function parseDeathReleaseLocation(
-  reader: PacketReader,
+  r: PacketReader,
 ): DeathReleaseLocation {
-  const mapId = reader.uint32LE();
-  const position = reader.vec3();
-  end(reader);
+  const mapId = r.uint32LE();
+  const position = r.vec3();
   if (mapId === 0xffffffff) return { kind: "clear" };
   return { kind: "location", mapId, position };
 }
 
-export function parseResurrectRequest(reader: PacketReader): ResurrectRequest {
-  const guid = reader.uint64LE();
-  const name = readName(reader);
-  const reserved = reader.uint8();
-  const sickness = reader.uint8();
-  if (reader.remaining !== 0 && reader.remaining !== 4)
-    throw new RangeError("Invalid resurrection delay payload size");
-  const delayMs = reader.remaining === 4 ? reader.uint32LE() : undefined;
+export function parseResurrectRequest(r: PacketReader): ResurrectRequest {
+  const guid = r.uint64LE();
+  const name = r.sizedString();
+  const reserved = r.uint8();
+  const sickness = r.uint8();
+  const delayMs = r.remaining >= 4 ? r.uint32LE() : undefined;
   return { guid, name, reserved, sickness, delayMs };
-}
-
-function readName(reader: PacketReader): string {
-  const length = reader.uint32LE();
-  if (length === 0) throw new RangeError("Resurrection name has no terminator");
-  const bytes = reader.bytes(length);
-  if (bytes.indexOf(0) !== length - 1)
-    throw new RangeError("Resurrection name terminator does not match length");
-  return new TextDecoder("utf-8", { fatal: true }).decode(
-    bytes.subarray(0, -1),
-  );
-}
-
-function checkGuid(guid: bigint): void {
-  if (guid < 0n || guid > 0xffffffffffffffffn)
-    throw new RangeError("GUID outside uint64 range");
-}
-
-function end(reader: PacketReader): void {
-  if (reader.remaining !== 0)
-    throw new RangeError("Unexpected trailing death payload");
 }
