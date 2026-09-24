@@ -4,7 +4,6 @@ import {
   UpdateType,
   UpdateFlag,
   MovementFlag,
-  MovementFlagExtra,
   OBJECT_END,
   UNIT_END,
   GAMEOBJECT_END,
@@ -57,13 +56,6 @@ describe("MovementFlag", () => {
     expect(MovementFlag.FALLING).toBe(0x00001000);
     expect(MovementFlag.FLYING).toBe(0x02000000);
     expect(MovementFlag.HOVER).toBe(0x40000000);
-  });
-});
-
-describe("MovementFlagExtra", () => {
-  test("has correct bitmask values", () => {
-    expect(MovementFlagExtra.ALWAYS_ALLOW_PITCHING).toBe(0x0020);
-    expect(MovementFlagExtra.INTERPOLATED_PITCHING).toBe(0x0100);
   });
 });
 

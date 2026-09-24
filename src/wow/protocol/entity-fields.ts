@@ -59,8 +59,6 @@ export const MovementFlag = {
 export const MovementFlagExtra = {
   ALWAYS_ALLOW_PITCHING: 0x0020,
   INTERPOLATED_MOVEMENT: 0x0400,
-  INTERPOLATED_TURNING: 0x0080,
-  INTERPOLATED_PITCHING: 0x0100,
 } as const;
 
 export const OBJECT_END = 0x0006;
