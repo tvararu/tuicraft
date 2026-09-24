@@ -2,7 +2,7 @@ import { test, expect, describe } from "bun:test";
 import { PacketReader } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { GameOpcode } from "wow/protocol/opcodes";
-import { registerStubs } from "wow/protocol/stubs";
+import { STUBS, registerStubs } from "wow/protocol/stubs";
 
 describe("registerStubs", () => {
   test("registers SMSG opcodes that aren't already handled", () => {
@@ -10,7 +10,7 @@ describe("registerStubs", () => {
     d.on(GameOpcode.SMSG_MESSAGE_CHAT, () => {});
     registerStubs(d, () => true);
 
-    expect(d.has(GameOpcode.SMSG_CONTACT_LIST)).toBe(true);
+    expect(d.has(GameOpcode.SMSG_WEATHER)).toBe(true);
   });
 
   test("skips opcodes already registered", () => {
@@ -33,10 +33,10 @@ describe("registerStubs", () => {
       return true;
     });
 
-    d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
-    d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
+    d.handle(GameOpcode.SMSG_WEATHER, new PacketReader(new Uint8Array(0)));
+    d.handle(GameOpcode.SMSG_WEATHER, new PacketReader(new Uint8Array(0)));
 
-    const matching = messages.filter((m) => m.includes("Friends"));
+    const matching = messages.filter((m) => m.includes("Weather"));
     expect(matching).toHaveLength(1);
   });
 
@@ -50,22 +50,23 @@ describe("registerStubs", () => {
       return true;
     });
 
-    d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
+    d.handle(GameOpcode.SMSG_WEATHER, new PacketReader(new Uint8Array(0)));
     expect(messages).toHaveLength(0);
 
     ready = true;
-    d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
+    d.handle(GameOpcode.SMSG_WEATHER, new PacketReader(new Uint8Array(0)));
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain("Friends");
+    expect(messages[0]).toContain("Weather");
 
-    d.handle(GameOpcode.SMSG_CONTACT_LIST, new PacketReader(new Uint8Array(0)));
+    d.handle(GameOpcode.SMSG_WEATHER, new PacketReader(new Uint8Array(0)));
     expect(messages).toHaveLength(1);
   });
 
-  test("does not register CMSG opcodes on dispatch", () => {
-    const d = new OpcodeDispatch();
-    registerStubs(d, () => true);
-    expect(d.has(GameOpcode.CMSG_ADD_FRIEND)).toBe(false);
-    expect(d.has(GameOpcode.CMSG_CAST_SPELL)).toBe(false);
+  test("lists only server opcodes", () => {
+    const names = new Map<number, string>(
+      Object.entries(GameOpcode).map(([name, value]) => [value, name]),
+    );
+    for (const [opcode] of STUBS)
+      expect(names.get(opcode)).toMatch(/^(SMSG|MSG)_/);
   });
 });
