@@ -196,7 +196,12 @@ type FakeCorpse =
     };
 
 function fakeControl(
-  config: { pose?: ControlPose; speed?: number; refuseMoves?: number } = {},
+  config: {
+    pose?: ControlPose;
+    speed?: number;
+    refuseMoves?: number;
+    moveError?: string;
+  } = {},
 ) {
   let pose: ControlPose | undefined = config.pose;
   const speed = config.speed ?? 7;
@@ -213,6 +218,7 @@ function fakeControl(
     },
     move(direction: MovementDirection, durationMs: number) {
       moves.push({ direction, durationMs });
+      if (config.moveError) throw new Error(config.moveError);
       if (!pose) return;
       if (refusalsRemaining > 0) {
         refusalsRemaining--;
@@ -990,6 +996,51 @@ test("ground refusal retries once at fixed angle then stops", async () => {
     expect(state.stopCause).toBe("corpse_unreachable");
     expect(control.faced().length).toBe(2);
     expect(control.moves().length).toBe(2);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("a refused corpse-run move stops with its reason", async () => {
+  jest.useFakeTimers();
+  try {
+    const control = fakeControl({
+      pose: {
+        mapId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        orientation: 0,
+        source: "predicted",
+        updatedAt: 0,
+      },
+      moveError: "movement_blocked",
+    });
+    const recovery = fakeRecovery({
+      offerEpoch: "none",
+      life: ["dead", "ghost"],
+      corpse: {
+        status: "found",
+        mapId: 0,
+        corpseMapId: 0,
+        position: { x: 100, y: 0, z: 0 },
+      },
+      pose: () => control.pose(),
+    });
+    const runtime = new EncounterCycleRuntime({
+      tactics: fakeTactics([], { deadOn: 0 }),
+      loot: fakeLoot({ items: [], money: 0 }),
+      recovery,
+      control,
+      now: () => 0,
+    });
+    const started = runtime.start({ guids: [1n], instruction: "fight" });
+    await advanceUntilSettled(started, 8000);
+    expect(runtime.snapshot()).toMatchObject({
+      stopCause: "corpse_unreachable",
+      stopDetail: { error: "movement_blocked" },
+    });
+    expect(control.moves().length).toBe(1);
   } finally {
     jest.useRealTimers();
   }

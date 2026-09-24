@@ -409,7 +409,13 @@ export class EncounterCycleRuntime {
     try {
       this.deps.control.face(bearing);
       this.deps.control.move("forward", LEG_LEASE_MS);
-    } catch {}
+    } catch (error) {
+      this.stop("corpse_unreachable", {
+        pose: before,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    }
     await this.sleep(LEG_LEASE_MS);
     if (!this.live(signal)) return undefined;
     const after = this.deps.control.pose();
