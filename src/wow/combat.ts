@@ -2,25 +2,30 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
 import {
   buildAttackSwing,
-  buildCancelCast,
-  buildCastSpell,
   parseAttackStart,
   parseAttackStop,
+  parseXpGain,
+} from "wow/protocol/combat";
+import {
   parseAuraUpdate,
   parseAuraUpdateAll,
-  parseSpellDelayed,
+  type AuraUpdate,
+} from "wow/protocol/aura";
+import {
+  buildCancelCast,
+  buildCastSpell,
   parseCastFailed,
   parseInitialSpells,
   parseLearnedSpell,
   parseRemovedSpell,
   parseSpellCooldown,
+  parseSpellDelayed,
   parseSpellFailure,
   parseSpellGo,
   parseSpellStart,
   parseSupersededSpell,
-  parseXpGain,
-  type AuraUpdate,
-} from "wow/protocol/combat";
+  SpellCastResult,
+} from "wow/protocol/spell";
 import { parseMonsterMove, type CreateSpline } from "wow/protocol/monster-move";
 import {
   createTrajectory,
@@ -155,8 +160,6 @@ export type CombatDeps = {
 };
 
 type TrackedAura = CombatAura & { unit: bigint; receivedAt: number };
-
-const SPELL_FAILED_INTERRUPTED = 40;
 
 export class CombatRuntime {
   private readonly deps: CombatDeps;
@@ -533,7 +536,7 @@ export class CombatRuntime {
     if (this.casting === cast) this.casting = undefined;
     this.lastOutcome = {
       kind:
-        cast.cancelRequested && result === SPELL_FAILED_INTERRUPTED
+        cast.cancelRequested && result === SpellCastResult.INTERRUPTED
           ? "cancel"
           : "cast",
       status,
