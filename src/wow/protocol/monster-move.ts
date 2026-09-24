@@ -1,23 +1,20 @@
 import { PacketReader, type Vec3 } from "wow/protocol/packet";
 
-const SPLINE_FALLING = 0x00000200;
-const SPLINE_PARABOLIC = 0x00000800;
-const SPLINE_FLYING = 0x00002000;
-const SPLINE_CATMULLROM = 0x00040000;
-const SPLINE_CYCLIC = 0x00080000;
-const SPLINE_ANIMATION = 0x00200000;
-const SPLINE_TRANSPORT_ENTER = 0x00800000;
-const SPLINE_TRANSPORT_EXIT = 0x01000000;
-const MASK_CATMULLROM = SPLINE_FLYING | SPLINE_CATMULLROM;
-const FINAL_POINT = 0x00008000;
-const FINAL_TARGET = 0x00010000;
-const FINAL_ANGLE = 0x00020000;
-const UNSUPPORTED_SAMPLE =
-  SPLINE_FALLING |
-  SPLINE_PARABOLIC |
-  SPLINE_ANIMATION |
-  SPLINE_TRANSPORT_ENTER |
-  SPLINE_TRANSPORT_EXIT;
+export const SplineFlag = {
+  FALLING: 0x00000200,
+  PARABOLIC: 0x00000800,
+  FLYING: 0x00002000,
+  FINAL_POINT: 0x00008000,
+  FINAL_TARGET: 0x00010000,
+  FINAL_ANGLE: 0x00020000,
+  CATMULLROM: 0x00040000,
+  CYCLIC: 0x00080000,
+  ANIMATION: 0x00200000,
+  TRANSPORT_ENTER: 0x00800000,
+  TRANSPORT_EXIT: 0x01000000,
+} as const;
+
+const MASK_CATMULLROM = SplineFlag.FLYING | SplineFlag.CATMULLROM;
 
 export type SplineFacing =
   | { kind: "none" }
@@ -26,15 +23,6 @@ export type SplineFacing =
   | { kind: "angle"; angle: number };
 
 export type SplineInterpolation = "linear" | "catmullrom";
-
-export type SplineTrajectory = {
-  points: Vec3[];
-  duration: number;
-  flags: number;
-  cyclic: boolean;
-  interpolation: SplineInterpolation;
-  orientation?: number;
-};
 
 export type MonsterMoveStop = {
   kind: "stop";
@@ -76,10 +64,6 @@ export type CreateSpline = {
   mode: number;
   final: Vec3;
 };
-
-export type SampledSpline =
-  | { supported: true; x: number; y: number; z: number }
-  | { supported: false; reason: string };
 
 function unpackXyz(packed: number): Vec3 {
   const x = ((packed & 0x7ff) << 21) >> 21;
@@ -151,112 +135,6 @@ function interpolationOf(flags: number): SplineInterpolation {
   return flags & MASK_CATMULLROM ? "catmullrom" : "linear";
 }
 
-function dist(a: Vec3, b: Vec3): number {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const dz = a.z - b.z;
-  return Math.hypot(dx, dy, dz);
-}
-
-function lerp(a: Vec3, b: Vec3, u: number): Vec3 {
-  return {
-    x: a.x + (b.x - a.x) * u,
-    y: a.y + (b.y - a.y) * u,
-    z: a.z + (b.z - a.z) * u,
-  };
-}
-
-function catmull(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number): Vec3 {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const w0 = -0.5 * t3 + t2 - 0.5 * t;
-  const w1 = 1.5 * t3 - 2.5 * t2 + 1;
-  const w2 = -1.5 * t3 + 2 * t2 + 0.5 * t;
-  const w3 = 0.5 * t3 - 0.5 * t2;
-  return {
-    x: w0 * p0.x + w1 * p1.x + w2 * p2.x + w3 * p3.x,
-    y: w0 * p0.y + w1 * p1.y + w2 * p2.y + w3 * p3.y,
-    z: w0 * p0.z + w1 * p1.z + w2 * p2.z + w3 * p3.z,
-  };
-}
-
-function pointAt(
-  points: Vec3[],
-  i: number,
-  cyclic: boolean,
-  orientation: number,
-): Vec3 {
-  const n = points.length;
-  if (n === 0) return { x: 0, y: 0, z: 0 };
-  if (cyclic) return points[((i % n) + n) % n] as Vec3;
-  if (i < 0) {
-    const start = points[0] as Vec3;
-    return {
-      x: start.x - Math.cos(orientation),
-      y: start.y - Math.sin(orientation),
-      z: start.z,
-    };
-  }
-  if (i >= n) return points[n - 1] as Vec3;
-  return points[i] as Vec3;
-}
-
-function segmentLengths(traj: SplineTrajectory): number[] {
-  const { points, cyclic, interpolation } = traj;
-  const orientation = traj.orientation ?? 0;
-  const n = cyclic ? points.length : points.length - 1;
-  const lengths: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const a = pointAt(points, i, cyclic, orientation);
-    const b = pointAt(points, i + 1, cyclic, orientation);
-    if (interpolation === "linear") {
-      lengths.push(dist(a, b));
-      continue;
-    }
-    const p0 = pointAt(points, i - 1, cyclic, orientation);
-    const p3 = pointAt(points, i + 2, cyclic, orientation);
-    let length = 0;
-    let prev = a;
-    for (let s = 1; s <= 3; s++) {
-      const next = catmull(p0, a, b, p3, s / 3);
-      length += dist(prev, next);
-      prev = next;
-    }
-    lengths.push(length);
-  }
-  return lengths;
-}
-
-function sampleAlong(traj: SplineTrajectory, t: number): Vec3 {
-  const { points, cyclic, interpolation } = traj;
-  const orientation = traj.orientation ?? 0;
-  if (points.length === 0) return { x: 0, y: 0, z: 0 };
-  if (points.length === 1) return points[0] as Vec3;
-  const lengths = segmentLengths(traj);
-  const total = lengths.reduce((sum, len) => sum + len, 0);
-  if (total === 0) return points[0] as Vec3;
-  let remain = t * total;
-  for (let i = 0; i < lengths.length; i++) {
-    const len = lengths[i] as number;
-    if (remain > len && i < lengths.length - 1) {
-      remain -= len;
-      continue;
-    }
-    const u = len === 0 ? 1 : remain / len;
-    const a = pointAt(points, i, cyclic, orientation);
-    const b = pointAt(points, i + 1, cyclic, orientation);
-    if (interpolation === "linear") return lerp(a, b, u);
-    return catmull(
-      pointAt(points, i - 1, cyclic, orientation),
-      a,
-      b,
-      pointAt(points, i + 2, cyclic, orientation),
-      u,
-    );
-  }
-  return pointAt(points, points.length - 1, cyclic, orientation);
-}
-
 export function parseMonsterMove(r: PacketReader): MonsterMove {
   const guid = r.packedGuidBig();
   const extra = r.uint8();
@@ -267,20 +145,20 @@ export function parseMonsterMove(r: PacketReader): MonsterMove {
   const facing = readFacing(r, type);
   const flags = r.uint32LE();
   const animation =
-    flags & SPLINE_ANIMATION
+    flags & SplineFlag.ANIMATION
       ? { id: r.uint8(), startTime: r.uint32LE() | 0 }
       : undefined;
   const duration = r.uint32LE() | 0;
   const parabolic =
-    flags & SPLINE_PARABOLIC
+    flags & SplineFlag.PARABOLIC
       ? { acceleration: r.floatLE(), startTime: r.uint32LE() | 0 }
       : undefined;
-  const cyclic = (flags & SPLINE_CYCLIC) !== 0;
+  const cyclic = (flags & SplineFlag.CYCLIC) !== 0;
   const interpolation = interpolationOf(flags);
   const points =
     interpolation === "linear"
       ? readLinearPath(r, start)
-      : readCatmullPath(r, start, cyclic, (flags & SPLINE_FLYING) !== 0);
+      : readCatmullPath(r, start, cyclic, (flags & SplineFlag.FLYING) !== 0);
   return {
     kind: "move",
     guid,
@@ -301,10 +179,12 @@ export function parseMonsterMove(r: PacketReader): MonsterMove {
 export function parseCreateSpline(r: PacketReader): CreateSpline {
   const flags = r.uint32LE();
   let facing: SplineFacing = { kind: "none" };
-  if (flags & FINAL_ANGLE) facing = { kind: "angle", angle: r.floatLE() };
-  else if (flags & FINAL_TARGET)
+  if (flags & SplineFlag.FINAL_ANGLE)
+    facing = { kind: "angle", angle: r.floatLE() };
+  else if (flags & SplineFlag.FINAL_TARGET)
     facing = { kind: "target", guid: r.uint64LE() };
-  else if (flags & FINAL_POINT) facing = { kind: "spot", point: r.vec3() };
+  else if (flags & SplineFlag.FINAL_POINT)
+    facing = { kind: "spot", point: r.vec3() };
   const elapsed = r.uint32LE() | 0;
   const duration = r.uint32LE() | 0;
   const splineId = r.uint32LE();
@@ -331,36 +211,4 @@ export function parseCreateSpline(r: PacketReader): CreateSpline {
     mode,
     final,
   };
-}
-
-export function sampleSplinePosition(
-  trajectory: SplineTrajectory,
-  elapsedMs: number,
-): SampledSpline {
-  if (trajectory.flags & UNSUPPORTED_SAMPLE) {
-    let reason = "transport";
-    if (trajectory.flags & SPLINE_FALLING) reason = "falling";
-    else if (trajectory.flags & SPLINE_PARABOLIC) reason = "parabolic";
-    else if (trajectory.flags & SPLINE_ANIMATION) reason = "animation";
-    return { supported: false, reason };
-  }
-  if (trajectory.points.length === 0)
-    return { supported: false, reason: "empty" };
-  if (trajectory.duration <= 0) {
-    const end = trajectory.points[trajectory.points.length - 1] as Vec3;
-    return { supported: true, ...end };
-  }
-  if (
-    trajectory.interpolation === "catmullrom" &&
-    !trajectory.cyclic &&
-    !Number.isFinite(trajectory.orientation)
-  ) {
-    return { supported: false, reason: "launch_orientation" };
-  }
-  let t = elapsedMs / trajectory.duration;
-  if (trajectory.cyclic) t = ((t % 1) + 1) % 1;
-  else if (t < 0) t = 0;
-  else if (t > 1) t = 1;
-  const p = sampleAlong(trajectory, t);
-  return { supported: true, ...p };
 }

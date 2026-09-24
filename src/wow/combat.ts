@@ -21,12 +21,13 @@ import {
   parseXpGain,
   type AuraUpdate,
 } from "wow/protocol/combat";
+import { parseMonsterMove, type CreateSpline } from "wow/protocol/monster-move";
 import {
-  parseMonsterMove,
+  createTrajectory,
+  pathTrajectory,
   sampleSplinePosition,
   type SplineTrajectory,
-  type CreateSpline,
-} from "wow/protocol/monster-move";
+} from "wow/spline";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
 import type { ControlPose } from "wow/control";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
@@ -377,22 +378,7 @@ export class CombatRuntime {
     spline?: CreateSpline,
   ): void {
     const now = this.deps.now();
-    const cyclic = spline ? (spline.flags & 0x00080000) !== 0 : false;
-    const first = spline?.points[0];
-    const second = spline?.points[1];
-    const trajectory: SplineTrajectory | undefined = spline
-      ? {
-          points: spline.points.slice(1, cyclic ? -2 : -1),
-          duration: spline.duration,
-          flags: spline.flags,
-          cyclic,
-          interpolation: spline.mode === 1 ? "catmullrom" : "linear",
-          orientation:
-            first && second
-              ? Math.atan2(second.y - first.y, second.x - first.x)
-              : position.orientation,
-        }
-      : undefined;
+    const trajectory = spline && createTrajectory(spline, position.orientation);
     this.motions.set(guid, {
       observed: { ...position, source: "server", updatedAt: now },
       trajectory,
@@ -706,14 +692,7 @@ export class CombatRuntime {
     }
     this.motions.set(packet.guid, {
       observed,
-      trajectory: {
-        points: packet.points,
-        duration: packet.duration,
-        interpolation: packet.interpolation,
-        cyclic: packet.cyclic,
-        flags: packet.flags,
-        orientation: observed.orientation,
-      },
+      trajectory: pathTrajectory(packet),
       startedAt: now,
       unsupportedReason:
         packet.interpolation === "catmullrom" && !packet.cyclic
