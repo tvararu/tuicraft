@@ -1,22 +1,24 @@
-export const enum ObjectType {
-  OBJECT = 0,
-  ITEM = 1,
-  CONTAINER = 2,
-  UNIT = 3,
-  PLAYER = 4,
-  GAMEOBJECT = 5,
-  DYNAMICOBJECT = 6,
-  CORPSE = 7,
-}
+export const ObjectType = {
+  OBJECT: 0,
+  ITEM: 1,
+  CONTAINER: 2,
+  UNIT: 3,
+  PLAYER: 4,
+  GAMEOBJECT: 5,
+  DYNAMICOBJECT: 6,
+  CORPSE: 7,
+} as const;
 
-export const enum UpdateType {
-  VALUES = 0,
-  MOVEMENT = 1,
-  CREATE_OBJECT = 2,
-  CREATE_OBJECT2 = 3,
-  OUT_OF_RANGE = 4,
-  NEAR_OBJECTS = 5,
-}
+export type ObjectType = (typeof ObjectType)[keyof typeof ObjectType];
+
+export const UpdateType = {
+  VALUES: 0,
+  MOVEMENT: 1,
+  CREATE_OBJECT: 2,
+  CREATE_OBJECT2: 3,
+  OUT_OF_RANGE: 4,
+  NEAR_OBJECTS: 5,
+} as const;
 
 export const UpdateFlag = {
   SELF: 0x0001,

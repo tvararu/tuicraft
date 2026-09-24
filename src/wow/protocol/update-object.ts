@@ -1,6 +1,6 @@
 import type { Position } from "wow/entity-store";
 import type { PacketReader } from "wow/protocol/packet";
-import { UpdateType } from "wow/protocol/entity-fields";
+import { ObjectType, UpdateType } from "wow/protocol/entity-fields";
 import { parseUpdateMask } from "wow/protocol/update-mask";
 import { parseMovementBlock } from "wow/protocol/movement-block";
 import type { CreateSpline } from "wow/protocol/monster-move";
@@ -18,7 +18,7 @@ export type UpdateEntry =
   | ({
       type: "create";
       guid: bigint;
-      objectType: number;
+      objectType: ObjectType;
       fields: Map<number, number>;
     } & Movement)
   | { type: "values"; guid: bigint; fields: Map<number, number> }
@@ -29,6 +29,19 @@ export type UpdateEntry =
 function readMovement(r: PacketReader, mapId: number): Movement {
   const { x, y, z, orientation, ...rest } = parseMovementBlock(r);
   return { position: { mapId, x, y, z, orientation }, ...rest };
+}
+
+const OBJECT_TYPES = new Set<number>(Object.values(ObjectType));
+
+function isObjectType(value: number): value is ObjectType {
+  return OBJECT_TYPES.has(value);
+}
+
+function readObjectType(r: PacketReader): ObjectType {
+  const value = r.uint8();
+  if (!isObjectType(value))
+    throw new RangeError(`unknown object type ${value}`);
+  return value;
 }
 
 function readGuids(r: PacketReader): bigint[] {
@@ -56,7 +69,7 @@ function readEntry(r: PacketReader, mapId: number): UpdateEntry | undefined {
     case UpdateType.CREATE_OBJECT:
     case UpdateType.CREATE_OBJECT2: {
       const guid = r.packedGuidBig();
-      const objectType = r.uint8();
+      const objectType = readObjectType(r);
       const movement = readMovement(r, mapId);
       return {
         type: "create",

@@ -263,6 +263,15 @@ describe("parseUpdateObject", () => {
     expect(e.position!.z).toBeCloseTo(300);
   });
 
+  test("an unknown object type ends the packet", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint8(2);
+    writePackedGuid(w, 1n);
+    w.uint8(9);
+    expect(parseUpdateObject(new PacketReader(w.finish()))).toEqual([]);
+  });
+
   test("zero-count packet returns empty array", () => {
     const w = new PacketWriter();
     w.uint32LE(0);

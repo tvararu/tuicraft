@@ -20,7 +20,7 @@ export type BaseEntity = {
 };
 
 export type UnitEntity = BaseEntity & {
-  objectType: ObjectType.UNIT | ObjectType.PLAYER;
+  objectType: typeof ObjectType.UNIT | typeof ObjectType.PLAYER;
   health: number;
   maxHealth: number;
   level: number;
@@ -39,7 +39,7 @@ export type UnitEntity = BaseEntity & {
 };
 
 export type GameObjectEntity = BaseEntity & {
-  objectType: ObjectType.GAMEOBJECT;
+  objectType: typeof ObjectType.GAMEOBJECT;
   displayId: number;
   flags: number;
   gameObjectType: number;
@@ -67,7 +67,7 @@ function createBase(guid: bigint, objectType: ObjectType): BaseEntity {
 
 function createUnit(
   guid: bigint,
-  objectType: ObjectType.UNIT | ObjectType.PLAYER,
+  objectType: typeof ObjectType.UNIT | typeof ObjectType.PLAYER,
 ): UnitEntity {
   return {
     ...createBase(guid, objectType),
