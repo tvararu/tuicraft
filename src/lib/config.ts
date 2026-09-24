@@ -90,3 +90,21 @@ export async function writeConfig(cfg: Config): Promise<void> {
   await mkdir(configDir(), { recursive: true });
   await writeFile(configPath(), serializeConfig(cfg) + "\n", { mode: 0o600 });
 }
+
+export function clientConfig(cfg: Config) {
+  return {
+    host: cfg.host,
+    port: cfg.port,
+    account: cfg.account.toUpperCase(),
+    password: cfg.password.toUpperCase(),
+    character: cfg.character,
+    language: cfg.language,
+    spellDataDir: cfg.spell_data_dir,
+    navigationDataDir: cfg.navigation_data_dir,
+    navigationLibrary: cfg.navigation_library,
+    jevApiKey: process.env["TYPESAFE_API_KEY"],
+    jevEndpointUrl:
+      process.env["JEV_ENDPOINT_URL"] ?? process.env["TYPESAFE_ENDPOINT_URL"],
+    jevFault: process.env["JEV_FAULT"],
+  };
+}

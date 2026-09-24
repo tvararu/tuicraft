@@ -1,0 +1,314 @@
+import type { RingBuffer } from "lib/ring-buffer";
+import type { SessionLog, LogEntry } from "lib/session-log";
+import {
+  formatMessage,
+  formatMessageObj,
+  formatGroupEvent,
+  formatEntityEvent,
+  formatEntityEventObj,
+  formatFriendEvent,
+  formatFriendEventObj,
+  formatIgnoreEvent,
+  formatIgnoreEventObj,
+  jsonSafe,
+} from "ui/format";
+import { formatControlEvent, formatControlEventObj } from "ui/format-control";
+import type { EventEntry } from "daemon/commands";
+import type { FriendEvent } from "wow/friend-store";
+import type { IgnoreEvent } from "wow/ignore-store";
+import type { GuildEvent } from "wow/guild-store";
+import { formatGuildCommandError } from "wow/protocol/guild";
+import type { ChatMessage, GroupEvent, DuelEvent } from "wow/client";
+import type { ControlEvent } from "wow/control";
+import type { EntityEvent } from "wow/entity-store";
+
+function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "invite_received":
+      return { type: "GROUP_INVITE", from: event.from };
+    case "command_result":
+      return {
+        type: "GROUP_COMMAND_RESULT",
+        operation: event.operation,
+        target: event.target,
+        result: event.result,
+      };
+    case "leader_changed":
+      return { type: "GROUP_LEADER_CHANGED", name: event.name };
+    case "group_destroyed":
+      return { type: "GROUP_DESTROYED" };
+    case "kicked":
+      return { type: "GROUP_KICKED" };
+    case "invite_declined":
+      return { type: "GROUP_INVITE_DECLINED", name: event.name };
+    case "group_list":
+      return {
+        type: "GROUP_LIST",
+        members: event.members.map((m) => ({
+          name: m.name,
+          online: m.online,
+        })),
+        leader: event.leader,
+      };
+    case "member_stats":
+      return {
+        type: "PARTY_MEMBER_STATS",
+        guidLow: event.guidLow,
+        online: event.online,
+        hp: event.hp,
+        maxHp: event.maxHp,
+        level: event.level,
+      };
+  }
+}
+
+export function onGroupEvent(
+  event: GroupEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatGroupEvent(event);
+  const obj = formatGroupEventObj(event);
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onChatMessage(
+  msg: ChatMessage,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj = formatMessageObj(msg);
+  events.push({ text: formatMessage(msg), json: JSON.stringify(obj) });
+  log.append(obj).catch(() => {});
+}
+
+export function onEntityEvent(
+  event: EntityEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatEntityEvent(event);
+  const obj = formatEntityEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+export function onFriendEvent(
+  event: FriendEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatFriendEvent(event);
+  const obj = formatFriendEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+export function onIgnoreEvent(
+  event: IgnoreEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatIgnoreEvent(event);
+  const obj = formatIgnoreEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+function formatGuildEvent(event: GuildEvent): string {
+  switch (event.type) {
+    case "guild-roster":
+      return `[guild] Roster updated: ${event.roster.members.length} members`;
+    case "promotion":
+      return `[guild] ${event.officer} promoted ${event.member} to ${event.rank}`;
+    case "demotion":
+      return `[guild] ${event.officer} demoted ${event.member} to ${event.rank}`;
+    case "motd":
+      return `[guild] MOTD: ${event.text}`;
+    case "joined":
+      return `[guild] ${event.name} has joined the guild`;
+    case "left":
+      return `[guild] ${event.name} has left the guild`;
+    case "removed":
+      return `[guild] ${event.officer} removed ${event.member} from the guild`;
+    case "leader_is":
+      return `[guild] ${event.name} is the guild leader`;
+    case "leader_changed":
+      return `[guild] ${event.oldLeader} has made ${event.newLeader} the new guild leader`;
+    case "disbanded":
+      return "[guild] Guild has been disbanded";
+    case "signed_on":
+      return `[guild] ${event.name} has come online`;
+    case "signed_off":
+      return `[guild] ${event.name} has gone offline`;
+    case "command_result":
+      return formatGuildCommandError(event.command, event.name, event.result)!;
+    case "guild_invite":
+      return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
+  }
+}
+
+function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "guild-roster":
+      return {
+        type: "GUILD_ROSTER_UPDATED",
+        sender: "",
+        message: `${event.roster.members.length} members`,
+      };
+    case "promotion":
+      return {
+        type: "GUILD_PROMOTION",
+        officer: event.officer,
+        member: event.member,
+        rank: event.rank,
+      };
+    case "demotion":
+      return {
+        type: "GUILD_DEMOTION",
+        officer: event.officer,
+        member: event.member,
+        rank: event.rank,
+      };
+    case "motd":
+      return { type: "GUILD_MOTD", text: event.text };
+    case "joined":
+      return { type: "GUILD_JOINED", name: event.name };
+    case "left":
+      return { type: "GUILD_LEFT", name: event.name };
+    case "removed":
+      return {
+        type: "GUILD_REMOVED",
+        member: event.member,
+        officer: event.officer,
+      };
+    case "leader_is":
+      return { type: "GUILD_LEADER_IS", name: event.name };
+    case "leader_changed":
+      return {
+        type: "GUILD_LEADER_CHANGED",
+        oldLeader: event.oldLeader,
+        newLeader: event.newLeader,
+      };
+    case "disbanded":
+      return { type: "GUILD_DISBANDED" };
+    case "signed_on":
+      return { type: "GUILD_SIGNED_ON", name: event.name };
+    case "signed_off":
+      return { type: "GUILD_SIGNED_OFF", name: event.name };
+    case "command_result":
+      return {
+        type: "GUILD_COMMAND_RESULT",
+        command: event.command,
+        name: event.name,
+        result: event.result,
+      };
+    case "guild_invite":
+      return {
+        type: "GUILD_INVITE_RECEIVED",
+        inviter: event.inviter,
+        guildName: event.guildName,
+      };
+  }
+}
+
+export function onGuildEvent(
+  event: GuildEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatGuildEvent(event);
+  const obj = formatGuildEventObj(event);
+  events.push({ text, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+function formatDuelEvent(event: DuelEvent): string | undefined {
+  switch (event.type) {
+    case "duel_requested":
+      return `[duel] ${event.challenger} challenges you to a duel`;
+    case "duel_countdown":
+      return `[duel] Duel starting in ${event.timeMs / 1000} seconds`;
+    case "duel_complete":
+      return event.completed ? undefined : "[duel] Duel interrupted";
+    case "duel_winner":
+      return event.reason === "won"
+        ? `[duel] ${event.winner} has defeated ${event.loser} in a duel`
+        : `[duel] ${event.loser} has fled from ${event.winner} in a duel`;
+    case "duel_out_of_bounds":
+      return "[duel] Out of bounds \u2014 return to the duel area";
+    case "duel_in_bounds":
+      return "[duel] Back in bounds";
+  }
+}
+
+function formatDuelEventObj(
+  event: DuelEvent,
+): Record<string, unknown> | undefined {
+  switch (event.type) {
+    case "duel_requested":
+      return { type: "DUEL_REQUESTED", challenger: event.challenger };
+    case "duel_countdown":
+      return { type: "DUEL_COUNTDOWN", timeMs: event.timeMs };
+    case "duel_complete":
+      return { type: "DUEL_COMPLETE", completed: event.completed };
+    case "duel_winner":
+      return {
+        type: "DUEL_WINNER",
+        reason: event.reason,
+        winner: event.winner,
+        loser: event.loser,
+      };
+    case "duel_out_of_bounds":
+      return { type: "DUEL_OUT_OF_BOUNDS" };
+    case "duel_in_bounds":
+      return { type: "DUEL_IN_BOUNDS" };
+  }
+}
+
+export function onDuelEvent(
+  event: DuelEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const text = formatDuelEvent(event);
+  const obj = formatDuelEventObj(event);
+  if (obj) {
+    events.push({ text, json: JSON.stringify(obj) });
+    log.append(obj as LogEntry).catch(() => {});
+  }
+}
+
+export function onControlEvent(
+  event: ControlEvent,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj = formatControlEventObj(event);
+  events.push({
+    text: formatControlEvent(event),
+    json: JSON.stringify(obj),
+  });
+  log.append(obj as LogEntry).catch(() => {});
+}
+
+export function onDomainEvent<E extends { type: string }>(
+  tag: string,
+  event: E,
+  events: RingBuffer<EventEntry>,
+  log: SessionLog,
+): void {
+  const obj: Record<string, unknown> = {
+    type: tag.toUpperCase(),
+    data: jsonSafe(event),
+  };
+  events.push({ text: `[${tag}] ${event.type}`, json: JSON.stringify(obj) });
+  log.append(obj as LogEntry).catch(() => {});
+}

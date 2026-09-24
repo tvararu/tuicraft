@@ -16,8 +16,11 @@ import {
   type ReplyKind,
   type OutputEnvelope,
   type OutputStage,
+  type JsonValue,
 } from "cli/send-output";
 import { access } from "node:fs/promises";
+import { messageOf } from "lib/errors";
+import { formatGuid } from "ui/format";
 import { socketPath } from "lib/paths";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
@@ -96,28 +99,37 @@ function printHumanInspection(command: string, lines: string[]): void {
     console.log(line);
 }
 function printWalkReply(lines: string[]): void {
-  if (jsonRequested()) {
-    const reply = decodeReply(publicCommand() ?? "", "json", lines);
-    if (
-      !reply.error &&
-      (typeof reply.data !== "object" ||
-        reply.data === null ||
-        !("status" in reply.data) ||
-        reply.data["status"] !== "completed")
-    ) {
-      emit(
-        errorEnvelope(
-          publicCommand(),
-          "command",
-          "walk stopped without completion",
-          reply,
-        ),
-      );
-    } else emit(reply);
+  const failed = walkCommandFailed(lines);
+  if (!jsonRequested()) {
+    for (const line of lines) console.log(line);
+    if (failed) process.exitCode = 1;
     return;
   }
-  for (const line of lines) console.log(line);
-  if (walkCommandFailed(lines)) process.exitCode = 1;
+  const reply = decodeReply(publicCommand() ?? "", "json", lines);
+  if (reply.error || !failed) emit(reply);
+  else
+    emit(
+      errorEnvelope(
+        publicCommand(),
+        "command",
+        "walk stopped without completion",
+      ),
+    );
+}
+
+function printStatus(command: string, lines: string[], data: JsonValue): void {
+  if (!jsonRequested()) {
+    for (const line of lines) console.log(line);
+    return;
+  }
+  if (lines.length === 1 && lines[0] === "CONNECTED")
+    emit(resultEnvelope(command, data));
+  else {
+    const message = lines[0]?.startsWith("ERR ")
+      ? lines[0].slice(4)
+      : "Unexpected daemon reply";
+    emit(errorEnvelope(command, "command", message));
+  }
 }
 
 async function printSendReply(
@@ -143,12 +155,7 @@ async function printSendReply(
         ? errorEnvelope("send", "wait", waited.error.message, reply)
         : { ...reply, events: waited.events };
     } catch (error) {
-      reply = errorEnvelope(
-        "send",
-        "wait",
-        error instanceof Error ? error.message : String(error),
-        reply,
-      );
+      reply = errorEnvelope("send", "wait", messageOf(error), reply);
     }
   }
   emit(reply);
@@ -161,7 +168,7 @@ async function main() {
     case "interactive": {
       const { authWithRetry } = await import("wow/auth");
       const { worldSession } = await import("wow/client");
-      const { readConfig } = await import("lib/config");
+      const { readConfig, clientConfig } = await import("lib/config");
       const { configPath } = await import("lib/paths");
 
       if (!(await Bun.file(configPath()).exists())) {
@@ -174,23 +181,7 @@ async function main() {
         await runSetup([]);
       }
 
-      const cfg = await readConfig();
-      const clientCfg = {
-        host: cfg.host,
-        port: cfg.port,
-        account: cfg.account.toUpperCase(),
-        password: cfg.password.toUpperCase(),
-        character: cfg.character,
-        language: cfg.language,
-        spellDataDir: cfg.spell_data_dir,
-        navigationDataDir: cfg.navigation_data_dir,
-        navigationLibrary: cfg.navigation_library,
-        jevApiKey: process.env["TYPESAFE_API_KEY"],
-        jevEndpointUrl:
-          process.env["JEV_ENDPOINT_URL"] ??
-          process.env["TYPESAFE_ENDPOINT_URL"],
-        jevFault: process.env["JEV_FAULT"],
-      };
+      const clientCfg = clientConfig(await readConfig());
       const auth = await authWithRetry(clientCfg);
       const handle = await worldSession(clientCfg, auth);
       const { startTui } = await import("ui/tui");
@@ -267,60 +258,30 @@ async function main() {
       }
     }
     case "start": {
-      try {
-        const lines = await sendToSocket("STATUS");
-        if (lines.includes("CONNECTED")) {
-          if (jsonRequested())
-            emit(
-              resultEnvelope("start", { socket: "responsive", started: false }),
-            );
-          else console.log("Daemon is already running.");
-          break;
-        }
-      } catch {}
+      const running = await sendToSocket("STATUS").then(
+        (lines) => lines.includes("CONNECTED"),
+        () => false,
+      );
+      if (running) {
+        if (jsonRequested())
+          emit(
+            resultEnvelope("start", { socket: "responsive", started: false }),
+          );
+        else console.log("Daemon is already running.");
+        break;
+      }
       failureStage = "startup";
       await ensureDaemon();
       const lines = await sendToSocket("STATUS");
-      if (jsonRequested()) {
-        if (lines.length === 1 && lines[0] === "CONNECTED")
-          emit(
-            resultEnvelope("start", { socket: "responsive", started: true }),
-          );
-        else
-          emit(
-            errorEnvelope(
-              "start",
-              "command",
-              lines[0]?.startsWith("ERR ")
-                ? lines[0].slice(4)
-                : "Unexpected daemon reply",
-            ),
-          );
-      } else for (const line of lines) console.log(line);
+      printStatus("start", lines, { socket: "responsive", started: true });
       break;
     }
     case "status": {
-      try {
-        const lines = await sendToSocket("STATUS");
-        if (jsonRequested()) {
-          if (lines.length === 1 && lines[0] === "CONNECTED")
-            emit(resultEnvelope("status", { socket: "responsive" }));
-          else
-            emit(
-              errorEnvelope(
-                "status",
-                "command",
-                lines[0]?.startsWith("ERR ")
-                  ? lines[0].slice(4)
-                  : "Unexpected daemon reply",
-              ),
-            );
-        } else for (const line of lines) console.log(line);
-      } catch {
-        if (jsonRequested())
-          emit(resultEnvelope("status", { socket: "not_running" }));
-        else console.log("Daemon is not running.");
-      }
+      const lines = await sendToSocket("STATUS").catch(() => undefined);
+      if (lines) printStatus("status", lines, { socket: "responsive" });
+      else if (jsonRequested())
+        emit(resultEnvelope("status", { socket: "not_running" }));
+      else console.log("Daemon is not running.");
       break;
     }
     case "stop": {
@@ -340,14 +301,7 @@ async function main() {
                 probeError.code === "ENOENT",
             );
           if (absent) emit(resultEnvelope("stop", { socket: "not_running" }));
-          else
-            emit(
-              errorEnvelope(
-                "stop",
-                "command",
-                error instanceof Error ? error.message : String(error),
-              ),
-            );
+          else emit(errorEnvelope("stop", "command", messageOf(error)));
         }
       }
       break;
@@ -382,7 +336,7 @@ async function main() {
     case "face_guid": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(`FACE_GUID 0x${action.guid.toString(16)}`),
+        await sendToSocket(`FACE_GUID ${formatGuid(action.guid)}`),
       );
       break;
     }
@@ -390,7 +344,7 @@ async function main() {
       await ensureDaemon();
       const destination =
         action.target.kind === "guid"
-          ? `0x${action.target.guid.toString(16)}`
+          ? `${formatGuid(action.target.guid)}`
           : `${action.target.x} ${action.target.y} ${action.target.z}`;
       const lines = await sendToSocket(
         `WALK_TOWARD ${action.yards} ${destination}`,
@@ -401,7 +355,7 @@ async function main() {
     case "target": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(`TARGET 0x${action.guid.toString(16)}`),
+        await sendToSocket(`TARGET ${formatGuid(action.guid)}`),
       );
       break;
     }
@@ -440,16 +394,14 @@ async function main() {
     case "cast": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(
-          `CAST ${action.spellId} 0x${action.guid.toString(16)}`,
-        ),
+        await sendToSocket(`CAST ${action.spellId} ${formatGuid(action.guid)}`),
       );
       break;
     }
     case "attack": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(`ATTACK 0x${action.guid.toString(16)}`),
+        await sendToSocket(`ATTACK ${formatGuid(action.guid)}`),
       );
       break;
     }
@@ -471,16 +423,14 @@ async function main() {
           : "";
       printControlReply(
         await sendToSocket(
-          `FIGHT ${framingPart}0x${action.guid.toString(16)} ${action.instruction}`,
+          `FIGHT ${framingPart}${formatGuid(action.guid)} ${action.instruction}`,
         ),
       );
       break;
     }
     case "cycle": {
       await ensureDaemon();
-      const guidsPart = action.guids
-        .map((guid) => `0x${guid.toString(16)}`)
-        .join(" ");
+      const guidsPart = action.guids.map(formatGuid).join(" ");
       printControlReply(
         await sendToSocket(
           `CYCLE ${guidsPart}${action.maxStarts ? ` --max ${action.maxStarts}` : ""} --instruction ${action.instruction}`,
@@ -491,7 +441,7 @@ async function main() {
     case "open_loot": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(`OPEN_LOOT 0x${action.guid.toString(16)}`),
+        await sendToSocket(`OPEN_LOOT ${formatGuid(action.guid)}`),
       );
       break;
     }
@@ -508,9 +458,7 @@ async function main() {
     }
     case "talk": {
       await ensureDaemon();
-      printControlReply(
-        await sendToSocket(`TALK 0x${action.guid.toString(16)}`),
-      );
+      printControlReply(await sendToSocket(`TALK ${formatGuid(action.guid)}`));
       break;
     }
     case "query_quest":
@@ -557,7 +505,7 @@ async function main() {
     case "spirit_healer": {
       await ensureDaemon();
       printControlReply(
-        await sendToSocket(`SPIRIT_HEALER 0x${action.guid.toString(16)}`),
+        await sendToSocket(`SPIRIT_HEALER ${formatGuid(action.guid)}`),
       );
       break;
     }
@@ -593,7 +541,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = messageOf(error);
   if (jsonRequested())
     emit(errorEnvelope(publicCommand(), failureStage, message));
   else console.error(message);

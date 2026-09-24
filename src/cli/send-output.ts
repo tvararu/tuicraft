@@ -17,15 +17,6 @@ export type OutputEnvelope = {
 };
 export type ReplyKind = "intent" | "json" | "nearby" | "events" | "slash";
 
-export function formatSendOutput(
-  lines: string[],
-  json: boolean,
-  preserveDaemonLines: boolean,
-): string[] {
-  if (!json || preserveDaemonLines) return lines;
-  return [JSON.stringify({ status: "ok" })];
-}
-
 export function resultEnvelope(
   command: string,
   data: JsonValue,

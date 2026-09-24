@@ -230,7 +230,7 @@ export function formatEntityEventObj(
       const e = event.entity;
       const obj: Record<string, unknown> = {
         type: "ENTITY_APPEAR",
-        guid: `0x${e.guid.toString(16)}`,
+        guid: formatGuid(e.guid),
         objectType: e.objectType,
         name: e.name,
       };
@@ -253,7 +253,7 @@ export function formatEntityEventObj(
     case "disappear":
       return {
         type: "ENTITY_DISAPPEAR",
-        guid: `0x${event.guid.toString(16)}`,
+        guid: formatGuid(event.guid),
         name: event.name,
       };
     case "update":
@@ -289,7 +289,7 @@ export function formatFriendListJson(friends: FriendEntry[]): string {
     count: friends.length,
     online: friends.filter((f) => f.status !== FriendStatus.OFFLINE).length,
     friends: friends.map((f) => ({
-      guid: `0x${f.guid.toString(16)}`,
+      guid: formatGuid(f.guid),
       name: f.name,
       note: f.note,
       status: friendStatusLabel(f.status).toUpperCase(),
@@ -379,7 +379,7 @@ export function formatIgnoreListJson(ignored: IgnoreEntry[]): string {
     type: "IGNORED",
     count: ignored.length,
     ignored: ignored.map((e) => ({
-      guid: `0x${e.guid.toString(16)}`,
+      guid: formatGuid(e.guid),
       name: e.name,
     })),
   });
@@ -478,7 +478,7 @@ export function formatGuildRosterJson(roster: GuildRoster): string {
     online: roster.members.filter((m) => m.status !== GuildMemberStatus.OFFLINE)
       .length,
     members: roster.members.map((m) => ({
-      guid: `0x${m.guid.toString(16)}`,
+      guid: formatGuid(m.guid),
       name: m.name,
       rank: rankName(roster, m.rankIndex),
       rankIndex: m.rankIndex,
@@ -490,4 +490,20 @@ export function formatGuildRosterJson(roster: GuildRoster): string {
       officerNote: m.officerNote,
     })),
   });
+}
+
+export function formatGuid(guid: bigint): string {
+  return `0x${guid.toString(16)}`;
+}
+
+export function jsonSafe(value: unknown): unknown {
+  if (typeof value === "bigint") return formatGuid(value);
+  if (Array.isArray(value)) return value.map(jsonSafe);
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value))
+      out[key] = jsonSafe(entry);
+    return out;
+  }
+  return value;
 }
