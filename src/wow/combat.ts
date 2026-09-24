@@ -7,6 +7,13 @@ import {
   type XpGain,
 } from "wow/protocol/combat";
 import type { AuraUpdate, AuraUpdateAll } from "wow/protocol/aura";
+import { AuraStore, type CombatAura } from "wow/aura-store";
+import { CooldownStore, type CombatCooldown } from "wow/cooldown-store";
+import {
+  MotionStore,
+  type CombatPose,
+  type UnitMotion,
+} from "wow/motion-store";
 import {
   buildCancelCast,
   buildCastSpell,
@@ -24,12 +31,6 @@ import {
   type SupersededSpell,
 } from "wow/protocol/spell";
 import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
-import {
-  createTrajectory,
-  pathTrajectory,
-  sampleSplinePosition,
-  type SplineTrajectory,
-} from "wow/spline";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
 import type { ControlPose } from "wow/control";
 import { UNIT_FIELDS } from "wow/protocol/entity-fields";
@@ -48,24 +49,6 @@ export type CombatCast = {
   source: "server" | "pending";
   count: number;
   cancelRequested?: boolean;
-};
-
-export type CombatCooldown = {
-  spellId: number;
-  remainingMs: number;
-  until: number;
-  source: "server" | "predicted";
-};
-
-export type CombatAura = {
-  slot: number;
-  spellId: number;
-  caster: bigint | undefined;
-  stacks: number;
-  duration: number | undefined;
-  timeLeft: number | undefined;
-  flags: number;
-  level: number;
 };
 
 export type CombatOutcome = {
@@ -87,10 +70,6 @@ export type CombatXp = {
   at: number;
 };
 
-export type CombatPose = Omit<ControlPose, "orientation"> & {
-  orientation: number | undefined;
-};
-
 export type CombatUnit = {
   guid: bigint;
   name: string | undefined;
@@ -104,13 +83,7 @@ export type CombatUnit = {
   shapeshiftForm?: number;
   pose: CombatPose | undefined;
   serverPose: CombatPose | undefined;
-  motion:
-    | {
-        kind: "spline" | "stationary";
-        observedAt: number;
-        unsupportedReason?: string;
-      }
-    | undefined;
+  motion: UnitMotion | undefined;
 };
 
 export type CombatState = {
@@ -162,33 +135,15 @@ export type CombatDeps = {
   catalog?: SpellCatalog;
 };
 
-type TrackedAura = CombatAura & { unit: bigint; receivedAt: number };
-
 export class CombatRuntime {
   private readonly deps: CombatDeps;
   private listener: ((event: CombatEvent) => void) | undefined;
   private readonly incomingAttackers = new Set<bigint>();
   private readonly learned = new Set<number>();
-  private readonly cooldowns = new Map<
-    number,
-    { until: number; source: "server" | "predicted" }
-  >();
-  private readonly categories = new Map<
-    number,
-    { until: number; source: "server" | "predicted" }
-  >();
-  private globalUntil = 0;
+  private readonly cooldowns: CooldownStore;
+  private readonly auras: AuraStore;
+  private readonly motions: MotionStore;
   private pendingAttack: bigint | undefined;
-  private readonly auras = new Map<string, TrackedAura>();
-  private readonly motions = new Map<
-    bigint,
-    {
-      observed: CombatPose;
-      trajectory?: SplineTrajectory;
-      startedAt: number;
-      unsupportedReason?: string;
-    }
-  >();
   private castCount = 1;
   private pending: CombatCast | undefined;
   private casting: CombatCast | undefined;
@@ -200,6 +155,12 @@ export class CombatRuntime {
 
   constructor(deps: CombatDeps) {
     this.deps = deps;
+    this.cooldowns = new CooldownStore(
+      deps.now,
+      (id) => this.definition(id)?.cooldown,
+    );
+    this.auras = new AuraStore(deps.now);
+    this.motions = new MotionStore(deps.now);
   }
 
   onEvent(cb: ((event: CombatEvent) => void) | undefined): void {
@@ -209,20 +170,15 @@ export class CombatRuntime {
   isAttackingSelf(guid: bigint): boolean {
     if (!this.incomingAttackers.has(guid)) return false;
     const entity = this.deps.getEntity(guid);
-    if (isUnit(entity) && entity.health === 0) {
-      this.incomingAttackers.delete(guid);
-      return false;
-    }
-    return true;
+    return !(isUnit(entity) && entity.health === 0);
   }
 
   snapshot(selected = this.deps.selectedGuid()): CombatState {
     const selfGuid = this.deps.selfGuid();
-    const now = this.deps.now();
     return {
       self: this.unitOf(selfGuid, this.deps.selfPose()),
       target: selected
-        ? this.unitOf(selected, this.poseOf(selected))
+        ? this.unitOf(selected, this.motions.pose(selected))
         : undefined,
       selectedGuid: selected,
       attacking: this.attacking,
@@ -234,9 +190,9 @@ export class CombatRuntime {
       unknownLearned: [...this.learned].filter(
         (id) => !this.deps.catalog?.get(id),
       ),
-      cooldowns: this.cooldownList(now),
-      auras: this.aurasFor(selfGuid),
-      targetAuras: selected ? this.aurasFor(selected) : [],
+      cooldowns: this.cooldowns.list(this.learned),
+      auras: this.auras.forUnit(selfGuid),
+      targetAuras: selected ? this.auras.forUnit(selected) : [],
       lastOutcome: this.lastOutcome,
       lastXp: this.lastXp,
     };
@@ -246,7 +202,9 @@ export class CombatRuntime {
     const entity = this.deps.getEntity(guid);
     if (!isUnit(entity)) return undefined;
     const pose =
-      guid === this.deps.selfGuid() ? this.deps.selfPose() : this.poseOf(guid);
+      guid === this.deps.selfGuid()
+        ? this.deps.selfPose()
+        : this.motions.pose(guid);
     return this.unitOf(guid, pose, entity);
   }
 
@@ -259,12 +217,7 @@ export class CombatRuntime {
   }
 
   readyAt(id: number): number {
-    const category = this.definition(id)?.cooldown.category;
-    return Math.max(
-      this.globalUntil,
-      this.cooldowns.get(id)?.until ?? 0,
-      category ? (this.categories.get(category)?.until ?? 0) : 0,
-    );
+    return this.cooldowns.readyAt(id);
   }
 
   async spellbook(): Promise<SpellDefinition[]> {
@@ -362,7 +315,6 @@ export class CombatRuntime {
     this.auras.clear();
     this.learned.clear();
     this.cooldowns.clear();
-    this.categories.clear();
     this.pending = undefined;
     this.casting = undefined;
     this.lastCast = undefined;
@@ -373,9 +325,8 @@ export class CombatRuntime {
 
   forget(guid: bigint): void {
     this.incomingAttackers.delete(guid);
-    this.motions.delete(guid);
-    for (const [key, aura] of this.auras)
-      if (aura.unit === guid) this.auras.delete(key);
+    this.motions.forget(guid);
+    this.auras.forget(guid);
   }
 
   observePosition(
@@ -383,38 +334,13 @@ export class CombatRuntime {
     position: Position,
     spline?: CreateSpline,
   ): void {
-    const now = this.deps.now();
-    const trajectory = spline && createTrajectory(spline, position.orientation);
-    this.motions.set(guid, {
-      observed: { ...position, source: "server", updatedAt: now },
-      trajectory,
-      startedAt: now - (spline?.elapsed ?? 0),
-      unsupportedReason:
-        spline && spline.mode !== 0 && spline.mode !== 1
-          ? "unsupported_spline_mode"
-          : undefined,
-    });
-    this.checkMotion(guid);
+    this.motions.observe(guid, position, spline);
   }
 
   applyInitialSpells(packet: InitialSpells): void {
     this.learned.clear();
     for (const spell of packet.spells) this.learned.add(spell.spellId);
-    const now = this.deps.now();
-    this.cooldowns.clear();
-    this.categories.clear();
-    for (const cd of packet.cooldowns) {
-      if (cd.cooldown > 0)
-        this.cooldowns.set(cd.spellId, {
-          until: now + cd.cooldown,
-          source: "server",
-        });
-      if (cd.categoryCooldown > 0)
-        this.categories.set(cd.category, {
-          until: now + cd.categoryCooldown,
-          source: "server",
-        });
-    }
+    this.cooldowns.reset(packet.cooldowns);
     this.emit("spellbook");
   }
 
@@ -454,7 +380,7 @@ export class CombatRuntime {
       count: packet.castCount,
     };
     this.lastCast = this.casting;
-    this.beginGlobalCooldown(packet.spellId);
+    this.cooldowns.beginGlobal(packet.spellId);
     this.lastOutcome = {
       kind: "cast",
       status: "started",
@@ -476,8 +402,8 @@ export class CombatRuntime {
     )
       this.pending = undefined;
     if (hadStart) this.casting = undefined;
-    if (!hadStart) this.beginGlobalCooldown(packet.spellId);
-    this.predictCooldown(packet.spellId);
+    if (!hadStart) this.cooldowns.beginGlobal(packet.spellId);
+    this.cooldowns.predict(packet.spellId);
     this.lastOutcome = {
       kind: "cast",
       hits: packet.hits,
@@ -536,25 +462,19 @@ export class CombatRuntime {
 
   applyCooldown(packet: SpellCooldown): void {
     if (packet.guid !== this.deps.selfGuid()) return;
-    const now = this.deps.now();
     for (const cd of packet.cooldowns)
-      this.cooldowns.set(cd.spellId, {
-        until: now + cd.time,
-        source: "server",
-      });
+      this.cooldowns.observe(cd.spellId, cd.time);
   }
 
   applyClearCooldown({ spellId, guid }: CooldownNotice): void {
     if (guid !== this.deps.selfGuid()) return;
-    this.cooldowns.delete(spellId);
-    const category = this.definition(spellId)?.cooldown.category;
-    if (category) this.categories.delete(category);
+    this.cooldowns.release(spellId);
     this.emit("outcome", "cooldown_cleared");
   }
 
   applyCooldownEvent({ spellId, guid }: CooldownNotice): void {
     if (guid !== this.deps.selfGuid()) return;
-    this.predictCooldown(spellId);
+    this.cooldowns.predict(spellId);
     this.emit("outcome", "cooldown_event");
   }
 
@@ -623,14 +543,12 @@ export class CombatRuntime {
   }
 
   applyAura(update: AuraUpdate): void {
-    this.storeAura(update);
+    this.auras.apply(update);
     this.emit("aura");
   }
 
-  applyAuraAll({ unit, auras }: AuraUpdateAll): void {
-    for (const [key, aura] of this.auras)
-      if (aura.unit === unit) this.auras.delete(key);
-    for (const aura of auras) this.storeAura(aura);
+  applyAuraAll(update: AuraUpdateAll): void {
+    this.auras.replace(update);
     this.emit("aura");
   }
 
@@ -645,97 +563,7 @@ export class CombatRuntime {
   }
 
   applyMonsterMove(packet: MonsterMove, mapId: number): void {
-    const now = this.deps.now();
-    const observed: CombatPose = {
-      mapId,
-      x: packet.start.x,
-      y: packet.start.y,
-      z: packet.start.z,
-      orientation: undefined,
-      source: "server",
-      updatedAt: now,
-    };
-    if (packet.kind === "stop") {
-      this.motions.set(packet.guid, { observed, startedAt: now });
-      return;
-    }
-    this.motions.set(packet.guid, {
-      observed,
-      trajectory: pathTrajectory(packet),
-      startedAt: now,
-      unsupportedReason:
-        packet.interpolation === "catmullrom" && !packet.cyclic
-          ? "unknown_launch_orientation"
-          : undefined,
-    });
-    this.checkMotion(packet.guid);
-  }
-
-  private storeAura(update: AuraUpdate): void {
-    const key = `${update.unit}:${update.slot}`;
-    if (update.removed) {
-      this.auras.delete(key);
-      return;
-    }
-    this.auras.set(key, {
-      unit: update.unit,
-      receivedAt: this.deps.now(),
-      slot: update.slot,
-      spellId: update.spellId,
-      caster:
-        update.caster ??
-        ((update.flags & 0x08) !== 0 ? update.unit : undefined),
-      stacks: update.stacks,
-      duration: update.duration,
-      timeLeft: update.timeLeft,
-      flags: update.flags,
-      level: update.level,
-    });
-  }
-
-  private aurasFor(guid: bigint): CombatAura[] {
-    const list: CombatAura[] = [];
-    for (const aura of this.auras.values()) {
-      if (aura.unit !== guid) continue;
-      const timeLeft =
-        aura.timeLeft === undefined
-          ? undefined
-          : Math.max(0, aura.timeLeft - (this.deps.now() - aura.receivedAt));
-      if (timeLeft === 0) continue;
-      const { unit: _unit, receivedAt: _receivedAt, ...value } = aura;
-      list.push({ ...value, timeLeft });
-    }
-    return list;
-  }
-
-  private cooldownList(now: number): CombatCooldown[] {
-    const list: CombatCooldown[] = [];
-    for (const spellId of this.learned) this.appendCooldown(list, spellId, now);
-    for (const spellId of this.cooldowns.keys())
-      if (!this.learned.has(spellId)) this.appendCooldown(list, spellId, now);
-    return list;
-  }
-
-  private appendCooldown(
-    list: CombatCooldown[],
-    spellId: number,
-    now: number,
-  ): void {
-    const cd = this.cooldowns.get(spellId);
-    const categoryId = this.definition(spellId)?.cooldown.category;
-    const category = categoryId ? this.categories.get(categoryId) : undefined;
-    let until = this.globalUntil;
-    let source: CombatCooldown["source"] = "predicted";
-    if (cd && cd.until >= until) {
-      until = cd.until;
-      source = cd.source;
-    }
-    if (category && category.until >= until) {
-      until = category.until;
-      source = category.source;
-    }
-    if (until > now)
-      list.push({ spellId, until, remainingMs: until - now, source });
+    this.motions.monsterMove(packet, mapId);
   }
 
   private unitOf(
@@ -765,7 +593,7 @@ export class CombatRuntime {
       shapeshiftForm: formBytes === undefined ? undefined : formBytes >>> 24,
       level: fieldOf(unit, UNIT_FIELDS.LEVEL.offset),
       pose,
-      motion: this.motionOf(guid),
+      motion: this.motions.motion(guid),
       serverPose: this.serverPoseOf(guid, pose),
     };
   }
@@ -779,67 +607,7 @@ export class CombatRuntime {
       if (self) return { ...self };
       return pose?.source === "server" ? { ...pose } : undefined;
     }
-    const observed = this.motions.get(guid)?.observed;
-    return observed ? { ...observed } : undefined;
-  }
-
-  private checkMotion(guid: bigint): void {
-    const motion = this.motions.get(guid);
-    if (!motion?.trajectory || motion.unsupportedReason) return;
-    const sample = sampleSplinePosition(motion.trajectory, 0);
-    if (!sample.supported) motion.unsupportedReason = sample.reason;
-  }
-
-  private motionOf(guid: bigint): CombatUnit["motion"] {
-    const motion = this.motions.get(guid);
-    if (!motion) return undefined;
-    const unsupportedReason = motion.unsupportedReason;
-    return {
-      kind: motion.trajectory ? "spline" : "stationary",
-      observedAt: motion.observed.updatedAt,
-      unsupportedReason,
-    };
-  }
-
-  private poseOf(guid: bigint): CombatPose | undefined {
-    const motion = this.motions.get(guid);
-    if (motion?.unsupportedReason) return undefined;
-    if (motion?.trajectory) {
-      const sample = sampleSplinePosition(
-        motion.trajectory,
-        this.deps.now() - motion.startedAt,
-      );
-      if (sample.supported) {
-        return {
-          mapId: motion.observed.mapId,
-          x: sample.x,
-          y: sample.y,
-          z: sample.z,
-          orientation: motion.observed.orientation,
-          source: "predicted",
-          updatedAt: this.deps.now(),
-        };
-      }
-      return undefined;
-    }
-    if (motion) return { ...motion.observed };
-    return undefined;
-  }
-
-  private predictCooldown(id: number): void {
-    const cd = this.definition(id)?.cooldown;
-    const until = (ms: number) => ({
-      until: this.deps.now() + ms,
-      source: "predicted" as const,
-    });
-    if (cd?.recoveryTimeMs) this.cooldowns.set(id, until(cd.recoveryTimeMs));
-    if (cd?.categoryRecoveryTimeMs)
-      this.categories.set(cd.category, until(cd.categoryRecoveryTimeMs));
-  }
-
-  private beginGlobalCooldown(id: number): void {
-    const time = this.definition(id)?.cooldown.startRecoveryTimeMs ?? 0;
-    this.globalUntil = Math.max(this.globalUntil, this.deps.now() + time);
+    return this.motions.serverPose(guid);
   }
 
   private emit(type: CombatEventType, reason?: string): void {
