@@ -88,7 +88,9 @@ These values describe the daemon socket, not world-session health.
 Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` show human
 summaries. Use `--json` for all fields and automated parsing. A human action
 acknowledgment means that the daemon accepted a request. It does not confirm
-that the server completed the action.
+that the server completed the action. `fight` and `cycle` reply when the
+run ends, and human mode says that it ended; read `tactics` or `cycling` for
+the outcome.
 
 ## Direct control
 

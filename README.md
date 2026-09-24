@@ -202,7 +202,8 @@ Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 
 Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` print readable
-summaries. Control actions report daemon request acceptance, not server success.
+summaries. Control actions report daemon request acceptance, not server success;
+`fight` and `cycle` reply when the run ends and say so.
 Use `--json` for the full observed state and for scripts.
 
 ## Gameplay notes

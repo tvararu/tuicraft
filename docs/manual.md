@@ -631,5 +631,6 @@ server-accepted pose.
 Without `--json`, control commands and inspections print daemon `ERR` lines
 and exit with status 1. With `--json`, they print one error envelope on stdout
 and exit with status 1. Human control actions print daemon request acceptance,
-not a server result. `cycling`, `recovery`, `inventory`, and `loot` print
-readable summaries.
+not a server result. `fight` and `cycle` reply when the run ends and print
+that it ended; `tactics` or `cycling` holds the outcome. `cycling`,
+`recovery`, `inventory`, and `loot` print readable summaries.
