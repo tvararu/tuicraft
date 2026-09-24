@@ -98,6 +98,7 @@ JSON OUTPUT
   interactive mode and internal daemon mode.
   Without --json, cycling, recovery, inventory and loot print readable summaries.
   Control actions print daemon request acceptance, not a server result.
+  fight and cycle reply when the run ends; check tactics or cycling for the outcome.
 
 SETUP FLAGS
   --account NAME  Account name (required)

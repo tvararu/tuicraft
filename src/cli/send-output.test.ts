@@ -279,12 +279,18 @@ test("a directed walk exits unsuccessfully on a stop or missing outcome", () => 
 
 describe("formatHumanIntent", () => {
   test("explains that an OK from an action is not a server result", () => {
-    expect(formatHumanIntent("cycle", ["OK"]).join("\n")).toContain(
-      "Check tuicraft cycling",
-    );
-    expect(formatHumanIntent("cycle", ["OK"]).join("\n")).toContain(
-      "Daemon accepted request",
-    );
+    expect(formatHumanIntent("open-loot", ["OK"])).toEqual([
+      "Daemon accepted request. Check tuicraft loot for observed results.",
+    ]);
     expect(formatHumanIntent("cycle", ["ERR unsafe"])).toEqual(["ERR unsafe"]);
+  });
+
+  test("reports that fight and cycle ended, since they reply at the end", () => {
+    expect(formatHumanIntent("fight", ["OK"])).toEqual([
+      "The fight run ended. Check tuicraft tactics for its outcome.",
+    ]);
+    expect(formatHumanIntent("cycle", ["OK"])).toEqual([
+      "The cycle run ended. Check tuicraft cycling for its outcome.",
+    ]);
   });
 });

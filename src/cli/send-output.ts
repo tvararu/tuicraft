@@ -137,26 +137,25 @@ export function walkCommandFailed(lines: string[]): boolean {
   }
 }
 
+const RUNS: Record<string, string> = { fight: "tactics", cycle: "cycling" };
+const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
+const RECOVERY = [
+  "query-corpse",
+  "release-spirit",
+  "reclaim-corpse",
+  "spirit-healer",
+  "resurrect",
+];
+
 export function formatHumanIntent(command: string, lines: string[]): string[] {
   if (lines.length !== 1 || (lines[0] !== "OK" && !lines[0]?.startsWith("OK ")))
     return lines;
+  const run = RUNS[command];
+  if (run)
+    return [`The ${command} run ended. Check tuicraft ${run} for its outcome.`];
   let inspection: string | undefined;
-  if (command === "cycle") inspection = "cycling";
-  else if (command === "fight") inspection = "tactics";
-  else if (
-    ["open-loot", "take-loot", "take-money", "release-loot"].includes(command)
-  )
-    inspection = "loot";
-  else if (
-    [
-      "query-corpse",
-      "release-spirit",
-      "reclaim-corpse",
-      "spirit-healer",
-      "resurrect",
-    ].includes(command)
-  )
-    inspection = "recovery";
+  if (LOOT.includes(command)) inspection = "loot";
+  else if (RECOVERY.includes(command)) inspection = "recovery";
   return [
     `Daemon accepted request. ${inspection ? `Check tuicraft ${inspection} for observed results.` : "No server result confirmed."}`,
   ];
