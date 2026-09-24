@@ -33,8 +33,14 @@ import {
 } from "wow/protocol/group";
 import {
   SPEED_ACKS,
+  parseClientControl,
+  parseForceSpeed,
+  parseKnockBack,
   parseMoveCounter,
   parseMovementInfo,
+  parseTeleportAck,
+  parseWorldPosition,
+  type SpeedAck,
 } from "wow/protocol/movement";
 import { parseUpdateObject } from "wow/protocol/update-object";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
@@ -870,7 +876,7 @@ export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
   const guid = r.packedGuidBig();
   const info = parseMovementInfo(r);
   if (guid === selfGuid(conn)) {
-    conn.control?.handleNearTeleport(info);
+    conn.control?.nearTeleport(info);
     return;
   }
   const position = {
@@ -888,7 +894,7 @@ export function handleTeleportAckRequest(
   conn: WorldConn,
   r: PacketReader,
 ): void {
-  conn.control?.handleTeleportAck(r);
+  conn.control?.teleportAck(parseTeleportAck(r));
 }
 
 export function handleTransferPending(conn: WorldConn): void {
@@ -896,7 +902,7 @@ export function handleTransferPending(conn: WorldConn): void {
 }
 
 export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
-  conn.control?.handleNewWorld(r);
+  conn.control?.newWorld(parseWorldPosition(r));
   conn.quests?.resetInteraction();
   conn.entityStore.clear();
   conn.quests?.observeQuestLog();
@@ -911,27 +917,35 @@ export function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
 }
 
 export function handleMoveKnockBack(conn: WorldConn, r: PacketReader): void {
-  conn.control?.handleKnockBack(r);
+  conn.control?.knockBack(parseKnockBack(r));
 }
 
 export function handleClientControlUpdate(
   conn: WorldConn,
   r: PacketReader,
 ): void {
-  conn.control?.handleClientControl(r);
+  conn.control?.clientControl(parseClientControl(r));
 }
 
 export function handleForceSpeedChange(
   conn: WorldConn,
   r: PacketReader,
-  opcode: number,
+  spec: SpeedAck,
 ): void {
-  conn.control?.handleForceSpeed(r, opcode);
+  conn.control?.forceSpeed(spec, parseForceSpeed(r, spec));
+}
+
+export function handleCanFly(
+  conn: WorldConn,
+  r: PacketReader,
+  enable: boolean,
+): void {
+  conn.control?.setCanFly(parseMoveCounter(r).counter, enable);
 }
 
 export function registerMovementHandlers(conn: WorldConn): void {
   conn.dispatch.on(GameOpcode.SMSG_LOGIN_VERIFY_WORLD, (r) => {
-    conn.control?.applyLoginVerify(r);
+    conn.control?.loginVerified(parseWorldPosition(r));
   });
   conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT, (r) =>
     handleNearTeleport(conn, r),
@@ -955,15 +969,14 @@ export function registerMovementHandlers(conn: WorldConn): void {
   conn.dispatch.on(GameOpcode.SMSG_CLIENT_CONTROL_UPDATE, (r) =>
     handleClientControlUpdate(conn, r),
   );
-  conn.dispatch.on(GameOpcode.SMSG_MOVE_SET_CAN_FLY, (r) => {
-    conn.control?.handleCanFly(r, true);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_MOVE_UNSET_CAN_FLY, (r) => {
-    conn.control?.handleCanFly(r, false);
-  });
-  for (const { smsg: opcode } of SPEED_ACKS) {
-    conn.dispatch.on(opcode, (r) => handleForceSpeedChange(conn, r, opcode));
-  }
+  conn.dispatch.on(GameOpcode.SMSG_MOVE_SET_CAN_FLY, (r) =>
+    handleCanFly(conn, r, true),
+  );
+  conn.dispatch.on(GameOpcode.SMSG_MOVE_UNSET_CAN_FLY, (r) =>
+    handleCanFly(conn, r, false),
+  );
+  for (const spec of SPEED_ACKS)
+    conn.dispatch.on(spec.smsg, (r) => handleForceSpeedChange(conn, r, spec));
 }
 
 export function registerCombatHandlers(conn: WorldConn): void {

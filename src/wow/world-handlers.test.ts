@@ -4004,13 +4004,13 @@ describe("handleNearTeleport", () => {
       selfGuid: () => 0x0764n,
       findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
     });
-    const login = new PacketWriter();
-    login.uint32LE(530);
-    login.floatLE(8709.46);
-    login.floatLE(-6671.76);
-    login.floatLE(70.34);
-    login.floatLE(0.5);
-    runtime.applyLoginVerify(new PacketReader(login.finish()));
+    runtime.loginVerified({
+      mapId: 530,
+      x: 8709.46,
+      y: -6671.76,
+      z: 70.34,
+      orientation: 0.5,
+    });
     sent.length = 0;
     const conn = fakeConn(runtime, store);
     registerMovementHandlers(conn);
@@ -4039,7 +4039,7 @@ describe("handleNearTeleport", () => {
     const conn = fakeConn(
       {
         currentMapId: () => 530,
-        handleNearTeleport: () => {
+        nearTeleport: () => {
           handled++;
         },
       },

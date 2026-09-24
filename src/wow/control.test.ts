@@ -1,10 +1,14 @@
 import { GroundRoute } from "wow/navigation";
 import type { NativeMap } from "wow/navigation-native";
 import { test, expect, describe, jest } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { PacketReader } from "wow/protocol/packet";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { MovementFlag } from "wow/protocol/entity-fields";
-import { parseMovementInfo, writeMovementInfo } from "wow/protocol/movement";
+import {
+  parseMovementInfo,
+  speedAckFor,
+  type MovementInfo,
+} from "wow/protocol/movement";
 
 import {
   ControlRuntime,
@@ -15,14 +19,28 @@ import {
 
 type Sent = { opcode: number; body: Uint8Array };
 
-function loginReader(): PacketReader {
-  const w = new PacketWriter();
-  w.uint32LE(530);
-  w.floatLE(8709.46);
-  w.floatLE(-6671.76);
-  w.floatLE(70.34);
-  w.floatLE(0.5);
-  return new PacketReader(w.finish());
+const LOGIN = {
+  mapId: 530,
+  x: 8709.46,
+  y: -6671.76,
+  z: 70.34,
+  orientation: 0.5,
+};
+
+const RUN_SPEED = speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE)!;
+
+function info(over: Partial<MovementInfo> = {}): MovementInfo {
+  return {
+    flags: 0,
+    extraFlags: 0,
+    time: 1,
+    x: 10,
+    y: 20,
+    z: 30,
+    orientation: 0,
+    fallTime: 0,
+    ...over,
+  };
 }
 
 function setup(over: Partial<ControlDeps> = {}): {
@@ -45,7 +63,7 @@ function setup(over: Partial<ControlDeps> = {}): {
   };
   const runtime = new ControlRuntime(deps);
   runtime.onEvent((event) => events.push(event));
-  runtime.applyLoginVerify(loginReader());
+  runtime.loginVerified(LOGIN);
   runtime.observeSelf({
     position: {
       mapId: 530,
@@ -418,7 +436,7 @@ describe("ControlRuntime", () => {
         now: () => 0,
         selfGuid: () => 1n,
       });
-      noSpeed.applyLoginVerify(loginReader());
+      noSpeed.loginVerified(LOGIN);
       expect(() => noSpeed.move("forward", 1000)).toThrow("missing_speed");
       expect(() => runtime.move("forward", 0)).toThrow("invalid_duration");
       expect(() => runtime.move("forward", 10001)).toThrow("invalid_duration");
@@ -472,20 +490,11 @@ describe("ControlRuntime", () => {
     try {
       const { runtime, events } = setup();
       runtime.move("forward", 2000);
-      const w = new PacketWriter();
-      w.packedGuid(0x0764, 0);
-      w.uint32LE(4);
-      writeMovementInfo(w, {
-        flags: 0,
-        extraFlags: 0,
-        time: 1,
-        x: 100,
-        y: 200,
-        z: 50,
-        orientation: 0,
-        fallTime: 0,
+      runtime.teleportAck({
+        guid: 0x0764n,
+        counter: 4,
+        info: info({ x: 100, y: 200, z: 50 }),
       });
-      runtime.handleTeleportAck(new PacketReader(w.finish()));
       expect(runtime.snapshot().moving).toBe(false);
       expect(runtime.snapshot().pose?.source).toBe("server");
       expect(runtime.snapshot().pose?.x).toBe(100);
@@ -505,7 +514,7 @@ describe("ControlRuntime", () => {
       const { runtime, sent, events } = setup();
       runtime.move("forward", 2000);
       sent.length = 0;
-      runtime.handleNearTeleport({
+      runtime.nearTeleport({
         flags: 0,
         extraFlags: 0,
         time: 1,
@@ -534,10 +543,7 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime } = setup();
-      const w = new PacketWriter();
-      w.packedGuid(0x0764, 0);
-      w.uint8(0);
-      runtime.handleClientControl(new PacketReader(w.finish()));
+      runtime.clientControl({ guid: 0x0764n, allow: false });
       expect(runtime.snapshot().movementAllowed).toBe(false);
       expect(() => runtime.move("left", 500)).toThrow("no_control");
     } finally {
@@ -596,16 +602,8 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, sent } = setup();
-      const w = new PacketWriter();
-      w.packedGuid(0x0764, 0);
-      w.uint32LE(8);
-      w.uint8(0);
-      w.floatLE(8.5);
       sent.length = 0;
-      runtime.handleForceSpeed(
-        new PacketReader(w.finish()),
-        GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
-      );
+      runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 8, speed: 8.5 });
       expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_FORCE_RUN_SPEED_CHANGE_ACK);
       expect(runtime.snapshot().speed).toBeCloseTo(8.5, 4);
     } finally {
@@ -619,14 +617,11 @@ describe("ControlRuntime", () => {
       const { runtime, sent, advance } = setup();
       runtime.move("forward", 2000);
       sent.length = 0;
-      const w = new PacketWriter();
-      w.packedGuid(0x0764, 0);
-      w.uint32LE(11);
-      w.floatLE(0.5);
-      w.floatLE(0.866);
-      w.floatLE(12);
-      w.floatLE(-20);
-      runtime.handleKnockBack(new PacketReader(w.finish()));
+      runtime.knockBack({
+        guid: 0x0764n,
+        counter: 11,
+        fall: { cosAngle: 0.5, sinAngle: 0.866, xySpeed: 12, zSpeed: -20 },
+      });
       expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_MOVE_KNOCK_BACK_ACK);
       const ack = new PacketReader(sent[0]!.body);
       ack.packedGuid();
@@ -706,10 +701,7 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, sent } = setup();
-      const deny = new PacketWriter();
-      deny.packedGuid(0x0764, 0);
-      deny.uint8(0);
-      runtime.handleClientControl(new PacketReader(deny.finish()));
+      runtime.clientControl({ guid: 0x0764n, allow: false });
       sent.length = 0;
       expect(() => runtime.face(1)).toThrow("no_control");
       expect(
@@ -717,25 +709,22 @@ describe("ControlRuntime", () => {
       ).toBe(false);
 
       const tele = setup();
-      const dest = new PacketWriter();
-      dest.packedGuid(0x0764, 0);
-      dest.uint32LE(2);
-      dest.uint32LE(MovementFlag.ON_TRANSPORT);
-      dest.uint16LE(0);
-      dest.uint32LE(1);
-      dest.floatLE(10);
-      dest.floatLE(20);
-      dest.floatLE(30);
-      dest.floatLE(0);
-      dest.packedGuid(0x99, 0);
-      dest.floatLE(0);
-      dest.floatLE(0);
-      dest.floatLE(0);
-      dest.floatLE(0);
-      dest.uint32LE(0);
-      dest.uint8(0);
-      dest.uint32LE(0);
-      tele.runtime.handleTeleportAck(new PacketReader(dest.finish()));
+      tele.runtime.teleportAck({
+        guid: 0x0764n,
+        counter: 2,
+        info: info({
+          flags: MovementFlag.ON_TRANSPORT,
+          transport: {
+            guid: 0x99n,
+            x: 0,
+            y: 0,
+            z: 0,
+            orientation: 0,
+            time: 0,
+            seat: 0,
+          },
+        }),
+      });
       tele.sent.length = 0;
       expect(() => tele.runtime.move("forward", 500)).toThrow("transport");
       expect(() => tele.runtime.face(0.2)).toThrow("transport");
@@ -753,10 +742,7 @@ describe("ControlRuntime", () => {
       const { runtime, sent } = setup();
       runtime.move("forward", 2000);
       sent.length = 0;
-      const fly = new PacketWriter();
-      fly.packedGuid(0x0764, 0);
-      fly.uint32LE(4);
-      runtime.handleCanFly(new PacketReader(fly.finish()), true);
+      runtime.setCanFly(4, true);
       expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_MOVE_SET_CAN_FLY_ACK);
       const ack = new PacketReader(sent[0]!.body);
       ack.packedGuid();
@@ -766,11 +752,8 @@ describe("ControlRuntime", () => {
       expect(ack.uint32LE()).toBe(1);
       expect(runtime.snapshot().moving).toBe(false);
       expect(() => runtime.move("forward", 500)).toThrow("flying");
-      const land = new PacketWriter();
-      land.packedGuid(0x0764, 0);
-      land.uint32LE(5);
       sent.length = 0;
-      runtime.handleCanFly(new PacketReader(land.finish()), false);
+      runtime.setCanFly(5, false);
       const landAck = new PacketReader(sent[0]!.body);
       landAck.packedGuid();
       landAck.uint32LE();
@@ -790,15 +773,7 @@ describe("ControlRuntime", () => {
       const { runtime, advance } = setup();
       runtime.move("forward", 2000);
       advance(250);
-      const speed = new PacketWriter();
-      speed.packedGuid(0x0764, 0);
-      speed.uint32LE(1);
-      speed.uint8(0);
-      speed.floatLE(3.5);
-      runtime.handleForceSpeed(
-        new PacketReader(speed.finish()),
-        GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
-      );
+      runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 1, speed: 3.5 });
       advance(250);
       const pose = runtime.snapshot().pose!;
       const expected = 8709.46 + Math.cos(0.5) * (7 * 0.25 + 3.5 * 0.25);
@@ -812,25 +787,22 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, sent } = setup();
-      const dest = new PacketWriter();
-      dest.packedGuid(0x0764, 0);
-      dest.uint32LE(2);
-      dest.uint32LE(MovementFlag.ON_TRANSPORT);
-      dest.uint16LE(0);
-      dest.uint32LE(1);
-      dest.floatLE(10);
-      dest.floatLE(20);
-      dest.floatLE(30);
-      dest.floatLE(0);
-      dest.packedGuid(0x99, 0);
-      dest.floatLE(1);
-      dest.floatLE(2);
-      dest.floatLE(3);
-      dest.floatLE(0.25);
-      dest.uint32LE(44);
-      dest.uint8(1);
-      dest.uint32LE(0);
-      runtime.handleTeleportAck(new PacketReader(dest.finish()));
+      runtime.teleportAck({
+        guid: 0x0764n,
+        counter: 2,
+        info: info({
+          flags: MovementFlag.ON_TRANSPORT,
+          transport: {
+            guid: 0x99n,
+            x: 1,
+            y: 2,
+            z: 3,
+            orientation: 0.25,
+            time: 44,
+            seat: 1,
+          },
+        }),
+      });
       sent.length = 0;
       runtime.forceRoot(9);
       const rootAck = new PacketReader(sent[0]!.body);
@@ -844,15 +816,7 @@ describe("ControlRuntime", () => {
       expect(rooted.transport?.seat).toBe(1);
       expect(rootAck.remaining).toBe(0);
       sent.length = 0;
-      const speed = new PacketWriter();
-      speed.packedGuid(0x0764, 0);
-      speed.uint32LE(3);
-      speed.uint8(0);
-      speed.floatLE(7);
-      runtime.handleForceSpeed(
-        new PacketReader(speed.finish()),
-        GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
-      );
+      runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 3, speed: 7 });
       const speedAck = new PacketReader(sent[0]!.body);
       speedAck.packedGuid();
       expect(speedAck.uint32LE()).toBe(3);

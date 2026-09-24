@@ -2,7 +2,6 @@ import type { GroundRoute, NavPoint } from "wow/navigation";
 import type { Position } from "wow/entity-store";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { MovementFlag, UnitFlag } from "wow/protocol/entity-fields";
-import type { PacketReader } from "wow/protocol/packet";
 import {
   buildCanFlyAck,
   buildMoveMessage,
@@ -11,15 +10,12 @@ import {
   buildSetSelection,
   buildSpeedAck,
   buildTeleportAck,
-  parseClientControl,
-  parseForceSpeed,
-  parseKnockBack,
-  parseMoveCounter,
-  parseTeleportAck,
-  parseWorldPosition,
-  speedAckFor,
+  type ClientControl,
   type FallData,
+  type ForceSpeed,
+  type KnockBack,
   type MoveAck,
+  type SpeedAck,
   type MovementInfo,
   type TransportInfo,
 } from "wow/protocol/movement";
@@ -204,7 +200,7 @@ export class ControlRuntime {
   };
   private target: bigint | undefined;
   private requestedTarget: bigint | undefined;
-  private clientControl = true;
+  private controlAllowed = true;
   private rooted = false;
   private teleporting = false;
   private unitBlocked = false;
@@ -215,7 +211,7 @@ export class ControlRuntime {
   private lastHeartbeat = 0;
   private fall: FallData | undefined;
   private transport: TransportInfo | undefined;
-  private loginVerified = false;
+  private verified = false;
   private loginWaiters: Array<() => void> = [];
 
   constructor(deps: ControlDeps) {
@@ -457,12 +453,11 @@ export class ControlRuntime {
     this.abortUnsafe("close");
   }
 
-  applyLoginVerify(r: PacketReader): void {
-    const position = parseWorldPosition(r);
+  loginVerified(position: Position): void {
     this.mapId = position.mapId;
     this.setServerPose(position);
     this.predicted = undefined;
-    this.loginVerified = true;
+    this.verified = true;
     const waiters = this.loginWaiters;
     this.loginWaiters = [];
     for (const waiter of waiters) waiter();
@@ -473,7 +468,7 @@ export class ControlRuntime {
   }
 
   waitLogin(timeoutMs = 10_000): Promise<void> {
-    if (this.loginVerified) return Promise.resolve();
+    if (this.verified) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error("Timed out waiting for opcode 0x236"));
@@ -536,8 +531,7 @@ export class ControlRuntime {
     this.emit("target_observed");
   }
 
-  handleTeleportAck(r: PacketReader): void {
-    const { counter, info: dest } = parseTeleportAck(r);
+  teleportAck({ counter, info: dest }: MoveAck): void {
     this.teleporting = false;
     this.abortUnsafe("teleport");
     this.deps.send(
@@ -547,7 +541,7 @@ export class ControlRuntime {
     this.applyForcedPose(dest, "teleport");
   }
 
-  handleNearTeleport(dest: MovementInfo): void {
+  nearTeleport(dest: MovementInfo): void {
     this.teleporting = false;
     this.abortUnsafe("near_teleport");
     this.applyForcedPose(dest, "near_teleport");
@@ -559,8 +553,7 @@ export class ControlRuntime {
     this.emitAllowed("teleporting");
   }
 
-  handleNewWorld(r: PacketReader): void {
-    const position = parseWorldPosition(r);
+  newWorld(position: Position): void {
     this.teleporting = false;
     this.abortUnsafe("teleport");
     this.mapId = position.mapId;
@@ -595,8 +588,7 @@ export class ControlRuntime {
     this.emitAllowed(undefined);
   }
 
-  handleKnockBack(r: PacketReader): void {
-    const { counter, fall } = parseKnockBack(r);
+  knockBack({ counter, fall }: KnockBack): void {
     this.abortUnsafe("knockback");
     this.observedFlags |= MovementFlag.FALLING;
     this.moveFlags |= MovementFlag.FALLING;
@@ -605,24 +597,20 @@ export class ControlRuntime {
     this.emit("server_correction", "knockback");
   }
 
-  handleClientControl(r: PacketReader): void {
-    const { guid, allow } = parseClientControl(r);
+  clientControl({ guid, allow }: ClientControl): void {
     const self = this.deps.selfGuid();
     if (guid !== 0n && guid !== self) {
-      this.clientControl = false;
+      this.controlAllowed = false;
       this.abortUnsafe("no_control");
       this.emitAllowed("no_control");
       return;
     }
-    this.clientControl = allow;
+    this.controlAllowed = allow;
     if (!allow) this.abortUnsafe("no_control");
     this.emitAllowed(allow ? undefined : "no_control");
   }
 
-  handleForceSpeed(r: PacketReader, opcode: number): void {
-    const spec = speedAckFor(opcode);
-    if (!spec) return;
-    const { counter, speed } = parseForceSpeed(r, spec);
+  forceSpeed(spec: SpeedAck, { counter, speed }: ForceSpeed): void {
     this.integrate();
     if ("field" in spec && spec.field === "runSpeed") this.runSpeed = speed;
     if ("field" in spec && spec.field === "runBackSpeed")
@@ -630,8 +618,7 @@ export class ControlRuntime {
     this.deps.send(spec.ack, buildSpeedAck(this.moveAck(counter), speed));
   }
 
-  handleCanFly(r: PacketReader, enable: boolean): void {
-    const { counter } = parseMoveCounter(r);
+  setCanFly(counter: number, enable: boolean): void {
     this.abortUnsafe(enable ? "flying" : "unset_can_fly");
     if (enable) {
       this.observedFlags |= MovementFlag.CAN_FLY;
@@ -1046,7 +1033,7 @@ export class ControlRuntime {
   private blockReason(): string | undefined {
     if (this.teleporting) return "teleporting";
     if (this.rooted) return "rooted";
-    if (!this.clientControl) return "no_control";
+    if (!this.controlAllowed) return "no_control";
     if (this.unitBlocked) return "disable_move";
     return unsupportedReason(this.observedFlags);
   }
