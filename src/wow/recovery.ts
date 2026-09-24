@@ -9,16 +9,13 @@ import {
   type PlayerLifeState,
 } from "wow/player-state";
 import { GameOpcode } from "wow/protocol/opcodes";
-import type { PacketReader } from "wow/protocol/packet";
 import {
   buildReclaimCorpse,
   buildRepopRequest,
   buildResurrectResponse,
   buildSpiritHealerActivate,
-  parseCorpseQuery,
-  parseCorpseReclaimDelay,
-  parseDeathReleaseLocation,
-  parseResurrectRequest,
+  type CorpseQuery,
+  type CorpseReclaimDelay,
   type DeathReleaseLocation,
   type ResurrectRequest,
 } from "wow/protocol/death";
@@ -117,13 +114,6 @@ export type RecoveryEvent = {
   at: number;
   state: RecoveryState;
 };
-
-export const RECOVERY_OPCODES = [
-  GameOpcode.MSG_CORPSE_QUERY,
-  GameOpcode.SMSG_CORPSE_RECLAIM_DELAY,
-  GameOpcode.SMSG_DEATH_RELEASE_LOC,
-  GameOpcode.SMSG_RESURRECT_REQUEST,
-] as const;
 
 function copyCorpse(corpse: RecoveryCorpse): RecoveryCorpse {
   return corpse.status === "found"
@@ -336,9 +326,8 @@ export class RecoveryRuntime {
     return this.emit("resurrection_response_requested");
   }
 
-  handleCorpseQuery(reader: PacketReader): void {
+  receiveCorpse(response: CorpseQuery): void {
     if (this.disposed) return;
-    const response = parseCorpseQuery(reader);
     this.observeLife();
     const pending = this.queryPending;
     this.queryPending = undefined;
@@ -363,9 +352,8 @@ export class RecoveryRuntime {
     this.emit("corpse_observed");
   }
 
-  handleCorpseReclaimDelay(reader: PacketReader): void {
+  receiveReclaimDelay({ delayMs }: CorpseReclaimDelay): void {
     if (this.disposed) return;
-    const { delayMs } = parseCorpseReclaimDelay(reader);
     this.observeLife();
     if (this.unavailable) return;
     const receivedAt = this.deps.now();
@@ -373,18 +361,16 @@ export class RecoveryRuntime {
     this.emit("reclaim_delay_observed");
   }
 
-  handleDeathReleaseLocation(reader: PacketReader): void {
+  receiveGraveyard(location: DeathReleaseLocation): void {
     if (this.disposed) return;
-    const location = parseDeathReleaseLocation(reader);
     this.observeLife();
     if (this.unavailable) return;
     this.graveyard = location;
     this.emit("graveyard_observed");
   }
 
-  handleResurrectRequest(reader: PacketReader): void {
+  receiveResurrectRequest(packet: ResurrectRequest): void {
     if (this.disposed) return;
-    const packet = parseResurrectRequest(reader);
     this.observeLife();
     if (this.unavailable || this.life().life === "alive") return;
     this.offer = {

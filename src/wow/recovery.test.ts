@@ -5,6 +5,12 @@ import type { ControlPose } from "wow/control";
 import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { PacketReader } from "wow/protocol/packet";
+import {
+  parseCorpseQuery,
+  parseCorpseReclaimDelay,
+  parseDeathReleaseLocation,
+  parseResurrectRequest,
+} from "wow/protocol/death";
 
 function fixture(health = 0, flags = 0) {
   const self: Entity = {
@@ -68,15 +74,19 @@ describe("ordinary-player recovery", () => {
       life: "dead",
       request: { action: "release", status: "unanswered" },
     });
-    f.runtime.handleDeathReleaseLocation(
-      new PacketReader(bytes("12020000 00004842 00000000 00000000")),
+    f.runtime.receiveGraveyard(
+      parseDeathReleaseLocation(
+        new PacketReader(bytes("12020000 00004842 00000000 00000000")),
+      ),
     );
     expect(f.runtime.snapshot().life).toBe("dead");
     f.life(1, 0x10);
     expect(f.runtime.snapshot().life).toBe("ghost");
     expect(f.runtime.snapshot().request).toBeUndefined();
-    f.runtime.handleDeathReleaseLocation(
-      new PacketReader(bytes("ffffffff 00000000 00000000 00000000")),
+    f.runtime.receiveGraveyard(
+      parseDeathReleaseLocation(
+        new PacketReader(bytes("ffffffff 00000000 00000000 00000000")),
+      ),
     );
     expect(f.runtime.snapshot().life).toBe("ghost");
   });
@@ -87,8 +97,10 @@ describe("ordinary-player recovery", () => {
     f.runtime.queryCorpse();
     expect(f.runtime.snapshot().corpse.status).toBe("unknown");
     expect(f.runtime.snapshot().query?.status).toBe("unanswered");
-    f.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
-    f.runtime.handleCorpseReclaimDelay(new PacketReader(bytes("30750000")));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes(corpse))));
+    f.runtime.receiveReclaimDelay(
+      parseCorpseReclaimDelay(new PacketReader(bytes("30750000"))),
+    );
     expect(f.runtime.snapshot().reclaim).toMatchObject({
       canRequest: false,
       reason: "reclaim_delay",
@@ -118,9 +130,11 @@ describe("ordinary-player recovery", () => {
   test("does not use an entrance-map display position as the actual corpse", () => {
     const f = fixture(1, 0x10);
     f.runtime.queryCorpse();
-    f.runtime.handleCorpseQuery(
-      new PacketReader(
-        bytes("01 12020000 00000000 00000000 00000000 01000000 00000000"),
+    f.runtime.receiveCorpse(
+      parseCorpseQuery(
+        new PacketReader(
+          bytes("01 12020000 00000000 00000000 00000000 01000000 00000000"),
+        ),
       ),
     );
     expect(f.runtime.snapshot().corpse).toMatchObject({
@@ -131,7 +145,7 @@ describe("ordinary-player recovery", () => {
     expect(f.runtime.snapshot().reclaim.reason).toBe("corpse_position_unknown");
     expect(() => f.runtime.reclaimCorpse()).toThrow();
     f.runtime.queryCorpse();
-    f.runtime.handleCorpseQuery(new PacketReader(bytes("00")));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes("00"))));
     expect(f.runtime.snapshot().corpse.status).toBe("absent");
     expect(f.runtime.snapshot().life).toBe("ghost");
   });
@@ -139,7 +153,7 @@ describe("ordinary-player recovery", () => {
   test("keeps omitted login timer unknown while allowing an explicit server-checked request", () => {
     const f = fixture(1, 0x10);
     f.runtime.queryCorpse();
-    f.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes(corpse))));
     expect(f.runtime.snapshot().reclaim).toMatchObject({
       canRequest: true,
       readiness: "unverified",
@@ -157,10 +171,12 @@ describe("ordinary-player recovery", () => {
     const f = fixture(1, 0x10);
     f.runtime.queryCorpse();
     expect(() => f.runtime.queryCorpse()).toThrow();
-    f.runtime.handleResurrectRequest(
-      new PacketReader(bytes(offer + " 00000000")),
+    f.runtime.receiveResurrectRequest(
+      parseResurrectRequest(new PacketReader(bytes(offer + " 00000000"))),
     );
-    f.runtime.handleCorpseReclaimDelay(new PacketReader(bytes("30750000")));
+    f.runtime.receiveReclaimDelay(
+      parseCorpseReclaimDelay(new PacketReader(bytes("30750000"))),
+    );
     f.life(100, 0);
     f.life(0, 0);
     f.life(1, 0x10);
@@ -168,19 +184,23 @@ describe("ordinary-player recovery", () => {
     expect(f.runtime.snapshot().resurrection).toBeUndefined();
     expect(f.runtime.snapshot().reclaimDelay).toBeUndefined();
     expect(() => f.runtime.queryCorpse()).toThrow();
-    f.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes(corpse))));
     expect(f.runtime.snapshot().corpse.status).toBe("unknown");
     expect(f.runtime.snapshot().query).toBeUndefined();
     f.runtime.queryCorpse();
-    f.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes(corpse))));
     expect(f.runtime.snapshot().corpse.status).toBe("found");
   });
 
   test("resurrection responses require a current offer; override0 is not a reclaim timer", () => {
     const f = fixture(1, 0x10);
     expect(() => f.runtime.respondResurrection(true)).toThrow();
-    f.runtime.handleCorpseReclaimDelay(new PacketReader(bytes("30750000")));
-    f.runtime.handleResurrectRequest(new PacketReader(bytes(offer)));
+    f.runtime.receiveReclaimDelay(
+      parseCorpseReclaimDelay(new PacketReader(bytes("30750000"))),
+    );
+    f.runtime.receiveResurrectRequest(
+      parseResurrectRequest(new PacketReader(bytes(offer))),
+    );
     expect(() => f.runtime.respondResurrection(true)).toThrow();
     f.runtime.respondResurrection(false);
     expect(f.sent.at(-1)).toEqual({
@@ -191,8 +211,8 @@ describe("ordinary-player recovery", () => {
       "decline_requested",
     );
     expect(() => f.runtime.respondResurrection(false)).toThrow();
-    f.runtime.handleResurrectRequest(
-      new PacketReader(bytes(offer + " 00000000")),
+    f.runtime.receiveResurrectRequest(
+      parseResurrectRequest(new PacketReader(bytes(offer + " 00000000"))),
     );
     f.runtime.respondResurrection(true);
     expect(f.sent.at(-1)).toEqual({
@@ -219,13 +239,15 @@ describe("ordinary-player recovery", () => {
   test("snapshots cannot alter reclaim evidence and disposal clears callbacks and authorization", () => {
     const f = fixture(1, 0x10);
     f.runtime.queryCorpse();
-    f.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    f.runtime.receiveCorpse(parseCorpseQuery(new PacketReader(bytes(corpse))));
     const state = f.runtime.snapshot();
     if (state.corpse.status === "found") state.corpse.position.x = 999;
     expect(f.runtime.snapshot().corpse).toMatchObject({ position: { x: 0 } });
     f.runtime.dispose();
     const count = f.events.length;
-    f.runtime.handleResurrectRequest(new PacketReader(bytes(offer)));
+    f.runtime.receiveResurrectRequest(
+      parseResurrectRequest(new PacketReader(bytes(offer))),
+    );
     f.life(100, 0);
     expect(f.events.length).toBe(count);
     expect(f.runtime.snapshot()).toMatchObject({
@@ -344,7 +366,9 @@ describe("ordinary-player recovery", () => {
     );
     expect(ghost.sent.filter((p) => p.opcode === 0x21c)).toHaveLength(1);
 
-    ghost.runtime.handleCorpseQuery(new PacketReader(bytes(corpse)));
+    ghost.runtime.receiveCorpse(
+      parseCorpseQuery(new PacketReader(bytes(corpse))),
+    );
     expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
       "Previous spirit-healer request remains unanswered",
     );

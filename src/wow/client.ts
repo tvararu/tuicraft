@@ -151,6 +151,8 @@ import {
   registerMovementHandlers,
   registerCombatHandlers,
   registerQuestHandlers,
+  registerLootHandlers,
+  registerRecoveryHandlers,
   selfGuid,
 } from "wow/world-handlers";
 
@@ -750,39 +752,6 @@ export function worldSession(
       conn.onRewardsEvent?.(event);
       cycleLootListener?.(event);
     });
-    conn.dispatch.on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
-      recovery.handleCorpseQuery(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CORPSE_RECLAIM_DELAY, (r) =>
-      recovery.handleCorpseReclaimDelay(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DEATH_RELEASE_LOC, (r) =>
-      recovery.handleDeathReleaseLocation(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
-      recovery.handleResurrectRequest(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
-      rewards.handleLootResponse(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_LOOT_REMOVED, (r) =>
-      rewards.handleLootRemoved(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_LOOT_RELEASE_RESPONSE, (r) =>
-      rewards.handleLootReleaseResponse(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_LOOT_MONEY_NOTIFY, (r) =>
-      rewards.handleLootMoneyNotify(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_LOOT_CLEAR_MONEY, (r) =>
-      rewards.handleLootClearMoney(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) =>
-      rewards.handleItemPushResult(r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
-      rewards.handleInventoryChangeFailure(r),
-    );
     function observedTarget(guid: bigint): { x: number; y: number; z: number } {
       const entity = conn.entityStore.get(guid);
       if (!entity || guid === selfGuid(conn))
@@ -982,6 +951,8 @@ export function worldSession(
     registerMovementHandlers(conn);
     registerCombatHandlers(conn);
     registerQuestHandlers(conn);
+    registerLootHandlers(conn);
+    registerRecoveryHandlers(conn);
 
     registerStubs(conn.dispatch, (msg) => {
       if (!conn.onMessage) return false;

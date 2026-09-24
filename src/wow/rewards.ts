@@ -3,24 +3,19 @@ import { readInventory, type InventoryState } from "wow/inventory";
 import { readLife, type EntityLookup } from "wow/player-state";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
-import type { PacketReader } from "wow/protocol/packet";
 import {
   buildAutostoreLootItem,
   buildLoot,
   buildLootRelease,
-  parseItemPushResult,
-  parseLootMoneyNotify,
-  parseLootReleaseResponse,
-  parseLootRemoved,
-  parseLootResponse,
   type ItemPushResult,
+  type LootRemoved,
+  type LootResponse,
   type LootItem,
   type LootMoneyNotify,
   type LootReleaseResponse,
 } from "wow/protocol/loot";
 import {
   InventoryResult,
-  parseInventoryChangeFailure,
   type InventoryChangeFailure,
 } from "wow/protocol/inventory";
 
@@ -106,16 +101,6 @@ export type RewardsEvent = {
   at: number;
   state: RewardsState;
 };
-
-export const REWARDS_OPCODES = [
-  GameOpcode.SMSG_LOOT_RESPONSE,
-  GameOpcode.SMSG_LOOT_REMOVED,
-  GameOpcode.SMSG_LOOT_RELEASE_RESPONSE,
-  GameOpcode.SMSG_LOOT_MONEY_NOTIFY,
-  GameOpcode.SMSG_LOOT_CLEAR_MONEY,
-  GameOpcode.SMSG_ITEM_PUSH_RESULT,
-  GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE,
-] as const;
 
 function copyLoot(loot: RewardsLoot): RewardsLoot {
   if (loot.phase === "open" || loot.phase === "closing")
@@ -245,9 +230,8 @@ export class RewardsRuntime {
     return this.emit("loot_close_requested");
   }
 
-  handleLootResponse(reader: PacketReader): void {
+  receiveLootResponse(response: LootResponse): void {
     if (this.disposed) return;
-    const response = parseLootResponse(reader);
     if (this.loot.phase === "closed" || response.guid !== this.loot.guid)
       return;
     if (response.kind === "error") {
@@ -275,9 +259,8 @@ export class RewardsRuntime {
     this.emit("loot_opened");
   }
 
-  handleLootRemoved(reader: PacketReader): void {
+  receiveLootRemoved({ slot }: LootRemoved): void {
     if (this.disposed) return;
-    const { slot } = parseLootRemoved(reader);
     if (this.loot.phase !== "open" && this.loot.phase !== "closing") return;
     const index = this.loot.items.findIndex((item) => item.slot === slot);
     if (index < 0) return;
@@ -287,19 +270,16 @@ export class RewardsRuntime {
     this.emit("loot_removed");
   }
 
-  handleLootClearMoney(reader: PacketReader): void {
+  receiveLootMoneyCleared(): void {
     if (this.disposed) return;
-    if (reader.remaining !== 0)
-      throw new RangeError("Loot money-clear payload must be empty");
     if (this.loot.phase !== "open" && this.loot.phase !== "closing") return;
     this.loot.money = 0;
     if (this.pending?.action === "money") this.pending = undefined;
     this.emit("loot_money_cleared");
   }
 
-  handleLootReleaseResponse(reader: PacketReader): void {
+  receiveLootRelease(response: LootReleaseResponse): void {
     if (this.disposed) return;
-    const response = parseLootReleaseResponse(reader);
     if (this.loot.phase === "closed" || response.guid !== this.loot.guid)
       return;
     this.lastRelease = { ...response, observedAt: this.deps.now() };
@@ -310,26 +290,23 @@ export class RewardsRuntime {
     this.emit("loot_release_observed");
   }
 
-  handleLootMoneyNotify(reader: PacketReader): void {
+  receiveMoneyNotice(notice: LootMoneyNotify): void {
     if (this.disposed) return;
-    const notice = parseLootMoneyNotify(reader);
     if (!this.deps.selfGuid()) return;
     this.lastMoneyNotice = { ...notice, observedAt: this.deps.now() };
     this.emit("money_notice");
   }
 
-  handleItemPushResult(reader: PacketReader): void {
+  receiveItemPush(push: ItemPushResult): void {
     if (this.disposed) return;
-    const push = parseItemPushResult(reader);
     const selfGuid = this.deps.selfGuid();
     if (!selfGuid || push.guid !== selfGuid) return;
     this.lastItemPush = { ...push, observedAt: this.deps.now() };
     this.emit("item_push");
   }
 
-  handleInventoryChangeFailure(reader: PacketReader): void {
+  receiveInventoryFailure(packet: InventoryChangeFailure): void {
     if (this.disposed) return;
-    const packet = parseInventoryChangeFailure(reader);
     if (packet.kind === "ok") {
       this.lastInventoryError = undefined;
       this.emit("inventory_result");

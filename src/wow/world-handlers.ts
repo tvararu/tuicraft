@@ -84,6 +84,20 @@ import {
   parseQuestUpdateFailedTimer,
 } from "wow/protocol/quest-log";
 import type { QuestDialog } from "wow/quests";
+import {
+  parseItemPushResult,
+  parseLootMoneyNotify,
+  parseLootReleaseResponse,
+  parseLootRemoved,
+  parseLootResponse,
+} from "wow/protocol/loot";
+import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import {
+  parseCorpseQuery,
+  parseCorpseReclaimDelay,
+  parseDeathReleaseLocation,
+  parseResurrectRequest,
+} from "wow/protocol/death";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -1153,5 +1167,48 @@ export function registerQuestHandlers(conn: WorldConn): void {
   );
   on(GameOpcode.SMSG_QUESTLOG_FULL, () =>
     conn.quests?.receiveError({ kind: "log_full" }),
+  );
+}
+
+export function registerLootHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
+    conn.rewards?.receiveLootResponse(parseLootResponse(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_REMOVED, (r) =>
+    conn.rewards?.receiveLootRemoved(parseLootRemoved(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_RELEASE_RESPONSE, (r) =>
+    conn.rewards?.receiveLootRelease(parseLootReleaseResponse(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_MONEY_NOTIFY, (r) =>
+    conn.rewards?.receiveMoneyNotice(parseLootMoneyNotify(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_CLEAR_MONEY, () =>
+    conn.rewards?.receiveLootMoneyCleared(),
+  );
+  on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) =>
+    conn.rewards?.receiveItemPush(parseItemPushResult(r)),
+  );
+  on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
+    conn.rewards?.receiveInventoryFailure(parseInventoryChangeFailure(r)),
+  );
+}
+
+export function registerRecoveryHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.MSG_CORPSE_QUERY, (r) =>
+    conn.recovery?.receiveCorpse(parseCorpseQuery(r)),
+  );
+  on(GameOpcode.SMSG_CORPSE_RECLAIM_DELAY, (r) =>
+    conn.recovery?.receiveReclaimDelay(parseCorpseReclaimDelay(r)),
+  );
+  on(GameOpcode.SMSG_DEATH_RELEASE_LOC, (r) =>
+    conn.recovery?.receiveGraveyard(parseDeathReleaseLocation(r)),
+  );
+  on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
+    conn.recovery?.receiveResurrectRequest(parseResurrectRequest(r)),
   );
 }
