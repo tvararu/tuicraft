@@ -194,8 +194,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## WorldHandle
 
-- Two mocks exist: `src/test/mock-handle.ts` (shared) and an inline mock in
-  `src/daemon/start.test.ts` — update both when adding WorldHandle methods
+- `src/test/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
+  `src/daemon/start.test.ts` spreads it and overrides only `closed` and
+  `close`, so add new WorldHandle methods to the shared mock only
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
 - Clear event callbacks before socket teardown — `entityStore.clear()` in the
