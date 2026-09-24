@@ -220,7 +220,7 @@ export class CombatRuntime {
     return this.cooldowns.readyAt(id);
   }
 
-  async spellbook(): Promise<SpellDefinition[]> {
+  spellbook(): SpellDefinition[] {
     const catalog = this.deps.catalog;
     if (!catalog) throw new Error("missing_spell_data");
     const defs: SpellDefinition[] = [];

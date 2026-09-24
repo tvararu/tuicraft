@@ -57,7 +57,7 @@ describe("combat observations", () => {
   test("manual learned cast without metadata awaits server and HALT cancels an unacknowledged attack", async () => {
     const { combat, sent } = setup();
     expect(combat.snapshot().unknownLearned).toEqual([17]);
-    await expect(combat.spellbook()).rejects.toThrow("missing_spell_data");
+    expect(() => combat.spellbook()).toThrow("missing_spell_data");
     combat.cast(17, 2n);
     combat.attack(2n);
     expect(combat.snapshot().lastOutcome?.status).toBe("sent");
