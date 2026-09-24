@@ -236,7 +236,7 @@ function fakeControl(
 }
 
 function fakeRecovery(config: {
-  offerEpoch?: "current" | "stale" | "none";
+  offer?: boolean;
   life: PlayerLife[];
   corpse?: FakeCorpse;
   pose?: () => ControlPose | undefined;
@@ -244,7 +244,6 @@ function fakeRecovery(config: {
   reclaimDelaySchedule?: Array<{ atMs: number; delayMs: number }>;
 }) {
   let lifeIndex = 0;
-  let snapshotCalls = 0;
   let answered = false;
   let responded: "unanswered" | "accept_requested" | "decline_requested" =
     "unanswered";
@@ -333,14 +332,12 @@ function fakeRecovery(config: {
   }
 
   function snapshot(): RecoveryState {
-    snapshotCalls++;
-    const epoch = config.offerEpoch === "stale" && snapshotCalls > 1 ? 2 : 1;
     return {
       life: life(),
       health: undefined,
       flags: undefined,
       selfGuid: 1n,
-      epoch,
+      epoch: 1,
       corpse:
         corpse.status === "found"
           ? {
@@ -356,19 +353,18 @@ function fakeRecovery(config: {
       reclaimDelay: delay ? { ...delay } : undefined,
       reclaim: reclaimGate(),
       graveyard: undefined,
-      resurrection:
-        config.offerEpoch && config.offerEpoch !== "none"
-          ? {
-              guid: 99n,
-              name: "Healer",
-              reserved: 0,
-              sickness: 0,
-              delayMs: undefined,
-              receivedAt: 0,
-              readyAt: undefined,
-              response: responded,
-            }
-          : undefined,
+      resurrection: config.offer
+        ? {
+            guid: 99n,
+            name: "Healer",
+            reserved: 0,
+            sickness: 0,
+            delayMs: undefined,
+            receivedAt: 0,
+            readyAt: undefined,
+            response: responded,
+          }
+        : undefined,
       request: undefined,
       disposed: false,
     };
@@ -807,7 +803,7 @@ test("release-only denial stops with reconnect cause", async () => {
 
 test("current resurrection offer is accepted and loop resumes", async () => {
   const recovery = fakeRecovery({
-    offerEpoch: "current",
+    offer: true,
     life: ["ghost", "alive"],
   });
   const runtime = new EncounterCycleRuntime({
@@ -823,47 +819,6 @@ test("current resurrection offer is accepted and loop resumes", async () => {
     phase: "stopped",
     stopCause: "queue_exhausted",
   });
-});
-
-test("stale resurrection offer is ignored, corpse run proceeds", async () => {
-  const control = fakeControl({
-    pose: {
-      mapId: 0,
-      x: 0,
-      y: 0,
-      z: 0,
-      orientation: 0,
-      source: "predicted",
-      updatedAt: 0,
-    },
-  });
-  const recovery = fakeRecovery({
-    offerEpoch: "stale",
-    life: ["dead", "ghost", "alive"],
-    corpse: {
-      status: "found",
-      mapId: 0,
-      corpseMapId: 0,
-      position: { x: 5, y: 0, z: 0 },
-    },
-    pose: () => control.pose(),
-  });
-  const runtime = new EncounterCycleRuntime({
-    tactics: fakeTactics([], { deadOn: 0 }),
-    loot: fakeLoot({ items: [], money: 0 }),
-    recovery,
-    control,
-    now: () => 0,
-  });
-  await runtime.start({ guids: [1n, 2n], instruction: "fight" });
-  expect(recovery.answered()).toBe(false);
-  const state = runtime.snapshot();
-  expect(state).toMatchObject({
-    phase: "stopped",
-    stopCause: "queue_exhausted",
-  });
-  expect(state.queue[0]).toMatchObject({ status: "skipped", cause: "died" });
-  expect(state.queue[1]).toMatchObject({ status: "done" });
 });
 
 test("reclaim delay waits bounded then retries once", async () => {
@@ -885,7 +840,6 @@ test("reclaim delay waits bounded then retries once", async () => {
       },
     });
     const recovery = fakeRecovery({
-      offerEpoch: "none",
       life: ["dead", "ghost", "alive"],
       corpse: {
         status: "found",
@@ -931,7 +885,6 @@ test("cross-map corpse stops with pose and range", async () => {
     },
   });
   const recovery = fakeRecovery({
-    offerEpoch: "none",
     life: ["dead", "ghost"],
     corpse: {
       status: "found",
@@ -973,7 +926,6 @@ test("ground refusal retries once at fixed angle then stops", async () => {
       refuseMoves: 2,
     });
     const recovery = fakeRecovery({
-      offerEpoch: "none",
       life: ["dead", "ghost"],
       corpse: {
         status: "found",
@@ -1017,7 +969,6 @@ test("a refused corpse-run move stops with its reason", async () => {
       moveError: "movement_blocked",
     });
     const recovery = fakeRecovery({
-      offerEpoch: "none",
       life: ["dead", "ghost"],
       corpse: {
         status: "found",
@@ -1062,7 +1013,6 @@ test("reclaim restores life and resumes next target", async () => {
       speed: 7,
     });
     const recovery = fakeRecovery({
-      offerEpoch: "none",
       life: ["dead", "ghost", "alive"],
       corpse: {
         status: "found",

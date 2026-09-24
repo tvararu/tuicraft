@@ -278,11 +278,7 @@ export class EncounterCycleRuntime {
         RECOVERY_WAIT_MS,
       );
     try {
-      const deathEpoch = recovery.snapshot().epoch;
-      const offerState = recovery.snapshot();
-      const offer =
-        offerState.epoch === deathEpoch ? offerState.resurrection : undefined;
-      if (offer?.response === "unanswered") {
+      if (recovery.snapshot().resurrection?.response === "unanswered") {
         recovery.respondResurrection(true);
         const revived = await awaitLife("alive");
         if (!this.live(signal)) return false;
