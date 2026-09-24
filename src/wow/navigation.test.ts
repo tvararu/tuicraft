@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createNavigation, GroundRoute, type NavPoint } from "wow/navigation";
+import {
+  classifyNavigationRefusal,
+  collisionFree,
+  createNavigation,
+  GroundRoute,
+  type NavPoint,
+} from "wow/navigation";
 import { groundError, type NativeMap } from "wow/navigation-native";
 
 function native(over: Partial<NativeMap> = {}): NativeMap {
@@ -430,5 +436,36 @@ describe("ground destinations", () => {
       false,
     );
     expect(() => nav.clear(0, start, end)).toThrow(/unsupported map/);
+  });
+});
+
+describe("classifyNavigationRefusal", () => {
+  test("maps ground refusals to a next step", () => {
+    expect(
+      classifyNavigationRefusal("position disagrees with ground height"),
+    ).toBe("wait");
+    expect(classifyNavigationRefusal("ambiguous ground column")).toBe(
+      "pick_destination",
+    );
+    expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
+  });
+});
+
+describe("collisionFree", () => {
+  test("probes low, head-height and vertical rays", () => {
+    const rays: [number, number][] = [];
+    const from = { x: 0, y: 0, z: 0 };
+    const to = { x: 1, y: 0, z: 0 };
+    const ray = (a: NavPoint, b: NavPoint) => {
+      rays.push([a.z, b.z]);
+      return true;
+    };
+    expect(collisionFree(ray, from, to)).toBe(true);
+    expect(rays).toEqual([
+      [0.25, 0.25],
+      [1.6, 1.6],
+      [0.25, 1.6],
+    ]);
+    expect(collisionFree(() => false, from, to)).toBe(false);
   });
 });

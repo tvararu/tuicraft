@@ -26,9 +26,29 @@ export type Navigation = {
 const EXPANSION01 = 530;
 const ADT_STEP = 64;
 const GROUND_STEP = 0.5;
-const GROUND_ERROR = 0.25;
+export const GROUND_ERROR = 0.25;
 const FLOOR_MERGE = 0.01;
 const MESH_HEIGHT = 1.6;
+
+export type NavigationRefusal = "wait" | "pick_destination" | "stop";
+
+export function classifyNavigationRefusal(reason: string): NavigationRefusal {
+  if (reason.includes("position disagrees with ground height")) return "wait";
+  if (reason.includes("ambiguous ground column")) return "pick_destination";
+  return "stop";
+}
+
+export function collisionFree(
+  ray: (from: NavPoint, to: NavPoint) => boolean,
+  from: NavPoint,
+  to: NavPoint,
+): boolean {
+  const lowFrom = { ...from, z: from.z + GROUND_ERROR };
+  const lowTo = { ...to, z: to.z + GROUND_ERROR };
+  const highFrom = { ...from, z: from.z + MESH_HEIGHT };
+  const highTo = { ...to, z: to.z + MESH_HEIGHT };
+  return ray(lowFrom, lowTo) && ray(highFrom, highTo) && ray(lowTo, highTo);
+}
 
 export class GroundRoute {
   readonly points: readonly NavPoint[];
@@ -268,17 +288,8 @@ function groundHeights(map: NativeMap, x: number, y: number): number[] {
 }
 
 function checkCollision(map: NativeMap, from: NavPoint, to: NavPoint): void {
-  const lowFrom = { ...from, z: from.z + GROUND_ERROR };
-  const lowTo = { ...to, z: to.z + GROUND_ERROR };
-  const highFrom = { ...from, z: from.z + MESH_HEIGHT };
-  const highTo = { ...to, z: to.z + MESH_HEIGHT };
-  if (
-    !clearRay(map, lowFrom, lowTo) ||
-    !clearRay(map, highFrom, highTo) ||
-    !clearRay(map, lowTo, highTo)
-  ) {
+  if (!collisionFree((a, b) => clearRay(map, a, b), from, to))
     throw groundError("ground corridor collision");
-  }
 }
 
 function clearRay(map: NativeMap, from: NavPoint, to: NavPoint): boolean {

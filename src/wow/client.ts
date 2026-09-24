@@ -62,7 +62,6 @@ import {
 import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
 import {
   ControlRuntime,
-  classifyNavigationRefusal,
   type ControlEvent,
   type ControlState,
   type MovementDirection,
@@ -85,7 +84,11 @@ import {
   loadFactionTemplates,
   type FactionTemplateCatalog,
 } from "wow/faction-template";
-import { createNavigation, type Navigation } from "wow/navigation";
+import {
+  classifyNavigationRefusal,
+  createNavigation,
+  type Navigation,
+} from "wow/navigation";
 import {
   RecoveryRuntime,
   type RecoveryState,
@@ -569,7 +572,7 @@ export function worldSession(
         try {
           return getNavigation().clear(mapId, from, to);
         } catch {
-          return undefined;
+          return false;
         }
       },
     });

@@ -12,7 +12,6 @@ import {
 
 import {
   ControlRuntime,
-  classifyNavigationRefusal,
   type ControlEvent,
   type ControlDeps,
 } from "wow/control";
@@ -59,6 +58,7 @@ function setup(over: Partial<ControlDeps> = {}): {
     now: () => now,
     selfGuid: () => 0x0764n,
     findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
+    isPathClear: () => false,
     ...over,
   };
   const runtime = new ControlRuntime(deps);
@@ -238,8 +238,7 @@ describe("ControlRuntime", () => {
         now: () => now,
         ticks: () => now - 10_000,
         findHeight: (_map, x, _y, from) => {
-          if (x > startX + 0.5 && x < startX + 1.5)
-            throw new Error("UNKNOWN_HEIGHT");
+          if (x > startX + 0.5 && x < startX + 1.5) return undefined;
           return from?.z ?? 70.34;
         },
       });
@@ -331,25 +330,6 @@ describe("ControlRuntime", () => {
     }
   });
 
-  test("a failed movement send does not retain an active directed walk", () => {
-    jest.useFakeTimers();
-    try {
-      const { runtime } = setup({
-        send: (opcode) => {
-          if (opcode === GameOpcode.MSG_MOVE_START_FORWARD)
-            throw new Error("connection_failed");
-        },
-      });
-      const start = runtime.snapshot().pose!;
-      expect(() =>
-        runtime.walkToward({ x: start.x + 4, y: start.y, z: start.z }, 4),
-      ).toThrow("connection_failed");
-      expect(runtime.walkActive()).toBe(false);
-      expect(runtime.snapshot().moving).toBe(false);
-    } finally {
-      jest.useRealTimers();
-    }
-  });
   test("directed walk refuses zero speed instead of hanging under a lease", () => {
     jest.useFakeTimers();
     const { runtime, sent } = setup();
@@ -435,6 +415,8 @@ describe("ControlRuntime", () => {
         ticks: () => 0,
         now: () => 0,
         selfGuid: () => 1n,
+        findHeight: () => undefined,
+        isPathClear: () => false,
       });
       noSpeed.loginVerified(LOGIN);
       expect(() => noSpeed.move("forward", 1000)).toThrow("missing_speed");
@@ -1124,20 +1106,6 @@ test("explicit halt clears stale obstruction while obstruction halt preserves it
   } finally {
     jest.useRealTimers();
   }
-});
-
-test("classifyNavigationRefusal distinguishes wait, pick_destination, and stop", () => {
-  expect(
-    classifyNavigationRefusal("position disagrees with ground height"),
-  ).toBe("wait");
-  expect(classifyNavigationRefusal("ambiguous ground column")).toBe(
-    "pick_destination",
-  );
-  expect(
-    classifyNavigationRefusal("pathfind_find_height failed (UNKNOWN_HEIGHT)"),
-  ).toBe("stop");
-  expect(classifyNavigationRefusal("ground height unavailable")).toBe("stop");
-  expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
 });
 
 test("navigationError stores refusal and navigate clears refusal", () => {

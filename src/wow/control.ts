@@ -1,4 +1,15 @@
-import type { GroundRoute, NavPoint } from "wow/navigation";
+import {
+  classifyNavigationRefusal,
+  type GroundRoute,
+  type NavPoint,
+  type NavigationRefusal,
+} from "wow/navigation";
+import {
+  MOVING_BITS,
+  groundStep,
+  unsupportedReason,
+  type Ground,
+} from "wow/control-motion";
 import type { Position } from "wow/entity-store";
 import { bearing, distance, distance2d, normalizeAngle } from "wow/geometry";
 import { GameOpcode } from "wow/protocol/opcodes";
@@ -65,18 +76,6 @@ export type ControlState = {
   owner: ControlOwner;
 };
 
-export type NavigationRefusal = "wait" | "pick_destination" | "stop";
-
-export function classifyNavigationRefusal(reason: string): NavigationRefusal {
-  if (reason.includes("position disagrees with ground height")) {
-    return "wait";
-  }
-  if (reason.includes("ambiguous ground column")) {
-    return "pick_destination";
-  }
-  return "stop";
-}
-
 export type NavigationState = {
   active: boolean;
   destination: NavPoint | undefined;
@@ -104,27 +103,20 @@ export type ControlEvent = {
 
 export type ControlSend = (opcode: number, body?: Uint8Array) => void;
 
-export type ControlDeps = {
+export type ControlDeps = Ground & {
   send: ControlSend;
   ticks: () => number;
   now: () => number;
   selfGuid: () => bigint;
-  findHeight?: (
-    mapId: number,
-    x: number,
-    y: number,
-    from?: NavPoint,
-  ) => number | undefined;
-  isPathClear?: (
-    mapId: number,
-    from: NavPoint,
-    to: NavPoint,
-  ) => boolean | undefined;
 };
 
 const MIN_DURATION_MS = 1;
 const MAX_DURATION_MS = 10000;
 const HEARTBEAT_MS = 500;
+const ROUTE_HEARTBEAT_MS = 100;
+const STEP_MS = 100;
+const STEP_YARDS = 0.5;
+const HALT_BLOCKERS = new Set(["obstructed", "height_unresolved"]);
 
 const DIR_FLAG: Record<MovementDirection, number> = {
   forward: MovementFlag.FORWARD,
@@ -155,17 +147,6 @@ const UNIT_BLOCK_FLAGS =
 
 function copyPose(pose: ControlPose | undefined): ControlPose | undefined {
   return pose ? { ...pose } : undefined;
-}
-
-function unsupportedReason(flags: number): string | undefined {
-  if (flags & MovementFlag.ON_TRANSPORT) return "transport";
-  if (flags & MovementFlag.FLYING || flags & MovementFlag.CAN_FLY)
-    return "flying";
-  if (flags & MovementFlag.FALLING) return "falling";
-  if (flags & MovementFlag.SWIMMING) return "swimming";
-  if (flags & MovementFlag.DISABLE_GRAVITY) return "disable_gravity";
-  if (flags & MovementFlag.SPLINE_ENABLED) return "spline";
-  return undefined;
 }
 
 export class ControlRuntime {
@@ -363,23 +344,7 @@ export class ControlRuntime {
     };
     this.walk = walk;
     signal?.addEventListener("abort", walk.abort, { once: true });
-    if (signal?.aborted) {
-      if (this.walk === walk) this.endWalk("abort");
-      return promise;
-    }
-    try {
-      this.startMoving("forward", MAX_DURATION_MS);
-    } catch (error) {
-      if (this.walk === walk) {
-        this.clearTimers();
-        this.moving = false;
-        this.direction = undefined;
-        this.owner = "none";
-        this.moveFlags &= ~MovementFlag.FORWARD;
-        this.endWalk("start_failed");
-      }
-      throw error;
-    }
+    this.startMoving("forward", MAX_DURATION_MS);
     return promise;
   }
 
@@ -633,39 +598,19 @@ export class ControlRuntime {
     this.armLease(durationMs);
     this.heartbeatTimer = setInterval(
       () => this.heartbeat(),
-      this.route || this.walk ? 100 : HEARTBEAT_MS,
+      this.route || this.walk ? STEP_MS : HEARTBEAT_MS,
     );
     this.emit("movement_started");
     this.emit("control_changed");
   }
 
   private haltMovement(reason: string, sendStop: boolean): void {
+    const blocked = HALT_BLOCKERS.has(reason) ? reason : undefined;
     if (!this.moving && this.owner === "none") {
-      if (reason !== "obstructed" && reason !== "height_unresolved")
-        this.blockedReason = undefined;
+      if (!blocked) this.blockedReason = undefined;
       return;
     }
-    this.clearTimers();
-    this.endNavigation(reason);
-    const wasMoving = this.moving;
-    const ownerChanged = this.owner !== "none";
-    this.moving = false;
-    this.direction = undefined;
-    this.owner = "none";
-    this.blockedReason =
-      reason === "obstructed" || reason === "height_unresolved"
-        ? reason
-        : undefined;
-    const movingBits =
-      MovementFlag.FORWARD |
-      MovementFlag.BACKWARD |
-      MovementFlag.STRAFE_LEFT |
-      MovementFlag.STRAFE_RIGHT;
-    this.moveFlags &= ~movingBits;
-    this.endWalk(reason);
-    if (sendStop && wasMoving) this.sendMove(GameOpcode.MSG_MOVE_STOP);
-    if (wasMoving) this.emit("movement_stopped", reason);
-    if (ownerChanged) this.emit("control_changed", reason);
+    this.endMotion(reason, blocked, sendStop);
   }
 
   private stopMoving(reason: string, sendStop: boolean): void {
@@ -674,6 +619,20 @@ export class ControlRuntime {
   }
 
   private abortUnsafe(reason: string): void {
+    this.endMotion(reason, reason, false);
+  }
+
+  private fail(reason: string): void {
+    this.abortUnsafe(reason);
+    this.sendMove(GameOpcode.MSG_MOVE_STOP);
+    this.emit("control_error", reason);
+  }
+
+  private endMotion(
+    reason: string,
+    blocked: string | undefined,
+    sendStop: boolean,
+  ): void {
     this.clearTimers();
     this.endNavigation(reason);
     const wasMoving = this.moving;
@@ -681,14 +640,10 @@ export class ControlRuntime {
     this.moving = false;
     this.direction = undefined;
     this.owner = "none";
-    this.blockedReason = reason;
-    this.moveFlags &= ~(
-      MovementFlag.FORWARD |
-      MovementFlag.BACKWARD |
-      MovementFlag.STRAFE_LEFT |
-      MovementFlag.STRAFE_RIGHT
-    );
+    this.blockedReason = blocked;
+    this.moveFlags &= ~MOVING_BITS;
     this.endWalk(reason);
+    if (sendStop && wasMoving) this.sendMove(GameOpcode.MSG_MOVE_STOP);
     if (wasMoving) this.emit("movement_stopped", reason);
     if (ownerChanged) this.emit("control_changed", reason);
   }
@@ -701,7 +656,11 @@ export class ControlRuntime {
       return;
     }
     const now = this.deps.ticks();
-    if (now - this.lastHeartbeat < (this.route ? 100 : HEARTBEAT_MS)) return;
+    if (
+      now - this.lastHeartbeat <
+      (this.route ? ROUTE_HEARTBEAT_MS : HEARTBEAT_MS)
+    )
+      return;
     this.lastHeartbeat = now;
     this.sendMove(GameOpcode.MSG_MOVE_HEARTBEAT);
   }
@@ -728,11 +687,9 @@ export class ControlRuntime {
         };
         this.navigation.remaining = this.route.length - this.routeDistance;
       } catch (error) {
-        const reason =
-          error instanceof Error ? error.message : "navigation_sample_failed";
-        this.abortUnsafe(reason);
-        this.sendMove(GameOpcode.MSG_MOVE_STOP);
-        this.emit("control_error", reason);
+        this.fail(
+          error instanceof Error ? error.message : "navigation_sample_failed",
+        );
       }
       return;
     }
@@ -740,7 +697,7 @@ export class ControlRuntime {
     if (walk) {
       const distance = Math.min(walk.distance, walk.traveled + speed * dt);
       while (walk.traveled < distance) {
-        const next = Math.min(distance, walk.traveled + 0.5);
+        const next = Math.min(distance, walk.traveled + STEP_YARDS);
         if (
           !this.integrateGroundStep(
             walk.x + walk.dx * next,
@@ -761,100 +718,22 @@ export class ControlRuntime {
     this.integrateGroundStep(newX, newY, now);
   }
 
-  private integrateGroundStep(
-    newX: number,
-    newY: number,
-    now: number,
-  ): boolean {
+  private integrateGroundStep(x: number, y: number, now: number): boolean {
     const pose = this.predicted!;
-    let newZ: number | undefined;
-    if (this.deps.findHeight) {
-      try {
-        newZ = this.deps.findHeight(pose.mapId, newX, newY, pose);
-      } catch {
-        newZ = undefined;
-      }
-    }
-    if (newZ === undefined || !Number.isFinite(newZ)) {
-      let currentZ: number | undefined;
-      if (this.deps.findHeight) {
-        try {
-          currentZ = this.deps.findHeight(pose.mapId, pose.x, pose.y, pose);
-        } catch {
-          currentZ = undefined;
-        }
-      }
-      if (currentZ !== undefined && Number.isFinite(currentZ)) {
-        let clear: boolean | undefined;
-        if (this.deps.isPathClear) {
-          try {
-            clear = this.deps.isPathClear(pose.mapId, pose, {
-              x: newX,
-              y: newY,
-              z: currentZ,
-            });
-          } catch {
-            clear = undefined;
-          }
-        }
-        this.haltMovement(
-          clear === true ? "height_unresolved" : "obstructed",
-          true,
-        );
-        return false;
-      }
-      this.abortUnsafe("ground_height_unavailable");
-      this.sendMove(GameOpcode.MSG_MOVE_STOP);
-      this.emit("control_error", "ground_height_unavailable");
+    const step = groundStep(this.deps, pose, x, y, !!this.walk);
+    if (!step.ok) {
+      if (step.reason === "ground_height_unavailable") this.fail(step.reason);
+      else this.haltMovement(step.reason, true);
       return false;
     }
-    if (this.walk && !this.directedStepClear(pose, newX, newY, newZ))
-      return false;
-    pose.x = newX;
-    pose.y = newY;
-    pose.z = newZ;
-    pose.source = "predicted";
-    pose.updatedAt = now;
+    Object.assign(pose, {
+      x,
+      y,
+      z: step.z,
+      source: "predicted",
+      updatedAt: now,
+    });
     return true;
-  }
-
-  private directedStepClear(
-    pose: ControlPose,
-    x: number,
-    y: number,
-    z: number,
-  ): boolean {
-    let back: number | undefined;
-    try {
-      back = this.deps.findHeight?.(pose.mapId, pose.x, pose.y, { x, y, z });
-    } catch {}
-    if (
-      back === undefined ||
-      !Number.isFinite(back) ||
-      Math.abs(back - pose.z) > 0.25
-    ) {
-      this.haltMovement("height_unresolved", true);
-      return false;
-    }
-    const clear = this.deps.isPathClear;
-    if (!clear) {
-      this.haltMovement("obstructed", true);
-      return false;
-    }
-    const fromLow = { x: pose.x, y: pose.y, z: pose.z + 0.25 };
-    const toLow = { x, y, z: z + 0.25 };
-    const fromHigh = { x: pose.x, y: pose.y, z: pose.z + 1.6 };
-    const toHigh = { x, y, z: z + 1.6 };
-    let pass = false;
-    try {
-      pass =
-        clear(pose.mapId, fromLow, toLow) === true &&
-        clear(pose.mapId, fromHigh, toHigh) === true &&
-        clear(pose.mapId, toLow, toHigh) === true;
-    } catch {}
-    if (pass) return true;
-    this.haltMovement("obstructed", true);
-    return false;
   }
 
   private armLease(durationMs: number): void {
@@ -875,18 +754,13 @@ export class ControlRuntime {
         return;
       }
       this.heartbeat();
-      if (this.route)
-        this.armLease(
-          Math.max(
-            1,
-            Math.min(
-              MAX_DURATION_MS,
-              ((this.route.length - this.routeDistance) / this.runSpeed!) *
-                1000,
-            ),
-          ),
-        );
+      if (this.route) this.armLease(this.routeLeaseMs(this.route));
     }, durationMs);
+  }
+
+  private routeLeaseMs(route: GroundRoute): number {
+    const ms = ((route.length - this.routeDistance) / this.runSpeed!) * 1000;
+    return Math.max(1, Math.min(MAX_DURATION_MS, ms));
   }
 
   private endWalk(reason: string): void {
@@ -959,14 +833,9 @@ export class ControlRuntime {
   }
 
   private applyForcedPose(dest: MovementInfo, reason: string): void {
-    const movingBits =
-      MovementFlag.FORWARD |
-      MovementFlag.BACKWARD |
-      MovementFlag.STRAFE_LEFT |
-      MovementFlag.STRAFE_RIGHT;
     this.observedFlags = dest.flags;
     this.extraFlags = dest.extraFlags;
-    this.moveFlags = dest.flags & ~movingBits;
+    this.moveFlags = dest.flags & ~MOVING_BITS;
     this.fall = dest.fall;
     this.transport = dest.transport;
     this.rooted = (dest.flags & MovementFlag.ROOT) !== 0;

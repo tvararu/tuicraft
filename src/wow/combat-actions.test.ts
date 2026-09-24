@@ -135,6 +135,8 @@ function setup(
     now: nowFn,
     ticks: () => 0,
     selfGuid: () => 1n,
+    findHeight: () => undefined,
+    isPathClear: () => false,
   });
   control.observeSelf({
     position: { mapId: 530, x: 0, y: 0, z: 0, orientation: 0 },
@@ -495,6 +497,8 @@ test("an attacking creature whose faction relation is not verified as hostile ca
     now: () => 1000,
     ticks: () => 0,
     selfGuid: () => 1n,
+    findHeight: () => undefined,
+    isPathClear: () => false,
   });
   control.observeSelf({
     position: { mapId: 530, x: 0, y: 0, z: 0, orientation: 0 },

@@ -47,6 +47,7 @@ describe("handleNearTeleport", () => {
       now: () => 10_000,
       selfGuid: () => 0x0764n,
       findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
+      isPathClear: () => false,
     });
     runtime.loginVerified({
       mapId: 530,
