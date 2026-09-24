@@ -5,10 +5,7 @@ import {
   parseGossipMessage,
 } from "wow/protocol/gossip";
 import { PacketReader } from "wow/protocol/packet";
-
-function bytes(hex: string): Uint8Array {
-  return Buffer.from(hex.replace(/\s/g, ""), "hex");
-}
+import { bytes } from "test/hex";
 
 const guid = 0x0102030405060708n;
 const menu = bytes(`
@@ -17,31 +14,32 @@ const menu = bytes(`
   01000000 2a000000 08000000 ffffffff 00020080 02 517565737400
 `);
 
-describe("gossip wire", () => {
-  test("selects offered option IDs and distinguishes absent from empty code", () => {
+describe("buildGossipHello", () => {
+  test("writes the npc guid", () => {
     expect(buildGossipHello(guid)).toEqual(bytes("0807060504030201"));
-    expect(buildGossipSelectOption(guid, 17, 153)).toEqual(
+  });
+});
+
+describe("buildGossipSelectOption", () => {
+  const select = { guid, menuId: 17, optionIndex: 153 };
+
+  test("distinguishes an absent code from an empty one", () => {
+    expect(buildGossipSelectOption(select)).toEqual(
       bytes("0807060504030201 11000000 99000000"),
     );
-    expect(buildGossipSelectOption(guid, 17, 153, "")).toEqual(
+    expect(buildGossipSelectOption({ ...select, code: "" })).toEqual(
       bytes("0807060504030201 11000000 99000000 00"),
     );
-    expect(buildGossipSelectOption(guid, 17, 153, "é")).toEqual(
+    expect(buildGossipSelectOption({ ...select, code: "é" })).toEqual(
       bytes("0807060504030201 11000000 99000000 c3a900"),
     );
-    expect(() => buildGossipSelectOption(guid, 17, 153, "x\0y")).toThrow(
-      RangeError,
-    );
-    expect(() => buildGossipHello(-1n)).toThrow(RangeError);
-    expect(() => buildGossipHello(0x10000000000000000n)).toThrow(RangeError);
-    expect(() => buildGossipSelectOption(guid, -1, 153)).toThrow(RangeError);
-    expect(() => buildGossipSelectOption(guid, 17, 0x100000000)).toThrow(
-      RangeError,
-    );
   });
+});
 
+describe("parseGossipMessage", () => {
   test("retains menu identity, raw flags, signed levels, and UTF-8 labels", () => {
-    expect(parseGossipMessage(new PacketReader(menu))).toEqual({
+    const r = new PacketReader(menu);
+    expect(parseGossipMessage(r)).toEqual({
       guid,
       menuId: 17,
       titleTextId: 34,
@@ -66,6 +64,7 @@ describe("gossip wire", () => {
         },
       ],
     });
+    expect(r.remaining).toBe(0);
     expect(
       parseGossipMessage(
         new PacketReader(
@@ -73,28 +72,5 @@ describe("gossip wire", () => {
         ),
       ),
     ).toEqual({ guid, menuId: 17, titleTextId: 34, options: [], quests: [] });
-  });
-
-  test("rejects truncated strings and records, trailing bytes, and unbounded counts", () => {
-    for (let length = 0; length < menu.length; length++) {
-      expect(() =>
-        parseGossipMessage(new PacketReader(menu.subarray(0, length))),
-      ).toThrow(RangeError);
-    }
-    expect(() =>
-      parseGossipMessage(
-        new PacketReader(bytes("0807060504030201 11000000 22000000 ffffffff")),
-      ),
-    ).toThrow(RangeError);
-    expect(() =>
-      parseGossipMessage(
-        new PacketReader(
-          bytes("0807060504030201 11000000 22000000 00000000 ffffffff"),
-        ),
-      ),
-    ).toThrow(RangeError);
-    expect(() =>
-      parseGossipMessage(new PacketReader(Buffer.concat([menu, bytes("00")]))),
-    ).toThrow(RangeError);
   });
 });

@@ -13,20 +13,31 @@ import {
   type GossipMessage,
 } from "wow/protocol/gossip";
 import {
-  buildQuestQuery,
   buildQuestgiverQueryQuest,
   buildQuestgiverAcceptQuest,
   buildQuestgiverCompleteQuest,
   buildQuestgiverRequestReward,
   buildQuestgiverChooseReward,
-  buildQuestLogRemoveQuest,
   parseQuestgiverStatus,
   parseQuestgiverQuestList,
   parseQuestgiverQuestDetails,
   parseQuestgiverRequestItems,
   parseQuestgiverOfferReward,
-  parseQuestQueryResponse,
   parseQuestgiverQuestComplete,
+  type QuestgiverStatus,
+  type QuestgiverQuestList,
+  type QuestgiverQuestDetails,
+  type QuestgiverRequestItems,
+  type QuestgiverOfferReward,
+  type QuestgiverQuestComplete,
+} from "wow/protocol/questgiver";
+import {
+  buildQuestQuery,
+  parseQuestQueryResponse,
+  type QuestQueryResponse,
+} from "wow/protocol/quest-query";
+import {
+  buildQuestLogRemoveQuest,
   parseQuestUpdateAddKill,
   parseQuestUpdateAddItem,
   parseQuestUpdateComplete,
@@ -34,16 +45,9 @@ import {
   parseQuestFailed,
   parseQuestUpdateFailed,
   parseQuestUpdateFailedTimer,
-  type QuestgiverStatus,
-  type QuestgiverQuestList,
-  type QuestgiverQuestDetails,
-  type QuestgiverRequestItems,
-  type QuestgiverOfferReward,
-  type QuestQueryResponse,
-  type QuestgiverQuestComplete,
   type QuestUpdateAddKill,
   type QuestUpdateAddItem,
-} from "wow/protocol/quest";
+} from "wow/protocol/quest-log";
 
 export const QuestServerOpcode = {
   SMSG_GOSSIP_MESSAGE: GameOpcode.SMSG_GOSSIP_MESSAGE,
@@ -445,7 +449,12 @@ export class QuestRuntime {
     if (!option.coded && code !== undefined)
       throw new Error("gossip_code_not_offered");
     const { guid, menuId } = dialog.data;
-    const body = buildGossipSelectOption(guid, menuId, optionId, code);
+    const body = buildGossipSelectOption({
+      guid,
+      menuId,
+      optionIndex: optionId,
+      code,
+    });
     this.send(GameOpcode.CMSG_GOSSIP_SELECT_OPTION, body, {
       action: "selectOption",
       guid,

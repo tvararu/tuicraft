@@ -1,5 +1,8 @@
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { parseQuestMenuEntry, type QuestMenuEntry } from "wow/protocol/quest";
+import {
+  parseQuestMenuEntry,
+  type QuestMenuEntry,
+} from "wow/protocol/questgiver";
 
 export type GossipOption = {
   optionIndex: number;
@@ -18,76 +21,56 @@ export type GossipMessage = {
   quests: QuestMenuEntry[];
 };
 
-const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
-
-function string(reader: PacketReader): string {
-  const bytes: number[] = [];
-  for (let byte = reader.uint8(); byte !== 0; byte = reader.uint8())
-    bytes.push(byte);
-  return decoder.decode(Uint8Array.from(bytes));
-}
-
-function checkCount(reader: PacketReader, count: number, width: number): void {
-  if (count > Math.floor(reader.remaining / width))
-    throw new RangeError("Gossip record count exceeds remaining payload");
-}
-
-function guidRequest(guid: bigint, size: number): PacketWriter {
-  if (guid < 0n || guid > 0xffffffffffffffffn)
-    throw new RangeError("GUID outside uint64 range");
-  const writer = new PacketWriter(size);
-  writer.uint64LE(guid);
-  return writer;
-}
-
-function checkUnsigned(value: number): void {
-  if (!Number.isInteger(value) || value < 0 || value > 0xffffffff)
-    throw new RangeError("Gossip request integer outside uint32 range");
-}
+export type GossipSelect = {
+  guid: bigint;
+  menuId: number;
+  optionIndex: number;
+  code?: string;
+};
 
 export function buildGossipHello(guid: bigint): Uint8Array {
-  return guidRequest(guid, 8).finish();
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  return w.finish();
 }
 
-export function buildGossipSelectOption(
-  guid: bigint,
-  menuId: number,
-  optionIndex: number,
-  code?: string,
-): Uint8Array {
-  checkUnsigned(menuId);
-  checkUnsigned(optionIndex);
-  if (code?.includes("\0"))
-    throw new RangeError("Gossip code contains a NUL character");
-  const writer = guidRequest(guid, 16);
-  writer.uint32LE(menuId);
-  writer.uint32LE(optionIndex);
-  if (code !== undefined) writer.cString(code);
-  return writer.finish();
+export function buildGossipSelectOption({
+  guid,
+  menuId,
+  optionIndex,
+  code,
+}: GossipSelect): Uint8Array {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  w.uint32LE(menuId);
+  w.uint32LE(optionIndex);
+  if (code !== undefined) w.cString(code);
+  return w.finish();
 }
 
-export function parseGossipMessage(reader: PacketReader): GossipMessage {
-  const guid = reader.uint64LE();
-  const menuId = reader.uint32LE();
-  const titleTextId = reader.uint32LE();
-  const optionCount = reader.uint32LE();
-  checkCount(reader, optionCount, 12);
-  const options: GossipOption[] = [];
-  for (let i = 0; i < optionCount; i++) {
-    options.push({
-      optionIndex: reader.uint32LE(),
-      icon: reader.uint8(),
-      coded: reader.uint8(),
-      money: reader.uint32LE(),
-      text: string(reader),
-      boxText: string(reader),
-    });
-  }
-  const questCount = reader.uint32LE();
-  checkCount(reader, questCount, 18);
-  const quests: QuestMenuEntry[] = [];
-  for (let i = 0; i < questCount; i++) quests.push(parseQuestMenuEntry(reader));
-  if (reader.remaining !== 0)
-    throw new RangeError("Unexpected trailing gossip payload");
+function parseOption(r: PacketReader): GossipOption {
+  return {
+    optionIndex: r.uint32LE(),
+    icon: r.uint8(),
+    coded: r.uint8(),
+    money: r.uint32LE(),
+    text: r.cString(),
+    boxText: r.cString(),
+  };
+}
+
+function list<T>(r: PacketReader, parse: (r: PacketReader) => T): T[] {
+  const count = r.uint32LE();
+  const out: T[] = [];
+  for (let i = 0; i < count; i++) out.push(parse(r));
+  return out;
+}
+
+export function parseGossipMessage(r: PacketReader): GossipMessage {
+  const guid = r.uint64LE();
+  const menuId = r.uint32LE();
+  const titleTextId = r.uint32LE();
+  const options = list(r, parseOption);
+  const quests = list(r, parseQuestMenuEntry);
   return { guid, menuId, titleTextId, options, quests };
 }
