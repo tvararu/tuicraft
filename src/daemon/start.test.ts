@@ -106,8 +106,6 @@ function makeMockClient(): {
         selectTarget: jest.fn(),
         halt: jest.fn(),
         onControlEvent: jest.fn(),
-        follow: jest.fn(),
-        onFollowEvent: jest.fn(),
         queryCorpse: jest.fn(),
         releaseSpirit: jest.fn(),
         reclaimCorpse: jest.fn(),

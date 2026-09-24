@@ -85,7 +85,6 @@ import {
   type FactionTemplateCatalog,
 } from "wow/faction-template";
 import { createNavigation, type Navigation } from "wow/navigation";
-import { FollowRuntime, type FollowState, type FollowEvent } from "wow/follow";
 import {
   RecoveryRuntime,
   type RecoveryState,
@@ -335,9 +334,6 @@ export type WorldHandle = {
   getNavigationState(): NavigationState;
   onCombatEvent(cb: ((event: CombatEvent) => void) | undefined): void;
   onTacticsEvent(cb: ((event: TacticsEvent) => void) | undefined): void;
-  follow(guid: bigint, distance?: number): void;
-  getFollowState(): FollowState;
-  onFollowEvent(cb: ((event: FollowEvent) => void) | undefined): void;
   getRecoveryState(): RecoveryState;
   queryCorpse(): void;
   releaseSpirit(): void;
@@ -409,7 +405,6 @@ export type WorldConn = {
   onDuelEvent?: (event: DuelEvent) => void;
   control?: ControlRuntime;
   combat?: CombatRuntime;
-  follow?: FollowRuntime;
   recovery?: RecoveryRuntime;
   quests?: QuestRuntime;
   rewards?: RewardsRuntime;
@@ -546,12 +541,7 @@ export function worldSession(
       duelArbiter: 0n,
     };
     conn.entityStore.onEvent((event) => {
-      if (event.type === "disappear") {
-        conn.follow?.invalidateTarget(event.guid, "target_lost");
-        conn.combat?.forget(event.guid);
-      } else if ("health" in event.entity && event.entity.health === 0) {
-        conn.follow?.invalidateTarget(event.entity.guid, "target_dead");
-      }
+      if (event.type === "disappear") conn.combat?.forget(event.guid);
       conn.recovery?.observeEntity(event);
       conn.rewards?.observeEntity(event);
       conn.onEntityEvent?.(event);
@@ -629,7 +619,6 @@ export function worldSession(
     }
     function rawHalt(): void {
       if (disposed) return;
-      conn.follow?.stop("halt");
       control.setMode("none");
       control.halt();
       combat.halt();
@@ -669,13 +658,6 @@ export function worldSession(
       halt: rawHalt,
     });
     conn.tactics = tactics;
-    const follow = new FollowRuntime({
-      control,
-      navigation: getNavigation,
-      target: (guid) => combat.unit(guid),
-      now: runtimeDeps.now,
-    });
-    conn.follow = follow;
     const recovery = new RecoveryRuntime({
       ...runtimeDeps,
       pose: () => control.snapshot().pose,
@@ -733,7 +715,6 @@ export function worldSession(
       now: runtimeDeps.now,
     });
     control.onEvent((event) => {
-      follow.observeControl(event);
       conn.onControlEvent?.(event);
     });
     recovery.onEvent((event) => {
@@ -743,7 +724,6 @@ export function worldSession(
           (event.state.life === "dead" || event.state.life === "ghost"))
       ) {
         tactics.stop(`self_${event.state.life}`);
-        follow.stop(`self_${event.state.life}`);
       }
       conn.onRecoveryEvent?.(event);
       cycleRecoveryListener?.(event);
@@ -783,7 +763,6 @@ export function worldSession(
 
     function override(): void {
       cycle.stop("manual_override");
-      follow.stop("manual_override");
       tactics.stop("manual_override");
       rawHalt();
     }
@@ -798,7 +777,6 @@ export function worldSession(
       conn.onControlEvent = undefined;
       conn.onRecoveryEvent = undefined;
       conn.onRewardsEvent = undefined;
-      follow.onEvent(undefined);
       recovery.onEvent(undefined);
       quests.onEvent(undefined);
       rewards.onEvent(undefined);
@@ -812,7 +790,6 @@ export function worldSession(
       disposed = true;
       control.dispose();
       tactics.dispose();
-      follow.dispose();
       recovery.dispose();
       quests.dispose();
       rewards.dispose();
@@ -1362,7 +1339,6 @@ export function worldSession(
             !state.moving ||
             state.direction !== direction ||
             control.walkActive() ||
-            follow.snapshot().active ||
             tactics.snapshot().status !== "idle" ||
             cycle.snapshot().active
           )
@@ -1435,7 +1411,6 @@ export function worldSession(
           conn.control.selectTarget(guid);
         },
         halt() {
-          follow.stop("halt");
           tactics.stop("halt");
           cycle.stop("halt");
           rawHalt();
@@ -1456,17 +1431,14 @@ export function worldSession(
           combat.attack(targetGuid);
         },
         cancelCast() {
-          follow.stop("manual_override");
           tactics.stop("manual_override");
           combat.cancelCast();
         },
         stopAttack() {
-          follow.stop("manual_override");
           tactics.stop("manual_override");
           combat.stopAttack();
         },
         startTactics(targetGuid, instruction, signal, framing) {
-          follow.stop("tactics");
           const life = recovery.snapshot().life;
           if (life === "dead" || life === "ghost")
             throw new Error("self_not_alive");
@@ -1507,16 +1479,6 @@ export function worldSession(
         },
         onControlEvent(cb) {
           conn.onControlEvent = cb;
-        },
-        follow(guid, distance) {
-          override();
-          follow.start(guid, distance);
-        },
-        getFollowState() {
-          return follow.snapshot();
-        },
-        onFollowEvent(cb) {
-          follow.onEvent(cb);
         },
         getRecoveryState() {
           return recovery.snapshot();

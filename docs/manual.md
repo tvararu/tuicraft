@@ -18,7 +18,6 @@ tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--js
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
 tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycling [--json]
-tuicraft follow <guid> [distance] | following [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft spirit-healer <guid> | resurrect accept|decline
 tuicraft quests [--json] | talk <guid> | query-quest <id>
@@ -120,7 +119,7 @@ For `fight` and `cycle`, choose current non-self creature GUIDs from this JSON o
 `left`/`right` strafe. *ms* is an integer 1–10000. Default 1000. The walk
 ends when the duration ends. Repeating the same direction while manual movement
 is active renews the lease without a stop. A manual command takes over from
-Jev, follow, or cycle immediately instead of refreshing their movement.
+Jev or cycle immediately instead of refreshing their movement.
 
 `tuicraft face` _radians_
 :: Set facing. The value is a finite number in radians. Empty input is rejected.
@@ -141,8 +140,7 @@ starting ground, connected heights in both directions, and low/headroom rays
 at each step of at most 0.5 yards. It stops on an obstruction, unsafe state,
 correction, client disconnect, `halt`, or takeover. The 10-second safety lease
 renews only while the leg makes progress; a stalled leg stops. It does not
-route around obstacles; use `goto` for a checked route or `follow` to track
-a moving GUID.
+route around obstacles; use `goto` for a checked route.
 The command waits for a terminal JSON object: `status` is `completed` or
 `stopped`, `traveled` is predicted horizontal yards, `pose` has
 `source=predicted` for motion, and a stop has `reason`. Exit status is 1 on
@@ -157,9 +155,9 @@ use. Inspect `control --json`: `requestedTarget` is intent, `target` is the last
 server observation.
 
 `tuicraft halt`
-:: Stop motion, cast, attack, tactics, navigation, follow, and cycle. The daemon stays connected.
+:: Stop motion, cast, attack, tactics, navigation, and cycle. The daemon stays connected.
 HALT on one IPC socket interrupts pending work and drops older queued
-FOLLOW/RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
+RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
 HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT commands as well.
@@ -264,31 +262,6 @@ grounded waypoint; do not repeat the failed heading. For `ambiguous ground
 column`, choose a destination with one ground height; do not guess Z.
 `nextStep` is advice, not a verified detour or an automatic retry.
 
-`tuicraft follow` _guid_ [_distance_]
-:: Request bounded following of an observed unit on Expansion01/map 530.
-_guid_ is a nonzero unsigned 64-bit integer in `0x` hex or decimal.
-_distance_ is a finite number from 1 through 20 yards. The default is 3.
-Distance measures horizontal ground-route length behind the target, not a straight-line radius.
-The command requires compatible navigation data and supported recent target motion.
-Destination height comes from unambiguous native ground, never from the target altitude.
-
-A request lasts at most 30 seconds and allows at most 32 native planning calls.
-The runtime limits target separation to 100 yards and planned routes to 150 yards.
-It observes motion every 100ms. Replans require meaningful displacement and at least 500ms between plans.
-Motion receive age must not exceed 5 seconds. Quiet stationary targets can therefore expire.
-Loss, unsupported or stale motion, unsafe control, correction, planning failure, and manual override stop follow without retries.
-Use `halt` to stop follow while keeping the daemon connected.
-
-`tuicraft following` [`--json`]
-:: Print follow state, including `active`, `status`, target `guid`, requested `distance`, and terminal `reason`.
-`attempts` counts native planner calls. `separation` is the observed/predicted 3D pose distance.
-`targetPose.source` distinguishes predicted positions from server observations.
-`observedAt` is the original motion receive time, not a refreshed prediction timestamp.
-`OK` confirms request intent only. `holding` means predicted grounded standoff, not server-confirmed arrival.
-Use `control --json` to compare the current predicted pose with the last server pose.
-Both command failures and inspection failures exit with status 1. Human mode
-prints `ERR`; JSON mode returns one error envelope.
-
 `tuicraft recovery` [`--json`]
 :: Print observed life, health, flags, death epoch, corpse/query state, reclaim guards, delay, offer, and pending request intent.
 Ghost flags take precedence over positive ghost health. A release request or graveyard marker does not establish ghost state.
@@ -326,7 +299,7 @@ Guided corpse run:
 
 After reconnect, `combat --json` may list every learned spell in `unknownLearned` while the catalog is cold. Run `spells` once. Inspect `combat --json` again before diagnosing a broken spell kit.
 
-Mutating recovery actions stop prior tactics, follow, and motion through the manual override path.
+Mutating recovery actions stop prior tactics and motion through the manual override path.
 `OK` acknowledges intent only. Confirm recovery through subsequent authoritative life/ghost-flag observations.
 Do not retry unanswered actions automatically. Recovery command and inspection
 errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
@@ -457,11 +430,11 @@ Parse complete stdout with `JSON.parse` or `json.loads`. Only `tail --json` is
 continuous JSONL: parse one envelope per line. See [Output Format](#output-format).
 
 Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
-`spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`,
+`spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`,
 `inventory`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
-`goto`, `follow`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
+`goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
 `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, and `release-loot`.
@@ -646,7 +619,7 @@ The daemon buffers up to 1000 events. The idle timeout is configurable via
 `timeout_minutes` in the config file.
 
 `tuicraft stop` disconnects the daemon. `tuicraft halt` cancels movement,
-navigation, tactics, and follow, and requests cast and auto-attack cancellation without
+navigation, and tactics, and requests cast and auto-attack cancellation without
 disconnecting. A sent request is not server-confirmed completion; inspect combat
 state and events for the outcome.
 

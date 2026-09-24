@@ -65,8 +65,6 @@ export type CliAction =
   | { mode: "cycling"; json: boolean }
   | { mode: "goto"; x: number; y: number; z: number; json?: true }
   | { mode: "navigation"; json: boolean }
-  | { mode: "follow"; guid: bigint; distance?: number; json?: true }
-  | { mode: "following"; json: boolean }
   | { mode: "recovery"; json: boolean }
   | { mode: "query_corpse"; json?: true }
   | { mode: "release_spirit"; json?: true }
@@ -129,8 +127,6 @@ const SUBCOMMANDS = new Set([
   "cycling",
   "goto",
   "navigation",
-  "follow",
-  "following",
   "recovery",
   "query-corpse",
   "release-spirit",
@@ -289,7 +285,6 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     case "tactics":
     case "cycling":
     case "navigation":
-    case "following":
     case "recovery":
     case "quests":
     case "inventory":
@@ -309,8 +304,6 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseCycle(args);
     case "goto":
       return parseGoto(args);
-    case "follow":
-      return parseFollow(args);
     case "query-corpse":
       if (args.length !== 1) throw new Error("Invalid query-corpse arguments");
       return { mode: "query_corpse" };
@@ -787,22 +780,6 @@ function parseGoto(args: string[]): CliAction {
     throw new Error("Invalid goto arguments");
   }
   return { mode: "goto", x, y, z };
-}
-
-function parseFollow(args: string[]): CliAction {
-  if (args.length < 2 || args.length > 3)
-    throw new Error("Invalid follow arguments");
-  const guid = parseGuid(args[1]!);
-  if (guid === undefined || guid === 0n)
-    throw new Error(`Invalid follow guid: ${args[1]}`);
-  const raw = args[2];
-  const distance = raw === undefined ? undefined : parseFiniteNumber(raw);
-  if (
-    raw !== undefined &&
-    (distance === undefined || distance < 1 || distance > 20)
-  )
-    throw new Error(`Invalid follow distance: ${raw}`);
-  return { mode: "follow", guid, distance };
 }
 
 function parseBoundedArgument(

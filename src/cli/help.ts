@@ -20,7 +20,7 @@ USAGE
   tuicraft face-guid <guid>  Face a currently observed GUID
   tuicraft walk-toward <yards> <guid>|<x> <y> <z>  Bounded direct leg (>0 to 20yd); JSON terminal outcome
   tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
-  tuicraft halt              Cancel motion, cast, attack, tactics, follow, cycle
+  tuicraft halt              Cancel motion, cast, attack, tactics, cycle
                             Drop older queued mutations on this socket; not sent requests
   tuicraft nearby [--all] [--json]  Nearby 3D/XY distance and facing from current pose
   tuicraft combat [--json]   Combat state
@@ -37,9 +37,6 @@ USAGE
   tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
   tuicraft goto <x> <y> <z> [--json]  Walk a ground route
   tuicraft navigation [--json]  Navigation state and refusal next step
-  tuicraft follow <guid> [distance] [--json]  Bounded ground follow (1-20 yards, default 3)
-                            Map 530; maximum 30s; OK is intent, not arrival
-  tuicraft following [--json]  Follow state, provenance and stop reason
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
   tuicraft release-spirit     Request release from observed dead state
   tuicraft query-corpse       Request current corpse information

@@ -41,7 +41,6 @@ import type { CombatEvent } from "wow/combat";
 import type { TacticsEvent } from "wow/tactics";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
-import type { FollowEvent } from "wow/follow";
 import type { CycleEvent } from "wow/encounter-cycle";
 import type { RecoveryEvent } from "wow/recovery";
 import type { QuestEvent } from "wow/quests";
@@ -124,9 +123,6 @@ export type IpcCommand =
   | { type: "goto"; x: number; y: number; z: number }
   | { type: "navigation" }
   | { type: "navigation_json" }
-  | { type: "follow"; guid: bigint; distance?: number }
-  | { type: "following" }
-  | { type: "following_json" }
   | { type: "recovery" }
   | { type: "recovery_json" }
   | { type: "query_corpse" }
@@ -380,12 +376,6 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       return { type: "navigation" };
     case "NAVIGATION_JSON":
       return { type: "navigation_json" };
-    case "FOLLOW":
-      return parseFollowCommand(rest);
-    case "FOLLOWING":
-      return { type: "following" };
-    case "FOLLOWING_JSON":
-      return { type: "following_json" };
     case "RECOVERY":
       return { type: "recovery" };
     case "RECOVERY_JSON":
@@ -900,14 +890,6 @@ export async function dispatchCommand(
       return writeInspect(socket, () => navigationObservation(handle), false);
     case "navigation_json":
       return writeInspect(socket, () => navigationObservation(handle), true);
-    case "follow":
-      return runControlAction(socket, () => {
-        handle.follow(cmd.guid, cmd.distance);
-      });
-    case "following":
-      return writeInspect(socket, () => handle.getFollowState(), false);
-    case "following_json":
-      return writeInspect(socket, () => handle.getFollowState(), true);
     case "recovery":
       return writeInspect(socket, () => handle.getRecoveryState(), false);
     case "recovery_json":
@@ -1534,22 +1516,6 @@ export function onTacticsEvent(
   log.append(obj as LogEntry).catch(() => {});
 }
 
-export function onFollowEvent(
-  event: FollowEvent,
-  events: RingBuffer<EventEntry>,
-  log: SessionLog,
-): void {
-  const obj: Record<string, unknown> = {
-    type: "FOLLOW",
-    data: jsonSafe(event),
-  };
-  events.push({
-    text: formatDomainEvent("follow", event),
-    json: JSON.stringify(obj),
-  });
-  log.append(obj as LogEntry).catch(() => {});
-}
-
 export function onCycleEvent(
   event: CycleEvent,
   events: RingBuffer<EventEntry>,
@@ -1815,23 +1781,6 @@ function parseWalkTowardCommand(rest: string): IpcCommand {
   if (x === undefined || y === undefined || z === undefined)
     return { type: "invalid", reason: "invalid walk target" };
   return { type: "walk_toward", yards, target: { kind: "point", x, y, z } };
-}
-
-function parseFollowCommand(rest: string): IpcCommand {
-  const parts = rest.split(" ").filter(Boolean);
-  if (parts.length < 1 || parts.length > 2)
-    return { type: "invalid", reason: "invalid follow" };
-  const guid = parseGuid(parts[0]!);
-  if (guid === undefined || guid === 0n)
-    return { type: "invalid", reason: "invalid guid" };
-  const raw = parts[1];
-  const distance = raw === undefined ? undefined : parseFiniteNumber(raw);
-  if (
-    raw !== undefined &&
-    (distance === undefined || distance < 1 || distance > 20)
-  )
-    return { type: "invalid", reason: "invalid follow distance" };
-  return { type: "follow", guid, distance };
 }
 
 function parseBoundedInteger(

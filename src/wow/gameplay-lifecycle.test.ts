@@ -192,12 +192,11 @@ function expectInactive(handle: WorldHandle): void {
     owner: "none",
   });
   expect(handle.getNavigationState().active).toBe(false);
-  expect(handle.getFollowState().active).toBe(false);
   expect(handle.getTacticsState().status).toBe("idle");
 }
 
 describe("gameplay forced-close lifecycle", () => {
-  test("server close silently retires an actively moving follow owner and its timers", async () => {
+  test("server close silently retires an active route owner and its timers", async () => {
     const createNavigation = navigation.createNavigation;
     const nav = jest
       .spyOn(navigation, "createNavigation")
@@ -209,14 +208,10 @@ describe("gameplay forced-close lifecycle", () => {
     try {
       jest.useFakeTimers();
       f = await fixture(21);
-      f.handle.follow(BigInt(targetGuid), 3);
-      expect(f.handle.getFollowState()).toMatchObject({
-        active: true,
-        status: "following",
-      });
+      f.handle.goTo(21, 2, 3);
       expect(f.handle.getControlState()).toMatchObject({
         moving: true,
-        owner: "follow",
+        owner: "manual",
       });
       expect(f.handle.getNavigationState().active).toBe(true);
       expect(

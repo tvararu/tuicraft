@@ -422,7 +422,6 @@ async function main() {
     case "tactics":
     case "cycling":
     case "navigation":
-    case "following":
     case "recovery":
     case "quests":
     case "inventory":
@@ -565,15 +564,6 @@ async function main() {
       await ensureDaemon();
       printControlReply(
         await sendToSocket(`RESURRECT ${action.accept ? "accept" : "decline"}`),
-      );
-      break;
-    }
-    case "follow": {
-      await ensureDaemon();
-      const distance =
-        action.distance === undefined ? "" : ` ${action.distance}`;
-      printControlReply(
-        await sendToSocket(`FOLLOW 0x${action.guid.toString(16)}${distance}`),
       );
       break;
     }

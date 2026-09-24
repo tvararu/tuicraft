@@ -1,6 +1,5 @@
 import { CombatRuntime, type CombatEvent } from "wow/combat";
 import type { TacticsState, TacticsEvent } from "wow/tactics";
-import type { FollowState, FollowEvent } from "wow/follow";
 import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
 import { QuestRuntime, type QuestEvent } from "wow/quests";
 import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
@@ -36,7 +35,6 @@ export function createMockHandle(): WorldHandle & {
   triggerControlEvent(event: ControlEvent): void;
   triggerCombatEvent(event: CombatEvent): void;
   triggerTacticsEvent(event: TacticsEvent): void;
-  triggerFollowEvent(event: FollowEvent): void;
   triggerRecoveryEvent(event: RecoveryEvent): void;
   triggerQuestEvent(event: QuestEvent): void;
   triggerRewardsEvent(event: RewardsEvent): void;
@@ -65,7 +63,6 @@ export function createMockHandle(): WorldHandle & {
   };
   let combatEventCb: ((event: CombatEvent) => void) | undefined;
   let tacticsEventCb: ((event: TacticsEvent) => void) | undefined;
-  let followEventCb: ((event: FollowEvent) => void) | undefined;
   let recoveryEventCb: ((event: RecoveryEvent) => void) | undefined;
   let questEventCb: ((event: QuestEvent) => void) | undefined;
   let rewardsEventCb: ((event: RewardsEvent) => void) | undefined;
@@ -120,21 +117,6 @@ export function createMockHandle(): WorldHandle & {
     control: cycleControl,
     now: runtimeDeps.now,
   });
-  const followState: FollowState = {
-    active: false,
-    status: "idle",
-    guid: undefined,
-    distance: 3,
-    separation: undefined,
-    targetPose: undefined,
-    observedAt: undefined,
-    destination: undefined,
-    startedAt: undefined,
-    expiresAt: undefined,
-    plans: 0,
-    attempts: 0,
-    reason: undefined,
-  };
   const tacticsState: TacticsState = {
     status: "idle",
     runId: undefined,
@@ -264,11 +246,6 @@ export function createMockHandle(): WorldHandle & {
     onTacticsEvent(cb) {
       tacticsEventCb = cb;
     },
-    follow: jest.fn(),
-    getFollowState: jest.fn(() => followState),
-    onFollowEvent(cb) {
-      followEventCb = cb;
-    },
     getRecoveryState: jest.fn(() => recovery.snapshot()),
     queryCorpse: jest.fn(),
     releaseSpirit: jest.fn(),
@@ -291,9 +268,6 @@ export function createMockHandle(): WorldHandle & {
     cancelInteraction: jest.fn(),
     onQuestEvent(cb) {
       questEventCb = cb;
-    },
-    triggerFollowEvent(event) {
-      followEventCb?.(event);
     },
     triggerRecoveryEvent(event) {
       recoveryEventCb?.(event);

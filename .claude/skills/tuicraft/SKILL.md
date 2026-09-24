@@ -24,9 +24,9 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `following`, `recovery`, `quests`, `inventory`, `loot`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `loot`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
-- Movement and combat actions: `move`, `face`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`, `follow`.
+- Movement and combat actions: `move`, `face`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
 - Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
@@ -115,7 +115,7 @@ Rules:
 - Duration is an integer from 1 through 10000 milliseconds. The default is 1000 milliseconds.
 - Invalid duration sends no movement packet.
 - Repeating the same direction extends an active manual lease without a stop.
-- A manual command stops Jev, follow, or cycle before it takes control.
+- A manual command stops Jev or cycle before it takes control.
 - `face` takes one finite radian number.
 - `face-guid` needs a nonzero GUID with an observed position on the current map.
 - Reject a missing GUID, an unsupported unit position, or a stale unit observation.
@@ -127,7 +127,7 @@ Rules:
 - The daemon checks ground continuity and collision at each step of at most 0.5 yards.
 - The daemon stops on unsafe ground, correction, client disconnect, manual takeover, or HALT.
 - A 10-second safety lease renews only while the character makes progress.
-- The daemon does not make a blind detour or retry automatically. Use `follow` to track a moving GUID.
+- The daemon does not make a blind detour or retry automatically. It does not track a moving GUID.
 - `walk-toward` returns one JSON object with `status`, `traveled`, and `pose`.
 - A stopped result also contains `reason` and makes the CLI exit with status 1.
 - `completed` is a predicted endpoint. It is not server confirmation.
@@ -135,8 +135,8 @@ Rules:
 - `target` takes one unsigned 64-bit GUID in `0x` hexadecimal or decimal. `0` and `0x0` clear the target.
 - Invalid direction, duration, facing, or GUID fails locally. The character does not move or retarget.
 - A valid GUID can still be stale. `target` sends it without checking entity age. Refresh `nearby --json` before acting. `requestedTarget` is sent intent; `target` is the last server observation. Equal values do not prove a fresh acknowledgment.
-- `halt` stops walking, casting, auto-attack, tactics, navigation, follow, and cycle. On one IPC socket it interrupts pending work and drops older queued mutating control, recovery, quest, and loot commands, including `cycle`, plus older read waits. It retains state inspections, corpse and metadata queries, and newer requests. It cannot undo a sent request or disengage an attacking enemy. `status` remains CONNECTED.
-- Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, GOTO, and FOLLOW exit the CLI with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
+- `halt` stops walking, casting, auto-attack, tactics, navigation, and cycle. On one IPC socket it interrupts pending work and drops older queued mutating control, recovery, quest, and loot commands, including `cycle`, plus older read waits. It retains state inspections, corpse and metadata queries, and newer requests. It cannot undo a sent request or disengage an attacking enemy. `status` remains CONNECTED.
+- Daemon `ERR` replies for MOVE, FACE, TARGET, HALT, CAST, ATTACK, FIGHT, and GOTO exit the CLI with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 - A terminal `stopped` result from WALK_TOWARD also makes the CLI exit with status 1.
 
 `control --json` fields in `data` you must not mix up:
@@ -150,7 +150,7 @@ Rules:
 | `requestedTarget` | Last GUID this client sent with `target`; `0x0` is a clear request, null means none sent. It can differ from `target`. |
 | `moving` | Whether a timed walk is active. |
 | `direction` | `forward` / `backward` / `left` / `right`, or null. |
-| `owner` | `manual` for direct movement. `follow` or `jev` while that runtime owns control, including stationary waits. `none` when unowned. |
+| `owner` | `manual` for direct movement. `jev` while Jev owns control, including stationary waits. `none` when unowned. |
 | `nextStep` | Conservative guidance after a known ground refusal, or `null`. Keep `blockedReason` as the actual refusal. |
 
 Self movement is not echoed by the server. After a walk, `pose` is predicted. Relog (`stop`, then connect again) and read `control` to see the server-accepted position.
@@ -231,30 +231,6 @@ Rules:
 
 IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
 
-## Bounded ground follow
-
-    tuicraft follow <observed-guid> [distance]
-    tuicraft following [--json]
-    tuicraft halt
-
-Rules:
-
-- Use a nonzero uint64 GUID in decimal or `0x` hex. Do not reuse an old spawn GUID.
-- Distance is 1–20 yards along the horizontal ground route behind the target. The default is 3 yards.
-- Follow requires supported, recently observed target motion, compatible native navigation data, and map 530.
-- Ground height must be unambiguous. Do not substitute the target altitude or retry with nudged coordinates.
-- Each request lasts at most 30 seconds and uses at most 32 native planning calls.
-- Target separation is limited to 100 yards. Planned routes are limited to 150 yards.
-- Replans require meaningful displacement and at least 500ms between plans. The runtime stops current motion before sampling the next origin.
-- Receive age must not exceed 5 seconds. A quiet stationary target can expire. Predictions do not refresh receive age.
-- Loss, unsupported motion, correction, unsafe control, or failed planning stops follow without retries. Manual commands and `halt` also stop follow.
-- `OK` acknowledges intent only. `following.status=holding` means predicted standoff, not server-confirmed arrival.
-- Inspect `following.reason` after stopping. Compare `targetPose.source`, original `observedAt`, and `control.serverPose` before claiming arrival.
-- `following.separation` is 3D pose distance, not the requested horizontal route distance. GUIDs use hex in JSON.
-- FOLLOW and FOLLOWING inspection errors exit the CLI with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
-
-IPC: FOLLOW <guid> [distance], FOLLOWING, FOLLOWING_JSON.
-
 ## Ordinary death recovery
 
     tuicraft recovery [--json]
@@ -280,7 +256,7 @@ A current unanswered resurrection offer is a separate choice. Answer `resurrect 
 
 `spirit-healer <guid>` is the explicit spirit-healer path. It requires observed ghost state and one observed creature whose NPC flags carry the healer bit (0x4000). It rejects an unanswered duplicate request, never auto-activates, and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip option 0 stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
-Mutating recovery actions stop tactics, follow, and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
+Mutating recovery actions stop tactics and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, SPIRIT_HEALER <guid>, RESURRECT accept|decline.
 

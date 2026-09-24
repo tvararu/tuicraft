@@ -128,8 +128,6 @@ tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquir
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 3        # ground route
 tuicraft navigation --json # route state, refusal and conservative next step
-tuicraft follow 0xabc 3    # bounded follow of an observed unit
-tuicraft following --json # follow state and terminal reason
 tuicraft recovery        # observed life and corpse-reclaim conditions
 tuicraft query-corpse      # request corpse information
 tuicraft release-spirit    # request release while observed dead
@@ -148,7 +146,7 @@ tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of the open window
-tuicraft halt              # stop motion, cast, attack, tactics, navigation, follow, cycle
+tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
 tuicraft stop [--json]     # stop daemon
@@ -233,23 +231,13 @@ each target's status and an open-ended `stopCause` with `stopDetail`. The loop w
 verified item gains. Confirm storage from `inventory --json` slot/count changes.
 
 Repeated `move` in the same direction renews active manual movement without a
-stop; taking control from Jev, follow, or cycle still stops the old owner.
+stop; taking control from Jev or cycle still stops the old owner.
 `walk-toward` travels at most 20 yards in one direct leg and returns terminal
 JSON with predicted distance, pose, and a reason if stopped. It exits with
-status 1 on a stop. An observed GUID is sampled once, not tracked; use
-`follow` to track movement. Coordinates require unambiguous native ground.
+status 1 on a stop. An observed GUID is sampled once, not tracked.
+Coordinates require unambiguous native ground.
 Ground refusal, correction, HALT, or takeover stops the leg rather than
 steering blindly. A `completed` result is not server-confirmed arrival.
-
-`follow` requests a bounded ground route behind an observed unit on map 530.
-The optional distance is 1–20 yards along the ground route, with a default of 3.
-It requires compatible navigation data and supported, recent target motion.
-Each request lasts at most 30 seconds and allows at most 32 native planning calls.
-Loss, stale or unsupported motion, unsafe ground, correction, or manual override
-stops following without retries. `halt` also stops following.
-`OK` acknowledges the request, not arrival. Inspect `following --json` and
-`control --json` for stop reasons and separate predicted versus server poses.
-The `holding` state is predicted standoff, not server-confirmed arrival.
 
 Use the existing commands for an agent-guided corpse run:
 1. Inspect `recovery --json`. Trust observed life, not positive ghost health or an `OK` response.

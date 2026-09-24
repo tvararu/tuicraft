@@ -29,7 +29,6 @@ import type {
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 import type { ControlEvent, ControlState } from "wow/control";
-import type { FollowState } from "wow/follow";
 import type { CycleState } from "wow/encounter-cycle";
 
 function createMockSocket(): {
@@ -3991,21 +3990,6 @@ describe("IPC round-trip", () => {
     await aborted.promise;
   }, 2_000);
 
-  test("HALT drops older FOLLOW but preserves a newer follow request", async () => {
-    startTestServer();
-    const requested: bigint[] = [];
-    Object.assign(handle, {
-      follow: (guid: bigint) => {
-        requested.push(guid);
-      },
-    });
-    const lines = await sendRawUntilClose(sockPath, [
-      "FOLLOW 1 3\nHALT\nFOLLOW 2 4\n",
-    ]);
-    expect(requested).toEqual([2n]);
-    expect(lines).toEqual(["OK", "OK"]);
-  });
-
   test("HALT drops older CYCLE", async () => {
     startTestServer();
     const lines = await sendRawUntilClose(sockPath, ["CYCLE 0xa\nHALT\n"]);
@@ -5308,133 +5292,6 @@ describe("onControlEvent", () => {
     const entry = events.drain()[0]!;
     expect(JSON.parse(entry.json).pose.source).toBe("server");
     expect(entry.text).toContain("server");
-  });
-});
-
-describe("follow IPC boundary", () => {
-  test("parses optional finite standoff and exact unsigned GUIDs", () => {
-    expect(parseIpcCommand("FOLLOW 18446744073709551615")).toEqual({
-      type: "follow",
-      guid: 0xffff_ffff_ffff_ffffn,
-      distance: undefined,
-    });
-    expect(parseIpcCommand("FOLLOW 0xabc 2.5")).toEqual({
-      type: "follow",
-      guid: 0xabcn,
-      distance: 2.5,
-    });
-    expect(parseIpcCommand("FOLLOWING")).toEqual({ type: "following" });
-    expect(parseIpcCommand("FOLLOWING_JSON")).toEqual({
-      type: "following_json",
-    });
-  });
-
-  test("malformed follow is an error instead of a chat message or action", async () => {
-    const handle = Object.assign(attachControl(createMockHandle()), {
-      follow: () => {
-        throw new Error("action_was_called");
-      },
-    });
-    for (const line of [
-      "FOLLOW",
-      "FOLLOW 0",
-      "FOLLOW -1",
-      "FOLLOW 18446744073709551616",
-      "FOLLOW 1 Infinity",
-      "FOLLOW 1 0",
-      "FOLLOW 1 21",
-      "FOLLOW 1 3 extra",
-    ]) {
-      const command = parseIpcCommand(line)!;
-      expect(command.type).toBe("invalid");
-      const socket = createMockSocket();
-      await dispatchCommand(
-        command,
-        handle,
-        new RingBuffer<EventEntry>(10),
-        socket,
-        jest.fn(),
-      );
-      expect(socket.written()).toMatch(/^ERR /);
-      expect(socket.written()).not.toContain("action_was_called");
-    }
-    expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
-  });
-
-  test("follow rejection is ERR without an OK or arrival claim", async () => {
-    const handle = Object.assign(attachControl(createMockHandle()), {
-      follow: () => {
-        throw new Error("target_motion_unknown");
-      },
-    });
-    const socket = createMockSocket();
-    await dispatchCommand(
-      { type: "follow", guid: 1n },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
-    );
-    expect(socket.written()).toBe("ERR target_motion_unknown\n\n");
-  });
-
-  test("following JSON preserves provenance and encodes uint64 identifiers", async () => {
-    const handle = Object.assign(attachControl(createMockHandle()), {
-      getFollowState: (): FollowState => ({
-        active: true,
-        status: "following",
-        guid: 0xffff_ffff_ffff_ffffn,
-        distance: 3,
-        separation: undefined,
-        destination: undefined,
-        startedAt: 1000,
-        expiresAt: 31_000,
-        plans: 1,
-        targetPose: {
-          x: 1,
-          y: 2,
-          z: 3,
-          mapId: 530,
-          orientation: 0,
-          source: "predicted",
-          updatedAt: 1100,
-        },
-        observedAt: 1000,
-        attempts: 2,
-        reason: undefined,
-      }),
-    });
-    const socket = createMockSocket();
-    await dispatchCommand(
-      { type: "following_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
-    );
-    const state = JSON.parse(socket.written());
-    expect(state.guid).toBe("0xffffffffffffffff");
-    expect(state.status).toBe("following");
-    expect(state.targetPose.source).toBe("predicted");
-    expect(state.observedAt).toBe(1000);
-    expect(state.targetPose.updatedAt).toBe(1100);
-  });
-
-  test("following inspection failure cannot be presented as an empty state", async () => {
-    const handle = Object.assign(attachControl(createMockHandle()), {
-      getFollowState: () => {
-        throw new Error("session_closed");
-      },
-    });
-    const socket = createMockSocket();
-    await dispatchCommand(
-      { type: "following" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
-    );
-    expect(socket.written()).toBe("ERR session_closed\n\n");
   });
 });
 

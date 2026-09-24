@@ -609,42 +609,6 @@ describe("cycle arguments", () => {
   });
 });
 
-describe("follow arguments", () => {
-  test("keeps default distance optional and preserves uint64 target precision", () => {
-    expect(parseArgs(["follow", "18446744073709551615"])).toEqual({
-      mode: "follow",
-      guid: 0xffff_ffff_ffff_ffffn,
-      distance: undefined,
-    });
-    expect(parseArgs(["follow", "0xabcdef", "2.5"])).toEqual({
-      mode: "follow",
-      guid: 0xabcdefn,
-      distance: 2.5,
-    });
-    expect(parseArgs(["following", "--json"])).toEqual({
-      mode: "following",
-      json: true,
-    });
-  });
-
-  test("rejects malformed targets and distances before IPC", () => {
-    for (const args of [
-      ["follow"],
-      ["follow", "0"],
-      ["follow", "-1"],
-      ["follow", "18446744073709551616"],
-      ["follow", "0xzz"],
-      ["follow", "1", "NaN"],
-      ["follow", "1", "Infinity"],
-      ["follow", "1", "0.9"],
-      ["follow", "1", "20.1"],
-      ["follow", "1", ""],
-      ["follow", "1", "3", "extra"],
-    ])
-      expect(() => parseArgs(args)).toThrow();
-  });
-});
-
 describe("recovery arguments", () => {
   test("parses inspection and explicit resurrection decisions", () => {
     expect(parseArgs(["recovery", "--json"])).toEqual({
@@ -825,7 +789,6 @@ describe("daemon JSON arguments", () => {
       },
     ],
     [["goto", "1.5", "2", "3"], { mode: "goto", x: 1.5, y: 2, z: 3 }],
-    [["follow", "0xa", "2.5"], { mode: "follow", guid: 10n, distance: 2.5 }],
     [["query-corpse"], { mode: "query_corpse" }],
     [["release-spirit"], { mode: "release_spirit" }],
     [["reclaim-corpse"], { mode: "reclaim_corpse" }],
@@ -870,12 +833,6 @@ describe("daemon JSON arguments", () => {
       x: 1,
       y: 2,
       z: 3,
-      json: true,
-    });
-    expect(parseArgs(["follow", "0xa", "--json", "2.5"])).toEqual({
-      mode: "follow",
-      guid: 10n,
-      distance: 2.5,
       json: true,
     });
     expect(parseArgs(["move", "forward", "--json"])).toEqual({

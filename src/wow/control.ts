@@ -47,7 +47,7 @@ type DirectedWalk = {
   resolve: (outcome: WalkOutcome) => void;
 };
 
-export type ControlMode = "none" | "jev" | "follow";
+export type ControlMode = "none" | "jev";
 export type ControlOwner = ControlMode | "manual";
 
 export type ControlState = {
@@ -246,11 +246,6 @@ export class ControlRuntime {
     this.emit("control_changed", "mode_changed");
   }
 
-  pause(owner: "follow"): void {
-    if (this.mode !== owner) throw new Error("control_owner_changed");
-    this.stopMoving("follow_pause", true);
-  }
-
   navigationState(): NavigationState {
     return {
       ...this.navigation,
@@ -277,13 +272,8 @@ export class ControlRuntime {
     this.emit("control_error", reason);
   }
 
-  navigate(
-    route: GroundRoute,
-    destination: NavPoint,
-    mode: ControlMode = this.mode === "jev" ? "jev" : "none",
-  ): void {
+  navigate(route: GroundRoute, destination: NavPoint): void {
     this.guardMove("forward");
-    this.setMode(mode);
     this.stopMoving("navigation_replaced", true);
     const origin = route.points[0]!;
     const pose = this.requirePose();
@@ -402,7 +392,6 @@ export class ControlRuntime {
   move(direction: MovementDirection, durationMs: number): void {
     this.assertDirection(direction);
     this.assertDuration(durationMs);
-    if (this.mode === "follow") this.setMode("none");
     if (this.walk) this.stopMoving("manual_move", true);
     if (this.route) this.stopMoving("manual_move", true);
     if (this.moving && this.direction === direction) {
@@ -419,7 +408,6 @@ export class ControlRuntime {
     if (!Number.isFinite(orientation)) throw new Error("invalid_orientation");
     const reason = this.blockReason();
     if (reason) throw new Error(reason);
-    if (this.mode === "follow") this.setMode("none");
     if (this.walk) this.stopMoving("face", true);
     this.applyFacing(orientation);
   }
@@ -443,7 +431,6 @@ export class ControlRuntime {
   }
 
   halt(): void {
-    if (this.mode === "follow") this.setMode("none");
     this.stopMoving("halt", true);
   }
 

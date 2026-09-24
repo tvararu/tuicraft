@@ -34,8 +34,6 @@ test("help text includes all subcommands", () => {
     "cycling",
     "goto",
     "navigation",
-    "follow",
-    "following",
     "recovery",
     "query-corpse",
     "release-spirit",
