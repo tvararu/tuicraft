@@ -3,6 +3,7 @@ import {
   parseFramingVariant,
   type FramingVariant,
 } from "wow/framing";
+import { abortReason, isAbort } from "lib/abort";
 
 const SYSTEMONE_URL = "https://api.typesafe.ai/v1/systemone";
 const DEFAULT_MODEL = "jev-latest";
@@ -45,13 +46,13 @@ export async function selectJevAction(
   options: JevActionOptions,
 ): Promise<JevActionResult> {
   if (!options.apiKey) throw new Error("Missing TypeSafe API key");
-  if (options.signal.aborted) throw abortError(options.signal);
+  if (options.signal.aborted) throw abortReason(options.signal);
   if (request.framing !== undefined) parseFramingVariant(request.framing);
   const allowed = new Set(request.candidates.map((candidate) => candidate.id));
   if (allowed.size === 0) throw new Error("No TypeSafe Choice candidates");
   const started = performance.now();
   const payload = await postSystemOne(request, options);
-  if (options.signal.aborted) throw abortError(options.signal);
+  if (options.signal.aborted) throw abortReason(options.signal);
   return parseChoice(payload, allowed, performance.now() - started);
 }
 
@@ -112,15 +113,15 @@ async function postSystemOne(
     });
   } catch (error) {
     if (options.signal.aborted || isAbort(error))
-      throw abortError(options.signal, error);
+      throw abortReason(options.signal, error);
     throw error;
   }
-  if (options.signal.aborted) throw abortError(options.signal);
+  if (options.signal.aborted) throw abortReason(options.signal);
   if (!response.ok) throw new Error(`TypeSafe HTTP ${response.status}`);
   try {
     return await response.json();
   } catch (error) {
-    if (options.signal.aborted) throw abortError(options.signal);
+    if (options.signal.aborted) throw abortReason(options.signal);
     throw responseError("json", { error });
   }
 }
@@ -213,14 +214,4 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     return undefined;
   return value as Record<string, unknown>;
-}
-
-function isAbort(value: unknown): boolean {
-  return value instanceof Error && value.name === "AbortError";
-}
-
-function abortError(signal: AbortSignal, cause?: unknown): never {
-  if (isAbort(signal.reason)) throw signal.reason;
-  if (isAbort(cause)) throw cause;
-  throw new DOMException("The operation was aborted.", "AbortError");
 }

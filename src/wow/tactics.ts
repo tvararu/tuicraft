@@ -5,6 +5,8 @@ import {
   type JevActionResult,
 } from "wow/jev";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
+import { abortReason, abortable, bounded, pause } from "lib/abort";
+import { messageOf } from "lib/errors";
 
 const WAIT = {
   id: "wait",
@@ -205,7 +207,12 @@ export class TacticsLoop {
         run.abort.signal,
       );
       if (this.pending)
-        await bounded(this.pending, run.abort.signal, this.requestTimeoutMs);
+        await bounded(
+          this.pending,
+          run.abort.signal,
+          this.requestTimeoutMs,
+          "jev_timeout",
+        );
       if (!this.live(run)) return;
       this.deps.activate(run.context);
       if (!this.live(run)) return;
@@ -407,7 +414,12 @@ export class TacticsLoop {
       if (this.pending === settled) this.pending = undefined;
     });
     try {
-      return await bounded(pending, signal, this.requestTimeoutMs);
+      return await bounded(
+        pending,
+        signal,
+        this.requestTimeoutMs,
+        "jev_timeout",
+      );
     } finally {
       if (this.live(run)) this.state.lastElapsedMs = this.now() - sentAtMs;
       abort.abort();
@@ -490,59 +502,4 @@ function withWait(candidates: readonly TacticsCandidate[]): TacticsCandidate[] {
   if (!list.some((candidate) => candidate.id === WAIT.id))
     list.push({ ...WAIT });
   return list;
-}
-
-async function abortable<T>(
-  pending: Promise<T>,
-  signal: AbortSignal,
-): Promise<T> {
-  const aborted = Promise.withResolvers<never>();
-  const fail = () => aborted.reject(abortReason(signal));
-  if (signal.aborted) fail();
-  else signal.addEventListener("abort", fail, { once: true });
-  try {
-    return await Promise.race([pending, aborted.promise]);
-  } finally {
-    signal.removeEventListener("abort", fail);
-  }
-}
-
-async function bounded<T>(
-  pending: Promise<T>,
-  signal: AbortSignal,
-  timeoutMs: number,
-): Promise<T> {
-  const timeout = Promise.withResolvers<never>();
-  const timer = setTimeout(
-    () => timeout.reject(new Error("jev_timeout")),
-    timeoutMs,
-  );
-  try {
-    return await abortable(Promise.race([pending, timeout.promise]), signal);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function pause(ms: number, signal: AbortSignal): Promise<void> {
-  const elapsed = Promise.withResolvers<void>();
-  const timer = setTimeout(elapsed.resolve, ms);
-  try {
-    await abortable(elapsed.promise, signal);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function abortReason(signal: AbortSignal): DOMException {
-  if (
-    signal.reason instanceof DOMException &&
-    signal.reason.name === "AbortError"
-  )
-    return signal.reason;
-  return new DOMException("The operation was aborted.", "AbortError");
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

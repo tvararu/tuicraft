@@ -6,6 +6,8 @@ import type {
   RecoveryState,
 } from "wow/recovery";
 import type { ControlPose, MovementDirection } from "wow/control";
+import { messageOf } from "lib/errors";
+import { bearing, distance, normalizeAngle } from "wow/geometry";
 
 export type CyclePhase =
   | "idle"
@@ -198,7 +200,7 @@ export class EncounterCycleRuntime {
       } catch (error) {
         if (!this.live(signal)) return;
         record.status = "skipped";
-        record.cause = error instanceof Error ? error.message : "fight_failed";
+        record.cause = messageOf(error, "fight_failed");
         record.outcome = this.deps.tactics.lastOutcome();
         this.advance();
         continue;
@@ -398,17 +400,16 @@ export class EncounterCycleRuntime {
       }
     | undefined
   > {
-    const bearing = normalizeAngle(
-      Math.atan2(corpsePosition.y - before.y, corpsePosition.x - before.x) +
-        bearingOffset,
+    const heading = normalizeAngle(
+      bearing(before, corpsePosition) + bearingOffset,
     );
     try {
-      this.deps.control.face(bearing);
+      this.deps.control.face(heading);
       this.deps.control.move("forward", LEG_LEASE_MS);
     } catch (error) {
       this.stop("corpse_unreachable", {
         pose: before,
-        error: error instanceof Error ? error.message : String(error),
+        error: messageOf(error),
       });
       return undefined;
     }
@@ -463,7 +464,7 @@ export class EncounterCycleRuntime {
       try {
         loot.open(guid);
       } catch (error) {
-        this.stop(`loot_denied:${describeLootFailure(error)}`);
+        this.stop(`loot_denied:${messageOf(error, "loot_request_failed")}`);
         return false;
       }
       let opened: RewardsEvent | undefined;
@@ -507,7 +508,7 @@ export class EncounterCycleRuntime {
         try {
           loot.take(slot);
         } catch (error) {
-          this.stop(`loot_denied:${describeLootFailure(error)}`);
+          this.stop(`loot_denied:${messageOf(error, "loot_request_failed")}`);
           return false;
         }
         slotsTaken.push(slot);
@@ -523,7 +524,7 @@ export class EncounterCycleRuntime {
         try {
           loot.takeMoney();
         } catch (error) {
-          this.stop(`loot_denied:${describeLootFailure(error)}`);
+          this.stop(`loot_denied:${messageOf(error, "loot_request_failed")}`);
           return false;
         }
         moneyTaken = offeredMoney;
@@ -557,7 +558,7 @@ export class EncounterCycleRuntime {
     try {
       this.deps.loot.close();
     } catch (error) {
-      this.stop(`loot_denied:${describeLootFailure(error)}`);
+      this.stop(`loot_denied:${messageOf(error, "loot_request_failed")}`);
       return false;
     }
     while (this.live(signal)) {
@@ -638,24 +639,12 @@ export class EncounterCycleRuntime {
   }
 }
 
-function describeLootFailure(error: unknown): string {
-  return error instanceof Error ? error.message : "loot_request_failed";
-}
-
 function poseMoved(
   before: ControlPose | undefined,
   after: ControlPose | undefined,
 ): boolean {
   if (!before || !after) return false;
-  return (
-    Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z) >
-    POSE_MOVED_EPS
-  );
-}
-
-function normalizeAngle(radians: number): number {
-  const twoPi = Math.PI * 2;
-  return ((radians % twoPi) + twoPi) % twoPi;
+  return distance(before, after) > POSE_MOVED_EPS;
 }
 
 function describePoseRange(reclaim: RecoveryReclaim): Record<string, unknown> {
