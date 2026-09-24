@@ -175,8 +175,8 @@ IPC verbs on the daemon socket:
     MOVE <forward|backward|left|right> [milliseconds]
     FACE <radians>
     FACE_GUID <guid>
-    WALK_TOWARD <yards> GUID <guid>
-    WALK_TOWARD <yards> POINT <x> <y> <z>
+    WALK_TOWARD <yards> <guid>
+    WALK_TOWARD <yards> <x> <y> <z>
     TARGET <guid>
     HALT
     NEARBY [all]
