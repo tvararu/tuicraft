@@ -34,16 +34,22 @@ export class EventWaiter<E> {
     const queued = pick();
     if (queued !== undefined) return queued;
     const waiter = Promise.withResolvers<E | undefined>();
-    const timer = setTimeout(() => waiter.resolve(undefined), timeoutMs);
+    let settled = false;
+    const settle = (event: E | undefined) => {
+      settled = true;
+      clearTimeout(timer);
+      this.wake = undefined;
+      waiter.resolve(event);
+    };
+    const timer = setTimeout(() => settle(undefined), timeoutMs);
     this.wake = () => {
       const event = pick();
-      if (event !== undefined) waiter.resolve(event);
+      if (event !== undefined) settle(event);
     };
     try {
       return await abortable(waiter.promise, signal);
     } finally {
-      clearTimeout(timer);
-      this.wake = undefined;
+      if (!settled) settle(undefined);
     }
   }
 }

@@ -19,6 +19,15 @@ describe("next", () => {
     expect(await pending).toBe(7);
   });
 
+  test("keeps a second event pushed in the same tick", async () => {
+    const waiter = new EventWaiter<number>();
+    const pending = waiter.next(1000, open());
+    waiter.push(1);
+    waiter.push(2);
+    expect(await pending).toBe(1);
+    expect(await waiter.next(10, open())).toBe(2);
+  });
+
   test("resolves undefined on timeout", async () => {
     jest.useFakeTimers();
     try {
