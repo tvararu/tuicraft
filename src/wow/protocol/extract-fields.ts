@@ -79,6 +79,7 @@ export type UnitFieldsResult = {
   power?: number[];
   maxPower?: number[];
   modCastSpeed?: number;
+  combatReach?: number;
   _changed: string[];
 };
 
@@ -186,6 +187,12 @@ export function extractUnitFields(
   if (castSpeed !== undefined) {
     result.modCastSpeed = uint32ToFloat(castSpeed);
     changed.push("modCastSpeed");
+  }
+
+  const reach = raw.get(UNIT_FIELDS.COMBATREACH.offset);
+  if (reach !== undefined) {
+    result.combatReach = uint32ToFloat(reach);
+    changed.push("combatReach");
   }
 
   return result;

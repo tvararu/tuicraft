@@ -1,10 +1,9 @@
 import type { Vec3 } from "wow/protocol/packet";
 import type { ControlPose } from "wow/control";
 import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
-import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import { isUnit, type EntityEvent, type EntityLookup } from "wow/entity-store";
 import {
   readLife,
-  type EntityLookup,
   type PlayerLife,
   type PlayerLifeState,
 } from "wow/player-state";
@@ -271,9 +270,11 @@ export class RecoveryRuntime {
       throw new Error("Previous spirit-healer request remains unanswered");
     if (guid === 0n) throw new Error("Spirit-healer GUID is unknown");
     const healer = this.deps.getEntity(guid);
-    if (!healer || healer.objectType !== ObjectType.UNIT)
-      throw new Error("Observed creature is not a spirit healer");
-    if (((healer as UnitEntity).npcFlags & NpcFlag.SPIRIT_HEALER) === 0)
+    if (
+      !isUnit(healer) ||
+      healer.objectType !== ObjectType.UNIT ||
+      (healer.npcFlags & NpcFlag.SPIRIT_HEALER) === 0
+    )
       throw new Error("Observed creature is not a spirit healer");
     const requestedAt = this.deps.now();
     this.deps.send(

@@ -319,9 +319,9 @@ test("transient cooldown and cancellation waits do not block an encounter", () =
 });
 
 test("an unsupported spellbook does not block facing and melee engagement", () => {
-  const { actions, combat, fields, store } = setup();
-  fields.set(UNIT_FIELDS.COMBATREACH.offset, 0x3fc00000);
-  store.get(2n)!.rawFields.set(UNIT_FIELDS.COMBATREACH.offset, 0x3fc00000);
+  const { actions, combat, store } = setup();
+  store.update(1n, { combatReach: 1.5 });
+  store.update(2n, { combatReach: 1.5 });
   combat.observePosition(2n, {
     mapId: 530,
     x: -1,

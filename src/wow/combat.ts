@@ -32,8 +32,13 @@ import {
 } from "wow/spline";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
 import type { ControlPose } from "wow/control";
-import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
-import type { Entity, UnitEntity, Position } from "wow/entity-store";
+import { UNIT_FIELDS } from "wow/protocol/entity-fields";
+import {
+  fieldOf,
+  isUnit,
+  type EntityLookup,
+  type Position,
+} from "wow/entity-store";
 
 export type CombatCast = {
   spellId: number;
@@ -151,7 +156,7 @@ export type CombatDeps = {
   now: () => number;
   selfGuid: () => bigint;
   selectedGuid: () => bigint | undefined;
-  getEntity: (guid: bigint) => Entity | undefined;
+  getEntity: EntityLookup;
   selfPose: () => ControlPose | undefined;
   selfServerPose?: () => ControlPose | undefined;
   catalog?: SpellCatalog;
@@ -204,7 +209,7 @@ export class CombatRuntime {
   isAttackingSelf(guid: bigint): boolean {
     if (!this.incomingAttackers.has(guid)) return false;
     const entity = this.deps.getEntity(guid);
-    if (entity && "health" in entity && entity.health === 0) {
+    if (isUnit(entity) && entity.health === 0) {
       this.incomingAttackers.delete(guid);
       return false;
     }
@@ -739,26 +744,26 @@ export class CombatRuntime {
     entity = this.deps.getEntity(guid),
   ): CombatUnit {
     const unit = isUnit(entity) ? entity : undefined;
-    const bytes = observedPublicField(unit, UNIT_FIELDS.BYTES_0.offset);
+    const bytes = fieldOf(unit, UNIT_FIELDS.BYTES_0.offset);
     const powerType = bytes === undefined ? undefined : bytes >>> 24;
-    const formBytes = observedPublicField(unit, UNIT_FIELDS.BYTES_2.offset);
+    const formBytes = fieldOf(unit, UNIT_FIELDS.BYTES_2.offset);
     return {
       guid,
       name: entity?.name,
-      health: observedPublicField(unit, UNIT_FIELDS.HEALTH.offset),
-      maxHealth: observedPublicField(unit, UNIT_FIELDS.MAXHEALTH.offset),
+      health: fieldOf(unit, UNIT_FIELDS.HEALTH.offset),
+      maxHealth: fieldOf(unit, UNIT_FIELDS.MAXHEALTH.offset),
       power:
         powerType === undefined || powerType > 6
           ? undefined
-          : observedPublicField(unit, UNIT_FIELDS.POWER1.offset + powerType),
+          : fieldOf(unit, UNIT_FIELDS.POWER1.offset + powerType),
       maxPower:
         powerType === undefined || powerType > 6
           ? undefined
-          : observedPublicField(unit, UNIT_FIELDS.MAXPOWER1.offset + powerType),
+          : fieldOf(unit, UNIT_FIELDS.MAXPOWER1.offset + powerType),
       powerType,
-      baseMana: observedPublicField(unit, UNIT_FIELDS.BASE_MANA.offset),
+      baseMana: fieldOf(unit, UNIT_FIELDS.BASE_MANA.offset),
       shapeshiftForm: formBytes === undefined ? undefined : formBytes >>> 24,
-      level: observedPublicField(unit, UNIT_FIELDS.LEVEL.offset),
+      level: fieldOf(unit, UNIT_FIELDS.LEVEL.offset),
       pose,
       motion: this.motionOf(guid),
       serverPose: this.serverPoseOf(guid, pose),
@@ -842,19 +847,4 @@ export class CombatRuntime {
     if (reason !== undefined) event.reason = reason;
     this.listener?.(event);
   }
-}
-
-function isUnit(entity: Entity | undefined): entity is UnitEntity {
-  return (
-    entity !== undefined &&
-    (entity.objectType === ObjectType.UNIT ||
-      entity.objectType === ObjectType.PLAYER)
-  );
-}
-
-function observedPublicField(
-  unit: UnitEntity | undefined,
-  offset: number,
-): number | undefined {
-  return unit?.rawFields.get(offset) ?? (unit?.createComplete ? 0 : undefined);
 }

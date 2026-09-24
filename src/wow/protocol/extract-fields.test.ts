@@ -171,6 +171,13 @@ describe("extractUnitFields", () => {
     expect(result._changed).toContain("modCastSpeed");
   });
 
+  test("extracts combatReach as float", () => {
+    const raw = new Map([[UNIT_FIELDS.COMBATREACH.offset, floatBits(1.5)]]);
+    const result = extractUnitFields(raw);
+    expect(result.combatReach).toBe(1.5);
+    expect(result._changed).toContain("combatReach");
+  });
+
   test("sparse power array only sets updated indices", () => {
     const raw = new Map([[UNIT_FIELDS.POWER3.offset, 500]]);
     const result = extractUnitFields(raw);

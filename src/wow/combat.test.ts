@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { CombatRuntime } from "wow/combat";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { EntityStore } from "wow/entity-store";
 import type { CastFailed, SpellStart } from "wow/protocol/spell";
 import type { MonsterMovePath } from "wow/protocol/monster-move";
 
@@ -301,21 +303,18 @@ test("incoming attack start registers attacker against self and stop clears it",
 });
 
 test("dead incoming attacker is cleared on check", () => {
-  let health = 50;
+  const store = new EntityStore();
+  store.create(0x10n, ObjectType.UNIT, { health: 50 });
   const combat = new CombatRuntime({
     send() {},
     now: () => 1000,
     selfGuid: () => 1n,
     selectedGuid: () => 2n,
-    getEntity: () =>
-      ({
-        guid: 0x10n,
-        health,
-      }) as any,
+    getEntity: (guid) => store.get(guid),
     selfPose: () => undefined,
   });
   combat.applyAttackStart({ attacker: 0x10n, victim: 1n });
   expect(combat.isAttackingSelf(0x10n)).toBe(true);
-  health = 0;
+  store.update(0x10n, { health: 0 });
   expect(combat.isAttackingSelf(0x10n)).toBe(false);
 });

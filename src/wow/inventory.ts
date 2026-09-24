@@ -1,6 +1,6 @@
 import { joinGuid } from "wow/protocol/packet";
-import type { Entity } from "wow/entity-store";
-import { readSelfField, type EntityLookup } from "wow/player-state";
+import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
+import { readSelfField } from "wow/player-state";
 import {
   CONTAINER_FIELDS,
   ITEM_FIELDS,
@@ -108,13 +108,6 @@ const ROOTS = [
   },
 ] as const;
 
-function word(entity: Entity | undefined, offset: number): number | undefined {
-  if (!entity) return undefined;
-  const value = entity.rawFields.get(offset);
-  if (value !== undefined) return value >>> 0;
-  return entity.createComplete ? 0 : undefined;
-}
-
 function guid(
   low: number | undefined,
   high: number | undefined,
@@ -124,7 +117,7 @@ function guid(
 }
 
 function itemGuid(entity: Entity, offset: number): bigint | undefined {
-  return guid(word(entity, offset), word(entity, offset + 1));
+  return guid(fieldOf(entity, offset), fieldOf(entity, offset + 1));
 }
 
 function issue(
@@ -161,18 +154,20 @@ function readItem(
   if (contained !== undefined && contained !== parent)
     issue(context, address, itemId, "contained_mismatch");
   const owned = owner === context.selfGuid && contained === parent;
-  const property = word(entity, ITEM_FIELDS.RANDOM_PROPERTIES_ID.offset);
+  const property = fieldOf(entity, ITEM_FIELDS.RANDOM_PROPERTIES_ID.offset);
   return {
     guid: itemId,
     owner,
     contained,
-    entry: word(entity, OBJECT_FIELDS.ENTRY.offset),
-    count: owned ? word(entity, ITEM_FIELDS.STACK_COUNT.offset) : undefined,
-    flags: word(entity, ITEM_FIELDS.FLAGS.offset),
+    entry: fieldOf(entity, OBJECT_FIELDS.ENTRY.offset),
+    count: owned ? fieldOf(entity, ITEM_FIELDS.STACK_COUNT.offset) : undefined,
+    flags: fieldOf(entity, ITEM_FIELDS.FLAGS.offset),
     randomPropertyId: property === undefined ? undefined : property | 0,
-    durability: owned ? word(entity, ITEM_FIELDS.DURABILITY.offset) : undefined,
+    durability: owned
+      ? fieldOf(entity, ITEM_FIELDS.DURABILITY.offset)
+      : undefined,
     maxDurability: owned
-      ? word(entity, ITEM_FIELDS.MAXDURABILITY.offset)
+      ? fieldOf(entity, ITEM_FIELDS.MAXDURABILITY.offset)
       : undefined,
   };
 }
@@ -249,7 +244,7 @@ function bag(
     issue(context, root, root.guid, "invalid_bag_type");
     return result;
   }
-  const size = word(entity, CONTAINER_FIELDS.NUM_SLOTS.offset);
+  const size = fieldOf(entity, CONTAINER_FIELDS.NUM_SLOTS.offset);
   if (size === undefined) return result;
   if (size > CONTAINER_FIELDS.SLOT_1.size / 2) {
     issue(context, root, root.guid, "invalid_bag_size");

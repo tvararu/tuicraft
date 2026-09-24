@@ -34,6 +34,7 @@ export type UnitEntity = BaseEntity & {
   gender: number;
   powerType?: number;
   baseMana?: number;
+  combatReach?: number;
   power: number[];
   maxPower: number[];
 };
@@ -47,6 +48,24 @@ export type GameObjectEntity = BaseEntity & {
 };
 
 export type Entity = UnitEntity | GameObjectEntity | BaseEntity;
+
+export type EntityLookup = (guid: bigint) => Entity | undefined;
+
+export function isUnit(entity: Entity | undefined): entity is UnitEntity {
+  return (
+    entity?.objectType === ObjectType.UNIT ||
+    entity?.objectType === ObjectType.PLAYER
+  );
+}
+
+export function fieldOf(
+  entity: Entity | undefined,
+  offset: number,
+): number | undefined {
+  return (
+    entity?.rawFields.get(offset) ?? (entity?.createComplete ? 0 : undefined)
+  );
+}
 
 export type EntityEvent =
   | { type: "appear"; entity: Entity }

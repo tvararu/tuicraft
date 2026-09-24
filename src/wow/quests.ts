@@ -1,4 +1,4 @@
-import type { Entity } from "wow/entity-store";
+import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
 import {
   ObjectType,
   PLAYER_FIELDS,
@@ -143,14 +143,8 @@ export type QuestDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
   now: () => number;
   selfGuid: () => bigint;
-  getEntity: (guid: bigint) => Entity | undefined;
+  getEntity: EntityLookup;
 };
-
-function field(entity: Entity | undefined, offset: number): number | undefined {
-  return (
-    entity?.rawFields.get(offset) ?? (entity?.createComplete ? 0 : undefined)
-  );
-}
 
 function logSlot(
   entity: Entity | undefined,
@@ -158,19 +152,19 @@ function logSlot(
   idsVisible: boolean,
 ): QuestLogSlot {
   const offset = PLAYER_FIELDS.QUEST_LOG.offset + slot * 5;
-  const low = field(entity, offset + 2);
-  const high = field(entity, offset + 3);
+  const low = fieldOf(entity, offset + 2);
+  const high = fieldOf(entity, offset + 3);
   return {
     slot,
     questId: entity?.rawFields.get(offset) ?? (idsVisible ? 0 : undefined),
-    flags: field(entity, offset + 1),
+    flags: fieldOf(entity, offset + 1),
     counters: [
       low === undefined ? undefined : low & 0xffff,
       low === undefined ? undefined : low >>> 16,
       high === undefined ? undefined : high & 0xffff,
       high === undefined ? undefined : high >>> 16,
     ],
-    expiresAtSeconds: field(entity, offset + 4),
+    expiresAtSeconds: fieldOf(entity, offset + 4),
   };
 }
 
@@ -436,7 +430,7 @@ export class QuestRuntime {
     ];
     const visible = offsets.every(
       (offset) =>
-        field(entity, offset) === 0 && field(entity, offset + 1) === 0,
+        fieldOf(entity, offset) === 0 && fieldOf(entity, offset + 1) === 0,
     );
     this.visibleQuestIds.set(entity, visible);
   }

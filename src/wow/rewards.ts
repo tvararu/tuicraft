@@ -1,6 +1,6 @@
-import type { EntityEvent } from "wow/entity-store";
+import { fieldOf, type EntityEvent, type EntityLookup } from "wow/entity-store";
 import { readInventory, type InventoryState } from "wow/inventory";
-import { readLife, type EntityLookup } from "wow/player-state";
+import { readLife } from "wow/player-state";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import {
@@ -163,9 +163,7 @@ export class RewardsRuntime {
     const source = this.deps.getEntity(guid);
     if (source?.guid !== guid || source.objectType !== ObjectType.UNIT)
       throw new Error("Loot source is not an observed creature");
-    const health =
-      source.rawFields.get(UNIT_FIELDS.HEALTH.offset) ??
-      (source.createComplete ? 0 : undefined);
+    const health = fieldOf(source, UNIT_FIELDS.HEALTH.offset);
     const flags = source.rawFields.get(UNIT_FIELDS.DYNAMIC_FLAGS.offset);
     if (health !== 0)
       throw new Error("Loot source is not authoritatively dead");

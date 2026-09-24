@@ -1,6 +1,6 @@
 import type { CombatRuntime, CombatState, CombatUnit } from "wow/combat";
 import type { ControlRuntime, MovementDirection } from "wow/control";
-import type { Entity } from "wow/entity-store";
+import { isUnit, type EntityLookup } from "wow/entity-store";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { FactionTemplateCatalog } from "wow/faction-template";
 import type {
@@ -8,12 +8,12 @@ import type {
   TacticsFrame,
   TacticsCandidate,
 } from "wow/tactics";
-import { ObjectType, UNIT_FIELDS, UnitFlag } from "wow/protocol/entity-fields";
+import { ObjectType, UnitFlag } from "wow/protocol/entity-fields";
 
 type ActionDeps = {
   combat: CombatRuntime;
   control: ControlRuntime;
-  entity: (guid: bigint) => Entity | undefined;
+  entity: EntityLookup;
   factions: () => FactionTemplateCatalog | undefined;
   now: () => number;
   unreachableTimeoutMs?: number;
@@ -472,13 +472,9 @@ export class CombatActions {
   private targetReason(guid: bigint, state: CombatState): string | undefined {
     const target = this.deps.entity(guid);
     const self = this.deps.entity(state.self.guid);
-    if (
-      !target ||
-      target.objectType !== ObjectType.UNIT ||
-      !("unitFlags" in target)
-    )
+    if (!isUnit(target) || target.objectType !== ObjectType.UNIT)
       return "target_not_pve_creature";
-    if (!self || !("unitFlags" in self) || state.self.health === undefined)
+    if (!isUnit(self) || state.self.health === undefined)
       return "self_unobserved";
     if (state.target?.health === undefined) return "target_vitals_unobserved";
     if (state.target.health === 0) return "target_dead";
@@ -505,8 +501,8 @@ export class CombatActions {
   private inMelee(state: CombatState): boolean {
     const self = this.deps.entity(state.self.guid);
     const target = state.target && this.deps.entity(state.target.guid);
-    const a = fieldFloat(self, UNIT_FIELDS.COMBATREACH.offset);
-    const b = fieldFloat(target, UNIT_FIELDS.COMBATREACH.offset);
+    const a = isUnit(self) ? self.combatReach : undefined;
+    const b = isUnit(target) ? target.combatReach : undefined;
     const distance = separation(state);
     if (a === undefined || b === undefined || distance === undefined)
       return false;
@@ -597,17 +593,6 @@ function describeSpell(spell: SpellDefinition, self: boolean): string {
       intervalMs: effect.amplitude,
     }));
   return `Request ${spell.name} ${spell.rank} on ${self ? "self" : "selected creature"}; mana ${spell.power.costRaw} + ${spell.power.costPercentageOfBaseMana}% base mana; cast ${spell.castTime?.castTimeMs}ms; duration ${spell.duration?.durationMs ?? "unknown"}ms; DBC base effects (server applies scaling/modifiers) ${JSON.stringify(effects)}`;
-}
-
-function fieldFloat(
-  entity: Entity | undefined,
-  offset: number,
-): number | undefined {
-  const raw = entity?.rawFields.get(offset);
-  if (raw === undefined) return undefined;
-  const view = new DataView(new ArrayBuffer(4));
-  view.setUint32(0, raw, true);
-  return view.getFloat32(0, true);
 }
 
 function separation(state: CombatState): number | undefined {

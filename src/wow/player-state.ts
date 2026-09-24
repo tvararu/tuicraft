@@ -1,11 +1,10 @@
-import type { Entity } from "wow/entity-store";
+import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
 import {
   ObjectType,
   PLAYER_FIELDS,
   UNIT_FIELDS,
 } from "wow/protocol/entity-fields";
 
-export type EntityLookup = (guid: bigint) => Entity | undefined;
 export type PlayerLife = "unknown" | "alive" | "dead" | "ghost";
 export type PlayerLifeState = {
   life: PlayerLife;
@@ -39,12 +38,7 @@ export function readSelfField(
       (range) => offset >= range.offset && offset < range.offset + range.size,
     );
   if (!visible) return undefined;
-  const value = entity.rawFields.get(offset);
-  return value === undefined
-    ? entity.createComplete
-      ? 0
-      : undefined
-    : value >>> 0;
+  return fieldOf(entity, offset);
 }
 
 export function readLife(
