@@ -144,6 +144,58 @@ describe("parseChatMessage", () => {
     expect(msg.message).toBe("The zeppelin to Orgrimmar has arrived!");
   });
 
+  function sized(w: PacketWriter, text: string) {
+    const bytes = new TextEncoder().encode(text);
+    w.uint32LE(bytes.byteLength + 1);
+    w.rawBytes(bytes);
+    w.uint8(0);
+  }
+
+  function monsterSay(receiver: bigint) {
+    const w = new PacketWriter();
+    w.uint8(ChatType.MONSTER_SAY);
+    w.uint32LE(0);
+    w.uint64LE(0xf130000000000042n);
+    w.uint32LE(0);
+    sized(w, "Guard");
+    w.uint64LE(receiver);
+    if (receiver >> 48n === 0xf130n) sized(w, "Peon");
+    sized(w, "Back to work!");
+    w.uint8(0);
+    return new PacketReader(w.finish());
+  }
+
+  test("monster chat to a creature skips the receiver name", () => {
+    const r = monsterSay(0xf130000000000099n);
+    const msg = parseChatMessage(r);
+    expect(msg.senderName).toBe("Guard");
+    expect(msg.message).toBe("Back to work!");
+    expect(r.remaining).toBe(0);
+  });
+
+  test("monster chat to a player has no receiver name", () => {
+    const r = monsterSay(0x99n);
+    expect(parseChatMessage(r).message).toBe("Back to work!");
+    expect(r.remaining).toBe(0);
+  });
+
+  test("battleground system chat skips a non-player receiver name", () => {
+    const w = new PacketWriter();
+    w.uint8(ChatType.BG_SYSTEM_NEUTRAL);
+    w.uint32LE(0);
+    w.uint64LE(0n);
+    w.uint32LE(0);
+    w.uint64LE(0xf140000000000007n);
+    sized(w, "Wolf");
+    sized(w, "The battle begins");
+    w.uint8(0);
+    const r = new PacketReader(w.finish());
+    const msg = parseChatMessage(r);
+    expect(msg.senderName).toBeUndefined();
+    expect(msg.message).toBe("The battle begins");
+    expect(r.remaining).toBe(0);
+  });
+
   test("raid warning carries no sender name", () => {
     const w = new PacketWriter();
     w.uint8(ChatType.RAID_WARNING);

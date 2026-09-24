@@ -711,6 +711,9 @@ export const ChatType = {
   CHANNEL: 0x11,
   AFK: 0x17,
   DND: 0x18,
+  BG_SYSTEM_NEUTRAL: 0x24,
+  BG_SYSTEM_ALLIANCE: 0x25,
+  BG_SYSTEM_HORDE: 0x26,
   RAID_LEADER: 0x27,
   RAID_WARNING: 0x28,
   RAID_BOSS_EMOTE: 0x29,
@@ -720,6 +723,12 @@ export const ChatType = {
   BATTLENET: 0x2f,
   PARTY_LEADER: 0x33,
   ROLL: 0x100,
+} as const;
+
+export const HighGuid = {
+  PLAYER: 0x0000,
+  UNIT: 0xf130,
+  PET: 0xf140,
 } as const;
 
 export const PartyResult = {

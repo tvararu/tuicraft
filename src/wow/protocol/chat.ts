@@ -1,5 +1,5 @@
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { ChatType, ChannelNotify } from "wow/protocol/opcodes";
+import { ChatType, ChannelNotify, HighGuid } from "wow/protocol/opcodes";
 
 export type ChatMessage = {
   type: number;
@@ -27,19 +27,52 @@ export type WhoResult = {
   zone: number;
 };
 
-function hasSenderName(type: number, isGm: boolean): boolean {
-  if (isGm) return true;
-  return (
-    type === ChatType.WHISPER_FOREIGN ||
-    type === ChatType.MONSTER_SAY ||
-    type === ChatType.MONSTER_PARTY ||
-    type === ChatType.MONSTER_YELL ||
-    type === ChatType.MONSTER_WHISPER ||
-    type === ChatType.MONSTER_EMOTE ||
-    type === ChatType.RAID_BOSS_EMOTE ||
-    type === ChatType.RAID_BOSS_WHISPER ||
-    type === ChatType.BATTLENET
-  );
+const MONSTER_CHAT = new Set<number>([
+  ChatType.MONSTER_SAY,
+  ChatType.MONSTER_PARTY,
+  ChatType.MONSTER_YELL,
+  ChatType.MONSTER_WHISPER,
+  ChatType.MONSTER_EMOTE,
+  ChatType.RAID_BOSS_EMOTE,
+  ChatType.RAID_BOSS_WHISPER,
+  ChatType.BATTLENET,
+]);
+
+const BG_SYSTEM_CHAT = new Set<number>([
+  ChatType.BG_SYSTEM_NEUTRAL,
+  ChatType.BG_SYSTEM_ALLIANCE,
+  ChatType.BG_SYSTEM_HORDE,
+]);
+
+type SenderBlock = { senderName?: string; channel?: string };
+
+function skipReceiver(r: PacketReader, skipPet: boolean): void {
+  const receiver = r.uint64LE();
+  const high = Number(receiver >> 48n);
+  if (receiver === 0n || high === HighGuid.PLAYER) return;
+  if (skipPet && high === HighGuid.PET) return;
+  r.sizedString();
+}
+
+function readSenderBlock(
+  r: PacketReader,
+  type: number,
+  isGm: boolean,
+): SenderBlock {
+  if (MONSTER_CHAT.has(type)) {
+    const senderName = r.sizedString();
+    skipReceiver(r, true);
+    return { senderName };
+  }
+  if (BG_SYSTEM_CHAT.has(type)) {
+    skipReceiver(r, false);
+    return {};
+  }
+  const named = isGm || type === ChatType.WHISPER_FOREIGN;
+  const senderName = named ? r.sizedString() : undefined;
+  const channel = type === ChatType.CHANNEL ? r.cString() : undefined;
+  r.uint64LE();
+  return { senderName, channel };
 }
 
 export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
@@ -48,30 +81,8 @@ export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
   const senderGuidLow = r.uint32LE();
   const senderGuidHigh = r.uint32LE();
   r.uint32LE();
-
-  let senderName: string | undefined;
-  if (hasSenderName(type, isGm)) {
-    const nameLen = r.uint32LE();
-    const nameBytes = r.bytes(nameLen);
-    const nameEnd =
-      nameLen > 0 && nameBytes[nameLen - 1] === 0 ? nameLen - 1 : nameLen;
-    senderName = new TextDecoder().decode(nameBytes.subarray(0, nameEnd));
-  }
-
-  let channel: string | undefined;
-  if (type === ChatType.CHANNEL) {
-    channel = r.cString();
-  }
-
-  r.uint32LE();
-  r.uint32LE();
-  const messageLength = r.uint32LE();
-  const messageBytes = r.bytes(messageLength);
-  const end =
-    messageLength > 0 && messageBytes[messageLength - 1] === 0
-      ? messageLength - 1
-      : messageLength;
-  const message = new TextDecoder().decode(messageBytes.subarray(0, end));
+  const { senderName, channel } = readSenderBlock(r, type, isGm);
+  const message = r.sizedString();
   if (r.remaining > 0) r.uint8();
 
   return {
