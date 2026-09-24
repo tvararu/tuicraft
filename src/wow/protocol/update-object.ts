@@ -1,113 +1,86 @@
-import type { CreateSpline } from "wow/protocol/monster-move";
-import type { PacketReader } from "./packet";
-import { UpdateType } from "./entity-fields";
-import { parseUpdateMask } from "./update-mask";
-import { parseMovementBlock } from "./movement-block";
 import type { Position } from "wow/entity-store";
+import type { PacketReader } from "wow/protocol/packet";
+import { UpdateType } from "wow/protocol/entity-fields";
+import { parseUpdateMask } from "wow/protocol/update-mask";
+import { parseMovementBlock } from "wow/protocol/movement-block";
+import type { CreateSpline } from "wow/protocol/monster-move";
+
+type Movement = {
+  position: Position;
+  updateFlags: number;
+  movementFlags?: number;
+  runSpeed?: number;
+  runBackSpeed?: number;
+  spline?: CreateSpline;
+};
 
 export type UpdateEntry =
-  | {
+  | ({
       type: "create";
       guid: bigint;
       objectType: number;
-      position: Position;
       fields: Map<number, number>;
-      updateFlags: number;
-      movementFlags?: number;
-      runSpeed?: number;
-      runBackSpeed?: number;
-      spline?: CreateSpline;
-    }
+    } & Movement)
   | { type: "values"; guid: bigint; fields: Map<number, number> }
-  | {
-      type: "movement";
-      guid: bigint;
-      position: Position;
-      updateFlags: number;
-      movementFlags?: number;
-      runSpeed?: number;
-      runBackSpeed?: number;
-      spline?: CreateSpline;
-    }
+  | ({ type: "movement"; guid: bigint } & Movement)
   | { type: "outOfRange"; guids: bigint[] }
   | { type: "nearObjects"; guids: bigint[] };
+
+function readMovement(r: PacketReader, mapId: number): Movement {
+  const { x, y, z, orientation, ...rest } = parseMovementBlock(r);
+  return { position: { mapId, x, y, z, orientation }, ...rest };
+}
+
+function readGuids(r: PacketReader): bigint[] {
+  const n = r.uint32LE();
+  const guids: bigint[] = [];
+  for (let j = 0; j < n; j++) guids.push(r.packedGuidBig());
+  return guids;
+}
+
+function readEntry(r: PacketReader, mapId: number): UpdateEntry | undefined {
+  const updateType = r.uint8();
+  switch (updateType) {
+    case UpdateType.VALUES:
+      return {
+        type: "values",
+        guid: r.packedGuidBig(),
+        fields: parseUpdateMask(r),
+      };
+    case UpdateType.MOVEMENT:
+      return {
+        type: "movement",
+        guid: r.packedGuidBig(),
+        ...readMovement(r, mapId),
+      };
+    case UpdateType.CREATE_OBJECT:
+    case UpdateType.CREATE_OBJECT2: {
+      const guid = r.packedGuidBig();
+      const objectType = r.uint8();
+      const movement = readMovement(r, mapId);
+      return {
+        type: "create",
+        guid,
+        objectType,
+        ...movement,
+        fields: parseUpdateMask(r),
+      };
+    }
+    case UpdateType.OUT_OF_RANGE:
+      return { type: "outOfRange", guids: readGuids(r) };
+    case UpdateType.NEAR_OBJECTS:
+      return { type: "nearObjects", guids: readGuids(r) };
+  }
+  return undefined;
+}
 
 export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
   const count = r.uint32LE();
   const entries: UpdateEntry[] = [];
   for (let i = 0; i < count; i++) {
     try {
-      const updateType = r.uint8();
-      switch (updateType) {
-        case UpdateType.VALUES: {
-          const guid = r.packedGuidBig();
-          const fields = parseUpdateMask(r);
-          entries.push({ type: "values", guid, fields });
-          break;
-        }
-        case UpdateType.MOVEMENT: {
-          const guid = r.packedGuidBig();
-          const movement = parseMovementBlock(r);
-          entries.push({
-            type: "movement",
-            guid,
-            position: {
-              mapId,
-              x: movement.x,
-              y: movement.y,
-              z: movement.z,
-              orientation: movement.orientation,
-            },
-            updateFlags: movement.updateFlags,
-            movementFlags: movement.movementFlags,
-            runSpeed: movement.runSpeed,
-            runBackSpeed: movement.runBackSpeed,
-            spline: movement.spline,
-          });
-          break;
-        }
-        case UpdateType.CREATE_OBJECT:
-        case UpdateType.CREATE_OBJECT2: {
-          const guid = r.packedGuidBig();
-          const objectType = r.uint8();
-          const movement = parseMovementBlock(r);
-          const fields = parseUpdateMask(r);
-          const position: Position = {
-            mapId,
-            x: movement.x,
-            y: movement.y,
-            z: movement.z,
-            orientation: movement.orientation,
-          };
-          entries.push({
-            type: "create",
-            guid,
-            objectType,
-            position,
-            fields,
-            updateFlags: movement.updateFlags,
-            movementFlags: movement.movementFlags,
-            runSpeed: movement.runSpeed,
-            runBackSpeed: movement.runBackSpeed,
-            spline: movement.spline,
-          });
-          break;
-        }
-        case UpdateType.OUT_OF_RANGE: {
-          const n = r.uint32LE();
-          const guids: bigint[] = [];
-          for (let j = 0; j < n; j++) guids.push(r.packedGuidBig());
-          entries.push({ type: "outOfRange", guids });
-          break;
-        }
-        case UpdateType.NEAR_OBJECTS: {
-          const n = r.uint32LE();
-          const guids: bigint[] = [];
-          for (let j = 0; j < n; j++) guids.push(r.packedGuidBig());
-          entries.push({ type: "nearObjects", guids });
-          break;
-        }
-      }
+      const entry = readEntry(r, mapId);
+      if (entry) entries.push(entry);
     } catch {
       break;
     }

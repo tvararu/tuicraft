@@ -1,6 +1,10 @@
-import type { PacketReader } from "./packet";
-import { MovementFlag, MovementFlagExtra, UpdateFlag } from "./entity-fields";
-import { parseCreateSpline, type CreateSpline } from "./monster-move";
+import type { PacketReader } from "wow/protocol/packet";
+import { MovementFlag, UpdateFlag } from "wow/protocol/entity-fields";
+import { parseMovementInfo } from "wow/protocol/movement";
+import {
+  parseCreateSpline,
+  type CreateSpline,
+} from "wow/protocol/monster-move";
 
 export type MovementData = {
   updateFlags: number;
@@ -8,113 +12,65 @@ export type MovementData = {
   y: number;
   z: number;
   orientation: number;
-  walkSpeed?: number;
   runSpeed?: number;
   runBackSpeed?: number;
   movementFlags?: number;
   spline?: CreateSpline;
 };
 
-export function parseMovementBlock(r: PacketReader): MovementData {
-  const updateFlags = r.uint16LE();
-  let x = 0;
-  let y = 0;
-  let z = 0;
-  let orientation = 0;
-  let walkSpeed: number | undefined;
-  let runSpeed: number | undefined;
-  let runBackSpeed: number | undefined;
-  let movementFlags: number | undefined;
-  let spline: CreateSpline | undefined;
+type Placement = Omit<MovementData, "updateFlags">;
 
-  if (updateFlags & UpdateFlag.LIVING) {
-    const flags = r.uint32LE();
-    movementFlags = flags;
-    const movementFlagsExtra = r.uint16LE();
-    r.skip(4);
-    x = r.floatLE();
-    y = r.floatLE();
-    z = r.floatLE();
-    orientation = r.floatLE();
+const ORIGIN: Placement = { x: 0, y: 0, z: 0, orientation: 0 };
 
-    if (flags & MovementFlag.ON_TRANSPORT) {
-      r.packedGuid();
-      r.skip(16);
-      r.skip(4);
-      r.skip(1);
-      if (movementFlagsExtra & MovementFlagExtra.INTERPOLATED_MOVEMENT) {
-        r.skip(4);
-      }
-    }
-
-    if (
-      flags & (MovementFlag.SWIMMING | MovementFlag.FLYING) ||
-      movementFlagsExtra & MovementFlagExtra.ALWAYS_ALLOW_PITCHING
-    ) {
-      r.skip(4);
-    }
-
-    r.skip(4);
-
-    if (flags & MovementFlag.FALLING) {
-      r.skip(16);
-    }
-
-    if (flags & MovementFlag.SPLINE_ELEVATION) {
-      r.skip(4);
-    }
-
-    walkSpeed = r.floatLE();
-    runSpeed = r.floatLE();
-    runBackSpeed = r.floatLE();
-    for (let i = 0; i < 6; i++) r.skip(4);
-
-    if (flags & MovementFlag.SPLINE_ENABLED) spline = parseCreateSpline(r);
-  } else if (updateFlags & UpdateFlag.POSITION) {
-    r.packedGuid();
-    x = r.floatLE();
-    y = r.floatLE();
-    z = r.floatLE();
-    r.skip(12);
-    orientation = r.floatLE();
-    r.skip(4);
-  } else if (updateFlags & UpdateFlag.HAS_POSITION) {
-    x = r.floatLE();
-    y = r.floatLE();
-    z = r.floatLE();
-    orientation = r.floatLE();
-  }
-
-  if (updateFlags & UpdateFlag.HIGH_GUID) {
-    r.skip(4);
-  }
-  if (updateFlags & UpdateFlag.LOW_GUID) {
-    r.skip(4);
-  }
-  if (updateFlags & UpdateFlag.HAS_ATTACKING_TARGET) {
-    r.packedGuid();
-  }
-  if (updateFlags & UpdateFlag.TRANSPORT) {
-    r.skip(4);
-  }
-  if (updateFlags & UpdateFlag.VEHICLE) {
-    r.skip(4);
-    r.skip(4);
-  }
-  if (updateFlags & UpdateFlag.ROTATION) {
-    r.skip(8);
-  }
-
+function readLiving(r: PacketReader): Placement {
+  const { flags, x, y, z, orientation } = parseMovementInfo(r);
+  r.skip(4);
+  const runSpeed = r.floatLE();
+  const runBackSpeed = r.floatLE();
+  r.skip(24);
+  const splined = flags & MovementFlag.SPLINE_ENABLED;
+  const spline = splined ? parseCreateSpline(r) : undefined;
   return {
-    updateFlags,
     x,
     y,
     z,
     orientation,
-    walkSpeed,
     runSpeed,
     runBackSpeed,
-    movementFlags,
+    movementFlags: flags,
     spline,
   };
+}
+
+function readStationaryTransport(r: PacketReader): Placement {
+  r.packedGuid();
+  const position = r.vec3();
+  r.skip(12);
+  const orientation = r.floatLE();
+  r.skip(4);
+  return { ...position, orientation };
+}
+
+function readPlacement(r: PacketReader, updateFlags: number): Placement {
+  if (updateFlags & UpdateFlag.LIVING) return readLiving(r);
+  if (updateFlags & UpdateFlag.POSITION) return readStationaryTransport(r);
+  if (updateFlags & UpdateFlag.HAS_POSITION)
+    return { ...r.vec3(), orientation: r.floatLE() };
+  return ORIGIN;
+}
+
+function skipTrailer(r: PacketReader, updateFlags: number): void {
+  if (updateFlags & UpdateFlag.HIGH_GUID) r.skip(4);
+  if (updateFlags & UpdateFlag.LOW_GUID) r.skip(4);
+  if (updateFlags & UpdateFlag.HAS_ATTACKING_TARGET) r.packedGuid();
+  if (updateFlags & UpdateFlag.TRANSPORT) r.skip(4);
+  if (updateFlags & UpdateFlag.VEHICLE) r.skip(8);
+  if (updateFlags & UpdateFlag.ROTATION) r.skip(8);
+}
+
+export function parseMovementBlock(r: PacketReader): MovementData {
+  const updateFlags = r.uint16LE();
+  const placement = readPlacement(r, updateFlags);
+  skipTrailer(r, updateFlags);
+  return { updateFlags, ...placement };
 }

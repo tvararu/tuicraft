@@ -59,7 +59,6 @@ describe("parseMovementBlock", () => {
     expect(m.y).toBeCloseTo(2.5);
     expect(m.z).toBeCloseTo(3.5);
     expect(m.orientation).toBeCloseTo(0.5);
-    expect(m.walkSpeed).toBeCloseTo(2.5);
     expect(m.runSpeed).toBeCloseTo(7.0);
     expect(m.runBackSpeed).toBeCloseTo(0);
     expect(m.movementFlags).toBe(0);
@@ -81,7 +80,6 @@ describe("parseMovementBlock", () => {
     expect(m.x).toBeCloseTo(10);
     expect(m.y).toBeCloseTo(20);
     expect(m.z).toBeCloseTo(30);
-    expect(m.walkSpeed).toBeCloseTo(2.5);
     expect(m.runSpeed).toBeCloseTo(7.0);
     expect(r.remaining).toBe(0);
   });
