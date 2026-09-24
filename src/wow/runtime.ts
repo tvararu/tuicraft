@@ -2,9 +2,9 @@ import type { ClientConfig, WorldConn } from "wow/client";
 import { ControlRuntime } from "wow/control";
 import { CombatRuntime } from "wow/combat";
 import { loadSpellCatalog } from "wow/spell-catalog";
-import { TacticsLoop, type TacticsSelect } from "wow/tactics";
+import { TacticsLoop } from "wow/tactics";
 import { CombatActions } from "wow/combat-actions";
-import { selectJevAction } from "wow/jev";
+import { selectJevAction, type JevSelect } from "wow/jev";
 import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
 import {
   loadFactionTemplates,
@@ -124,14 +124,12 @@ export function createRuntimes(
     combat.halt();
   }
   const fault = parseJevFault(config.jevFault);
-  const baseSelect: TacticsSelect = (request, options) =>
+  const baseSelect: JevSelect = (request, options) =>
     selectJevAction(request, {
       ...options,
       endpointUrl: config.jevEndpointUrl,
     });
-  let select: TacticsSelect | undefined;
-  if (fault) select = createFaultSelect(fault, baseSelect);
-  else if (config.jevEndpointUrl) select = baseSelect;
+  const select = fault ? createFaultSelect(fault, baseSelect) : baseSelect;
   const tactics = new TacticsLoop({
     apiKey: config.jevApiKey,
     framing: config.framing,

@@ -4,11 +4,8 @@ import { isUnit, type EntityLookup } from "wow/entity-store";
 import { bearing, distance } from "wow/geometry";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { FactionTemplateCatalog } from "wow/faction-template";
-import type {
-  TacticsContext,
-  TacticsFrame,
-  TacticsCandidate,
-} from "wow/tactics";
+import type { JevCandidate } from "wow/jev";
+import type { TacticsContext, TacticsFrame } from "wow/tactics";
 import { ObjectType, UnitFlag } from "wow/protocol/entity-fields";
 
 type ActionDeps = {
@@ -118,7 +115,7 @@ export class CombatActions {
       this.spellAction(id, context, state),
     );
     const outcome = this.outcome(context, state, spells);
-    const candidates: TacticsCandidate[] = [WAIT];
+    const candidates: JevCandidate[] = [WAIT];
     if (!outcome) this.addCandidates(candidates, spells, state);
     return {
       observation: {
@@ -213,7 +210,7 @@ export class CombatActions {
   }
 
   private addCandidates(
-    candidates: TacticsCandidate[],
+    candidates: JevCandidate[],
     spells: readonly SpellAction[],
     state: CombatState,
   ): void {

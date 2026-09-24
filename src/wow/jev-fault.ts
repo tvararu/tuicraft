@@ -1,4 +1,4 @@
-import type { TacticsSelect } from "wow/tactics";
+import type { JevSelect } from "wow/jev";
 
 export type JevFault =
   | { kind: "delay"; delayMs: number }
@@ -31,8 +31,8 @@ export function faultMarker(fault: JevFault): string {
 
 export function createFaultSelect(
   fault: JevFault,
-  baseSelect: TacticsSelect,
-): TacticsSelect {
+  baseSelect: JevSelect,
+): JevSelect {
   if (fault.kind === "http")
     return async () => {
       throw new Error(`TypeSafe HTTP ${fault.status}`);

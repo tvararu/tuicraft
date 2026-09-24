@@ -1,9 +1,4 @@
-import {
-  selectJevAction,
-  type JevActionOptions,
-  type JevActionRequest,
-  type JevActionResult,
-} from "wow/jev";
+import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 import { abortReason, abortable, bounded, pause } from "lib/abort";
 import { messageOf } from "lib/errors";
@@ -26,11 +21,6 @@ export type TacticsContext = {
   characterClass?: string;
 };
 
-export type TacticsCandidate = {
-  id: string;
-  description: string;
-};
-
 export type TacticsOutcome = {
   status: "completed" | "blocked" | "failed";
   reason: string;
@@ -39,14 +29,9 @@ export type TacticsOutcome = {
 
 export type TacticsFrame = {
   observation: Readonly<Record<string, unknown>>;
-  candidates: readonly TacticsCandidate[];
+  candidates: readonly JevCandidate[];
   outcome?: TacticsOutcome;
 };
-
-export type TacticsSelect = (
-  request: JevActionRequest,
-  options: JevActionOptions,
-) => Promise<JevActionResult>;
 
 export type TacticsDeps = {
   apiKey: string | undefined;
@@ -55,7 +40,7 @@ export type TacticsDeps = {
   observe: (context: TacticsContext) => TacticsFrame;
   execute: (actionId: string, context: TacticsContext) => void;
   halt: () => void;
-  select?: TacticsSelect;
+  select: JevSelect;
   now?: () => number;
   maxResultAgeMs?: number;
   minIntervalMs?: number;
@@ -78,7 +63,7 @@ export type TacticsState = {
   lastRequest:
     | {
         observation: Readonly<Record<string, unknown>>;
-        candidates: readonly TacticsCandidate[];
+        candidates: readonly JevCandidate[];
         instruction: string;
         sentAtMs: number;
         framing: FramingVariant;
@@ -115,7 +100,7 @@ export type TacticsEvent =
       runId: string;
       instruction: string;
       observation: Readonly<Record<string, unknown>>;
-      candidates: readonly TacticsCandidate[];
+      candidates: readonly JevCandidate[];
       sentAtMs: number;
       framing: FramingVariant;
       fault?: string;
@@ -157,7 +142,7 @@ type Run = {
 
 type Decision = {
   run: Run;
-  candidates: readonly TacticsCandidate[];
+  candidates: readonly JevCandidate[];
   sentAtMs: number;
   result: JevActionResult;
 };
@@ -405,8 +390,7 @@ export class TacticsLoop {
     if (!this.live(run)) throw abortReason(run.abort.signal);
     const abort = new AbortController();
     const signal = AbortSignal.any([run.abort.signal, abort.signal]);
-    const select = this.deps.select ?? selectJevAction;
-    const pending = select(request, { apiKey, signal });
+    const pending = this.deps.select(request, { apiKey, signal });
     const settled = pending.then(
       (result) => this.late(run, result, signal),
       () => {},
@@ -499,7 +483,7 @@ export class TacticsLoop {
   }
 }
 
-function withWait(candidates: readonly TacticsCandidate[]): TacticsCandidate[] {
+function withWait(candidates: readonly JevCandidate[]): JevCandidate[] {
   const list = candidates.map((candidate) => ({ ...candidate }));
   if (!list.some((candidate) => candidate.id === WAIT.id))
     list.push({ ...WAIT });

@@ -531,23 +531,6 @@ test("mechanics framing variant includes mechanics description in state.framing"
   );
 });
 
-test("rejects unknown framing variant", async () => {
-  const req: JevActionRequest = {
-    ...request,
-    framing: "bogus" as unknown as JevActionRequest["framing"],
-  };
-
-  await expect(
-    selectJevAction(req, {
-      apiKey: "ts_test_key",
-      signal: new AbortController().signal,
-      fetch: async () => jsonResponse(200, validPayload),
-    }),
-  ).rejects.toThrow(
-    'Unknown framing variant: "bogus". Must be one of: none, minimal, mechanics',
-  );
-});
-
 test("uses endpointUrl option when provided", async () => {
   let capturedUrl = "";
   await selectJevAction(request, {
@@ -560,24 +543,4 @@ test("uses endpointUrl option when provided", async () => {
     },
   });
   expect(capturedUrl).toBe("http://localhost:9999/custom");
-});
-
-test("uses JEV_ENDPOINT_URL environment variable override", async () => {
-  const previous = process.env["JEV_ENDPOINT_URL"];
-  process.env["JEV_ENDPOINT_URL"] = "http://localhost:8888/override";
-  try {
-    let capturedUrl = "";
-    await selectJevAction(request, {
-      apiKey: "ts_test_key",
-      signal: new AbortController().signal,
-      fetch: async (input) => {
-        capturedUrl = String(input);
-        return jsonResponse(200, validPayload);
-      },
-    });
-    expect(capturedUrl).toBe("http://localhost:8888/override");
-  } finally {
-    if (previous === undefined) delete process.env["JEV_ENDPOINT_URL"];
-    else process.env["JEV_ENDPOINT_URL"] = previous;
-  }
 });

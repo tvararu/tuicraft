@@ -1,8 +1,4 @@
-import {
-  buildFraming,
-  parseFramingVariant,
-  type FramingVariant,
-} from "wow/framing";
+import { buildFraming, type FramingVariant } from "wow/framing";
 import { abortReason, isAbort } from "lib/abort";
 
 const SYSTEMONE_URL = "https://api.typesafe.ai/v1/systemone";
@@ -41,71 +37,55 @@ export type JevActionResult = {
   elapsedMs: number;
 };
 
+export type JevSelect = (
+  request: JevActionRequest,
+  options: JevActionOptions,
+) => Promise<JevActionResult>;
+
 export async function selectJevAction(
   request: JevActionRequest,
   options: JevActionOptions,
 ): Promise<JevActionResult> {
   if (!options.apiKey) throw new Error("Missing TypeSafe API key");
   if (options.signal.aborted) throw abortReason(options.signal);
-  if (request.framing !== undefined) parseFramingVariant(request.framing);
   const allowed = new Set(request.candidates.map((candidate) => candidate.id));
   if (allowed.size === 0) throw new Error("No TypeSafe Choice candidates");
   const started = performance.now();
-  const payload = await postSystemOne(request, options);
+  const payload = await post(buildBody(request, options.model), options);
   if (options.signal.aborted) throw abortReason(options.signal);
   return parseChoice(payload, allowed, performance.now() - started);
 }
 
-async function postSystemOne(
-  request: JevActionRequest,
-  options: JevActionOptions,
-): Promise<unknown> {
-  const http = options.fetch ?? globalThis.fetch;
+function buildBody(request: JevActionRequest, model = DEFAULT_MODEL): string {
   const criteria = Object.fromEntries(
-    request.candidates.map((candidate) => [
-      candidate.id,
-      candidate.description,
-    ]),
+    request.candidates.map(({ id, description }) => [id, description]),
   );
-  const framingText =
-    request.framing && request.framing !== "none"
-      ? buildFraming(
-          request.framing,
-          request.observation,
-          request.characterClass,
-        )
-      : undefined;
-  const state: Record<string, unknown> = {
+  const framing =
+    request.framing &&
+    buildFraming(request.framing, request.observation, request.characterClass);
+  const state = {
     ...request.observation,
     standingInstruction: request.instruction,
+    ...(framing === undefined ? {} : { framing }),
   };
-  if (framingText !== undefined) {
-    state["framing"] = framingText;
-  }
-  const body = JSON.stringify({
+  const instructions =
+    "Which currently legal action best serves `standingInstruction`?";
+  return JSON.stringify({
     state,
-    model: options.model ?? DEFAULT_MODEL,
-    questions: {
-      action: {
-        type: "choice",
-        instructions:
-          "Which currently legal action best serves `standingInstruction`?",
-        criteria,
-      },
-    },
+    model,
+    questions: { action: { type: "choice", instructions, criteria } },
   });
+}
+
+async function post(body: string, options: JevActionOptions): Promise<unknown> {
+  const http = options.fetch ?? globalThis.fetch;
   const headers = {
     Authorization: `Bearer ${options.apiKey}`,
     "Content-Type": "application/json",
   };
   let response: Response;
   try {
-    const endpoint =
-      options.endpointUrl ??
-      process.env["JEV_ENDPOINT_URL"] ??
-      process.env["TYPESAFE_ENDPOINT_URL"] ??
-      SYSTEMONE_URL;
-    response = await http(endpoint, {
+    response = await http(options.endpointUrl ?? SYSTEMONE_URL, {
       method: "POST",
       headers,
       body,
