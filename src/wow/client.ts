@@ -70,25 +70,8 @@ import {
 } from "wow/control";
 import { CombatRuntime, type CombatEvent, type CombatState } from "wow/combat";
 import type { SpellDefinition } from "wow/spell-catalog";
-import { loadSpellCatalog } from "wow/spell-catalog";
-import {
-  TacticsLoop,
-  type TacticsEvent,
-  type TacticsState,
-  type TacticsSelect,
-} from "wow/tactics";
-import { CombatActions } from "wow/combat-actions";
-import { selectJevAction } from "wow/jev";
-import { readJevFaultFromEnv, createFaultSelect } from "wow/jev-fault";
-import {
-  loadFactionTemplates,
-  type FactionTemplateCatalog,
-} from "wow/faction-template";
-import {
-  classifyNavigationRefusal,
-  createNavigation,
-  type Navigation,
-} from "wow/navigation";
+import { TacticsLoop, type TacticsEvent, type TacticsState } from "wow/tactics";
+import { classifyNavigationRefusal } from "wow/navigation";
 import {
   RecoveryRuntime,
   type RecoveryState,
@@ -100,16 +83,9 @@ import {
   type RewardsState,
   type RewardsEvent,
 } from "wow/rewards";
-import {
-  EncounterCycleRuntime,
-  type CycleState,
-  type CycleEvent,
-  type CycleTactics,
-  type CycleLoot,
-  type CycleRecovery,
-  type CycleControl,
-} from "wow/encounter-cycle";
+import { type CycleState, type CycleEvent } from "wow/encounter-cycle";
 import type { InventoryState } from "wow/inventory";
+import { createRuntimes } from "wow/runtime";
 import {
   sendPacket,
   handleTimeSync,
@@ -151,7 +127,6 @@ import {
   handleDuelInBounds,
   handleGuildCommandResult,
   handleGuildInvitePacket,
-  selfGuid,
 } from "wow/world-handlers";
 import { registerMovementHandlers } from "wow/movement-handlers";
 import {
@@ -182,7 +157,6 @@ export type ClientConfig = {
 };
 
 import type { AuthResult } from "wow/auth";
-import { ObjectType } from "wow/protocol/entity-fields";
 
 export type ChatMessage = {
   type: number;
@@ -555,225 +529,12 @@ export function worldSession(
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
     conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
     conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
-    conn.control = new ControlRuntime({
-      send: (opcode, body) =>
-        sendPacket(conn, opcode, body ?? new Uint8Array()),
-      ticks: () => Date.now() - conn.startTime,
-      now: () => Date.now(),
-      selfGuid: () => selfGuid(conn),
-      findHeight: (mapId, x, y, from) => {
-        try {
-          return getNavigation().height(mapId, x, y, from);
-        } catch {
-          return undefined;
-        }
-      },
-      isPathClear: (mapId, from, to) => {
-        try {
-          return getNavigation().clear(mapId, from, to);
-        } catch {
-          return false;
-        }
-      },
-    });
-
-    const control = conn.control;
-    const runtimeDeps = {
-      send: (opcode: number, body?: Uint8Array) =>
-        sendPacket(conn, opcode, body ?? new Uint8Array()),
-      now: () => Date.now(),
-      selfGuid: () => selfGuid(conn),
-      getEntity: (guid: bigint) => conn.entityStore.get(guid),
-    };
-    const combat = new CombatRuntime({
-      ...runtimeDeps,
-      selectedGuid: () => control.snapshot().target,
-      selfPose: () => control.snapshot().pose,
-      selfServerPose: () => control.snapshot().serverPose,
-    });
-    conn.combat = combat;
-    let catalogPromise: Promise<void> | undefined;
-    let factions: FactionTemplateCatalog | undefined;
-    let factionPromise: Promise<void> | undefined;
-    let navigation: Navigation | undefined;
-    let disposed = false;
-    const actions = new CombatActions({
-      combat,
-      control,
-      entity: (guid) => conn.entityStore.get(guid),
-      factions: () => factions,
-      now: () => Date.now(),
-    });
-    function prepareCatalog(): Promise<void> {
-      if (!config.spellDataDir)
-        return Promise.reject(new Error("missing_spell_data"));
-      catalogPromise ??= loadSpellCatalog(config.spellDataDir).then(
-        (catalog) => {
-          if (!disposed) combat.setCatalog(catalog);
-        },
-      );
-      return catalogPromise;
-    }
-    function getNavigation(): Navigation {
-      if (!config.navigationDataDir || !config.navigationLibrary)
-        throw new Error("missing_navigation");
-      navigation ??= createNavigation({
-        dataPath: config.navigationDataDir,
-        libraryPath: config.navigationLibrary,
-      });
-      return navigation;
-    }
-    function rawHalt(): void {
-      if (disposed) return;
-      control.setMode("none");
-      control.halt();
-      combat.halt();
-    }
-    const faultInfo = readJevFaultFromEnv();
-    const baseSelect: TacticsSelect = (request, options) =>
-      selectJevAction(request, {
-        ...options,
-        endpointUrl: config.jevEndpointUrl,
-      });
-    const faultSelect = faultInfo.fault
-      ? createFaultSelect(faultInfo.fault, baseSelect)
-      : config.jevEndpointUrl
-        ? baseSelect
-        : undefined;
-    const tactics = new TacticsLoop({
-      apiKey: config.jevApiKey,
-      framing: config.framing,
-      characterClass: config.characterClass,
-      fault: faultInfo.marker,
-      select: faultSelect,
-      async prepare(_context, signal) {
-        signal.throwIfAborted();
-        await prepareCatalog();
-        signal.throwIfAborted();
-        factionPromise ??= loadFactionTemplates(config.spellDataDir!).then(
-          (data) => {
-            if (!disposed) factions = data;
-          },
-        );
-        await factionPromise;
-        signal.throwIfAborted();
-      },
-      activate: (context) => actions.activate(context),
-      observe: (context) => actions.observe(context),
-      execute: (id, context) => actions.execute(id, context),
-      halt: rawHalt,
-    });
-    conn.tactics = tactics;
-    const recovery = new RecoveryRuntime({
-      ...runtimeDeps,
-      pose: () => control.snapshot().pose,
-    });
-    conn.recovery = recovery;
-    const quests = new QuestRuntime(runtimeDeps);
-    conn.quests = quests;
-    const rewards = new RewardsRuntime(runtimeDeps);
-    conn.rewards = rewards;
-    let cycleRecoveryListener: ((event: RecoveryEvent) => void) | undefined;
-    let cycleLootListener: ((event: RewardsEvent) => void) | undefined;
-    const cycleTactics: CycleTactics = {
-      start: (context, signal) =>
-        tactics.start(
-          { targetGuid: context.targetGuid, instruction: context.instruction },
-          signal,
-        ),
-      stop: (reason) => tactics.stop(reason),
-      lastOutcome: () => tactics.snapshot().lastOutcome,
-      selfDead: () => {
-        const life = recovery.snapshot().life;
-        return life === "dead" || life === "ghost";
-      },
-    };
-    const cycleLoot: CycleLoot = {
-      snapshot: () => rewards.snapshot(),
-      open: (guid) => rewards.open(guid),
-      take: (slot) => rewards.take(slot),
-      takeMoney: () => rewards.takeMoney(),
-      close: () => rewards.close(),
-      onEvent: (callback) => {
-        cycleLootListener = callback;
-      },
-    };
-    const cycleRecovery: CycleRecovery = {
-      snapshot: () => recovery.snapshot(),
-      releaseSpirit: () => recovery.releaseSpirit(),
-      queryCorpse: () => recovery.queryCorpse(),
-      reclaimCorpse: () => recovery.reclaimCorpse(),
-      respondResurrection: (accept) => recovery.respondResurrection(accept),
-      onEvent: (callback) => {
-        cycleRecoveryListener = callback;
-      },
-    };
-    const cycleControl: CycleControl = {
-      pose: () => control.snapshot().pose,
-      face: (orientation) => control.face(orientation),
-      move: (direction, durationMs) => control.move(direction, durationMs),
-    };
-    const cycle = new EncounterCycleRuntime({
-      tactics: cycleTactics,
-      loot: cycleLoot,
-      recovery: cycleRecovery,
-      control: cycleControl,
-      now: runtimeDeps.now,
-    });
-    control.onEvent((event) => {
-      conn.onControlEvent?.(event);
-    });
-    recovery.onEvent((event) => {
-      if (
-        event.type === "recovery_invalidated" ||
-        (event.type === "life_observed" &&
-          (event.state.life === "dead" || event.state.life === "ghost"))
-      ) {
-        tactics.stop(`self_${event.state.life}`);
-      }
-      conn.onRecoveryEvent?.(event);
-      cycleRecoveryListener?.(event);
-    });
-    rewards.onEvent((event) => {
-      conn.onRewardsEvent?.(event);
-      cycleLootListener?.(event);
-    });
-    function observedTarget(guid: bigint): { x: number; y: number; z: number } {
-      const entity = conn.entityStore.get(guid);
-      if (!entity || guid === selfGuid(conn))
-        throw new Error("target_not_observed");
-      const self = control.snapshot().pose;
-      if (!self) throw new Error("no_pose");
-      const unit =
-        entity.objectType === ObjectType.UNIT ||
-        entity.objectType === ObjectType.PLAYER
-          ? combat.unit(guid)
-          : undefined;
-      if (unit?.motion?.unsupportedReason)
-        throw new Error(unit.motion.unsupportedReason);
-      if (
-        unit?.motion &&
-        (Date.now() - unit.motion.observedAt < 0 ||
-          Date.now() - unit.motion.observedAt > 5000)
-      )
-        throw new Error("target_stale");
-      const position = unit?.serverPose ?? entity.position;
-      if (
-        !position ||
-        ![position.x, position.y, position.z].every(Number.isFinite)
-      )
-        throw new Error("target_not_observed");
-      if (position.mapId !== self.mapId) throw new Error("target_map_changed");
-      return { x: position.x, y: position.y, z: position.z };
-    }
-
-    function override(): void {
-      cycle.stop("manual_override");
-      tactics.stop("manual_override");
-      rawHalt();
-    }
+    const rt = createRuntimes(conn, config);
+    const { control, combat, tactics, recovery, quests, rewards, cycle } = rt;
+    const { prepareCatalog, observedTarget, override } = rt;
+    const getNavigation = rt.navigation;
+    const rawHalt = rt.halt;
     function cleanup(sendStop: boolean): void {
-      if (disposed) return;
       conn.onEntityEvent = undefined;
       conn.onFriendEvent = undefined;
       conn.onIgnoreEvent = undefined;
@@ -783,25 +544,7 @@ export function worldSession(
       conn.onControlEvent = undefined;
       conn.onRecoveryEvent = undefined;
       conn.onRewardsEvent = undefined;
-      recovery.onEvent(undefined);
-      quests.onEvent(undefined);
-      rewards.onEvent(undefined);
-      control.onEvent(undefined);
-      combat.onEvent(undefined);
-      tactics.onEvent(undefined);
-      cycle.onEvent(undefined);
-      cycleRecoveryListener = undefined;
-      cycleLootListener = undefined;
-      if (sendStop) rawHalt();
-      disposed = true;
-      control.dispose();
-      tactics.dispose();
-      recovery.dispose();
-      quests.dispose();
-      rewards.dispose();
-      combat.dispose();
-      cycle.dispose();
-      navigation?.close();
+      rt.dispose(sendStop);
     }
 
     let pingInterval: ReturnType<typeof setInterval>;
@@ -1322,21 +1065,7 @@ export function worldSession(
           conn.onDuelEvent = cb;
         },
         getControlState() {
-          return (
-            conn.control?.snapshot() ?? {
-              selfGuid: selfGuid(conn),
-              pose: undefined,
-              serverPose: undefined,
-              target: undefined,
-              requestedTarget: undefined,
-              moving: false,
-              direction: undefined,
-              movementAllowed: false,
-              blockedReason: "no_control",
-              speed: 0,
-              owner: "none",
-            }
-          );
+          return control.snapshot();
         },
         move(direction, durationMs) {
           const state = control.snapshot();
@@ -1353,8 +1082,7 @@ export function worldSession(
         },
         face(orientation) {
           override();
-          if (!conn.control) throw new Error("no_control");
-          conn.control.face(orientation);
+          control.face(orientation);
         },
         faceGuid(guid) {
           const target = observedTarget(guid);
@@ -1413,8 +1141,7 @@ export function worldSession(
         },
         selectTarget(guid) {
           override();
-          if (!conn.control) throw new Error("no_control");
-          conn.control.selectTarget(guid);
+          control.selectTarget(guid);
         },
         halt() {
           tactics.stop("halt");
