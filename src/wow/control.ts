@@ -1,5 +1,6 @@
 import type { GroundRoute, NavPoint } from "wow/navigation";
 import type { Position } from "wow/entity-store";
+import { bearing, distance, distance2d, normalizeAngle } from "wow/geometry";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { MovementFlag, UnitFlag } from "wow/protocol/entity-fields";
 import {
@@ -124,7 +125,6 @@ export type ControlDeps = {
 const MIN_DURATION_MS = 1;
 const MAX_DURATION_MS = 10000;
 const HEARTBEAT_MS = 500;
-const TWO_PI = Math.PI * 2;
 
 const DIR_FLAG: Record<MovementDirection, number> = {
   forward: MovementFlag.FORWARD,
@@ -155,10 +155,6 @@ const UNIT_BLOCK_FLAGS =
 
 function copyPose(pose: ControlPose | undefined): ControlPose | undefined {
   return pose ? { ...pose } : undefined;
-}
-
-function normalizeFacing(orientation: number): number {
-  return ((orientation % TWO_PI) + TWO_PI) % TWO_PI;
 }
 
 function unsupportedReason(flags: number): string | undefined {
@@ -277,9 +273,7 @@ export class ControlRuntime {
     this.stopMoving("navigation_replaced", true);
     const origin = route.points[0]!;
     const pose = this.requirePose();
-    if (
-      Math.hypot(origin.x - pose.x, origin.y - pose.y, origin.z - pose.z) > 1e-6
-    )
+    if (distance(origin, pose) > 1e-6)
       throw new Error("navigation_origin_changed");
     if (route.length === 0) {
       this.navigation = {
@@ -344,12 +338,12 @@ export class ControlRuntime {
     const pose = this.requirePose();
     const dx = targetX - pose.x;
     const dy = targetY - pose.y;
-    const separation = Math.hypot(dx, dy);
+    const separation = distance2d(pose, target);
     const distance = Math.min(yards, separation);
     if (distance === 0)
       return Promise.resolve({ status: "completed", traveled: 0, pose });
 
-    this.applyFacing(Math.atan2(dy, dx));
+    this.applyFacing(bearing(pose, target));
     const { promise, resolve } = Promise.withResolvers<WalkOutcome>();
     const walk: DirectedWalk = {
       x: pose.x,
@@ -415,7 +409,7 @@ export class ControlRuntime {
   private applyFacing(orientation: number): void {
     this.integrate();
     const pose = this.requirePose();
-    pose.orientation = normalizeFacing(orientation);
+    pose.orientation = normalizeAngle(orientation);
     pose.source = "predicted";
     pose.updatedAt = this.deps.now();
     this.predicted = pose;

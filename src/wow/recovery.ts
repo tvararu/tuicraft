@@ -1,4 +1,5 @@
 import type { Vec3 } from "wow/protocol/packet";
+import { distance } from "wow/geometry";
 import type { ControlPose } from "wow/control";
 import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
 import { isUnit, type EntityEvent, type EntityLookup } from "wow/entity-store";
@@ -456,11 +457,7 @@ export class RecoveryRuntime {
     result.reason = this.reclaimBlocker(life, pose);
     if (result.reason || this.corpse.status !== "found" || !pose) return result;
     const point = this.corpse.position;
-    result.distance = Math.hypot(
-      pose.x - point.x,
-      pose.y - point.y,
-      pose.z - point.z,
-    );
+    result.distance = distance(pose, point);
     if (result.distance > 39) result.reason = "corpse_out_of_range";
     else if (remainingMs !== undefined && remainingMs > 0)
       result.reason = "reclaim_delay";

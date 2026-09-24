@@ -1,4 +1,5 @@
 import type { Vec3 } from "wow/protocol/packet";
+import { bearing, distance } from "wow/geometry";
 import {
   SplineFlag,
   type CreateSpline,
@@ -39,10 +40,7 @@ export function createTrajectory(
 ): SplineTrajectory {
   const cyclic = (spline.flags & SplineFlag.CYCLIC) !== 0;
   const [first, second] = spline.points;
-  const heading =
-    first && second
-      ? Math.atan2(second.y - first.y, second.x - first.x)
-      : facing;
+  const heading = first && second ? bearing(first, second) : facing;
   return {
     points: spline.points.slice(1, cyclic ? -2 : -1),
     duration: spline.duration,
@@ -51,10 +49,6 @@ export function createTrajectory(
     interpolation: spline.mode === 1 ? "catmullrom" : "linear",
     orientation: heading,
   };
-}
-
-function dist(a: Vec3, b: Vec3): number {
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
 function lerp(a: Vec3, b: Vec3, u: number): Vec3 {
@@ -103,12 +97,12 @@ function segmentAt(traj: SplineTrajectory, i: number, u: number): Vec3 {
 
 function segmentLength(traj: SplineTrajectory, i: number): number {
   if (traj.interpolation === "linear")
-    return dist(pointAt(traj, i), pointAt(traj, i + 1));
+    return distance(pointAt(traj, i), pointAt(traj, i + 1));
   let length = 0;
   let prev = pointAt(traj, i);
   for (let s = 1; s <= 3; s++) {
     const next = segmentAt(traj, i, s / 3);
-    length += dist(prev, next);
+    length += distance(prev, next);
     prev = next;
   }
   return length;

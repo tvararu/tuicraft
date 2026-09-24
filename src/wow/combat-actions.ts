@@ -1,6 +1,7 @@
 import type { CombatRuntime, CombatState, CombatUnit } from "wow/combat";
 import type { ControlRuntime, MovementDirection } from "wow/control";
 import { isUnit, type EntityLookup } from "wow/entity-store";
+import { bearing, distance } from "wow/geometry";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { FactionTemplateCatalog } from "wow/faction-template";
 import type {
@@ -206,7 +207,7 @@ export class CombatActions {
     if (id === "face_target") {
       const from = state.self.pose!;
       const to = state.target!.pose!;
-      this.deps.control.face(Math.atan2(to.y - from.y, to.x - from.x));
+      this.deps.control.face(bearing(from, to));
       return;
     }
     const action = state.learned
@@ -599,14 +600,14 @@ function separation(state: CombatState): number | undefined {
   const a = state.self.pose;
   const b = state.target?.pose;
   if (!a || !b || a.mapId !== b.mapId) return undefined;
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  return distance(a, b);
 }
 
 function facing(state: CombatState): boolean {
   const a = state.self.pose;
   const b = state.target?.pose;
   if (!a || !b || a.orientation === undefined) return false;
-  const angle = Math.atan2(b.y - a.y, b.x - a.x) - a.orientation;
+  const angle = bearing(a, b) - a.orientation;
   return Math.cos(angle) >= 0;
 }
 

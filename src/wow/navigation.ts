@@ -1,3 +1,4 @@
+import { bearing, distance2d } from "wow/geometry";
 import {
   groundError,
   isGroundError,
@@ -44,7 +45,7 @@ export class GroundRoute {
     this.distances = [0];
     let length = 0;
     for (let i = 1; i < this.points.length; i++) {
-      length += horizontal(this.points[i - 1]!, this.points[i]!);
+      length += distance2d(this.points[i - 1]!, this.points[i]!);
       this.distances.push(length);
     }
     this.length = length;
@@ -56,7 +57,7 @@ export class GroundRoute {
     const index = this.segment(travel);
     const start = this.points[index]!;
     const end = this.points[index + 1] ?? start;
-    const span = horizontal(start, end);
+    const span = distance2d(start, end);
     const ratio =
       span === 0
         ? 0
@@ -67,7 +68,7 @@ export class GroundRoute {
     if (travel === 0) Object.assign(point, this.points[0]);
     return {
       ...point,
-      orientation: Math.atan2(end.y - start.y, end.x - start.x),
+      orientation: bearing(start, end),
     };
   }
 
@@ -167,7 +168,7 @@ function planRoute(map: NativeMap, from: NavPoint, to: NavPoint): GroundRoute {
   for (const point of points) validateNativePoint(point);
   rejectSnap("start", from, points[0]!);
   rejectSnap("end", to, points[points.length - 1]!);
-  if (points.length === 1 && horizontal(from, to) > 0)
+  if (points.length === 1 && distance2d(from, to) > 0)
     throw new Error("native path omits destination");
   try {
     return new GroundRoute([from, to], map);
@@ -193,7 +194,7 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
     const from = corners[i - 1]!;
     const to = corners[i]!;
     validateNativePoint(to);
-    const span = horizontal(from, to);
+    const span = distance2d(from, to);
     if (span === 0 && Math.abs(to.z - from.z) > GROUND_ERROR)
       throw groundError("unsupported vertical ground route");
     const count = Math.ceil(span / GROUND_STEP);
@@ -286,7 +287,7 @@ function clearRay(map: NativeMap, from: NavPoint, to: NavPoint): boolean {
 }
 
 function loadCorridor(map: NativeMap, from: NavPoint, to: NavPoint): void {
-  const steps = Math.max(1, Math.ceil(horizontal(from, to) / ADT_STEP));
+  const steps = Math.max(1, Math.ceil(distance2d(from, to) / ADT_STEP));
   for (let i = 0; i <= steps; i++) {
     const ratio = i / steps;
     map.loadAdtAt(
@@ -313,8 +314,4 @@ function rejectSnap(
   ) {
     throw new Error(`${label} snapped off the requested ground position`);
   }
-}
-
-function horizontal(from: NavPoint, to: NavPoint): number {
-  return Math.hypot(to.x - from.x, to.y - from.y);
 }

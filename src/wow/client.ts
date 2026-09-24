@@ -1,5 +1,6 @@
 import type { Socket } from "bun";
 import type { FramingVariant } from "wow/framing";
+import { bearing } from "wow/geometry";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { Arc4 } from "wow/crypto/arc4";
 import { GameOpcode, ChatType, Language } from "wow/protocol/opcodes";
@@ -1358,7 +1359,7 @@ export function worldSession(
           const pose = control.snapshot().pose!;
           if (pose.x === target.x && pose.y === target.y)
             throw new Error("target_coincident");
-          control.face(Math.atan2(target.y - pose.y, target.x - pose.x));
+          control.face(bearing(pose, target));
         },
         async walkToward(target, yards, signal) {
           if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
