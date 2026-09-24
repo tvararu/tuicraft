@@ -189,6 +189,7 @@ async function main() {
         jevEndpointUrl:
           process.env["JEV_ENDPOINT_URL"] ??
           process.env["TYPESAFE_ENDPOINT_URL"],
+        jevFault: process.env["JEV_FAULT"],
       };
       const auth = await authWithRetry(clientCfg);
       const handle = await worldSession(clientCfg, auth);

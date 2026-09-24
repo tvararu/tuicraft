@@ -152,6 +152,7 @@ export type ClientConfig = {
   navigationLibrary?: string;
   jevApiKey?: string;
   jevEndpointUrl?: string;
+  jevFault?: string;
   framing?: FramingVariant;
   characterClass?: string;
 };

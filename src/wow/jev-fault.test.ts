@@ -1,8 +1,9 @@
-import { test, expect, describe } from "bun:test";
+import { test, expect, describe, jest } from "bun:test";
 import {
-  parseJevFault,
-  readJevFaultFromEnv,
   createFaultSelect,
+  faultMarker,
+  parseJevFault,
+  type JevFault,
 } from "wow/jev-fault";
 import { TacticsLoop, type TacticsEvent } from "wow/tactics";
 import type { JevActionRequest, JevActionResult } from "wow/jev";
@@ -26,138 +27,79 @@ const mockResult: JevActionResult = {
 };
 
 describe("parseJevFault", () => {
-  test("returns empty when unset", () => {
-    expect(parseJevFault(undefined, undefined, undefined)).toEqual({});
+  test("returns undefined when unset", () => {
+    expect(parseJevFault(undefined)).toBeUndefined();
+    expect(parseJevFault("")).toBeUndefined();
   });
 
-  test("parses delay with milliseconds", () => {
+  test("parses the three documented forms", () => {
     expect(parseJevFault("delay:2500")).toEqual({
-      fault: { kind: "delay", delayMs: 2500 },
-      marker: "delay:2500ms",
+      kind: "delay",
+      delayMs: 2500,
     });
+    expect(parseJevFault("http:503")).toEqual({ kind: "http", status: 503 });
+    expect(parseJevFault("transport")).toEqual({ kind: "transport" });
   });
 
-  test("parses bare delay with separate delayMs argument", () => {
-    expect(parseJevFault("delay", "1800")).toEqual({
-      fault: { kind: "delay", delayMs: 1800 },
-      marker: "delay:1800ms",
-    });
+  test("rejects anything else", () => {
+    for (const raw of ["delay", "delay:-1", "http:99", "503", "network"])
+      expect(() => parseJevFault(raw)).toThrow("Unknown JEV_FAULT");
   });
+});
 
-  test("parses bare delay with default milliseconds", () => {
-    expect(parseJevFault("delay")).toEqual({
-      fault: { kind: "delay", delayMs: 2500 },
-      marker: "delay:2500ms",
-    });
-  });
-
-  test("parses delayMs alone without fault name", () => {
-    expect(parseJevFault(undefined, "3000")).toEqual({
-      fault: { kind: "delay", delayMs: 3000 },
-      marker: "delay:3000ms",
-    });
-  });
-
-  test("parses http status codes", () => {
-    expect(parseJevFault("http:503")).toEqual({
-      fault: { kind: "http", status: 503 },
-      marker: "http:503",
-    });
-    expect(parseJevFault("status:500")).toEqual({
-      fault: { kind: "http", status: 500 },
-      marker: "http:500",
-    });
-    expect(parseJevFault("503")).toEqual({
-      fault: { kind: "http", status: 503 },
-      marker: "http:503",
-    });
-  });
-
-  test("parses transport network failure", () => {
-    expect(parseJevFault("transport")).toEqual({
-      fault: { kind: "transport", error: "fetch failed" },
-      marker: "transport:network",
-    });
-    expect(parseJevFault("network")).toEqual({
-      fault: { kind: "transport", error: "fetch failed" },
-      marker: "transport:network",
-    });
-    expect(parseJevFault("error")).toEqual({
-      fault: { kind: "transport", error: "fetch failed" },
-      marker: "transport:network",
-    });
-  });
-
-  test("records endpoint marker when endpoint is provided alone", () => {
-    expect(
-      parseJevFault(undefined, undefined, "http://localhost:8080"),
-    ).toEqual({
-      marker: "endpoint:http://localhost:8080",
-    });
-  });
-
-  test("reads environment variables", () => {
-    const res = readJevFaultFromEnv({
-      JEV_FAULT: "delay:2200",
-    });
-    expect(res).toEqual({
-      fault: { kind: "delay", delayMs: 2200 },
-      marker: "delay:2200ms",
-    });
+describe("faultMarker", () => {
+  test("names each fault as the evidence records do", () => {
+    expect(faultMarker({ kind: "delay", delayMs: 2500 })).toBe("delay:2500ms");
+    expect(faultMarker({ kind: "http", status: 503 })).toBe("http:503");
+    expect(faultMarker({ kind: "transport" })).toBe("transport:network");
   });
 });
 
 describe("createFaultSelect", () => {
+  const options = () => ({
+    apiKey: "key",
+    signal: new AbortController().signal,
+  });
+  const base = async () => mockResult;
+
   test("throws HTTP status error", async () => {
-    const select = createFaultSelect({ kind: "http", status: 503 });
-    await expect(
-      select(mockRequest, {
-        apiKey: "key",
-        signal: new AbortController().signal,
-      }),
-    ).rejects.toThrow("TypeSafe HTTP 503");
+    const select = createFaultSelect({ kind: "http", status: 503 }, base);
+    await expect(select(mockRequest, options())).rejects.toThrow(
+      "TypeSafe HTTP 503",
+    );
   });
 
   test("throws transport error", async () => {
-    const select = createFaultSelect({
-      kind: "transport",
-      error: "fetch failed",
-    });
-    await expect(
-      select(mockRequest, {
+    const select = createFaultSelect({ kind: "transport" }, base);
+    await expect(select(mockRequest, options())).rejects.toThrow(
+      "fetch failed",
+    );
+  });
+
+  test("holds the real result until the delay passes, even after abort", async () => {
+    jest.useFakeTimers();
+    try {
+      const select = createFaultSelect({ kind: "delay", delayMs: 1000 }, base);
+      const controller = new AbortController();
+      let settled = false;
+      const pending = select(mockRequest, {
         apiKey: "key",
-        signal: new AbortController().signal,
-      }),
-    ).rejects.toThrow("fetch failed");
-  });
-
-  test("delays response returning choice", async () => {
-    const base = async () => mockResult;
-    const select = createFaultSelect({ kind: "delay", delayMs: 50 }, base);
-    const start = performance.now();
-    const result = await select(mockRequest, {
-      apiKey: "key",
-      signal: new AbortController().signal,
-    });
-    const elapsed = performance.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(40);
-    expect(result.choice).toBe("spell:585:target");
-  });
-
-  test("resolves early on abort signal during delay", async () => {
-    const base = async () => mockResult;
-    const select = createFaultSelect({ kind: "delay", delayMs: 1000 }, base);
-    const controller = new AbortController();
-    const pending = select(mockRequest, {
-      apiKey: "key",
-      signal: controller.signal,
-    });
-    setTimeout(() => controller.abort(), 20);
-    const start = performance.now();
-    const result = await pending;
-    const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500);
-    expect(result.choice).toBe("spell:585:target");
+        signal: controller.signal,
+      }).then((result) => {
+        settled = true;
+        return result;
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      controller.abort();
+      jest.advanceTimersByTime(900);
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      jest.advanceTimersByTime(100);
+      expect((await pending).choice).toBe("spell:585:target");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -171,84 +113,67 @@ describe("TacticsLoop fault integration", () => {
     ],
   };
 
-  test("delayed response past maxResultAgeMs yields stale_age discard", async () => {
-    const events: TacticsEvent[] = [];
-    const select = createFaultSelect(
-      { kind: "delay", delayMs: 50 },
-      async () => mockResult,
-    );
+  function faultLoop(fault: JevFault, maxResultAgeMs?: number) {
     const loop = new TacticsLoop({
       apiKey: "key",
-      maxResultAgeMs: 20,
-      select,
-      fault: "delay:50ms",
+      maxResultAgeMs,
+      select: createFaultSelect(fault, async () => mockResult),
+      fault: faultMarker(fault),
       prepare: async () => {},
       activate: () => {},
       observe: () => frame,
       execute: () => {},
       halt: () => {},
     });
-    loop.onEvent((e) => events.push(e));
+    const events: TacticsEvent[] = [];
+    const waiters: {
+      predicate: (event: TacticsEvent) => boolean;
+      resolve: (event: TacticsEvent) => void;
+    }[] = [];
+    loop.onEvent((event) => {
+      events.push(event);
+      for (const waiter of waiters)
+        if (waiter.predicate(event)) waiter.resolve(event);
+    });
+    const until = (predicate: (event: TacticsEvent) => boolean) =>
+      new Promise<TacticsEvent>((resolve) => {
+        const seen = events.find(predicate);
+        if (seen) resolve(seen);
+        else waiters.push({ predicate, resolve });
+      });
+    return { loop, events, until };
+  }
+
+  test("delayed response past maxResultAgeMs yields stale_age discard", async () => {
+    const { loop, events, until } = faultLoop(
+      { kind: "delay", delayMs: 50 },
+      20,
+    );
     const started = loop.start(context);
-    await new Promise((r) => setTimeout(r, 80));
+    await until((e) => e.type === "discarded" && e.reason === "stale_age");
     loop.stop("done");
     await started;
-
-    const discarded = events.filter((e) => e.type === "discarded");
-    expect(
-      discarded.some((e) => e.type === "discarded" && e.reason === "stale_age"),
-    ).toBe(true);
     expect(events.every((e) => e.fault === "delay:50ms")).toBe(true);
     expect(loop.snapshot().fault).toBe("delay:50ms");
   });
 
   test("delayed response with halt during delay yields aborted discard", async () => {
-    const events: TacticsEvent[] = [];
-    const select = createFaultSelect(
-      { kind: "delay", delayMs: 200 },
-      async () => mockResult,
-    );
-    const loop = new TacticsLoop({
-      apiKey: "key",
-      select,
-      fault: "delay:200ms",
-      prepare: async () => {},
-      activate: () => {},
-      observe: () => frame,
-      execute: () => {},
-      halt: () => {},
-    });
-    loop.onEvent((e) => events.push(e));
+    const { loop, until } = faultLoop({ kind: "delay", delayMs: 50 });
     const started = loop.start(context);
-    await new Promise((r) => setTimeout(r, 30));
+    await until((e) => e.type === "request");
     loop.stop("halt");
     await started;
-    await new Promise((r) => setTimeout(r, 50));
-
-    const discarded = events.filter((e) => e.type === "discarded");
-    expect(
-      discarded.some((e) => e.type === "discarded" && e.reason === "aborted"),
-    ).toBe(true);
+    const discarded = await until((e) => e.type === "discarded");
+    expect(discarded).toMatchObject({
+      reason: "aborted",
+      actionId: "spell:585:target",
+    });
     expect(loop.snapshot().lastStopReason).toBe("halt");
   });
 
   test("HTTP status failure yields transport error", async () => {
-    const events: TacticsEvent[] = [];
-    const select = createFaultSelect({ kind: "http", status: 503 });
-    const loop = new TacticsLoop({
-      apiKey: "key",
-      select,
-      fault: "http:503",
-      prepare: async () => {},
-      activate: () => {},
-      observe: () => frame,
-      execute: () => {},
-      halt: () => {},
-    });
-    loop.onEvent((e) => events.push(e));
+    const { loop, events } = faultLoop({ kind: "http", status: 503 });
     await loop.start(context);
-    await new Promise((r) => setTimeout(r, 20));
-
     const transport = events.filter((e) => e.type === "transport");
     expect(transport).toHaveLength(1);
     expect(transport[0]?.error).toBe("TypeSafe HTTP 503");
@@ -258,25 +183,8 @@ describe("TacticsLoop fault integration", () => {
   });
 
   test("transport network failure yields transport error", async () => {
-    const events: TacticsEvent[] = [];
-    const select = createFaultSelect({
-      kind: "transport",
-      error: "fetch failed",
-    });
-    const loop = new TacticsLoop({
-      apiKey: "key",
-      select,
-      fault: "transport:network",
-      prepare: async () => {},
-      activate: () => {},
-      observe: () => frame,
-      execute: () => {},
-      halt: () => {},
-    });
-    loop.onEvent((e) => events.push(e));
+    const { loop, events } = faultLoop({ kind: "transport" });
     await loop.start(context);
-    await new Promise((r) => setTimeout(r, 20));
-
     const transport = events.filter((e) => e.type === "transport");
     expect(transport).toHaveLength(1);
     expect(transport[0]?.error).toBe("fetch failed");

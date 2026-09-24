@@ -277,6 +277,7 @@ function buildClientConfig(cfg: Awaited<ReturnType<typeof readConfig>>) {
     jevApiKey: process.env["TYPESAFE_API_KEY"],
     jevEndpointUrl:
       process.env["JEV_ENDPOINT_URL"] ?? process.env["TYPESAFE_ENDPOINT_URL"],
+    jevFault: process.env["JEV_FAULT"],
   };
 }
 

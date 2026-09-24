@@ -5,7 +5,7 @@ import { loadSpellCatalog } from "wow/spell-catalog";
 import { TacticsLoop, type TacticsSelect } from "wow/tactics";
 import { CombatActions } from "wow/combat-actions";
 import { selectJevAction } from "wow/jev";
-import { readJevFaultFromEnv, createFaultSelect } from "wow/jev-fault";
+import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
 import {
   loadFactionTemplates,
   type FactionTemplateCatalog,
@@ -123,20 +123,20 @@ export function createRuntimes(
     control.halt();
     combat.halt();
   }
-  const faultInfo = readJevFaultFromEnv();
+  const fault = parseJevFault(config.jevFault);
   const baseSelect: TacticsSelect = (request, options) =>
     selectJevAction(request, {
       ...options,
       endpointUrl: config.jevEndpointUrl,
     });
   let select: TacticsSelect | undefined;
-  if (faultInfo.fault) select = createFaultSelect(faultInfo.fault, baseSelect);
+  if (fault) select = createFaultSelect(fault, baseSelect);
   else if (config.jevEndpointUrl) select = baseSelect;
   const tactics = new TacticsLoop({
     apiKey: config.jevApiKey,
     framing: config.framing,
     characterClass: config.characterClass,
-    fault: faultInfo.marker,
+    fault: fault && faultMarker(fault),
     select,
     async prepare(_context, signal) {
       signal.throwIfAborted();
