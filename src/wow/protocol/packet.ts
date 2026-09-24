@@ -1,3 +1,16 @@
+export type Vec3 = { x: number; y: number; z: number };
+
+export function joinGuid(low: number, high: number): bigint {
+  return (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0);
+}
+
+export function splitGuid(guid: bigint): { low: number; high: number } {
+  return {
+    low: Number(guid & 0xffffffffn),
+    high: Number((guid >> 32n) & 0xffffffffn),
+  };
+}
+
 export class PacketReader {
   private view: DataView;
   private pos = 0;
@@ -70,6 +83,16 @@ export class PacketReader {
     return str;
   }
 
+  sizedString(): string {
+    const bytes = this.bytes(this.uint32LE());
+    const end = bytes.at(-1) === 0 ? bytes.byteLength - 1 : bytes.byteLength;
+    return new TextDecoder().decode(bytes.subarray(0, end));
+  }
+
+  vec3(): Vec3 {
+    return { x: this.floatLE(), y: this.floatLE(), z: this.floatLE() };
+  }
+
   skip(n: number) {
     if (n > this.remaining)
       throw new RangeError(`skip(${n}) exceeds remaining ${this.remaining}`);
@@ -88,6 +111,11 @@ export class PacketReader {
       }
     }
     return { low, high };
+  }
+
+  packedGuidBig(): bigint {
+    const { low, high } = this.packedGuid();
+    return joinGuid(low, high);
   }
 }
 
@@ -175,6 +203,17 @@ export class PacketWriter {
     }
     this.uint8(mask);
     for (const b of bytes) this.uint8(b);
+  }
+
+  packedGuidBig(guid: bigint) {
+    const { low, high } = splitGuid(guid);
+    this.packedGuid(low, high);
+  }
+
+  vec3({ x, y, z }: Vec3) {
+    this.floatLE(x);
+    this.floatLE(y);
+    this.floatLE(z);
   }
 
   finish(): Uint8Array {

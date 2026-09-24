@@ -40,13 +40,13 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
       const updateType = r.uint8();
       switch (updateType) {
         case UpdateType.VALUES: {
-          const guid = readGuidBigint(r);
+          const guid = r.packedGuidBig();
           const fields = parseUpdateMask(r);
           entries.push({ type: "values", guid, fields });
           break;
         }
         case UpdateType.MOVEMENT: {
-          const guid = readGuidBigint(r);
+          const guid = r.packedGuidBig();
           const movement = parseMovementBlock(r);
           entries.push({
             type: "movement",
@@ -68,7 +68,7 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
         }
         case UpdateType.CREATE_OBJECT:
         case UpdateType.CREATE_OBJECT2: {
-          const guid = readGuidBigint(r);
+          const guid = r.packedGuidBig();
           const objectType = r.uint8();
           const movement = parseMovementBlock(r);
           const fields = parseUpdateMask(r);
@@ -96,14 +96,14 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
         case UpdateType.OUT_OF_RANGE: {
           const n = r.uint32LE();
           const guids: bigint[] = [];
-          for (let j = 0; j < n; j++) guids.push(readGuidBigint(r));
+          for (let j = 0; j < n; j++) guids.push(r.packedGuidBig());
           entries.push({ type: "outOfRange", guids });
           break;
         }
         case UpdateType.NEAR_OBJECTS: {
           const n = r.uint32LE();
           const guids: bigint[] = [];
-          for (let j = 0; j < n; j++) guids.push(readGuidBigint(r));
+          for (let j = 0; j < n; j++) guids.push(r.packedGuidBig());
           entries.push({ type: "nearObjects", guids });
           break;
         }
@@ -113,9 +113,4 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
     }
   }
   return entries;
-}
-
-export function readGuidBigint(r: PacketReader): bigint {
-  const { low, high } = r.packedGuid();
-  return (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0);
 }

@@ -1,3 +1,4 @@
+import { joinGuid } from "wow/protocol/packet";
 import { OBJECT_FIELDS, UNIT_FIELDS, GAMEOBJECT_FIELDS } from "./entity-fields";
 
 function uint32ToFloat(v: number): number {
@@ -14,9 +15,9 @@ function readU64(
   const low = raw.get(offset);
   const high = raw.get(offset + 1);
   if (low === undefined && high === undefined) return undefined;
-  return (
-    (BigInt((high ?? fallback?.get(offset + 1) ?? 0) >>> 0) << 32n) |
-    BigInt((low ?? fallback?.get(offset) ?? 0) >>> 0)
+  return joinGuid(
+    low ?? fallback?.get(offset) ?? 0,
+    high ?? fallback?.get(offset + 1) ?? 0,
   );
 }
 

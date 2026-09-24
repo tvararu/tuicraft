@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PacketReader, PacketWriter } from "./packet";
-import { parseUpdateObject, readGuidBigint } from "./update-object";
+import { parseUpdateObject } from "./update-object";
 import { UpdateFlag } from "./entity-fields";
 
 function writePackedGuid(w: PacketWriter, guid: bigint) {
@@ -261,26 +261,6 @@ describe("parseUpdateObject", () => {
     expect(e.position!.x).toBeCloseTo(100);
     expect(e.position!.y).toBeCloseTo(200);
     expect(e.position!.z).toBeCloseTo(300);
-  });
-
-  test("readGuidBigint composes high/low correctly", () => {
-    const w = new PacketWriter();
-    const guid = (0x12n << 32n) | 0x34n;
-    writePackedGuid(w, guid);
-
-    const r = new PacketReader(w.finish());
-    const result = readGuidBigint(r);
-    expect(result).toBe(guid);
-  });
-
-  test("readGuidBigint with large guid", () => {
-    const w = new PacketWriter();
-    const guid = (0xdeadbeefn << 32n) | 0xcafebaben;
-    writePackedGuid(w, guid);
-
-    const r = new PacketReader(w.finish());
-    const result = readGuidBigint(r);
-    expect(result).toBe(guid);
   });
 
   test("zero-count packet returns empty array", () => {

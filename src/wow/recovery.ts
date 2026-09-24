@@ -1,3 +1,4 @@
+import type { Vec3 } from "wow/protocol/packet";
 import type { ControlPose } from "wow/control";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
@@ -18,7 +19,6 @@ import {
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
   parseResurrectRequest,
-  type DeathPosition,
   type DeathReleaseLocation,
   type ResurrectRequest,
 } from "wow/protocol/death";
@@ -40,7 +40,7 @@ export type RecoveryCorpse =
       status: "found";
       mapId: number;
       corpseMapId: number;
-      position: DeathPosition;
+      position: Vec3;
       unknown: number;
       observedAt: number;
     };

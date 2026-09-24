@@ -1,5 +1,10 @@
 import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import {
+  PacketReader,
+  PacketWriter,
+  joinGuid,
+  splitGuid,
+} from "wow/protocol/packet";
 
 test("PacketWriter writes and PacketReader reads uint8", () => {
   const w = new PacketWriter();
@@ -178,5 +183,94 @@ describe("PacketWriter.uint64LE", () => {
     w.uint64LE(0x7fffffffffffffffn);
     const r = new PacketReader(w.finish());
     expect(r.uint64LE()).toBe(0x7fffffffffffffffn);
+  });
+});
+
+describe("PacketWriter.packedGuid", () => {
+  function roundTrip(low: number, high: number) {
+    const w = new PacketWriter();
+    w.packedGuid(low, high);
+    const bytes = w.finish();
+    const r = new PacketReader(bytes);
+    return { ...r.packedGuid(), size: bytes.byteLength };
+  }
+
+  test("zero guid is a single mask byte", () => {
+    expect(roundTrip(0, 0)).toEqual({ low: 0, high: 0, size: 1 });
+  });
+
+  test("low-only guid round-trips", () => {
+    const result = roundTrip(0x0764, 0);
+    expect(result.low).toBe(0x0764);
+    expect(result.high).toBe(0);
+    expect(result.size).toBe(3);
+  });
+
+  test("full guid round-trips", () => {
+    const result = roundTrip(0x0d000764 | 0, 0xf1300040 | 0);
+    expect(result.low >>> 0).toBe(0x0d000764);
+    expect(result.high >>> 0).toBe(0xf1300040);
+  });
+
+  test("skips zero bytes in the middle", () => {
+    const w = new PacketWriter();
+    w.packedGuid(0x00ff00ff, 0);
+    const bytes = w.finish();
+    expect(bytes[0]).toBe(0b0101);
+    expect(bytes.byteLength).toBe(3);
+  });
+});
+
+describe("joinGuid", () => {
+  test("joins signed halves as unsigned", () => {
+    expect(joinGuid(0xcafebabe | 0, 0xdeadbeef | 0)).toBe(0xdeadbeefcafebaben);
+  });
+});
+
+describe("splitGuid", () => {
+  test("inverts joinGuid", () => {
+    expect(splitGuid(0xdeadbeefcafebaben)).toEqual({
+      low: 0xcafebabe,
+      high: 0xdeadbeef,
+    });
+  });
+});
+
+describe("packedGuidBig", () => {
+  test("round-trips a full guid", () => {
+    const w = new PacketWriter();
+    w.packedGuidBig(0xf1300040_0d000764n);
+    const r = new PacketReader(w.finish());
+    expect(r.packedGuidBig()).toBe(0xf1300040_0d000764n);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("vec3", () => {
+  test("round-trips three floats", () => {
+    const w = new PacketWriter();
+    w.vec3({ x: 1.5, y: -2.25, z: 3 });
+    const r = new PacketReader(w.finish());
+    expect(r.vec3()).toEqual({ x: 1.5, y: -2.25, z: 3 });
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("sizedString", () => {
+  function sized(bytes: number[]) {
+    const w = new PacketWriter();
+    w.uint32LE(bytes.length);
+    w.rawBytes(Uint8Array.from(bytes));
+    return new PacketReader(w.finish());
+  }
+
+  test("strips the counted terminator", () => {
+    const r = sized([0x68, 0x69, 0]);
+    expect(r.sizedString()).toBe("hi");
+    expect(r.remaining).toBe(0);
+  });
+
+  test("keeps text without a terminator", () => {
+    expect(sized([0x68, 0x69]).sizedString()).toBe("hi");
   });
 });

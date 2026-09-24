@@ -596,8 +596,7 @@ export class CombatRuntime {
   }
 
   applySpellDelayed(r: PacketReader): void {
-    const guid = r.packedGuid();
-    const caster = (BigInt(guid.high >>> 0) << 32n) | BigInt(guid.low >>> 0);
+    const caster = r.packedGuidBig();
     const delay = r.uint32LE();
     if (caster !== this.deps.selfGuid() || !this.casting) return;
     this.casting.durationMs += delay;
@@ -670,8 +669,7 @@ export class CombatRuntime {
   }
 
   applyAuraAll(r: PacketReader): void {
-    const guid = r.packedGuid();
-    const unit = (BigInt(guid.high >>> 0) << 32n) | BigInt(guid.low >>> 0);
+    const unit = r.packedGuidBig();
     for (const [key, aura] of this.auras)
       if (aura.unit === unit) this.auras.delete(key);
     while (r.remaining > 0) this.storeAura(parseAuraUpdate(r, unit));

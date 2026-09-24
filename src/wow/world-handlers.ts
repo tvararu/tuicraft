@@ -1,5 +1,10 @@
 import { inflateSync } from "node:zlib";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import {
+  PacketReader,
+  PacketWriter,
+  joinGuid,
+  splitGuid,
+} from "wow/protocol/packet";
 import { GameOpcode, ChatType } from "wow/protocol/opcodes";
 import {
   parseChatMessage,
@@ -27,7 +32,7 @@ import {
   parsePartyMemberStats,
 } from "wow/protocol/group";
 import { parseMovementInfo } from "wow/protocol/movement";
-import { readGuidBigint, parseUpdateObject } from "wow/protocol/update-object";
+import { parseUpdateObject } from "wow/protocol/update-object";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -64,14 +69,10 @@ import type { GuildMember } from "wow/guild-store";
 import type { WorldConn } from "wow/client";
 
 function ensureNameQuery(conn: WorldConn, guid: bigint): void {
-  const guidLow = Number(guid & 0xffffffffn);
-  if (conn.pendingNameQueries.has(`player:${guidLow}`)) return;
-  conn.pendingNameQueries.add(`player:${guidLow}`);
-  sendPacket(
-    conn,
-    GameOpcode.CMSG_NAME_QUERY,
-    buildNameQuery(guidLow, Number((guid >> 32n) & 0xffffffffn)),
-  );
+  const { low, high } = splitGuid(guid);
+  if (conn.pendingNameQueries.has(`player:${low}`)) return;
+  conn.pendingNameQueries.add(`player:${low}`);
+  sendPacket(conn, GameOpcode.CMSG_NAME_QUERY, buildNameQuery(low, high));
 }
 
 export function sendPacket(
@@ -83,9 +84,7 @@ export function sendPacket(
 }
 
 export function selfGuid(conn: WorldConn): bigint {
-  return (
-    (BigInt(conn.selfGuidHigh >>> 0) << 32n) | BigInt(conn.selfGuidLow >>> 0)
-  );
+  return joinGuid(conn.selfGuidLow, conn.selfGuidHigh);
 }
 
 export function handleTimeSync(conn: WorldConn, r: PacketReader): void {
@@ -864,7 +863,7 @@ export function handleGuildInvitePacket(
 }
 
 export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
-  const guid = readGuidBigint(r);
+  const guid = r.packedGuidBig();
   const info = parseMovementInfo(r);
   if (guid === selfGuid(conn)) {
     conn.control?.handleNearTeleport(info);

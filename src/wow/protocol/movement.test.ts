@@ -14,41 +14,6 @@ import {
   type MovementInfo,
 } from "wow/protocol/movement";
 
-describe("PacketWriter.packedGuid", () => {
-  function roundTrip(low: number, high: number) {
-    const w = new PacketWriter();
-    w.packedGuid(low, high);
-    const bytes = w.finish();
-    const r = new PacketReader(bytes);
-    return { ...r.packedGuid(), size: bytes.byteLength };
-  }
-
-  test("zero guid is a single mask byte", () => {
-    expect(roundTrip(0, 0)).toEqual({ low: 0, high: 0, size: 1 });
-  });
-
-  test("low-only guid round-trips", () => {
-    const result = roundTrip(0x0764, 0);
-    expect(result.low).toBe(0x0764);
-    expect(result.high).toBe(0);
-    expect(result.size).toBe(3);
-  });
-
-  test("full guid round-trips", () => {
-    const result = roundTrip(0x0d000764 | 0, 0xf1300040 | 0);
-    expect(result.low >>> 0).toBe(0x0d000764);
-    expect(result.high >>> 0).toBe(0xf1300040);
-  });
-
-  test("skips zero bytes in the middle", () => {
-    const w = new PacketWriter();
-    w.packedGuid(0x00ff00ff, 0);
-    const bytes = w.finish();
-    expect(bytes[0]).toBe(0b0101);
-    expect(bytes.byteLength).toBe(3);
-  });
-});
-
 const base: MovementInfo = {
   flags: 0,
   extraFlags: 0,

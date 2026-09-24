@@ -1,3 +1,4 @@
+import { joinGuid } from "wow/protocol/packet";
 import type { Entity } from "wow/entity-store";
 import { readSelfField, type EntityLookup } from "wow/player-state";
 import {
@@ -119,7 +120,7 @@ function guid(
   high: number | undefined,
 ): bigint | undefined {
   if (low === undefined || high === undefined) return undefined;
-  return BigInt(low) | (BigInt(high) << 32n);
+  return joinGuid(low, high);
 }
 
 function itemGuid(entity: Entity, offset: number): bigint | undefined {

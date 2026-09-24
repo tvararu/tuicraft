@@ -1,19 +1,18 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { PacketReader, PacketWriter, type Vec3 } from "wow/protocol/packet";
 
-export type DeathPosition = { x: number; y: number; z: number };
 export type CorpseQuery =
   | { found: false }
   | {
       found: true;
       mapId: number;
-      position: DeathPosition;
+      position: Vec3;
       corpseMapId: number;
       unknown: number;
     };
 export type CorpseReclaimDelay = { delayMs: number };
 export type DeathReleaseLocation =
   | { kind: "clear" }
-  | { kind: "location"; mapId: number; position: DeathPosition };
+  | { kind: "location"; mapId: number; position: Vec3 };
 export type ResurrectRequest = {
   guid: bigint;
   name: string;
@@ -63,7 +62,7 @@ export function parseCorpseQuery(reader: PacketReader): CorpseQuery {
   }
   if (found !== 1) throw new RangeError("Invalid corpse query presence flag");
   const mapId = reader.uint32LE() | 0;
-  const position = readPosition(reader);
+  const position = reader.vec3();
   const corpseMapId = reader.uint32LE() | 0;
   const unknown = reader.uint32LE();
   end(reader);
@@ -82,7 +81,7 @@ export function parseDeathReleaseLocation(
   reader: PacketReader,
 ): DeathReleaseLocation {
   const mapId = reader.uint32LE();
-  const position = readPosition(reader);
+  const position = reader.vec3();
   end(reader);
   if (mapId === 0xffffffff) return { kind: "clear" };
   return { kind: "location", mapId, position };
@@ -108,10 +107,6 @@ function readName(reader: PacketReader): string {
   return new TextDecoder("utf-8", { fatal: true }).decode(
     bytes.subarray(0, -1),
   );
-}
-
-function readPosition(reader: PacketReader): DeathPosition {
-  return { x: reader.floatLE(), y: reader.floatLE(), z: reader.floatLE() };
 }
 
 function checkGuid(guid: bigint): void {

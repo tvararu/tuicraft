@@ -1,4 +1,4 @@
-import { PacketReader } from "wow/protocol/packet";
+import { PacketReader, type Vec3 } from "wow/protocol/packet";
 
 const SPLINE_FALLING = 0x00000200;
 const SPLINE_PARABOLIC = 0x00000800;
@@ -18,8 +18,6 @@ const UNSUPPORTED_SAMPLE =
   SPLINE_ANIMATION |
   SPLINE_TRANSPORT_ENTER |
   SPLINE_TRANSPORT_EXIT;
-
-export type Vec3 = { x: number; y: number; z: number };
 
 export type SplineFacing =
   | { kind: "none" }
@@ -83,15 +81,6 @@ export type SampledSpline =
   | { supported: true; x: number; y: number; z: number }
   | { supported: false; reason: string };
 
-function readPackedGuid(r: PacketReader): bigint {
-  const { low, high } = r.packedGuid();
-  return (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0);
-}
-
-function readVec3(r: PacketReader): Vec3 {
-  return { x: r.floatLE(), y: r.floatLE(), z: r.floatLE() };
-}
-
 function unpackXyz(packed: number): Vec3 {
   const x = ((packed & 0x7ff) << 21) >> 21;
   const y = (((packed >>> 11) & 0x7ff) << 21) >> 21;
@@ -101,7 +90,7 @@ function unpackXyz(packed: number): Vec3 {
 
 function readFacing(r: PacketReader, type: number): SplineFacing {
   if (type === 0) return { kind: "none" };
-  if (type === 2) return { kind: "spot", point: readVec3(r) };
+  if (type === 2) return { kind: "spot", point: r.vec3() };
   if (type === 3) return { kind: "target", guid: r.uint64LE() };
   if (type === 4) return { kind: "angle", angle: r.floatLE() };
   throw new RangeError(`unsupported monster move type ${type}`);
@@ -109,7 +98,7 @@ function readFacing(r: PacketReader, type: number): SplineFacing {
 
 function readLinearPath(r: PacketReader, start: Vec3): Vec3[] {
   const lastIdx = r.uint32LE();
-  const dest = readVec3(r);
+  const dest = r.vec3();
   const points: Vec3[] = [start];
   if (lastIdx > 1) {
     const middle = {
@@ -138,7 +127,7 @@ function readCatmullPath(
 ): Vec3[] {
   const count = r.uint32LE();
   const extra: Vec3[] = [];
-  for (let i = 0; i < count; i++) extra.push(readVec3(r));
+  for (let i = 0; i < count; i++) extra.push(r.vec3());
   if (cyclic && flying && extra.length > 0) extra.shift();
   if (cyclic && !flying && extra.length > 0) {
     const last = extra[extra.length - 1];
@@ -269,9 +258,9 @@ function sampleAlong(traj: SplineTrajectory, t: number): Vec3 {
 }
 
 export function parseMonsterMove(r: PacketReader): MonsterMove {
-  const guid = readPackedGuid(r);
+  const guid = r.packedGuidBig();
   const extra = r.uint8();
-  const start = readVec3(r);
+  const start = r.vec3();
   const splineId = r.uint32LE();
   const type = r.uint8();
   if (type === 1) return { kind: "stop", guid, extra, start, splineId };
@@ -315,7 +304,7 @@ export function parseCreateSpline(r: PacketReader): CreateSpline {
   if (flags & FINAL_ANGLE) facing = { kind: "angle", angle: r.floatLE() };
   else if (flags & FINAL_TARGET)
     facing = { kind: "target", guid: r.uint64LE() };
-  else if (flags & FINAL_POINT) facing = { kind: "spot", point: readVec3(r) };
+  else if (flags & FINAL_POINT) facing = { kind: "spot", point: r.vec3() };
   const elapsed = r.uint32LE() | 0;
   const duration = r.uint32LE() | 0;
   const splineId = r.uint32LE();
@@ -325,9 +314,9 @@ export function parseCreateSpline(r: PacketReader): CreateSpline {
   const effectStartTime = r.uint32LE() | 0;
   const nodeCount = r.uint32LE();
   const points: Vec3[] = [];
-  for (let i = 0; i < nodeCount; i++) points.push(readVec3(r));
+  for (let i = 0; i < nodeCount; i++) points.push(r.vec3());
   const mode = r.uint8();
-  const final = readVec3(r);
+  const final = r.vec3();
   return {
     flags,
     facing,

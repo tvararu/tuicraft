@@ -204,11 +204,6 @@ export type SupersededSpell = {
   learned: number;
 };
 
-function readPackedGuid(r: PacketReader): bigint {
-  const { low, high } = r.packedGuid();
-  return (BigInt(high >>> 0) << 32n) | BigInt(low >>> 0);
-}
-
 function remainingUint32s(r: PacketReader): number[] {
   if (r.remaining % 4 !== 0)
     throw new RangeError(
@@ -220,18 +215,13 @@ function remainingUint32s(r: PacketReader): number[] {
 }
 
 function readLocation(r: PacketReader): SpellLocation {
-  return {
-    transport: readPackedGuid(r),
-    x: r.floatLE(),
-    y: r.floatLE(),
-    z: r.floatLE(),
-  };
+  return { transport: r.packedGuidBig(), ...r.vec3() };
 }
 
 function parseSpellTargets(r: PacketReader): SpellTargets {
   const flags = r.uint32LE();
-  const objectGuid = flags & TARGET_OBJECT ? readPackedGuid(r) : undefined;
-  const itemGuid = flags & TARGET_ITEM_MASK ? readPackedGuid(r) : undefined;
+  const objectGuid = flags & TARGET_OBJECT ? r.packedGuidBig() : undefined;
+  const itemGuid = flags & TARGET_ITEM_MASK ? r.packedGuidBig() : undefined;
   const source = flags & TARGET_SOURCE ? readLocation(r) : undefined;
   const dest = flags & TARGET_DEST ? readLocation(r) : undefined;
   const name = flags & TARGET_STRING ? r.cString() : undefined;
@@ -324,7 +314,7 @@ export function buildCastSpell(
     return w.finish();
   }
   w.uint32LE(TARGET_UNIT);
-  w.packedGuid(Number(targetGuid & 0xffffffffn), Number(targetGuid >> 32n));
+  w.packedGuidBig(targetGuid);
   return w.finish();
 }
 
@@ -357,8 +347,8 @@ export function parseInitialSpells(r: PacketReader): InitialSpells {
 }
 
 export function parseSpellStart(r: PacketReader): SpellStart {
-  const castItem = readPackedGuid(r);
-  const caster = readPackedGuid(r);
+  const castItem = r.packedGuidBig();
+  const caster = r.packedGuidBig();
   const castCount = r.uint8();
   const spellId = r.uint32LE();
   const flags = r.uint32LE();
@@ -377,8 +367,8 @@ export function parseSpellStart(r: PacketReader): SpellStart {
 }
 
 export function parseSpellGo(r: PacketReader): SpellGo {
-  const castItem = readPackedGuid(r);
-  const caster = readPackedGuid(r);
+  const castItem = r.packedGuidBig();
+  const caster = r.packedGuidBig();
   const extraCasts = r.uint8();
   const spellId = r.uint32LE();
   const flags = r.uint32LE();
@@ -411,7 +401,7 @@ export function parseCastFailed(r: PacketReader): CastFailed {
 
 export function parseSpellFailure(r: PacketReader): SpellFailure {
   return {
-    caster: readPackedGuid(r),
+    caster: r.packedGuidBig(),
     extraCasts: r.uint8(),
     spellId: r.uint32LE(),
     result: r.uint8(),
@@ -436,15 +426,15 @@ export function parseAttackStart(r: PacketReader): AttackStart {
 
 export function parseAttackStop(r: PacketReader): AttackStop {
   return {
-    attacker: readPackedGuid(r),
-    victim: readPackedGuid(r),
+    attacker: r.packedGuidBig(),
+    victim: r.packedGuidBig(),
     dead: r.uint32LE(),
   };
 }
 
 export function parseAuraUpdate(
   r: PacketReader,
-  unit = readPackedGuid(r),
+  unit = r.packedGuidBig(),
 ): AuraUpdate {
   const slot = r.uint8();
   const spellId = r.uint32LE();
@@ -452,7 +442,7 @@ export function parseAuraUpdate(
   const flags = r.uint8();
   const level = r.uint8();
   const stacks = r.uint8();
-  const caster = (flags & AURA_CASTER) === 0 ? readPackedGuid(r) : undefined;
+  const caster = (flags & AURA_CASTER) === 0 ? r.packedGuidBig() : undefined;
   const duration = flags & AURA_DURATION ? r.uint32LE() : undefined;
   const timeLeft = flags & AURA_DURATION ? r.uint32LE() : undefined;
   return {

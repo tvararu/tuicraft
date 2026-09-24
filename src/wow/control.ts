@@ -652,7 +652,7 @@ export class ControlRuntime {
   }
 
   handleClientControl(r: PacketReader): void {
-    const guid = packedToBigint(r.packedGuid());
+    const guid = r.packedGuidBig();
     const allow = r.uint8() !== 0;
     const self = this.deps.selfGuid();
     if (guid !== 0n && guid !== self) {
@@ -1148,8 +1148,4 @@ export class ControlRuntime {
     if (reason !== undefined) event.reason = reason;
     this.listener?.(event);
   }
-}
-
-function packedToBigint(guid: { low: number; high: number }): bigint {
-  return (BigInt(guid.high >>> 0) << 32n) | BigInt(guid.low >>> 0);
 }
