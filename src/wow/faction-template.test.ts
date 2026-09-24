@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { packDbc } from "test/dbc";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,30 +14,6 @@ async function emptyDir(): Promise<string> {
   return dir;
 }
 
-function packDbc(rows: number[][]): Uint8Array {
-  const recordSize = FIELDS * 4;
-  const strings = new Uint8Array([0]);
-  const buf = new Uint8Array(20 + rows.length * recordSize + 1);
-  const view = new DataView(buf.buffer);
-  buf[0] = 0x57;
-  buf[1] = 0x44;
-  buf[2] = 0x42;
-  buf[3] = 0x43;
-  view.setUint32(4, rows.length, true);
-  view.setUint32(8, FIELDS, true);
-  view.setUint32(12, recordSize, true);
-  view.setUint32(16, 1, true);
-  let offset = 20;
-  for (const row of rows) {
-    for (let col = 0; col < FIELDS; col++) {
-      view.setUint32(offset + col * 4, row[col] ?? 0, true);
-    }
-    offset += recordSize;
-  }
-  buf.set(strings, offset);
-  return buf;
-}
-
 function templateRow(cells: Record<number, number>): number[] {
   const row = new Array<number>(FIELDS).fill(0);
   for (const [key, value] of Object.entries(cells)) row[Number(key)] = value;
@@ -45,7 +22,7 @@ function templateRow(cells: Record<number, number>): number[] {
 
 async function writeTemplates(rows: number[][]): Promise<string> {
   const dir = await emptyDir();
-  await Bun.write(join(dir, "FactionTemplate.dbc"), packDbc(rows));
+  await Bun.write(join(dir, "FactionTemplate.dbc"), packDbc(FIELDS, rows));
   return dir;
 }
 
@@ -65,7 +42,7 @@ describe("loadFactionTemplates", () => {
 
   test("fails on unsupported layout", async () => {
     const dir = await emptyDir();
-    const buf = packDbc([templateRow({ 0: 1 })]);
+    const buf = packDbc(FIELDS, [templateRow({ 0: 1 })]);
     const view = new DataView(buf.buffer);
     view.setUint32(8, 4, true);
     view.setUint32(12, 16, true);

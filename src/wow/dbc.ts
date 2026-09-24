@@ -30,7 +30,7 @@ export function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
   const { file: name, fields, recordSize } = spec;
   if (bytes.byteLength < 20) throw new Error(`${name}: truncated header`);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const magic = String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!);
+  const magic = String.fromCharCode(...bytes.subarray(0, 4));
   if (magic !== "WDBC") throw new Error(`${name}: expected WDBC, got ${magic}`);
   const recordCount = view.getUint32(4, true);
   const fieldCount = view.getUint32(8, true);
@@ -113,4 +113,23 @@ export function localeString(
 export function joinRow(file: DbcFile, id: number): number | undefined {
   if (id === 0) return undefined;
   return file.byId.get(id);
+}
+
+export class DbcTable<T> {
+  private readonly cache = new Map<number, T>();
+
+  constructor(
+    readonly file: DbcFile,
+    private readonly decode: (file: DbcFile, row: number) => T,
+  ) {}
+
+  get(id: number): T | undefined {
+    const cached = this.cache.get(id);
+    if (cached) return cached;
+    const row = this.file.byId.get(id);
+    if (row === undefined) return undefined;
+    const value = this.decode(this.file, row);
+    this.cache.set(id, value);
+    return value;
+  }
 }

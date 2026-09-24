@@ -1,4 +1,4 @@
-import { openDbc, u32, type DbcFile } from "wow/dbc";
+import { DbcTable, openDbc, u32, type DbcFile } from "wow/dbc";
 
 export type FactionRelation = "friendly" | "hostile" | "neutral" | "unknown";
 
@@ -22,21 +22,14 @@ const LAYOUT = {
 } as const;
 
 export class FactionTemplateCatalog {
-  private readonly table: DbcFile;
-  private readonly cache = new Map<number, FactionTemplate>();
+  private readonly table: DbcTable<FactionTemplate>;
 
-  constructor(table: DbcFile) {
-    this.table = table;
+  constructor(file: DbcFile) {
+    this.table = new DbcTable(file, decodeTemplate);
   }
 
   get(id: number): FactionTemplate | undefined {
-    const cached = this.cache.get(id);
-    if (cached) return cached;
-    const row = this.table.byId.get(id);
-    if (row === undefined) return undefined;
-    const def = decodeTemplate(this.table, row);
-    this.cache.set(id, def);
-    return def;
+    return this.table.get(id);
   }
 
   relation(

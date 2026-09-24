@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { packDbc } from "test/dbc";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,36 +34,6 @@ function stringTable(strings: string[]): { block: Uint8Array; at: number[] } {
     body.push(0);
   }
   return { block: Uint8Array.from(body), at };
-}
-
-function packDbc(
-  fieldCount: number,
-  rows: number[][],
-  strings: Uint8Array,
-): Uint8Array {
-  const recordSize = fieldCount * 4;
-  const header = 20;
-  const buf = new Uint8Array(
-    header + rows.length * recordSize + strings.byteLength,
-  );
-  const view = new DataView(buf.buffer);
-  buf[0] = 0x57;
-  buf[1] = 0x44;
-  buf[2] = 0x42;
-  buf[3] = 0x43;
-  view.setUint32(4, rows.length, true);
-  view.setUint32(8, fieldCount, true);
-  view.setUint32(12, recordSize, true);
-  view.setUint32(16, strings.byteLength, true);
-  let offset = header;
-  for (const row of rows) {
-    for (let col = 0; col < fieldCount; col++) {
-      view.setUint32(offset + col * 4, row[col] ?? 0, true);
-    }
-    offset += recordSize;
-  }
-  buf.set(strings, offset);
-  return buf;
 }
 
 function spellRow(cells: Record<number, number>): number[] {
@@ -262,22 +233,16 @@ describe("SpellCatalog.get", () => {
     if (!def) return;
     expect(def.name).toBe("Fireball");
     expect(def.rank).toBe("Rank 1");
-    expect(def.spellLevel).toBe(1);
     expect(def.power.type).toBe(0);
     expect(def.power.costRaw).toBe(0);
     expect(def.power.costPerLevel).toBe(2);
     expect(def.power.costPercentageOfBaseMana).toBe(8);
     expect(def.castTime?.castTimeMs).toBe(1500);
-    expect(def.castTime?.castTimePerLevel).toBe(-50);
-    expect(def.castTime?.minCastTimeMs).toBe(500);
     expect(def.range?.maxHostile).toBeCloseTo(35.5);
-    expect(def.range?.maxFriendly).toBeCloseTo(40);
     expect(def.duration?.durationMs).toBe(4000);
-    expect(def.duration?.duration2).toBe(-1);
     expect(def.cooldown.recoveryTimeMs).toBe(8000);
     expect(def.cooldown.categoryRecoveryTimeMs).toBe(1500);
     expect(def.cooldown.startRecoveryTimeMs).toBe(1500);
-    expect(def.schoolMask).toBe(4);
     expect(def.attributes.raw).toBe(0x10000);
     expect(def.targets.targets).toBe(0x20);
     expect(def.targets.creatureType).toBe(8);
@@ -323,7 +288,6 @@ describe("SpellCatalog.get", () => {
     const catalog = await loadSpellCatalog(dir);
     expect(catalog.get(78)?.power.costRaw).toBe(150);
     expect(catalog.get(78)?.power.type).toBe(1);
-    expect(catalog.get(9999)?.spellLevel).toBe(80);
   });
 
   test("treats duration index 0 as no duration row", async () => {

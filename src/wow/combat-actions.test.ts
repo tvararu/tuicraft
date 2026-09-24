@@ -21,8 +21,6 @@ function spell(): SpellDefinition {
     id: 17,
     name: "Fixture spell",
     rank: "Rank 1",
-    spellLevel: 1,
-    baseLevel: 1,
     maxLevel: 0,
     power: {
       type: 0,
@@ -35,15 +33,11 @@ function spell(): SpellDefinition {
     castTime: {
       id: 1,
       castTimeMs: 1000,
-      castTimePerLevel: 0,
-      minCastTimeMs: 1000,
     },
     range: {
       id: 2,
       minHostile: 0,
       maxHostile: 30,
-      minFriendly: 0,
-      maxFriendly: 30,
       flags: 0,
     },
     duration: undefined,
@@ -51,38 +45,27 @@ function spell(): SpellDefinition {
       recoveryTimeMs: 0,
       category: 0,
       categoryRecoveryTimeMs: 0,
-      startRecoveryCategory: 133,
       startRecoveryTimeMs: 1500,
     },
-    schoolMask: 2,
     attributes: {
       raw: 0,
       ex: 0,
       ex2: 0,
-      ex3: 0,
-      ex4: 0,
-      ex5: 0,
-      ex6: 0,
-      ex7: 0,
     },
     targets: {
       targets: 2,
       creatureType: 0,
       stances: 0,
-      stancesNot: 0,
-      facingCasterFlags: 1,
       requiresSpellFocus: 0,
     },
     interruptFlags: 0,
-    equippedItem: { itemClass: -1, subClassMask: 0, inventoryTypeMask: 0 },
+    equippedItem: { itemClass: -1 },
     reagents: [],
     effects: [
       {
         effect: 2,
-        dieSides: 1,
         realPointsPerLevel: 1,
         basePoints: 10,
-        mechanic: 0,
         implicitTargetA: 6,
         implicitTargetB: 0,
         applyAura: 0,
@@ -109,8 +92,6 @@ function standingRequiredSpell(): SpellDefinition {
     castTime: {
       id: 3,
       castTimeMs: 1500,
-      castTimePerLevel: 0,
-      minCastTimeMs: 1500,
     },
     interruptFlags: 15,
   };
@@ -119,7 +100,7 @@ function standingRequiredSpell(): SpellDefinition {
 function movementCompatibleSpell(): SpellDefinition {
   return {
     ...spell(),
-    castTime: { id: 4, castTimeMs: 0, castTimePerLevel: 0, minCastTimeMs: 0 },
+    castTime: { id: 4, castTimeMs: 0 },
     interruptFlags: 8,
   };
 }
@@ -272,7 +253,6 @@ test("normal-form spell restrictions use the observed high form byte", () => {
   const { actions, combat, fields } = setup();
   const data = spell();
   data.attributes.raw = 0x10000;
-  data.targets.stancesNot = 0x08000000;
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   try {
     expect(
@@ -295,7 +275,6 @@ test("a nonzero stance mask permits normal form only with its allowance flag", (
   const data = spell();
   data.attributes.raw = 0x10000;
   data.targets.stances = 0x80000000;
-  data.targets.stancesNot = 0x08000000;
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   try {
     expect(() => actions.execute("spell:17:target", context)).toThrow(

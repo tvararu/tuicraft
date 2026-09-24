@@ -1,4 +1,5 @@
 import {
+  DbcTable,
   f32,
   i32,
   joinRow,
@@ -17,28 +18,16 @@ export type SpellPower = {
   costPercentageOfBaseMana: number;
 };
 
-export type SpellCastTime = {
-  id: number;
-  castTimeMs: number;
-  castTimePerLevel: number;
-  minCastTimeMs: number;
-};
+export type SpellCastTime = { id: number; castTimeMs: number };
 
 export type SpellRange = {
   id: number;
   minHostile: number;
-  minFriendly: number;
   maxHostile: number;
-  maxFriendly: number;
   flags: number;
 };
 
-export type SpellDuration = {
-  id: number;
-  durationMs: number;
-  duration1: number;
-  duration2: number;
-};
+export type SpellDuration = { id: number; durationMs: number };
 
 export type SpellRadius = {
   id: number;
@@ -49,10 +38,8 @@ export type SpellRadius = {
 
 export type SpellEffect = {
   effect: number;
-  dieSides: number;
   realPointsPerLevel: number;
   basePoints: number;
-  mechanic: number;
   implicitTargetA: number;
   implicitTargetB: number;
   applyAura: number;
@@ -66,33 +53,21 @@ export type SpellAttributes = {
   raw: number;
   ex: number;
   ex2: number;
-  ex3: number;
-  ex4: number;
-  ex5: number;
-  ex6: number;
-  ex7: number;
 };
 
-export type SpellTargets = {
+export type SpellTargeting = {
   targets: number;
   creatureType: number;
   stances: number;
-  stancesNot: number;
-  facingCasterFlags: number;
   requiresSpellFocus: number;
 };
 
-export type SpellEquippedItem = {
-  itemClass: number;
-  subClassMask: number;
-  inventoryTypeMask: number;
-};
+export type SpellEquippedItem = { itemClass: number };
 
 export type SpellCooldown = {
   recoveryTimeMs: number;
   category: number;
   categoryRecoveryTimeMs: number;
-  startRecoveryCategory: number;
   startRecoveryTimeMs: number;
 };
 
@@ -111,17 +86,14 @@ export type SpellDefinition = {
   id: number;
   name: string;
   rank: string;
-  spellLevel: number;
-  baseLevel: number;
   maxLevel: number;
   power: SpellPower;
   castTime: SpellCastTime | undefined;
   range: SpellRange | undefined;
   duration: SpellDuration | undefined;
   cooldown: SpellCooldown;
-  schoolMask: number;
   attributes: SpellAttributes;
-  targets: SpellTargets;
+  targets: SpellTargeting;
   interruptFlags: number;
   equippedItem: SpellEquippedItem;
   reagents: SpellReagent[];
@@ -140,46 +112,41 @@ type CatalogFiles = {
 const SPELL_FIELDS = 234;
 const SPELL_RECORD_SIZE = 936;
 
-const LAYOUTS = [
-  { file: "Spell.dbc", fields: SPELL_FIELDS, recordSize: SPELL_RECORD_SIZE },
-  { file: "SpellRange.dbc", fields: 40, recordSize: 160 },
-  { file: "SpellCastTimes.dbc", fields: 4, recordSize: 16 },
-  { file: "SpellDuration.dbc", fields: 4, recordSize: 16 },
-  { file: "SpellRadius.dbc", fields: 4, recordSize: 16 },
-] as const;
+const LAYOUT = {
+  spell: {
+    file: "Spell.dbc",
+    fields: SPELL_FIELDS,
+    recordSize: SPELL_RECORD_SIZE,
+  },
+  range: { file: "SpellRange.dbc", fields: 40, recordSize: 160 },
+  cast: { file: "SpellCastTimes.dbc", fields: 4, recordSize: 16 },
+  duration: { file: "SpellDuration.dbc", fields: 4, recordSize: 16 },
+  radius: { file: "SpellRadius.dbc", fields: 4, recordSize: 16 },
+} as const;
 
 export class SpellCatalog {
-  private readonly files: CatalogFiles;
-  private readonly cache = new Map<number, SpellDefinition>();
+  private readonly table: DbcTable<SpellDefinition>;
 
   constructor(files: CatalogFiles) {
-    this.files = files;
+    this.table = new DbcTable(files.spell, (_, row) => decodeSpell(files, row));
   }
 
   get(spellId: number): SpellDefinition | undefined {
-    const cached = this.cache.get(spellId);
-    if (cached) return cached;
-    const row = this.files.spell.byId.get(spellId);
-    if (row === undefined) return undefined;
-    const def = decodeSpell(this.files, row);
-    this.cache.set(spellId, def);
-    return def;
+    return this.table.get(spellId);
   }
 }
 
 export async function loadSpellCatalog(
   directory: string,
 ): Promise<SpellCatalog> {
-  const loaded = await Promise.all(
-    LAYOUTS.map((spec) => openDbc(directory, spec)),
-  );
-  return new SpellCatalog({
-    spell: loaded[0]!,
-    range: loaded[1]!,
-    cast: loaded[2]!,
-    duration: loaded[3]!,
-    radius: loaded[4]!,
-  });
+  const [spell, range, cast, duration, radius] = await Promise.all([
+    openDbc(directory, LAYOUT.spell),
+    openDbc(directory, LAYOUT.range),
+    openDbc(directory, LAYOUT.cast),
+    openDbc(directory, LAYOUT.duration),
+    openDbc(directory, LAYOUT.radius),
+  ]);
+  return new SpellCatalog({ spell, range, cast, duration, radius });
 }
 
 function decodeCast(file: DbcFile, id: number): SpellCastTime | undefined {
@@ -188,8 +155,6 @@ function decodeCast(file: DbcFile, id: number): SpellCastTime | undefined {
   return {
     id,
     castTimeMs: i32(file, row, 1),
-    castTimePerLevel: i32(file, row, 2),
-    minCastTimeMs: i32(file, row, 3),
   };
 }
 
@@ -199,9 +164,7 @@ function decodeRange(file: DbcFile, id: number): SpellRange | undefined {
   return {
     id,
     minHostile: f32(file, row, 1),
-    minFriendly: f32(file, row, 2),
     maxHostile: f32(file, row, 3),
-    maxFriendly: f32(file, row, 4),
     flags: u32(file, row, 5),
   };
 }
@@ -212,8 +175,6 @@ function decodeDuration(file: DbcFile, id: number): SpellDuration | undefined {
   return {
     id,
     durationMs: i32(file, row, 1),
-    duration1: i32(file, row, 2),
-    duration2: i32(file, row, 3),
   };
 }
 
@@ -246,10 +207,8 @@ function decodeEffects(files: CatalogFiles, row: number): SpellEffect[] {
     if (effect === 0) continue;
     effects.push({
       effect,
-      dieSides: i32(files.spell, row, 74 + i),
       realPointsPerLevel: f32(files.spell, row, 77 + i),
       basePoints: i32(files.spell, row, 80 + i),
-      mechanic: u32(files.spell, row, 83 + i),
       implicitTargetA: u32(files.spell, row, 86 + i),
       implicitTargetB: u32(files.spell, row, 89 + i),
       applyAura: u32(files.spell, row, 95 + i),
@@ -276,7 +235,6 @@ function decodeCooldown(spell: DbcFile, row: number): SpellCooldown {
     recoveryTimeMs: u32(spell, row, 29),
     category: u32(spell, row, 1),
     categoryRecoveryTimeMs: u32(spell, row, 30),
-    startRecoveryCategory: u32(spell, row, 205),
     startRecoveryTimeMs: u32(spell, row, 206),
   };
 }
@@ -286,21 +244,14 @@ function decodeAttributes(spell: DbcFile, row: number): SpellAttributes {
     raw: u32(spell, row, 4),
     ex: u32(spell, row, 5),
     ex2: u32(spell, row, 6),
-    ex3: u32(spell, row, 7),
-    ex4: u32(spell, row, 8),
-    ex5: u32(spell, row, 9),
-    ex6: u32(spell, row, 10),
-    ex7: u32(spell, row, 11),
   };
 }
 
-function decodeTargets(spell: DbcFile, row: number): SpellTargets {
+function decodeTargets(spell: DbcFile, row: number): SpellTargeting {
   return {
     targets: u32(spell, row, 16),
     creatureType: u32(spell, row, 17),
     stances: u32(spell, row, 12),
-    stancesNot: u32(spell, row, 14),
-    facingCasterFlags: u32(spell, row, 19),
     requiresSpellFocus: u32(spell, row, 18),
   };
 }
@@ -308,8 +259,6 @@ function decodeTargets(spell: DbcFile, row: number): SpellTargets {
 function decodeEquipped(spell: DbcFile, row: number): SpellEquippedItem {
   return {
     itemClass: i32(spell, row, 68),
-    subClassMask: i32(spell, row, 69),
-    inventoryTypeMask: i32(spell, row, 70),
   };
 }
 
@@ -335,15 +284,12 @@ function decodeSpell(files: CatalogFiles, row: number): SpellDefinition {
     id: u32(spell, row, 0),
     name: localeString(spell, row, 136),
     rank: localeString(spell, row, 153),
-    spellLevel: u32(spell, row, 39),
-    baseLevel: u32(spell, row, 38),
     maxLevel: u32(spell, row, 37),
     power: decodePower(spell, row),
     castTime: decodeCast(files.cast, u32(spell, row, 28)),
     range: decodeRange(files.range, u32(spell, row, 46)),
     duration: decodeDuration(files.duration, u32(spell, row, 40)),
     cooldown: decodeCooldown(spell, row),
-    schoolMask: u32(spell, row, 225),
     attributes: decodeAttributes(spell, row),
     targets: decodeTargets(spell, row),
     interruptFlags: u32(spell, row, 31),
