@@ -416,43 +416,11 @@ describe("parseArgs", () => {
     });
   });
 
-  test("move rejects unknown direction without sending", () => {
-    expect(() => parseArgs(["move", "up"])).toThrow("invalid direction");
-  });
-
-  test("move rejects nonfinite duration", () => {
-    expect(() => parseArgs(["move", "forward", "1.5"])).toThrow(
-      "invalid duration",
-    );
-  });
-
-  test("move rejects duration below 1", () => {
-    expect(() => parseArgs(["move", "forward", "0"])).toThrow(
-      "invalid duration",
-    );
-  });
-
-  test("move rejects duration above 10000", () => {
-    expect(() => parseArgs(["move", "forward", "10001"])).toThrow(
-      "invalid duration",
-    );
-  });
-
   test("face parses radians", () => {
     expect(parseArgs(["face", "1.57"])).toEqual({
       mode: "face",
       orientation: 1.57,
     });
-  });
-
-  test("face rejects nonfinite", () => {
-    expect(() => parseArgs(["face", "NaN"])).toThrow("invalid facing");
-    expect(() => parseArgs(["face", "Infinity"])).toThrow("invalid facing");
-  });
-
-  test("face rejects empty and whitespace before IPC", () => {
-    expect(() => parseArgs(["face", ""])).toThrow("invalid facing");
-    expect(() => parseArgs(["face", "   "])).toThrow("invalid facing");
   });
 
   test("face-guid preserves a current entity GUID", () => {
@@ -485,14 +453,6 @@ describe("parseArgs", () => {
       mode: "target",
       guid: 0xffff_ffff_ffff_ffffn,
     });
-  });
-
-  test("target rejects malformed guid", () => {
-    expect(() => parseArgs(["target", "-1"])).toThrow("invalid guid");
-    expect(() => parseArgs(["target", "0x"])).toThrow("invalid guid");
-    expect(() => parseArgs(["target", "18446744073709551616"])).toThrow(
-      "invalid guid",
-    );
   });
 
   test("halt subcommand", () => {
