@@ -16,6 +16,8 @@ export const SplineFlag = {
 
 const MASK_CATMULLROM = SplineFlag.FLYING | SplineFlag.CATMULLROM;
 
+const ORIGIN: Vec3 = { x: 0, y: 0, z: 0 };
+
 export type SplineFacing =
   | { kind: "none" }
   | { kind: "spot"; point: Vec3 }
@@ -103,31 +105,23 @@ function readLinearPath(r: PacketReader, start: Vec3): Vec3[] {
   return points;
 }
 
-function readCatmullPath(
-  r: PacketReader,
-  start: Vec3,
-  cyclic: boolean,
-  flying: boolean,
-): Vec3[] {
-  const count = r.uint32LE();
-  const extra: Vec3[] = [];
-  for (let i = 0; i < count; i++) extra.push(r.vec3());
-  if (cyclic && flying && extra.length > 0) extra.shift();
-  if (cyclic && !flying && extra.length > 0) {
-    const last = extra[extra.length - 1];
-    if (last && last.x === 0 && last.y === 0 && last.z === 0) extra.pop();
-  }
+function same(a: Vec3 | undefined, b: Vec3): boolean {
+  return a !== undefined && a.x === b.x && a.y === b.y && a.z === b.z;
+}
+
+function readPoints(r: PacketReader, count: number): Vec3[] {
+  const points: Vec3[] = [];
+  for (let i = 0; i < count; i++) points.push(r.vec3());
+  return points;
+}
+
+function readCatmullPath(r: PacketReader, start: Vec3, flags: number): Vec3[] {
+  const extra = readPoints(r, r.uint32LE());
+  if (!(flags & SplineFlag.CYCLIC)) return [start, ...extra];
+  if (flags & SplineFlag.FLYING) extra.shift();
+  else if (same(extra.at(-1), ORIGIN)) extra.pop();
   const points = [start, ...extra];
-  const close = points[points.length - 1];
-  if (
-    cyclic &&
-    close &&
-    close.x === start.x &&
-    close.y === start.y &&
-    close.z === start.z
-  ) {
-    points.pop();
-  }
+  if (same(points.at(-1), start)) points.pop();
   return points;
 }
 
@@ -135,36 +129,32 @@ function interpolationOf(flags: number): SplineInterpolation {
   return flags & MASK_CATMULLROM ? "catmullrom" : "linear";
 }
 
-export function parseMonsterMove(r: PacketReader): MonsterMove {
-  const guid = r.packedGuidBig();
-  const extra = r.uint8();
-  const start = r.vec3();
-  const splineId = r.uint32LE();
-  const type = r.uint8();
-  if (type === 1) return { kind: "stop", guid, extra, start, splineId };
-  const facing = readFacing(r, type);
+type MoveHead = Omit<MonsterMoveStop, "kind">;
+
+function readMoveTail(
+  r: PacketReader,
+  head: MoveHead,
+  facing: SplineFacing,
+): MonsterMovePath {
   const flags = r.uint32LE();
-  const animation =
-    flags & SplineFlag.ANIMATION
-      ? { id: r.uint8(), startTime: r.uint32LE() | 0 }
-      : undefined;
+  const animated = flags & SplineFlag.ANIMATION;
+  const animation = animated
+    ? { id: r.uint8(), startTime: r.uint32LE() | 0 }
+    : undefined;
   const duration = r.uint32LE() | 0;
-  const parabolic =
-    flags & SplineFlag.PARABOLIC
-      ? { acceleration: r.floatLE(), startTime: r.uint32LE() | 0 }
-      : undefined;
+  const arcing = flags & SplineFlag.PARABOLIC;
+  const parabolic = arcing
+    ? { acceleration: r.floatLE(), startTime: r.uint32LE() | 0 }
+    : undefined;
   const cyclic = (flags & SplineFlag.CYCLIC) !== 0;
   const interpolation = interpolationOf(flags);
-  const points =
-    interpolation === "linear"
-      ? readLinearPath(r, start)
-      : readCatmullPath(r, start, cyclic, (flags & SplineFlag.FLYING) !== 0);
+  const linear = interpolation === "linear";
+  const points = linear
+    ? readLinearPath(r, head.start)
+    : readCatmullPath(r, head.start, flags);
   return {
     kind: "move",
-    guid,
-    extra,
-    start,
-    splineId,
+    ...head,
     facing,
     flags,
     duration,
@@ -176,15 +166,29 @@ export function parseMonsterMove(r: PacketReader): MonsterMove {
   };
 }
 
+export function parseMonsterMove(r: PacketReader): MonsterMove {
+  const guid = r.packedGuidBig();
+  const extra = r.uint8();
+  const start = r.vec3();
+  const splineId = r.uint32LE();
+  const head = { guid, extra, start, splineId };
+  const type = r.uint8();
+  if (type === 1) return { kind: "stop", ...head };
+  return readMoveTail(r, head, readFacing(r, type));
+}
+
+function readFinalFacing(r: PacketReader, flags: number): SplineFacing {
+  if (flags & SplineFlag.FINAL_ANGLE)
+    return { kind: "angle", angle: r.floatLE() };
+  if (flags & SplineFlag.FINAL_TARGET)
+    return { kind: "target", guid: r.uint64LE() };
+  if (flags & SplineFlag.FINAL_POINT) return { kind: "spot", point: r.vec3() };
+  return { kind: "none" };
+}
+
 export function parseCreateSpline(r: PacketReader): CreateSpline {
   const flags = r.uint32LE();
-  let facing: SplineFacing = { kind: "none" };
-  if (flags & SplineFlag.FINAL_ANGLE)
-    facing = { kind: "angle", angle: r.floatLE() };
-  else if (flags & SplineFlag.FINAL_TARGET)
-    facing = { kind: "target", guid: r.uint64LE() };
-  else if (flags & SplineFlag.FINAL_POINT)
-    facing = { kind: "spot", point: r.vec3() };
+  const facing = readFinalFacing(r, flags);
   const elapsed = r.uint32LE() | 0;
   const duration = r.uint32LE() | 0;
   const splineId = r.uint32LE();
@@ -192,9 +196,7 @@ export function parseCreateSpline(r: PacketReader): CreateSpline {
   const durationModNext = r.floatLE();
   const verticalAcceleration = r.floatLE();
   const effectStartTime = r.uint32LE() | 0;
-  const nodeCount = r.uint32LE();
-  const points: Vec3[] = [];
-  for (let i = 0; i < nodeCount; i++) points.push(r.vec3());
+  const points = readPoints(r, r.uint32LE());
   const mode = r.uint8();
   const final = r.vec3();
   return {

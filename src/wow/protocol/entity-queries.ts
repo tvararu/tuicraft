@@ -1,4 +1,4 @@
-import { PacketWriter, PacketReader } from "./packet";
+import { PacketWriter, PacketReader } from "wow/protocol/packet";
 
 export function buildCreatureQuery(entry: number, guid: bigint): Uint8Array {
   const w = new PacketWriter();

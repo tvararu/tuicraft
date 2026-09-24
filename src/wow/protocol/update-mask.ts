@@ -1,4 +1,4 @@
-import type { PacketReader } from "./packet";
+import type { PacketReader } from "wow/protocol/packet";
 
 export function parseUpdateMask(r: PacketReader): Map<number, number> {
   const blockCount = r.uint8();

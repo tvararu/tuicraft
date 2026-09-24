@@ -26,41 +26,48 @@ export async function openDbc(
   return parseDbc(spec, new Uint8Array(await handle.arrayBuffer()));
 }
 
-export function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
+type DbcHeader = {
+  recordCount: number;
+  recordSize: number;
+  stringBlockSize: number;
+};
+
+function readHeader(spec: DbcSpec, bytes: Uint8Array): DbcHeader {
   const { file: name, fields, recordSize } = spec;
   if (bytes.byteLength < 20) throw new Error(`${name}: truncated header`);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const magic = String.fromCharCode(...bytes.subarray(0, 4));
   if (magic !== "WDBC") throw new Error(`${name}: expected WDBC, got ${magic}`);
-  const recordCount = view.getUint32(4, true);
   const fieldCount = view.getUint32(8, true);
   const recSize = view.getUint32(12, true);
-  const stringBlockSize = view.getUint32(16, true);
-  if (fieldCount !== fields || recSize !== recordSize) {
+  if (fieldCount !== fields || recSize !== recordSize)
     throw new Error(
       `${name}: unsupported layout fields=${fieldCount} recordSize=${recSize} (need ${fields}x${recordSize} for build 12340)`,
     );
-  }
-  const expected = 20 + recordCount * recSize + stringBlockSize;
-  if (bytes.byteLength !== expected) {
+  return {
+    recordCount: view.getUint32(4, true),
+    recordSize,
+    stringBlockSize: view.getUint32(16, true),
+  };
+}
+
+export function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
+  const { file: name, fields } = spec;
+  const { recordCount, recordSize, stringBlockSize } = readHeader(spec, bytes);
+  const recordBytes = recordCount * recordSize;
+  const expected = 20 + recordBytes + stringBlockSize;
+  if (bytes.byteLength !== expected)
     throw new Error(
       `${name}: truncated (expected ${expected} bytes, got ${bytes.byteLength})`,
     );
-  }
   const records = new DataView(
     bytes.buffer,
     bytes.byteOffset + 20,
-    recordCount * recSize,
+    recordBytes,
   );
-  const strings = bytes.subarray(20 + recordCount * recSize);
-  return {
-    name,
-    fields,
-    records,
-    strings,
-    recordCount,
-    byId: indexById(records, recordCount, fields),
-  };
+  const strings = bytes.subarray(20 + recordBytes);
+  const byId = indexById(records, recordCount, fields);
+  return { name, fields, records, strings, recordCount, byId };
 }
 
 function indexById(
