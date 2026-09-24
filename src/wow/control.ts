@@ -1,7 +1,7 @@
 import type { GroundRoute, NavPoint } from "wow/navigation";
 import type { Position } from "wow/entity-store";
 import { GameOpcode } from "wow/protocol/opcodes";
-import { MovementFlag } from "wow/protocol/entity-fields";
+import { MovementFlag, UnitFlag } from "wow/protocol/entity-fields";
 import type { PacketReader } from "wow/protocol/packet";
 import {
   buildCanFlyAck,
@@ -151,7 +151,11 @@ const DIR_HEADING: Record<MovementDirection, number> = {
   right: -Math.PI / 2,
 };
 
-const UNIT_BLOCK_FLAGS = 0x00000004 | 0x00040000 | 0x00400000 | 0x00800000;
+const UNIT_BLOCK_FLAGS =
+  UnitFlag.DISABLE_MOVE |
+  UnitFlag.STUNNED |
+  UnitFlag.CONFUSED |
+  UnitFlag.FLEEING;
 
 function copyPose(pose: ControlPose | undefined): ControlPose | undefined {
   return pose ? { ...pose } : undefined;

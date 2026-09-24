@@ -1,6 +1,6 @@
 import type { Vec3 } from "wow/protocol/packet";
 import type { ControlPose } from "wow/control";
-import { ObjectType } from "wow/protocol/entity-fields";
+import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import {
   readLife,
@@ -22,8 +22,6 @@ import {
   type DeathReleaseLocation,
   type ResurrectRequest,
 } from "wow/protocol/death";
-
-export const SPIRIT_HEALER_NPC_FLAG = 0x4000;
 
 export type RecoveryDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
@@ -285,7 +283,7 @@ export class RecoveryRuntime {
     const healer = this.deps.getEntity(guid);
     if (!healer || healer.objectType !== ObjectType.UNIT)
       throw new Error("Observed creature is not a spirit healer");
-    if (((healer as UnitEntity).npcFlags & SPIRIT_HEALER_NPC_FLAG) === 0)
+    if (((healer as UnitEntity).npcFlags & NpcFlag.SPIRIT_HEALER) === 0)
       throw new Error("Observed creature is not a spirit healer");
     const requestedAt = this.deps.now();
     this.deps.send(

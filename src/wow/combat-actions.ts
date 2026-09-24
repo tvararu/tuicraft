@@ -8,7 +8,7 @@ import type {
   TacticsFrame,
   TacticsCandidate,
 } from "wow/tactics";
-import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
+import { ObjectType, UNIT_FIELDS, UnitFlag } from "wow/protocol/entity-fields";
 
 type ActionDeps = {
   combat: CombatRuntime;
@@ -72,8 +72,20 @@ const STOP_MOVING = {
 };
 const MOVEMENT_INTERRUPT_FLAG = 0x1;
 const AUTO_REPEAT_ATTRIBUTE_EX2 = 0x20;
-const TARGET_BLOCK = 0x2 | 0x8 | 0x80 | 0x100 | 0x10000 | 0x100000 | 0x2000000;
-const SELF_BLOCK = 0x1 | 0x40000 | 0x100000 | 0x400000 | 0x800000;
+const TARGET_BLOCK =
+  UnitFlag.NON_ATTACKABLE |
+  UnitFlag.PLAYER_CONTROLLED |
+  UnitFlag.NOT_ATTACKABLE_1 |
+  UnitFlag.IMMUNE_TO_PC |
+  UnitFlag.NON_ATTACKABLE_2 |
+  UnitFlag.TAXI_FLIGHT |
+  UnitFlag.NOT_SELECTABLE;
+const SELF_BLOCK =
+  UnitFlag.SERVER_CONTROLLED |
+  UnitFlag.STUNNED |
+  UnitFlag.TAXI_FLIGHT |
+  UnitFlag.CONFUSED |
+  UnitFlag.FLEEING;
 const AURAS = new Set([3, 8, 13, 22, 29, 69, 85]);
 const DEFAULT_UNREACHABLE_TIMEOUT_MS = 5000;
 const DEFAULT_MOVE_LEASE_MS = 2500;
@@ -473,7 +485,8 @@ export class CombatActions {
     if (self.unitFlags & SELF_BLOCK) return "self_cannot_act";
     if (
       this.deps.combat.isAttackingSelf(guid) ||
-      (target.target === state.self.guid && (target.unitFlags & 0x80000) !== 0)
+      (target.target === state.self.guid &&
+        (target.unitFlags & UnitFlag.IN_COMBAT) !== 0)
     )
       return undefined;
     const factions = this.deps.factions();
