@@ -1,5 +1,5 @@
 import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
-import { parseFramingVariant, type FramingVariant } from "wow/framing";
+import type { FramingVariant } from "wow/framing";
 import { abortReason, abortable, bounded, pause } from "lib/abort";
 import { messageOf } from "lib/errors";
 
@@ -18,7 +18,6 @@ export type TacticsContext = {
   targetGuid: bigint;
   instruction: string;
   framing?: FramingVariant;
-  characterClass?: string;
 };
 
 export type TacticsOutcome = {
@@ -45,9 +44,15 @@ export type TacticsDeps = {
   maxResultAgeMs?: number;
   minIntervalMs?: number;
   requestTimeoutMs?: number;
-  framing?: FramingVariant;
-  characterClass?: string;
   fault?: string;
+};
+
+type TacticsRequest = {
+  observation: Readonly<Record<string, unknown>>;
+  candidates: readonly JevCandidate[];
+  instruction: string;
+  sentAtMs: number;
+  framing: FramingVariant;
 };
 
 export type TacticsState = {
@@ -56,29 +61,14 @@ export type TacticsState = {
   targetGuid: bigint | undefined;
   instruction: string;
   framing?: FramingVariant;
-  characterClass?: string;
-  ownerEpoch: number;
-  instructionEpoch: number;
-  targetIntentEpoch: number;
-  lastRequest:
-    | {
-        observation: Readonly<Record<string, unknown>>;
-        candidates: readonly JevCandidate[];
-        instruction: string;
-        sentAtMs: number;
-        framing: FramingVariant;
-      }
-    | undefined;
+  lastRequest: TacticsRequest | undefined;
   lastResult: JevActionResult | undefined;
   lastDecision:
     | { actionId: string; disposition: "applied" | "discarded"; reason: string }
     | undefined;
   lastOutcome: TacticsOutcome | undefined;
-  lastElapsedMs: number | undefined;
-  lastInterApplyMs: number | undefined;
   lastDiscardReason: string | undefined;
   lastStopReason?: string;
-  lastInterRequestMs?: number;
   fault?: string;
 };
 
@@ -88,56 +78,24 @@ export type TacticsEvent =
       runId: string;
       targetGuid: string;
       instruction: string;
-      ownerEpoch: number;
-      instructionEpoch: number;
-      targetIntentEpoch: number;
-      framing?: FramingVariant;
-      fault?: string;
-    }
-  | { type: "activated"; runId: string; fault?: string }
-  | {
-      type: "request";
-      runId: string;
-      instruction: string;
-      observation: Readonly<Record<string, unknown>>;
-      candidates: readonly JevCandidate[];
-      sentAtMs: number;
       framing: FramingVariant;
       fault?: string;
     }
-  | ({ type: "result"; runId: string; fault?: string } & JevActionResult)
-  | {
-      type: "applied";
-      runId: string;
-      actionId: string;
-      ageMs: number;
-      fault?: string;
-    }
-  | {
-      type: "discarded";
-      runId: string;
-      reason: string;
-      actionId?: string;
-      fault?: string;
-    }
-  | ({ type: "outcome"; runId: string; fault?: string } & TacticsOutcome)
-  | { type: "transport"; runId: string; error: string; fault?: string }
-  | {
-      type: "stopped";
-      runId: string;
-      reason: string;
-      state: TacticsState;
-      fault?: string;
-    };
+  | { type: "activated"; runId: string }
+  | ({ type: "request"; runId: string } & TacticsRequest)
+  | ({ type: "result"; runId: string } & JevActionResult)
+  | { type: "applied"; runId: string; actionId: string; ageMs: number }
+  | { type: "discarded"; runId: string; reason: string; actionId?: string }
+  | ({ type: "outcome"; runId: string } & TacticsOutcome)
+  | { type: "transport"; runId: string; error: string }
+  | { type: "stopped"; runId: string; reason: string; state: TacticsState };
 
 type Run = {
-  generation: number;
   runId: string;
-  context: TacticsContext;
+  context: TacticsContext & { framing: FramingVariant };
+  apiKey: string;
   abort: AbortController;
   detach: () => void;
-  framing: FramingVariant;
-  characterClass: string | undefined;
 };
 
 type Decision = {
@@ -153,24 +111,17 @@ export class TacticsLoop {
   private readonly minIntervalMs: number;
   private readonly requestTimeoutMs: number;
   private listener: ((event: TacticsEvent) => void) | undefined;
-  private generation = 0;
   private run: Run | undefined;
   private pending: Promise<void> | undefined;
-  private lastApplyAtMs: number | undefined;
   private state: TacticsState = {
     status: "idle",
     runId: undefined,
     targetGuid: undefined,
     instruction: "",
-    ownerEpoch: 0,
-    instructionEpoch: 0,
-    targetIntentEpoch: 0,
     lastRequest: undefined,
     lastResult: undefined,
     lastDecision: undefined,
     lastOutcome: undefined,
-    lastElapsedMs: undefined,
-    lastInterApplyMs: undefined,
     lastDiscardReason: undefined,
   };
 
@@ -183,28 +134,12 @@ export class TacticsLoop {
 
   async start(context: TacticsContext, signal?: AbortSignal): Promise<void> {
     this.stop("replaced");
-    if (!this.deps.apiKey) throw new Error("missing_jev_key");
+    const apiKey = this.deps.apiKey;
+    if (!apiKey) throw new Error("missing_jev_key");
     if (signal?.aborted) throw abortReason(signal);
-    parseFramingVariant(context.framing ?? this.deps.framing);
-    const run = this.begin(context, signal);
+    const run = this.begin(context, apiKey, signal);
     try {
-      if (!this.live(run)) return;
-      await abortable(
-        this.deps.prepare(run.context, run.abort.signal),
-        run.abort.signal,
-      );
-      if (this.pending)
-        await bounded(
-          this.pending,
-          run.abort.signal,
-          this.requestTimeoutMs,
-          "jev_timeout",
-        );
-      if (!this.live(run)) return;
-      this.deps.activate(run.context);
-      if (!this.live(run)) return;
-      this.state.status = "active";
-      this.emit({ type: "activated", runId: run.runId });
+      await this.activate(run);
     } catch (error) {
       if (!this.live(run)) return;
       this.fail(run, error);
@@ -222,7 +157,6 @@ export class TacticsLoop {
     if (!run) return;
     this.run = undefined;
     this.state.status = "idle";
-    this.state.ownerEpoch += 1;
     this.state.lastStopReason = reason;
     const state = this.snapshot();
     run.detach();
@@ -252,69 +186,62 @@ export class TacticsLoop {
   }
 
   private emit(event: TacticsEvent): void {
-    const payload =
-      this.deps.fault !== undefined && event.fault === undefined
-        ? { ...event, fault: this.deps.fault }
-        : event;
-    this.listener?.(structuredClone(payload));
+    this.listener?.(structuredClone(event));
   }
 
-  private begin(context: TacticsContext, external?: AbortSignal): Run {
-    const framing = parseFramingVariant(context.framing ?? this.deps.framing);
-    const characterClass = context.characterClass ?? this.deps.characterClass;
+  private begin(
+    context: TacticsContext,
+    apiKey: string,
+    external: AbortSignal | undefined,
+  ): Run {
+    const framing = context.framing ?? "none";
     const run: Run = {
-      generation: ++this.generation,
       runId: crypto.randomUUID(),
-      context: { ...context, framing, characterClass },
+      context: { ...context, framing },
+      apiKey,
       abort: new AbortController(),
       detach: () => external?.removeEventListener("abort", onExternal),
-      framing,
-      characterClass,
     };
     const onExternal = () => {
       if (this.live(run)) this.stop("aborted");
     };
     external?.addEventListener("abort", onExternal, { once: true });
     this.run = run;
-    this.lastApplyAtMs = undefined;
+    const { targetGuid, instruction } = context;
+    const fault = this.deps.fault;
     this.state = {
       status: "preparing",
       runId: run.runId,
-      targetGuid: context.targetGuid,
-      instruction: context.instruction,
+      targetGuid,
+      instruction,
       framing,
-      characterClass,
-      ownerEpoch: this.state.ownerEpoch + 1,
-      instructionEpoch: this.state.instructionEpoch + 1,
-      targetIntentEpoch: this.state.targetIntentEpoch + 1,
       lastRequest: undefined,
       lastResult: undefined,
       lastDecision: undefined,
       lastOutcome: undefined,
-      lastElapsedMs: undefined,
-      lastInterApplyMs: undefined,
       lastDiscardReason: undefined,
-      fault: this.deps.fault,
+      fault,
     };
-    this.emit({
-      type: "started",
-      runId: run.runId,
-      targetGuid: `0x${context.targetGuid.toString(16)}`,
-      instruction: context.instruction,
-      framing,
-      ownerEpoch: this.state.ownerEpoch,
-      instructionEpoch: this.state.instructionEpoch,
-      targetIntentEpoch: this.state.targetIntentEpoch,
-    });
+    const guid = `0x${targetGuid.toString(16)}`;
+    const started = { runId: run.runId, targetGuid: guid, instruction };
+    this.emit({ type: "started", ...started, framing, fault });
     return run;
   }
 
+  private async activate(run: Run): Promise<void> {
+    const signal = run.abort.signal;
+    await abortable(this.deps.prepare(run.context, signal), signal);
+    if (this.pending)
+      await bounded(this.pending, signal, this.requestTimeoutMs, TIMEOUT);
+    if (!this.live(run)) return;
+    this.deps.activate(run.context);
+    if (!this.live(run)) return;
+    this.state.status = "active";
+    this.emit({ type: "activated", runId: run.runId });
+  }
+
   private live(run: Run): boolean {
-    return (
-      this.run === run &&
-      run.generation === this.generation &&
-      !run.abort.signal.aborted
-    );
+    return this.run === run && !run.abort.signal.aborted;
   }
 
   private fail(run: Run, error: unknown): void {
@@ -364,52 +291,33 @@ export class TacticsLoop {
     run: Run,
     frame: TacticsFrame,
   ): Promise<JevActionResult> {
-    const apiKey = this.deps.apiKey;
-    if (!apiKey) throw new Error("missing_jev_key");
-    const sentAtMs = this.now();
-    const previous = this.state.lastRequest;
-    this.state.lastInterRequestMs = previous
-      ? sentAtMs - previous.sentAtMs
-      : undefined;
-    const request = structuredClone({
+    const request: TacticsRequest = structuredClone({
       observation: frame.observation,
       candidates: frame.candidates,
       instruction: run.context.instruction,
-      sentAtMs,
-      framing: run.framing,
-      characterClass: run.characterClass,
+      sentAtMs: this.now(),
+      framing: run.context.framing,
     });
-    this.state.lastRequest = {
-      observation: request.observation,
-      candidates: request.candidates,
-      instruction: request.instruction,
-      sentAtMs: request.sentAtMs,
-      framing: run.framing,
-    };
+    this.state.lastRequest = request;
     this.emit({ type: "request", runId: run.runId, ...request });
     if (!this.live(run)) throw abortReason(run.abort.signal);
     const abort = new AbortController();
     const signal = AbortSignal.any([run.abort.signal, abort.signal]);
-    const pending = this.deps.select(request, { apiKey, signal });
-    const settled = pending.then(
-      (result) => this.late(run, result, signal),
-      () => {},
-    );
+    const pending = this.deps.select(request, { apiKey: run.apiKey, signal });
+    this.track(pending.then((result) => this.late(run, result, signal)));
+    try {
+      return await bounded(pending, signal, this.requestTimeoutMs, TIMEOUT);
+    } finally {
+      abort.abort();
+    }
+  }
+
+  private track(settling: Promise<void>): void {
+    const settled = settling.catch(() => {});
     this.pending = settled;
     void settled.then(() => {
       if (this.pending === settled) this.pending = undefined;
     });
-    try {
-      return await bounded(
-        pending,
-        signal,
-        this.requestTimeoutMs,
-        "jev_timeout",
-      );
-    } finally {
-      if (this.live(run)) this.state.lastElapsedMs = this.now() - sentAtMs;
-      abort.abort();
-    }
   }
 
   private late(run: Run, result: JevActionResult, signal: AbortSignal): void {
@@ -429,49 +337,30 @@ export class TacticsLoop {
     this.emit({ type: "result", runId: run.runId, ...result });
     if (!this.live(run)) return;
     const ageMs = this.now() - sentAtMs;
-    if (ageMs > this.maxResultAgeMs) {
-      this.discard(run, "stale_age", result.choice);
-      return;
-    }
-    if (!candidates.some((candidate) => candidate.id === result.choice)) {
-      this.discard(run, "unknown_id", result.choice);
-      return;
-    }
+    const choice = result.choice;
+    const rejected = judge(choice, ageMs, this.maxResultAgeMs, candidates);
+    if (rejected) return this.discard(run, rejected, choice);
     const current = this.deps.observe(run.context);
     if (!this.live(run)) return;
-    if (current.outcome) {
-      this.finish(run, current.outcome, current.observation);
-      return;
-    }
-    if (
-      !withWait(current.candidates).some(
-        (candidate) => candidate.id === result.choice,
-      )
-    ) {
-      this.discard(run, "unavailable", result.choice);
-      return;
-    }
+    if (current.outcome)
+      return this.finish(run, current.outcome, current.observation);
+    if (!offers(withWait(current.candidates), choice))
+      return this.discard(run, "unavailable", choice);
     try {
-      this.deps.execute(result.choice, run.context);
+      this.deps.execute(choice, run.context);
     } catch (error) {
-      this.discard(run, messageOf(error), result.choice);
-      return;
+      return this.discard(run, messageOf(error), choice);
     }
-    if (!this.live(run)) return;
-    this.applied(run, result.choice, ageMs);
+    if (this.live(run)) this.applied(run, choice, ageMs);
   }
 
   private applied(run: Run, actionId: string, ageMs: number): void {
-    const now = this.now();
     this.state.lastDecision = {
       actionId,
       disposition: "applied",
       reason: "ok",
     };
     this.state.lastDiscardReason = undefined;
-    this.state.lastInterApplyMs =
-      this.lastApplyAtMs === undefined ? undefined : now - this.lastApplyAtMs;
-    this.lastApplyAtMs = now;
     this.emit({ type: "applied", runId: run.runId, actionId, ageMs });
   }
 
@@ -483,9 +372,25 @@ export class TacticsLoop {
   }
 }
 
+const TIMEOUT = "jev_timeout";
+
+function judge(
+  choice: string,
+  ageMs: number,
+  maxAgeMs: number,
+  offered: readonly JevCandidate[],
+): string | undefined {
+  if (ageMs > maxAgeMs) return "stale_age";
+  if (!offers(offered, choice)) return "unknown_id";
+  return undefined;
+}
+
+function offers(candidates: readonly JevCandidate[], id: string): boolean {
+  return candidates.some((candidate) => candidate.id === id);
+}
+
 function withWait(candidates: readonly JevCandidate[]): JevCandidate[] {
   const list = candidates.map((candidate) => ({ ...candidate }));
-  if (!list.some((candidate) => candidate.id === WAIT.id))
-    list.push({ ...WAIT });
+  if (!offers(list, WAIT.id)) list.push({ ...WAIT });
   return list;
 }

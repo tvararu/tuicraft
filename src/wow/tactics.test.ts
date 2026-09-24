@@ -602,7 +602,6 @@ test("repeated useful decisions retain real cadence without concurrent requests"
     await requested.promise;
     expect(calls).toBe(2);
     expect(f.actions).toEqual(["smite"]);
-    expect(f.tactics.snapshot().lastInterRequestMs).toBe(200);
   } finally {
     f.tactics.dispose();
     first.resolve(judgment());
@@ -654,118 +653,50 @@ test("a replacement waits for the old provider to settle before dispatching", as
   }
 });
 
-test("default framing variant is none and records in request event and lastRequest", async () => {
-  let capturedFraming: string | undefined;
-  const f = fixture({
-    select: async (req) => {
-      capturedFraming = req.framing;
-      return judgment();
-    },
-  });
-  let eventFraming: string | undefined;
-  const requested = Promise.withResolvers<void>();
-  f.tactics.onEvent((event) => {
-    if (event.type === "request") {
-      eventFraming = event.framing;
-      requested.resolve();
+for (const [given, sent] of [
+  [undefined, "none"],
+  ["minimal", "minimal"],
+  ["mechanics", "mechanics"],
+] as const) {
+  test(`framing ${sent} reaches select, the request event and lastRequest`, async () => {
+    let capturedFraming: string | undefined;
+    const f = fixture({
+      select: async (req) => {
+        capturedFraming = req.framing;
+        return judgment();
+      },
+    });
+    let eventFraming: string | undefined;
+    const requested = Promise.withResolvers<void>();
+    f.tactics.onEvent((event) => {
+      if (event.type === "request") {
+        eventFraming = event.framing;
+        requested.resolve();
+      }
+    });
+    const running = f.tactics.start({ ...context, framing: given });
+    try {
+      await requested.promise;
+      expect(capturedFraming).toBe(sent);
+      expect(eventFraming).toBe(sent);
+      expect(f.tactics.snapshot().lastRequest?.framing).toBe(sent);
+    } finally {
+      f.tactics.dispose();
+      await running;
     }
   });
-  const running = f.tactics.start(context);
-  try {
-    await requested.promise;
-    expect(capturedFraming).toBe("none");
-    expect(eventFraming).toBe("none");
-    expect(f.tactics.snapshot().lastRequest?.framing).toBe("none");
-  } finally {
-    f.tactics.dispose();
-    await running;
-  }
-});
+}
 
-test("minimal framing variant records in request event and propagates to select", async () => {
-  let capturedFraming: string | undefined;
-  const f = fixture({
-    select: async (req) => {
-      capturedFraming = req.framing;
-      return judgment();
-    },
-  });
-  let eventFraming: string | undefined;
-  const requested = Promise.withResolvers<void>();
-  f.tactics.onEvent((event) => {
-    if (event.type === "request") {
-      eventFraming = event.framing;
-      requested.resolve();
-    }
-  });
-  const running = f.tactics.start({ ...context, framing: "minimal" });
-  try {
-    await requested.promise;
-    expect(capturedFraming).toBe("minimal");
-    expect(eventFraming).toBe("minimal");
-    expect(f.tactics.snapshot().lastRequest?.framing).toBe("minimal");
-  } finally {
-    f.tactics.dispose();
-    await running;
-  }
-});
-
-test("mechanics framing variant records in request event and propagates to select", async () => {
-  let capturedFraming: string | undefined;
-  const f = fixture({
-    select: async (req) => {
-      capturedFraming = req.framing;
-      return judgment();
-    },
-  });
-  let eventFraming: string | undefined;
-  const requested = Promise.withResolvers<void>();
-  f.tactics.onEvent((event) => {
-    if (event.type === "request") {
-      eventFraming = event.framing;
-      requested.resolve();
-    }
-  });
-  const running = f.tactics.start({ ...context, framing: "mechanics" });
-  try {
-    await requested.promise;
-    expect(capturedFraming).toBe("mechanics");
-    expect(eventFraming).toBe("mechanics");
-    expect(f.tactics.snapshot().lastRequest?.framing).toBe("mechanics");
-  } finally {
-    f.tactics.dispose();
-    await running;
-  }
-});
-
-test("unknown framing variant rejects start with clear error", async () => {
-  const f = fixture();
-  try {
-    await expect(
-      f.tactics.start({ ...context, framing: "invalid" as any }),
-    ).rejects.toThrow(
-      'Unknown framing variant: "invalid". Must be one of: none, minimal, mechanics',
-    );
-    expect(f.tactics.snapshot().status).toBe("idle");
-  } finally {
-    f.tactics.dispose();
-  }
-});
-
-test("fault marker propagates to state and emitted events", async () => {
+test("fault marker is recorded once, on started and in state", async () => {
   const f = fixture({ fault: "delay:2500ms" });
-  const events: TacticsEvent[] = [];
-  const seen = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<TacticsEvent>();
   f.tactics.onEvent((e) => {
-    events.push(e);
-    if (e.type === "request") seen.resolve();
+    if (e.type === "started") started.resolve(e);
   });
   const running = f.tactics.start(context);
   try {
-    await seen.promise;
+    expect(await started.promise).toMatchObject({ fault: "delay:2500ms" });
     expect(f.tactics.snapshot().fault).toBe("delay:2500ms");
-    expect(events.length).toBeGreaterThan(0);
-    expect(events.every((e) => e.fault === "delay:2500ms")).toBe(true);
   } finally {
     f.tactics.dispose();
     await running;

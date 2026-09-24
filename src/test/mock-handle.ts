@@ -82,15 +82,10 @@ export function createMockHandle(): WorldHandle & {
     runId: undefined,
     targetGuid: undefined,
     instruction: "",
-    ownerEpoch: 0,
-    instructionEpoch: 0,
-    targetIntentEpoch: 0,
     lastRequest: undefined,
     lastResult: undefined,
     lastDecision: undefined,
     lastOutcome: undefined,
-    lastElapsedMs: undefined,
-    lastInterApplyMs: undefined,
     lastDiscardReason: undefined,
   };
   const cycle = new EncounterCycleRuntime({

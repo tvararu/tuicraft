@@ -132,8 +132,6 @@ export function createRuntimes(
   const select = fault ? createFaultSelect(fault, baseSelect) : baseSelect;
   const tactics = new TacticsLoop({
     apiKey: config.jevApiKey,
-    framing: config.framing,
-    characterClass: config.characterClass,
     fault: fault && faultMarker(fault),
     select,
     async prepare(_context, signal) {

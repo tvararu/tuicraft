@@ -153,7 +153,7 @@ describe("TacticsLoop fault integration", () => {
     await until((e) => e.type === "discarded" && e.reason === "stale_age");
     loop.stop("done");
     await started;
-    expect(events.every((e) => e.fault === "delay:50ms")).toBe(true);
+    expect(events[0]).toMatchObject({ type: "started", fault: "delay:50ms" });
     expect(loop.snapshot().fault).toBe("delay:50ms");
   });
 
@@ -177,7 +177,7 @@ describe("TacticsLoop fault integration", () => {
     const transport = events.filter((e) => e.type === "transport");
     expect(transport).toHaveLength(1);
     expect(transport[0]?.error).toBe("TypeSafe HTTP 503");
-    expect(transport[0]?.fault).toBe("http:503");
+    expect(loop.snapshot().fault).toBe("http:503");
     expect(loop.snapshot().status).toBe("idle");
     expect(loop.snapshot().lastStopReason).toBe("failed");
   });
@@ -188,7 +188,7 @@ describe("TacticsLoop fault integration", () => {
     const transport = events.filter((e) => e.type === "transport");
     expect(transport).toHaveLength(1);
     expect(transport[0]?.error).toBe("fetch failed");
-    expect(transport[0]?.fault).toBe("transport:network");
+    expect(loop.snapshot().fault).toBe("transport:network");
     expect(loop.snapshot().status).toBe("idle");
     expect(loop.snapshot().lastStopReason).toBe("failed");
   });
