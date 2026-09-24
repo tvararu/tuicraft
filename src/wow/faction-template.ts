@@ -13,6 +13,8 @@ export type FactionTemplate = {
   friendFactions: number[];
 };
 
+const HATES_ALL_EXCEPT_FRIENDS = 0x2000;
+
 const LAYOUT = {
   file: "FactionTemplate.dbc",
   fields: 14,
@@ -44,11 +46,10 @@ export class FactionTemplateCatalog {
     const source = this.get(sourceTemplateId);
     const target = this.get(targetTemplateId);
     if (!source || !target) return "unknown";
-    const friendly = isFriendlyTo(source, target);
-    const hostile = isHostileTo(source, target);
-    if (friendly && hostile) return "unknown";
-    if (friendly) return "friendly";
-    if (hostile) return "hostile";
+    if (isHostileTo(source, target)) return "hostile";
+    if (isFriendlyTo(source, target)) return "friendly";
+    if (isFriendlyTo(target, source)) return "friendly";
+    if (source.flags & HATES_ALL_EXCEPT_FRIENDS) return "hostile";
     return "neutral";
   }
 }
@@ -82,21 +83,14 @@ function decodeTemplate(file: DbcFile, row: number): FactionTemplate {
   };
 }
 
-function containsFaction(ids: number[], faction: number): boolean {
-  for (const id of ids) {
-    if (id === faction) return true;
-  }
-  return false;
-}
-
 function isFriendlyTo(
   source: FactionTemplate,
   target: FactionTemplate,
 ): boolean {
   if (source.faction === target.faction) return true;
   if (target.faction !== 0) {
-    if (containsFaction(source.enemyFactions, target.faction)) return false;
-    if (containsFaction(source.friendFactions, target.faction)) return true;
+    if (source.enemyFactions.includes(target.faction)) return false;
+    if (source.friendFactions.includes(target.faction)) return true;
   }
   return (
     (source.friendlyMask & target.ourMask) !== 0 ||
@@ -109,8 +103,8 @@ function isHostileTo(
   target: FactionTemplate,
 ): boolean {
   if (target.faction !== 0) {
-    if (containsFaction(source.enemyFactions, target.faction)) return true;
-    if (containsFaction(source.friendFactions, target.faction)) return false;
+    if (source.enemyFactions.includes(target.faction)) return true;
+    if (source.friendFactions.includes(target.faction)) return false;
   }
   return (source.hostileMask & target.ourMask) !== 0;
 }

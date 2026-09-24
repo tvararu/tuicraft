@@ -123,13 +123,34 @@ describe("FactionTemplateCatalog.relation", () => {
     expect(catalog.relation(1, 3)).toBe("neutral");
   });
 
-  test("returns unknown when friend and enemy rules conflict", async () => {
+  test("checks hostility before friendship", async () => {
     const catalog = await loadFactionTemplates(
       await writeTemplates([
         templateRow({ 0: 1, 1: 50, 6: 50 }),
         templateRow({ 0: 2, 1: 50 }),
       ]),
     );
-    expect(catalog.relation(1, 2)).toBe("unknown");
+    expect(catalog.relation(1, 2)).toBe("hostile");
+  });
+
+  test("is friendly when the target lists the source as a friend", async () => {
+    const catalog = await loadFactionTemplates(
+      await writeTemplates([
+        templateRow({ 0: 1, 1: 10 }),
+        templateRow({ 0: 2, 1: 20, 10: 10 }),
+      ]),
+    );
+    expect(catalog.relation(1, 2)).toBe("friendly");
+  });
+
+  test("hates everyone except friends when flagged", async () => {
+    const catalog = await loadFactionTemplates(
+      await writeTemplates([
+        templateRow({ 0: 1, 1: 10, 2: 0x2000 }),
+        templateRow({ 0: 2, 1: 20 }),
+      ]),
+    );
+    expect(catalog.relation(1, 2)).toBe("hostile");
+    expect(catalog.relation(2, 1)).toBe("neutral");
   });
 });
