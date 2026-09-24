@@ -4,7 +4,6 @@ import { CombatRuntime } from "wow/combat";
 import { ControlRuntime } from "wow/control";
 import { EntityStore } from "wow/entity-store";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import type { SpellDefinition } from "wow/spell-catalog";
 
 const context = { targetGuid: 2n, instruction: "Defeat the selected creature" };
@@ -158,13 +157,7 @@ function setup(
       z: 0,
       orientation: 0,
     });
-  const w = new PacketWriter();
-  w.uint8(0);
-  w.uint16LE(1);
-  w.uint32LE(17);
-  w.uint16LE(0);
-  w.uint16LE(0);
-  combat.applyInitialSpells(new PacketReader(w.finish()));
+  combat.applyInitialSpells({ spells: [{ spellId: 17 }], cooldowns: [] });
   const actions = new CombatActions({
     combat,
     control,
@@ -517,13 +510,7 @@ test("an attacking creature whose faction relation is not verified as hostile ca
     selfPose: () => control.snapshot().pose,
   });
   combat.observePosition(2n, { mapId: 530, x: 10, y: 0, z: 0, orientation: 0 });
-  const w = new PacketWriter();
-  w.uint8(0);
-  w.uint16LE(1);
-  w.uint32LE(17);
-  w.uint16LE(0);
-  w.uint16LE(0);
-  combat.applyInitialSpells(new PacketReader(w.finish()));
+  combat.applyInitialSpells({ spells: [{ spellId: 17 }], cooldowns: [] });
   const factionsCatalog = {
     relation: () => "neutral" as const,
   };
@@ -539,18 +526,11 @@ test("an attacking creature whose faction relation is not verified as hostile ca
     "unverified_hostile_relation",
   );
 
-  const startWriter = new PacketWriter();
-  startWriter.uint64LE(2n);
-  startWriter.uint64LE(1n);
-  combat.applyAttackStart(new PacketReader(startWriter.finish()));
+  combat.applyAttackStart({ attacker: 2n, victim: 1n });
 
   expect(() => actions.activate(context)).not.toThrow();
 
-  const stopWriter = new PacketWriter();
-  stopWriter.packedGuid(2, 0);
-  stopWriter.packedGuid(1, 0);
-  stopWriter.uint32LE(0);
-  combat.applyAttackStop(new PacketReader(stopWriter.finish()));
+  combat.applyAttackStop({ attacker: 2n, victim: 1n, dead: 0 });
 
   expect(() => actions.activate(context)).toThrow(
     "unverified_hostile_relation",

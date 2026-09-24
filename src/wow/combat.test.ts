@@ -1,12 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import { CombatRuntime } from "wow/combat";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { GameOpcode } from "wow/protocol/opcodes";
+import type { CastFailed, SpellStart } from "wow/protocol/spell";
+import type { MonsterMovePath } from "wow/protocol/monster-move";
 
-function packet(write: (w: PacketWriter) => void): PacketReader {
-  const w = new PacketWriter();
-  write(w);
-  return new PacketReader(w.finish());
+function path(over: Partial<MonsterMovePath>): MonsterMovePath {
+  return {
+    kind: "move",
+    guid: 2n,
+    extra: 0,
+    start: { x: 0, y: 0, z: 3 },
+    splineId: 1,
+    facing: { kind: "none" },
+    flags: 0,
+    duration: 1000,
+    points: [
+      { x: 0, y: 0, z: 3 },
+      { x: 10, y: 0, z: 3 },
+    ],
+    interpolation: "linear",
+    cyclic: false,
+    ...over,
+  };
 }
 
 function setup() {
@@ -22,15 +37,7 @@ function setup() {
     getEntity: () => undefined,
     selfPose: () => undefined,
   });
-  combat.applyInitialSpells(
-    packet((w) => {
-      w.uint8(0);
-      w.uint16LE(1);
-      w.uint32LE(17);
-      w.uint16LE(0);
-      w.uint16LE(0);
-    }),
-  );
+  combat.applyInitialSpells({ spells: [{ spellId: 17 }], cooldowns: [] });
   return {
     combat,
     sent,
@@ -40,12 +47,8 @@ function setup() {
   };
 }
 
-function failure(count: number, result = 90): PacketReader {
-  return packet((w) => {
-    w.uint8(count);
-    w.uint32LE(17);
-    w.uint8(result);
-  });
+function failure(castCount: number, result = 90): CastFailed {
+  return { castCount, spellId: 17, result, extra: [] };
 }
 
 describe("combat observations", () => {
@@ -83,78 +86,69 @@ describe("combat observations", () => {
 
   test("full aura snapshots replace stale slots and duration expiry is reflected", () => {
     const { combat, advance } = setup();
-    combat.applyAuraAll(
-      packet((w) => {
-        w.packedGuid(1, 0);
-        for (const [slot, spell] of [
-          [0, 17],
-          [1, 18],
-        ]) {
-          w.uint8(slot!);
-          w.uint32LE(spell!);
-          w.uint8(0x28);
-          w.uint8(10);
-          w.uint8(1);
-          w.uint32LE(1000);
-          w.uint32LE(500);
-        }
-      }),
-    );
+    combat.applyAuraAll({
+      unit: 1n,
+      auras: [
+        {
+          unit: 1n,
+          slot: 0,
+          removed: false,
+          spellId: 17,
+          flags: 0x28,
+          level: 10,
+          stacks: 1,
+          duration: 1000,
+          timeLeft: 500,
+        },
+        {
+          unit: 1n,
+          slot: 1,
+          removed: false,
+          spellId: 18,
+          flags: 0x28,
+          level: 10,
+          stacks: 1,
+          duration: 1000,
+          timeLeft: 500,
+        },
+      ],
+    });
     expect(combat.snapshot().auras.map((aura) => aura.spellId)).toEqual([
       17, 18,
     ]);
     advance(501);
     expect(combat.snapshot().auras).toEqual([]);
-    combat.applyAuraAll(
-      packet((w) => {
-        w.packedGuid(1, 0);
-      }),
-    );
+    combat.applyAuraAll({ unit: 1n, auras: [] });
     expect(combat.snapshot().auras).toEqual([]);
   });
 
   test("foreign cooldown packets cannot block self and clears release observed cooldown", () => {
     const { combat } = setup();
-    const cooldown = (guid: bigint) =>
-      packet((w) => {
-        w.uint64LE(guid);
-        w.uint8(0);
-        w.uint32LE(17);
-        w.uint32LE(3000);
-      });
+    const cooldown = (guid: bigint) => ({
+      guid,
+      flags: 0,
+      cooldowns: [{ spellId: 17, time: 3000 }],
+    });
     combat.applyCooldown(cooldown(2n));
     expect(combat.snapshot().cooldowns).toEqual([]);
     combat.applyCooldown(cooldown(1n));
     expect(combat.snapshot().cooldowns[0]?.remainingMs).toBe(3000);
-    combat.applyClearCooldown(
-      packet((w) => {
-        w.uint32LE(17);
-        w.uint64LE(1n);
-      }),
-    );
+    combat.applyClearCooldown({ spellId: 17, guid: 1n });
     expect(combat.snapshot().cooldowns).toEqual([]);
   });
 
   test("attack stop on a dead victim does not fabricate kill credit", () => {
     const { combat } = setup();
-    combat.applyAttackStop(
-      packet((w) => {
-        w.packedGuid(1, 0);
-        w.packedGuid(2, 0);
-        w.uint32LE(1);
-      }),
-    );
+    combat.applyAttackStop({ attacker: 1n, victim: 2n, dead: 1 });
     expect(combat.snapshot().lastXp).toBeUndefined();
-    combat.applyXp(
-      packet((w) => {
-        w.uint64LE(2n);
-        w.uint32LE(55);
-        w.uint8(0);
-        w.uint32LE(55);
-        w.floatLE(1);
-        w.uint8(0);
-      }),
-    );
+    combat.applyXp({
+      victim: 2n,
+      total: 55,
+      kind: "kill",
+      original: 55,
+      groupRate: 1,
+      recruitAFriend: false,
+    });
     expect(combat.snapshot().lastXp).toMatchObject({
       victim: 2n,
       kind: "kill",
@@ -171,24 +165,7 @@ describe("combat observations", () => {
       z: 3,
       orientation: 1,
     });
-    combat.applyMonsterMove(
-      packet((w) => {
-        w.packedGuid(2, 0);
-        w.uint8(0);
-        w.floatLE(0);
-        w.floatLE(0);
-        w.floatLE(3);
-        w.uint32LE(1);
-        w.uint8(0);
-        w.uint32LE(0);
-        w.uint32LE(1000);
-        w.uint32LE(1);
-        w.floatLE(10);
-        w.floatLE(0);
-        w.floatLE(3);
-      }),
-      530,
-    );
+    combat.applyMonsterMove(path({}), 530);
     advance(500);
     const target = combat.snapshot().target!;
     expect(target.pose).toMatchObject({ source: "predicted", x: 5 });
@@ -208,29 +185,25 @@ test("cancellation intent survives START and repeated server failures", () => {
   const { combat } = setup();
   combat.cast(17, 2n);
   combat.cancelCast();
-  combat.applySpellStart(
-    packet((w) => {
-      w.packedGuid(1, 0);
-      w.packedGuid(1, 0);
-      w.uint8(1);
-      w.uint32LE(17);
-      w.uint32LE(0);
-      w.uint32LE(1500);
-      w.uint32LE(2);
-      w.packedGuid(2, 0);
-    }),
-  );
+  const start: SpellStart = {
+    castItem: 1n,
+    caster: 1n,
+    castCount: 1,
+    spellId: 17,
+    flags: 0,
+    timer: 1500,
+    targets: { flags: 2, objectGuid: 2n },
+  };
+  combat.applySpellStart(start);
   expect(combat.snapshot().casting?.cancelRequested).toBe(true);
   combat.applyCastFailed(failure(1, 40));
   expect(combat.snapshot().lastOutcome?.kind).toBe("cancel");
-  combat.applySpellFailure(
-    packet((w) => {
-      w.packedGuid(1, 0);
-      w.uint8(1);
-      w.uint32LE(17);
-      w.uint8(40);
-    }),
-  );
+  combat.applySpellFailure({
+    caster: 1n,
+    extraCasts: 1,
+    spellId: 17,
+    result: 40,
+  });
   expect(combat.snapshot().casting).toBeUndefined();
   expect(combat.snapshot().lastOutcome?.kind).toBe("cancel");
 });
@@ -270,16 +243,20 @@ test("full creature aura snapshots preserve unsigned GUID halves", () => {
     getEntity: () => undefined,
     selfPose: () => undefined,
   });
-  combat.applyAuraAll(
-    packet((w) => {
-      w.packedGuid(0xd20009e5, 0xf130003f);
-      w.uint8(2);
-      w.uint32LE(17);
-      w.uint8(8);
-      w.uint8(10);
-      w.uint8(1);
-    }),
-  );
+  combat.applyAuraAll({
+    unit: guid,
+    auras: [
+      {
+        unit: guid,
+        slot: 2,
+        removed: false,
+        spellId: 17,
+        flags: 8,
+        level: 10,
+        stacks: 1,
+      },
+    ],
+  });
   expect(combat.snapshot().targetAuras[0]).toMatchObject({
     spellId: 17,
     caster: guid,
@@ -291,23 +268,15 @@ test("a new open Catmull packet cannot promote old facing to authoritative launc
   const { combat } = setup();
   combat.observePosition(2n, { mapId: 530, x: 0, y: 0, z: 0, orientation: 0 });
   combat.applyMonsterMove(
-    packet((w) => {
-      w.packedGuid(2, 0);
-      w.uint8(0);
-      w.floatLE(0);
-      w.floatLE(2);
-      w.floatLE(0);
-      w.uint32LE(1);
-      w.uint8(0);
-      w.uint32LE(0x40000);
-      w.uint32LE(1000);
-      w.uint32LE(2);
-      w.floatLE(0);
-      w.floatLE(5);
-      w.floatLE(0);
-      w.floatLE(0);
-      w.floatLE(10);
-      w.floatLE(0);
+    path({
+      start: { x: 0, y: 2, z: 0 },
+      flags: 0x40000,
+      points: [
+        { x: 0, y: 2, z: 0 },
+        { x: 0, y: 5, z: 0 },
+        { x: 0, y: 10, z: 0 },
+      ],
+      interpolation: "catmullrom",
     }),
     530,
   );
@@ -324,21 +293,10 @@ test("a new open Catmull packet cannot promote old facing to authoritative launc
 test("incoming attack start registers attacker against self and stop clears it", () => {
   const { combat } = setup();
   expect(combat.isAttackingSelf(0x10n)).toBe(false);
-  combat.applyAttackStart(
-    packet((w) => {
-      w.uint64LE(0x10n);
-      w.uint64LE(1n);
-    }),
-  );
+  combat.applyAttackStart({ attacker: 0x10n, victim: 1n });
   expect(combat.isAttackingSelf(0x10n)).toBe(true);
   expect(combat.isAttackingSelf(0x20n)).toBe(false);
-  combat.applyAttackStop(
-    packet((w) => {
-      w.packedGuid(0x10, 0);
-      w.packedGuid(1, 0);
-      w.uint32LE(0);
-    }),
-  );
+  combat.applyAttackStop({ attacker: 0x10n, victim: 1n, dead: 0 });
   expect(combat.isAttackingSelf(0x10n)).toBe(false);
 });
 
@@ -356,12 +314,7 @@ test("dead incoming attacker is cleared on check", () => {
       }) as any,
     selfPose: () => undefined,
   });
-  combat.applyAttackStart(
-    packet((w) => {
-      w.uint64LE(0x10n);
-      w.uint64LE(1n);
-    }),
-  );
+  combat.applyAttackStart({ attacker: 0x10n, victim: 1n });
   expect(combat.isAttackingSelf(0x10n)).toBe(true);
   health = 0;
   expect(combat.isAttackingSelf(0x10n)).toBe(false);

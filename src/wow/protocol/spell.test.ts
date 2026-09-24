@@ -10,6 +10,7 @@ import {
   parseSpellFailure,
   parseSpellCooldown,
   parseSpellDelayed,
+  parseCooldownNotice,
   parseLearnedSpell,
   parseRemovedSpell,
   parseSupersededSpell,
@@ -250,6 +251,16 @@ describe("parseSpellDelayed", () => {
   test("reads caster and delay", () => {
     const r = reader([0x01, 0x17, 0xf4, 0x01, 0x00, 0x00]);
     expect(parseSpellDelayed(r)).toEqual({ caster: 0x17n, delayMs: 500 });
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseCooldownNotice", () => {
+  test("reads spell and unit guid", () => {
+    const r = reader([
+      0x11, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]);
+    expect(parseCooldownNotice(r)).toEqual({ spellId: 17, guid: 1n });
     expect(r.remaining).toBe(0);
   });
 });

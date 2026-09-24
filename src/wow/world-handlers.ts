@@ -43,6 +43,26 @@ import {
   type SpeedAck,
 } from "wow/protocol/movement";
 import { parseUpdateObject } from "wow/protocol/update-object";
+import {
+  parseAttackStart,
+  parseAttackStop,
+  parseXpGain,
+} from "wow/protocol/combat";
+import { parseAuraUpdate, parseAuraUpdateAll } from "wow/protocol/aura";
+import {
+  parseCastFailed,
+  parseCooldownNotice,
+  parseInitialSpells,
+  parseLearnedSpell,
+  parseRemovedSpell,
+  parseSpellCooldown,
+  parseSpellDelayed,
+  parseSpellFailure,
+  parseSpellGo,
+  parseSpellStart,
+  parseSupersededSpell,
+} from "wow/protocol/spell";
+import { parseMonsterMove } from "wow/protocol/monster-move";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   extractObjectFields,
@@ -980,69 +1000,69 @@ export function registerMovementHandlers(conn: WorldConn): void {
 }
 
 export function registerCombatHandlers(conn: WorldConn): void {
-  conn.dispatch.on(GameOpcode.SMSG_INITIAL_SPELLS, (r) => {
-    conn.combat?.applyInitialSpells(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_LEARNED_SPELL, (r) => {
-    conn.combat?.applyLearned(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_REMOVED_SPELL, (r) => {
-    conn.combat?.applyRemoved(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_SUPERCEDED_SPELL, (r) => {
-    conn.combat?.applySuperseded(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_SPELL_START, (r) => {
-    conn.combat?.applySpellStart(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_SPELL_GO, (r) => {
-    conn.combat?.applySpellGo(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_CAST_FAILED, (r) => {
-    conn.combat?.applyCastFailed(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_SPELL_FAILURE, (r) => {
-    conn.combat?.applySpellFailure(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_SPELL_COOLDOWN, (r) => {
-    conn.combat?.applyCooldown(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_CLEAR_COOLDOWN, (r) =>
-    conn.combat?.applyClearCooldown(r),
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_INITIAL_SPELLS, (r) =>
+    conn.combat?.applyInitialSpells(parseInitialSpells(r)),
   );
-  conn.dispatch.on(GameOpcode.SMSG_COOLDOWN_EVENT, (r) =>
-    conn.combat?.applyCooldownEvent(r),
+  on(GameOpcode.SMSG_LEARNED_SPELL, (r) =>
+    conn.combat?.applyLearned(parseLearnedSpell(r)),
   );
-  conn.dispatch.on(GameOpcode.SMSG_SPELL_DELAYED, (r) =>
-    conn.combat?.applySpellDelayed(r),
+  on(GameOpcode.SMSG_REMOVED_SPELL, (r) =>
+    conn.combat?.applyRemoved(parseRemovedSpell(r)),
   );
-  conn.dispatch.on(GameOpcode.SMSG_CANCEL_COMBAT, () =>
-    conn.combat?.applyCancelCombat(),
+  on(GameOpcode.SMSG_SUPERCEDED_SPELL, (r) =>
+    conn.combat?.applySuperseded(parseSupersededSpell(r)),
   );
+  on(GameOpcode.SMSG_SPELL_START, (r) =>
+    conn.combat?.applySpellStart(parseSpellStart(r)),
+  );
+  on(GameOpcode.SMSG_SPELL_GO, (r) =>
+    conn.combat?.applySpellGo(parseSpellGo(r)),
+  );
+  on(GameOpcode.SMSG_CAST_FAILED, (r) =>
+    conn.combat?.applyCastFailed(parseCastFailed(r)),
+  );
+  on(GameOpcode.SMSG_SPELL_FAILURE, (r) =>
+    conn.combat?.applySpellFailure(parseSpellFailure(r)),
+  );
+  on(GameOpcode.SMSG_SPELL_COOLDOWN, (r) =>
+    conn.combat?.applyCooldown(parseSpellCooldown(r)),
+  );
+  on(GameOpcode.SMSG_CLEAR_COOLDOWN, (r) =>
+    conn.combat?.applyClearCooldown(parseCooldownNotice(r)),
+  );
+  on(GameOpcode.SMSG_COOLDOWN_EVENT, (r) =>
+    conn.combat?.applyCooldownEvent(parseCooldownNotice(r)),
+  );
+  on(GameOpcode.SMSG_SPELL_DELAYED, (r) =>
+    conn.combat?.applySpellDelayed(parseSpellDelayed(r)),
+  );
+  on(GameOpcode.SMSG_CANCEL_COMBAT, () => conn.combat?.applyCancelCombat());
   for (const opcode of [
     GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
     GameOpcode.SMSG_ATTACKSWING_BADFACING,
     GameOpcode.SMSG_ATTACKSWING_DEADTARGET,
     GameOpcode.SMSG_ATTACKSWING_CANT_ATTACK,
-  ]) {
-    conn.dispatch.on(opcode, () => conn.combat?.applyAttackError(opcode));
-  }
-  conn.dispatch.on(GameOpcode.SMSG_ATTACKSTART, (r) => {
-    conn.combat?.applyAttackStart(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_ATTACKSTOP, (r) => {
-    conn.combat?.applyAttackStop(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE, (r) => {
-    conn.combat?.applyAura(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_AURA_UPDATE_ALL, (r) => {
-    conn.combat?.applyAuraAll(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_LOG_XPGAIN, (r) => {
-    conn.combat?.applyXp(r);
-  });
-  conn.dispatch.on(GameOpcode.SMSG_MONSTER_MOVE, (r) => {
-    conn.combat?.applyMonsterMove(r, conn.control?.currentMapId() ?? 0);
-  });
+  ])
+    on(opcode, () => conn.combat?.applyAttackError(opcode));
+  on(GameOpcode.SMSG_ATTACKSTART, (r) =>
+    conn.combat?.applyAttackStart(parseAttackStart(r)),
+  );
+  on(GameOpcode.SMSG_ATTACKSTOP, (r) =>
+    conn.combat?.applyAttackStop(parseAttackStop(r)),
+  );
+  on(GameOpcode.SMSG_AURA_UPDATE, (r) =>
+    conn.combat?.applyAura(parseAuraUpdate(r)),
+  );
+  on(GameOpcode.SMSG_AURA_UPDATE_ALL, (r) =>
+    conn.combat?.applyAuraAll(parseAuraUpdateAll(r)),
+  );
+  on(GameOpcode.SMSG_LOG_XPGAIN, (r) => conn.combat?.applyXp(parseXpGain(r)));
+  on(GameOpcode.SMSG_MONSTER_MOVE, (r) =>
+    conn.combat?.applyMonsterMove(
+      parseMonsterMove(r),
+      conn.control?.currentMapId() ?? 0,
+    ),
+  );
 }

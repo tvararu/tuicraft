@@ -1,32 +1,28 @@
 import { GameOpcode } from "wow/protocol/opcodes";
-import type { PacketReader } from "wow/protocol/packet";
 import {
   buildAttackSwing,
-  parseAttackStart,
-  parseAttackStop,
-  parseXpGain,
+  type AttackStart,
+  type AttackStop,
+  type XpGain,
 } from "wow/protocol/combat";
-import {
-  parseAuraUpdate,
-  parseAuraUpdateAll,
-  type AuraUpdate,
-} from "wow/protocol/aura";
+import type { AuraUpdate, AuraUpdateAll } from "wow/protocol/aura";
 import {
   buildCancelCast,
   buildCastSpell,
-  parseCastFailed,
-  parseInitialSpells,
-  parseLearnedSpell,
-  parseRemovedSpell,
-  parseSpellCooldown,
-  parseSpellDelayed,
-  parseSpellFailure,
-  parseSpellGo,
-  parseSpellStart,
-  parseSupersededSpell,
   SpellCastResult,
+  type CastFailed,
+  type CooldownNotice,
+  type InitialSpells,
+  type LearnedSpell,
+  type RemovedSpell,
+  type SpellCooldown,
+  type SpellDelayed,
+  type SpellFailure,
+  type SpellGo,
+  type SpellStart,
+  type SupersededSpell,
 } from "wow/protocol/spell";
-import { parseMonsterMove, type CreateSpline } from "wow/protocol/monster-move";
+import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import {
   createTrajectory,
   pathTrajectory,
@@ -394,8 +390,7 @@ export class CombatRuntime {
     this.checkMotion(guid);
   }
 
-  applyInitialSpells(r: PacketReader): void {
-    const packet = parseInitialSpells(r);
+  applyInitialSpells(packet: InitialSpells): void {
     this.learned.clear();
     for (const spell of packet.spells) this.learned.add(spell.spellId);
     const now = this.deps.now();
@@ -416,27 +411,23 @@ export class CombatRuntime {
     this.emit("spellbook");
   }
 
-  applyLearned(r: PacketReader): void {
-    const packet = parseLearnedSpell(r);
-    this.learned.add(packet.spellId);
+  applyLearned({ spellId }: LearnedSpell): void {
+    this.learned.add(spellId);
     this.emit("learned");
   }
 
-  applyRemoved(r: PacketReader): void {
-    const packet = parseRemovedSpell(r);
-    this.learned.delete(packet.spellId);
+  applyRemoved({ spellId }: RemovedSpell): void {
+    this.learned.delete(spellId);
     this.emit("learned");
   }
 
-  applySuperseded(r: PacketReader): void {
-    const packet = parseSupersededSpell(r);
-    this.learned.delete(packet.superseded);
-    this.learned.add(packet.learned);
+  applySuperseded({ superseded, learned }: SupersededSpell): void {
+    this.learned.delete(superseded);
+    this.learned.add(learned);
     this.emit("learned");
   }
 
-  applySpellStart(r: PacketReader): void {
-    const packet = parseSpellStart(r);
+  applySpellStart(packet: SpellStart): void {
     if (packet.caster !== this.deps.selfGuid()) return;
     const matching =
       this.pending?.spellId === packet.spellId &&
@@ -467,8 +458,7 @@ export class CombatRuntime {
     this.emit("cast_started");
   }
 
-  applySpellGo(r: PacketReader): void {
-    const packet = parseSpellGo(r);
+  applySpellGo(packet: SpellGo): void {
     if (packet.caster !== this.deps.selfGuid()) return;
     const hadStart =
       this.casting?.spellId === packet.spellId &&
@@ -480,17 +470,7 @@ export class CombatRuntime {
       this.pending = undefined;
     if (hadStart) this.casting = undefined;
     if (!hadStart) this.beginGlobalCooldown(packet.spellId);
-    const cd = this.definition(packet.spellId)?.cooldown;
-    if (cd?.recoveryTimeMs)
-      this.cooldowns.set(packet.spellId, {
-        until: this.deps.now() + cd.recoveryTimeMs,
-        source: "predicted",
-      });
-    if (cd?.categoryRecoveryTimeMs)
-      this.categories.set(cd.category, {
-        until: this.deps.now() + cd.categoryRecoveryTimeMs,
-        source: "predicted",
-      });
+    this.predictCooldown(packet.spellId);
     this.lastOutcome = {
       kind: "cast",
       hits: packet.hits,
@@ -503,8 +483,7 @@ export class CombatRuntime {
     this.emit("cast_succeeded");
   }
 
-  applyCastFailed(r: PacketReader): void {
-    const packet = parseCastFailed(r);
+  applyCastFailed(packet: CastFailed): void {
     this.recordCastFailure(
       packet.spellId,
       packet.castCount,
@@ -513,8 +492,7 @@ export class CombatRuntime {
     );
   }
 
-  applySpellFailure(r: PacketReader): void {
-    const packet = parseSpellFailure(r);
+  applySpellFailure(packet: SpellFailure): void {
     if (packet.caster !== this.deps.selfGuid()) return;
     this.recordCastFailure(
       packet.spellId,
@@ -549,8 +527,7 @@ export class CombatRuntime {
     else this.emit("cast_failed", `cast_failed:${result}`);
   }
 
-  applyCooldown(r: PacketReader): void {
-    const packet = parseSpellCooldown(r);
+  applyCooldown(packet: SpellCooldown): void {
     if (packet.guid !== this.deps.selfGuid()) return;
     const now = this.deps.now();
     for (const cd of packet.cooldowns)
@@ -560,34 +537,21 @@ export class CombatRuntime {
       });
   }
 
-  applyClearCooldown(r: PacketReader): void {
-    const id = r.uint32LE();
-    if (r.uint64LE() !== this.deps.selfGuid()) return;
-    this.cooldowns.delete(id);
-    const category = this.definition(id)?.cooldown.category;
+  applyClearCooldown({ spellId, guid }: CooldownNotice): void {
+    if (guid !== this.deps.selfGuid()) return;
+    this.cooldowns.delete(spellId);
+    const category = this.definition(spellId)?.cooldown.category;
     if (category) this.categories.delete(category);
     this.emit("outcome", "cooldown_cleared");
   }
 
-  applyCooldownEvent(r: PacketReader): void {
-    const id = r.uint32LE();
-    if (r.uint64LE() !== this.deps.selfGuid()) return;
-    const cd = this.definition(id)?.cooldown;
-    if (cd?.recoveryTimeMs)
-      this.cooldowns.set(id, {
-        until: this.deps.now() + cd.recoveryTimeMs,
-        source: "predicted",
-      });
-    if (cd?.categoryRecoveryTimeMs)
-      this.categories.set(cd.category, {
-        until: this.deps.now() + cd.categoryRecoveryTimeMs,
-        source: "predicted",
-      });
+  applyCooldownEvent({ spellId, guid }: CooldownNotice): void {
+    if (guid !== this.deps.selfGuid()) return;
+    this.predictCooldown(spellId);
     this.emit("outcome", "cooldown_event");
   }
 
-  applySpellDelayed(r: PacketReader): void {
-    const { caster, delayMs } = parseSpellDelayed(r);
+  applySpellDelayed({ caster, delayMs }: SpellDelayed): void {
     if (caster !== this.deps.selfGuid() || !this.casting) return;
     this.casting.durationMs += delayMs;
     this.emit("cast_started", "cast_delayed");
@@ -617,8 +581,7 @@ export class CombatRuntime {
     this.emit("attack_stopped");
   }
 
-  applyAttackStart(r: PacketReader): void {
-    const packet = parseAttackStart(r);
+  applyAttackStart(packet: AttackStart): void {
     if (packet.attacker === this.deps.selfGuid()) {
       this.pendingAttack = undefined;
       this.attacking = true;
@@ -635,8 +598,7 @@ export class CombatRuntime {
     }
   }
 
-  applyAttackStop(r: PacketReader): void {
-    const packet = parseAttackStop(r);
+  applyAttackStop(packet: AttackStop): void {
     if (packet.attacker === this.deps.selfGuid()) {
       this.pendingAttack = undefined;
       this.attacking = false;
@@ -653,21 +615,19 @@ export class CombatRuntime {
     }
   }
 
-  applyAura(r: PacketReader): void {
-    this.storeAura(parseAuraUpdate(r));
+  applyAura(update: AuraUpdate): void {
+    this.storeAura(update);
     this.emit("aura");
   }
 
-  applyAuraAll(r: PacketReader): void {
-    const { unit, auras } = parseAuraUpdateAll(r);
+  applyAuraAll({ unit, auras }: AuraUpdateAll): void {
     for (const [key, aura] of this.auras)
       if (aura.unit === unit) this.auras.delete(key);
     for (const aura of auras) this.storeAura(aura);
     this.emit("aura");
   }
 
-  applyXp(r: PacketReader): void {
-    const packet = parseXpGain(r);
+  applyXp(packet: XpGain): void {
     this.lastXp = {
       victim: packet.victim,
       total: packet.total,
@@ -677,8 +637,7 @@ export class CombatRuntime {
     this.emit("xp");
   }
 
-  applyMonsterMove(r: PacketReader, mapId: number): void {
-    const packet = parseMonsterMove(r);
+  applyMonsterMove(packet: MonsterMove, mapId: number): void {
     const now = this.deps.now();
     const observed: CombatPose = {
       mapId,
@@ -858,6 +817,17 @@ export class CombatRuntime {
     }
     if (motion) return { ...motion.observed };
     return undefined;
+  }
+
+  private predictCooldown(id: number): void {
+    const cd = this.definition(id)?.cooldown;
+    const until = (ms: number) => ({
+      until: this.deps.now() + ms,
+      source: "predicted" as const,
+    });
+    if (cd?.recoveryTimeMs) this.cooldowns.set(id, until(cd.recoveryTimeMs));
+    if (cd?.categoryRecoveryTimeMs)
+      this.categories.set(cd.category, until(cd.categoryRecoveryTimeMs));
   }
 
   private beginGlobalCooldown(id: number): void {

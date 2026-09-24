@@ -164,6 +164,8 @@ export type SupersededSpell = {
 
 export type SpellDelayed = { caster: bigint; delayMs: number };
 
+export type CooldownNotice = { spellId: number; guid: bigint };
+
 function remainingUint32s(r: PacketReader): number[] {
   const extra: number[] = [];
   while (r.remaining >= 4) extra.push(r.uint32LE());
@@ -382,4 +384,8 @@ export function parseSupersededSpell(r: PacketReader): SupersededSpell {
 
 export function parseSpellDelayed(r: PacketReader): SpellDelayed {
   return { caster: r.packedGuidBig(), delayMs: r.uint32LE() };
+}
+
+export function parseCooldownNotice(r: PacketReader): CooldownNotice {
+  return { spellId: r.uint32LE(), guid: r.uint64LE() };
 }
