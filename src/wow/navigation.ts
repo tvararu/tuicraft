@@ -114,60 +114,38 @@ export function createNavigation(
     throw new Error("navigation libraryPath is required");
   let map: NativeMap | undefined;
   let closed = false;
-  function requireMap(mapId: number): void {
+  function open(mapId: number, ...points: NavPoint[]): NativeMap {
     if (closed) throw new Error("navigation is closed");
     if (mapId !== EXPANSION01)
       throw new Error(
         `unsupported map ${mapId} (only Expansion01/${EXPANSION01})`,
       );
+    for (const point of points) validateNativePoint(point);
+    map ??= openMap(dataPath, libraryPath, "Expansion01");
+    return map;
   }
   return {
     plan(mapId, from, to) {
-      requireMap(mapId);
-      validateNativePoint(from);
-      validateNativePoint(to);
-      map ??= openMap(dataPath, libraryPath, "Expansion01");
-      return planRoute(map, from, to);
+      return planRoute(open(mapId, from, to), from, to);
     },
     planGround(mapId, from, to) {
-      requireMap(mapId);
-      validateNativePoint(from);
       validateNativeXY(to.x, to.y);
-      map ??= openMap(dataPath, libraryPath, "Expansion01");
+      const map = open(mapId, from);
       map.loadAdtAt(from.x, from.y);
       checkGround(map, from);
       map.loadAdtAt(to.x, to.y);
-      const destination = {
-        x: to.x,
-        y: to.y,
-        z: uniqueHeight(map, to.x, to.y),
-      };
-      return planRoute(map, from, destination);
+      const z = uniqueHeight(map, to.x, to.y);
+      return planRoute(map, from, { x: to.x, y: to.y, z });
     },
     height(mapId, x, y, from) {
-      requireMap(mapId);
       validateNativeXY(x, y);
-      map ??= openMap(dataPath, libraryPath, "Expansion01");
-      if (from) {
-        validateNativePoint(from);
-        map.loadAdtAt(from.x, from.y);
-      }
+      const map = open(mapId, ...(from ? [from] : []));
+      if (from) map.loadAdtAt(from.x, from.y);
       map.loadAdtAt(x, y);
-      if (from) {
-        try {
-          const h = map.findHeight(from, x, y);
-          if (Number.isFinite(h)) return h;
-        } catch {}
-        const continuous = continuousHeight(map, x, y, from.z);
-        if (continuous !== undefined) return continuous;
-      }
-      return uniqueHeight(map, x, y);
+      return from ? connectedHeight(map, x, y, from) : uniqueHeight(map, x, y);
     },
     clear(mapId, from, to) {
-      requireMap(mapId);
-      validateNativePoint(from);
-      validateNativePoint(to);
-      map ??= openMap(dataPath, libraryPath, "Expansion01");
+      const map = open(mapId, from, to);
       map.loadAdtAt(to.x, to.y);
       return map.lineOfSight(from, to);
     },
@@ -255,6 +233,19 @@ function checkGround(map: NativeMap, point: NavPoint): void {
   const heights = groundHeights(map, point.x, point.y);
   if (heights.some((height) => Math.abs(height - point.z) > GROUND_ERROR))
     throw groundError("position disagrees with ground height");
+}
+
+function connectedHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  from: NavPoint,
+): number {
+  try {
+    const h = map.findHeight(from, x, y);
+    if (Number.isFinite(h)) return h;
+  } catch {}
+  return continuousHeight(map, x, y, from.z) ?? uniqueHeight(map, x, y);
 }
 
 function uniqueHeight(map: NativeMap, x: number, y: number): number {
