@@ -1,6 +1,6 @@
 import type { MovementDirection } from "wow/control";
 import type { WalkTarget } from "wow/client";
-import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
+import { DEFAULT_FIGHT_INSTRUCTION } from "wow/tactics";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 
 export type CliAction =

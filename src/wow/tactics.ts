@@ -13,6 +13,8 @@ const WAIT = {
   description:
     "Hold current state and start nothing new: if moving, this refreshes the current direction's movement lease; if stationary, this is a no-op. Use stop_moving to release movement explicitly.",
 } as const;
+export const DEFAULT_FIGHT_INSTRUCTION =
+  "defeat the selected target while keeping the character alive";
 const DEFAULT_MAX_AGE_MS = 2000;
 const DEFAULT_INTERVAL_MS = 200;
 const DEFAULT_TIMEOUT_MS = 5000;

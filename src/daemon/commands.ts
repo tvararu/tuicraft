@@ -39,7 +39,7 @@ import type {
 } from "wow/control";
 import type { CombatEvent } from "wow/combat";
 import type { TacticsEvent } from "wow/tactics";
-import { DEFAULT_FIGHT_INSTRUCTION } from "wow/standing-instructions";
+import { DEFAULT_FIGHT_INSTRUCTION } from "wow/tactics";
 import { parseFramingVariant, type FramingVariant } from "wow/framing";
 import type { CycleEvent } from "wow/encounter-cycle";
 import type { RecoveryEvent } from "wow/recovery";
