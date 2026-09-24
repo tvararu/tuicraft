@@ -22,6 +22,12 @@ import {
   formatControlStateObj,
   nextStepFor,
 } from "ui/format-control";
+import {
+  formatCycleState,
+  formatRecoveryState,
+  formatInventoryState,
+  formatRewardsState,
+} from "ui/format-gameplay";
 import type { WorldHandle } from "wow/client";
 import type { ControlState } from "wow/control";
 
@@ -359,7 +365,7 @@ export async function dispatchCommand(
         ok,
       );
     case "cycling":
-      return reply(socket, () => handle.getCycleState(), pretty);
+      return reply(socket, () => handle.getCycleState(), formatCycleState);
     case "cycling_json":
       return reply(socket, () => handle.getCycleState(), json);
     case "goto":
@@ -369,7 +375,11 @@ export async function dispatchCommand(
     case "navigation_json":
       return reply(socket, () => navigationObservation(handle), json);
     case "recovery":
-      return reply(socket, () => handle.getRecoveryState(), pretty);
+      return reply(
+        socket,
+        () => handle.getRecoveryState(),
+        formatRecoveryState,
+      );
     case "recovery_json":
       return reply(socket, () => handle.getRecoveryState(), json);
     case "query_corpse":
@@ -411,11 +421,15 @@ export async function dispatchCommand(
     case "cancel_interaction":
       return reply(socket, () => handle.cancelInteraction(), ok);
     case "inventory":
-      return reply(socket, () => handle.getInventoryState(), pretty);
+      return reply(
+        socket,
+        () => handle.getInventoryState(),
+        formatInventoryState,
+      );
     case "inventory_json":
       return reply(socket, () => handle.getInventoryState(), json);
     case "loot":
-      return reply(socket, () => handle.getRewardsState(), pretty);
+      return reply(socket, () => handle.getRewardsState(), formatRewardsState);
     case "loot_json":
       return reply(socket, () => handle.getRewardsState(), json);
     case "open_loot":

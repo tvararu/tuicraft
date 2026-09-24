@@ -11,7 +11,6 @@ import {
   errorEnvelope,
   daemonCommandFailed,
   walkCommandFailed,
-  formatHumanInspection,
   formatHumanIntent,
   type ReplyKind,
   type OutputEnvelope,
@@ -93,16 +92,6 @@ function printControlReply(lines: string[]): void {
     if (daemonCommandFailed(lines)) process.exitCode = 1;
   }
 }
-function printHumanInspection(command: string, lines: string[]): void {
-  const reply = decodeReply(command, "json", lines);
-  if (reply.error) {
-    console.log(`ERR ${reply.error.message}`);
-    process.exitCode = 1;
-    return;
-  }
-  for (const line of formatHumanInspection(command, reply.data))
-    console.log(line);
-}
 function printWalkReply(lines: string[]): void {
   const failed = walkCommandFailed(lines);
   if (!jsonRequested()) {
@@ -138,13 +127,7 @@ function printStatus(command: string, lines: string[], data: JsonValue): void {
 }
 
 async function printInspection(action: Inspection): Promise<void> {
-  const summary =
-    !action.json &&
-    ["cycling", "recovery", "inventory", "loot"].includes(action.mode);
-  const line = inspectionLine(summary ? { ...action, json: true } : action);
-  const lines = await sendToSocket(line);
-  if (summary) printHumanInspection(action.mode, lines);
-  else printReply(lines, "json", true);
+  printReply(await sendToSocket(inspectionLine(action)), "json", true);
 }
 async function printSendReply(
   lines: string[],
