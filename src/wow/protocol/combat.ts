@@ -432,10 +432,25 @@ export function parseAttackStop(r: PacketReader): AttackStop {
   };
 }
 
-export function parseAuraUpdate(
-  r: PacketReader,
-  unit = r.packedGuidBig(),
-): AuraUpdate {
+export type AuraUpdateAll = { unit: bigint; auras: AuraUpdate[] };
+export type SpellDelayed = { caster: bigint; delayMs: number };
+
+export function parseAuraUpdate(r: PacketReader): AuraUpdate {
+  return readAura(r, r.packedGuidBig());
+}
+
+export function parseAuraUpdateAll(r: PacketReader): AuraUpdateAll {
+  const unit = r.packedGuidBig();
+  const auras: AuraUpdate[] = [];
+  while (r.remaining > 0) auras.push(readAura(r, unit));
+  return { unit, auras };
+}
+
+export function parseSpellDelayed(r: PacketReader): SpellDelayed {
+  return { caster: r.packedGuidBig(), delayMs: r.uint32LE() };
+}
+
+function readAura(r: PacketReader, unit: bigint): AuraUpdate {
   const slot = r.uint8();
   const spellId = r.uint32LE();
   if (spellId === 0) return { unit, slot, removed: true };

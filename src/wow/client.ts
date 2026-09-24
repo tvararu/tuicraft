@@ -566,8 +566,6 @@ export function worldSession(
         sendPacket(conn, opcode, body ?? new Uint8Array()),
       ticks: () => Date.now() - conn.startTime,
       now: () => Date.now(),
-      guidLow: () => conn.selfGuidLow,
-      guidHigh: () => conn.selfGuidHigh,
       selfGuid: () => selfGuid(conn),
       findHeight: (mapId, x, y, from) => {
         try {

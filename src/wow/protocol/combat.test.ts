@@ -13,6 +13,8 @@ import {
   parseAttackStart,
   parseAttackStop,
   parseAuraUpdate,
+  parseAuraUpdateAll,
+  parseSpellDelayed,
   parseXpGain,
   parseLearnedSpell,
   parseRemovedSpell,
@@ -392,31 +394,35 @@ describe("parseAuraUpdate", () => {
     });
   });
 
-  test("bulk aura entries reuse one decoded unit header", () => {
-    const r = reader([
-      0x01, 0x4e, 0x00, 0x00, 0x00, 0x08, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00,
-      0x00,
-    ]);
-    expect(parseAuraUpdate(r, 0x17n)).toMatchObject({
-      unit: 0x17n,
-      slot: 1,
-      removed: false,
-      spellId: 78,
-    });
-    expect(parseAuraUpdate(r, 0x17n)).toEqual({
-      unit: 0x17n,
-      slot: 3,
-      removed: true,
-    });
-    expect(r.remaining).toBe(0);
-  });
-
   test("throws when duration flag is set without duration fields", () => {
     expect(() =>
       parseAuraUpdate(
         reader([0x00, 0x00, 0x4e, 0x00, 0x00, 0x00, 0x28, 0x01, 0x01]),
       ),
     ).toThrow();
+  });
+});
+
+describe("parseAuraUpdateAll", () => {
+  test("every entry reuses the unit header", () => {
+    const r = reader([
+      0x01, 0x17, 0x01, 0x4e, 0x00, 0x00, 0x00, 0x08, 0x01, 0x01, 0x03, 0x00,
+      0x00, 0x00, 0x00,
+    ]);
+    const all = parseAuraUpdateAll(r);
+    expect(all.unit).toBe(0x17n);
+    expect(all.auras).toHaveLength(2);
+    expect(all.auras[0]).toMatchObject({ unit: 0x17n, slot: 1, spellId: 78 });
+    expect(all.auras[1]).toEqual({ unit: 0x17n, slot: 3, removed: true });
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseSpellDelayed", () => {
+  test("reads caster and delay", () => {
+    const r = reader([0x01, 0x17, 0xf4, 0x01, 0x00, 0x00]);
+    expect(parseSpellDelayed(r)).toEqual({ caster: 0x17n, delayMs: 500 });
+    expect(r.remaining).toBe(0);
   });
 });
 

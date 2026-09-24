@@ -18,8 +18,6 @@ function setup(over: Partial<NativeMap> = {}) {
     },
     ticks: () => now,
     now: () => now,
-    guidLow: () => 1,
-    guidHigh: () => 0,
     selfGuid: () => 1n,
     findHeight: () => 0,
   });

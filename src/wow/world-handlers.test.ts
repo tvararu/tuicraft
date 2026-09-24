@@ -4001,8 +4001,6 @@ describe("handleNearTeleport", () => {
       },
       ticks: () => 0,
       now: () => 10_000,
-      guidLow: () => 0x0764,
-      guidHigh: () => 0,
       selfGuid: () => 0x0764n,
       findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
     });

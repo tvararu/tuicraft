@@ -39,8 +39,6 @@ function setup(over: Partial<ControlDeps> = {}): {
       sent.push({ opcode, body: body ?? new Uint8Array() }),
     ticks: () => now - 10_000,
     now: () => now,
-    guidLow: () => 0x0764,
-    guidHigh: () => 0,
     selfGuid: () => 0x0764n,
     findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
     ...over,
@@ -418,8 +416,6 @@ describe("ControlRuntime", () => {
           sent.push({ opcode, body: body ?? new Uint8Array() }),
         ticks: () => 0,
         now: () => 0,
-        guidLow: () => 1,
-        guidHigh: () => 0,
         selfGuid: () => 1n,
       });
       noSpeed.applyLoginVerify(loginReader());
@@ -844,7 +840,7 @@ describe("ControlRuntime", () => {
       expect(rooted.flags & MovementFlag.ON_TRANSPORT).toBe(
         MovementFlag.ON_TRANSPORT,
       );
-      expect(rooted.transport?.guidLow).toBe(0x99);
+      expect(rooted.transport?.guid).toBe(0x99n);
       expect(rooted.transport?.seat).toBe(1);
       expect(rootAck.remaining).toBe(0);
       sent.length = 0;
@@ -861,7 +857,7 @@ describe("ControlRuntime", () => {
       speedAck.packedGuid();
       expect(speedAck.uint32LE()).toBe(3);
       const moving = parseMovementInfo(speedAck);
-      expect(moving.transport?.guidLow).toBe(0x99);
+      expect(moving.transport?.guid).toBe(0x99n);
       expect(speedAck.floatLE()).toBe(7);
       expect(speedAck.remaining).toBe(0);
     } finally {

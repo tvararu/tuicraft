@@ -31,7 +31,11 @@ import {
   parseGroupList,
   parsePartyMemberStats,
 } from "wow/protocol/group";
-import { parseMovementInfo } from "wow/protocol/movement";
+import {
+  SPEED_ACKS,
+  parseMoveCounter,
+  parseMovementInfo,
+} from "wow/protocol/movement";
 import { parseUpdateObject } from "wow/protocol/update-object";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
@@ -899,13 +903,11 @@ export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
 }
 
 export function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
-  r.packedGuid();
-  conn.control?.forceRoot(r.uint32LE());
+  conn.control?.forceRoot(parseMoveCounter(r).counter);
 }
 
 export function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
-  r.packedGuid();
-  conn.control?.forceUnroot(r.uint32LE());
+  conn.control?.forceUnroot(parseMoveCounter(r).counter);
 }
 
 export function handleMoveKnockBack(conn: WorldConn, r: PacketReader): void {
@@ -959,17 +961,7 @@ export function registerMovementHandlers(conn: WorldConn): void {
   conn.dispatch.on(GameOpcode.SMSG_MOVE_UNSET_CAN_FLY, (r) => {
     conn.control?.handleCanFly(r, false);
   });
-  const speedOpcodes = [
-    GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_RUN_BACK_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_WALK_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_SWIM_BACK_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_TURN_RATE_CHANGE,
-    GameOpcode.SMSG_FORCE_FLIGHT_SPEED_CHANGE,
-    GameOpcode.SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE,
-  ];
-  for (const opcode of speedOpcodes) {
+  for (const { smsg: opcode } of SPEED_ACKS) {
     conn.dispatch.on(opcode, (r) => handleForceSpeedChange(conn, r, opcode));
   }
 }

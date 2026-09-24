@@ -154,8 +154,6 @@ function setup(
     send() {},
     now: nowFn,
     ticks: () => 0,
-    guidLow: () => 1,
-    guidHigh: () => 0,
     selfGuid: () => 1n,
   });
   control.observeSelf({
@@ -524,8 +522,6 @@ test("an attacking creature whose faction relation is not verified as hostile ca
     send() {},
     now: () => 1000,
     ticks: () => 0,
-    guidLow: () => 1,
-    guidHigh: () => 0,
     selfGuid: () => 1n,
   });
   control.observeSelf({

@@ -11,8 +11,16 @@ import {
   buildRootAck,
   buildSetActiveMover,
   buildSetSelection,
+  buildCanFlyAck,
+  parseMoveCounter,
+  parseTeleportAck,
+  parseKnockBack,
+  parseForceSpeed,
+  parseClientControl,
+  speedAckFor,
   type MovementInfo,
 } from "wow/protocol/movement";
+import { GameOpcode } from "wow/protocol/opcodes";
 
 const base: MovementInfo = {
   flags: 0,
@@ -100,7 +108,7 @@ describe("MovementInfo round-trip", () => {
     const out = parseMovementInfo(parsed);
     expect(out.x).toBe(1);
     expect(out.fallTime).toBe(77);
-    expect(out.transport?.guidLow).toBe(0x1234);
+    expect(out.transport?.guid).toBe(0x1234n);
     expect(out.transport?.seat).toBe(1);
     expect(parsed.remaining).toBe(0);
   });
@@ -151,7 +159,7 @@ describe("MovementInfo round-trip", () => {
 
 describe("packet builders", () => {
   test("buildMoveMessage prefixes the packed guid", () => {
-    const body = buildMoveMessage(0x0764, 0, { ...base, flags: 1 });
+    const body = buildMoveMessage(0x0764n, { ...base, flags: 1 });
     const r = new PacketReader(body);
     expect(r.packedGuid()).toEqual({ low: 0x0764, high: 0 });
     const info = parseMovementInfo(r);
@@ -160,7 +168,7 @@ describe("packet builders", () => {
   });
 
   test("buildTeleportAck echoes counter and time", () => {
-    const body = buildTeleportAck(0x0764, 0, 3, 456789);
+    const body = buildTeleportAck(0x0764n, 3, 456789);
     const r = new PacketReader(body);
     expect(r.packedGuid()).toEqual({ low: 0x0764, high: 0 });
     expect(r.uint32LE()).toBe(3);
@@ -170,7 +178,10 @@ describe("packet builders", () => {
 
   test("buildSpeedAck echoes the exact f32 speed bits", () => {
     const speed = Math.fround(7.1234567);
-    const body = buildSpeedAck(0x0764, 0, 5, base, speed);
+    const body = buildSpeedAck(
+      { guid: 0x0764n, counter: 5, info: base },
+      speed,
+    );
     const r = new PacketReader(body);
     r.packedGuid();
     expect(r.uint32LE()).toBe(5);
@@ -180,7 +191,7 @@ describe("packet builders", () => {
   });
 
   test("buildRootAck carries counter and movement info", () => {
-    const body = buildRootAck(0x0764, 0, 9, base);
+    const body = buildRootAck({ guid: 0x0764n, counter: 9, info: base });
     const r = new PacketReader(body);
     r.packedGuid();
     expect(r.uint32LE()).toBe(9);
@@ -189,10 +200,9 @@ describe("packet builders", () => {
   });
 
   test("buildSetActiveMover writes the full guid", () => {
-    const body = buildSetActiveMover(0x0764, 0xf130);
+    const body = buildSetActiveMover(0xf130_00000764n);
     const r = new PacketReader(body);
-    expect(r.uint32LE()).toBe(0x0764);
-    expect(r.uint32LE()).toBe(0xf130);
+    expect(r.uint64LE()).toBe(0xf130_00000764n);
     expect(r.remaining).toBe(0);
   });
 
@@ -216,5 +226,97 @@ describe("packet builders", () => {
     expect(pos.mapId).toBe(530);
     expect(pos.x).toBeCloseTo(8709.46, 2);
     expect(pos.orientation).toBeCloseTo(1.5, 4);
+  });
+});
+
+function moveCounter(guid: bigint, counter: number): PacketWriter {
+  const w = new PacketWriter();
+  w.packedGuidBig(guid);
+  w.uint32LE(counter);
+  return w;
+}
+
+describe("buildCanFlyAck", () => {
+  test("appends the applied flag after movement info", () => {
+    const r = new PacketReader(
+      buildCanFlyAck({ guid: 0x0764n, counter: 2, info: base }, true),
+    );
+    expect(parseMoveCounter(r)).toEqual({ guid: 0x0764n, counter: 2 });
+    parseMovementInfo(r);
+    expect(r.uint32LE()).toBe(1);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseMoveCounter", () => {
+  test("reads guid and counter", () => {
+    const r = new PacketReader(moveCounter(0xf130_00000001n, 7).finish());
+    expect(parseMoveCounter(r)).toEqual({ guid: 0xf130_00000001n, counter: 7 });
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseTeleportAck", () => {
+  test("reads counter and destination", () => {
+    const w = moveCounter(0x0764n, 4);
+    writeMovementInfo(w, base);
+    const r = new PacketReader(w.finish());
+    const ack = parseTeleportAck(r);
+    expect(ack.counter).toBe(4);
+    expect(ack.info.time).toBe(base.time);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseKnockBack", () => {
+  test("reads cos, sin, horizontal then vertical speed", () => {
+    const w = moveCounter(0x0764n, 5);
+    w.floatLE(0.5);
+    w.floatLE(-1);
+    w.floatLE(8);
+    w.floatLE(-4);
+    const r = new PacketReader(w.finish());
+    expect(parseKnockBack(r)).toEqual({
+      guid: 0x0764n,
+      counter: 5,
+      fall: { cosAngle: 0.5, sinAngle: -1, xySpeed: 8, zSpeed: -4 },
+    });
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseForceSpeed", () => {
+  test("skips the extra byte for run speed", () => {
+    const w = moveCounter(0x0764n, 3);
+    w.uint8(0);
+    w.floatLE(7);
+    const r = new PacketReader(w.finish());
+    const spec = speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE)!;
+    expect(parseForceSpeed(r, spec)).toEqual({
+      guid: 0x0764n,
+      counter: 3,
+      speed: 7,
+    });
+    expect(r.remaining).toBe(0);
+  });
+
+  test("reads the speed directly for other kinds", () => {
+    const w = moveCounter(0x0764n, 3);
+    w.floatLE(4.5);
+    const r = new PacketReader(w.finish());
+    const spec = speedAckFor(GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE)!;
+    expect(parseForceSpeed(r, spec).speed).toBe(4.5);
+    expect(r.remaining).toBe(0);
+  });
+});
+
+describe("parseClientControl", () => {
+  test("reads guid and allow flag", () => {
+    const w = new PacketWriter();
+    w.packedGuidBig(0x0764n);
+    w.uint8(0);
+    const r = new PacketReader(w.finish());
+    expect(parseClientControl(r)).toEqual({ guid: 0x0764n, allow: false });
+    expect(r.remaining).toBe(0);
   });
 });

@@ -11,9 +11,15 @@ import {
   buildSetSelection,
   buildSpeedAck,
   buildTeleportAck,
-  parseMovementInfo,
+  parseClientControl,
+  parseForceSpeed,
+  parseKnockBack,
+  parseMoveCounter,
+  parseTeleportAck,
   parseWorldPosition,
+  speedAckFor,
   type FallData,
+  type MoveAck,
   type MovementInfo,
   type TransportInfo,
 } from "wow/protocol/movement";
@@ -105,8 +111,6 @@ export type ControlDeps = {
   send: ControlSend;
   ticks: () => number;
   now: () => number;
-  guidLow: () => number;
-  guidHigh: () => number;
   selfGuid: () => bigint;
   findHeight?: (
     mapId: number,
@@ -148,48 +152,6 @@ const DIR_HEADING: Record<MovementDirection, number> = {
 };
 
 const UNIT_BLOCK_FLAGS = 0x00000004 | 0x00040000 | 0x00400000 | 0x00800000;
-
-const SPEED_ACKS = [
-  {
-    smsg: GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_RUN_SPEED_CHANGE_ACK,
-    extraByte: true,
-    field: "runSpeed",
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_RUN_BACK_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_RUN_BACK_SPEED_CHANGE_ACK,
-    field: "runBackSpeed",
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_SWIM_SPEED_CHANGE_ACK,
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_WALK_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_WALK_SPEED_CHANGE_ACK,
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_SWIM_BACK_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_SWIM_BACK_SPEED_CHANGE_ACK,
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_TURN_RATE_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_TURN_RATE_CHANGE_ACK,
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_FLIGHT_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_FLIGHT_SPEED_CHANGE_ACK,
-  },
-  {
-    smsg: GameOpcode.SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE,
-    ack: GameOpcode.CMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE_ACK,
-  },
-] as const;
-
-export function speedAckFor(opcode: number) {
-  return SPEED_ACKS.find((entry) => entry.smsg === opcode);
-}
 
 function copyPose(pose: ControlPose | undefined): ControlPose | undefined {
   return pose ? { ...pose } : undefined;
@@ -502,7 +464,7 @@ export class ControlRuntime {
     for (const waiter of waiters) waiter();
     this.deps.send(
       GameOpcode.CMSG_SET_ACTIVE_MOVER,
-      buildSetActiveMover(this.deps.guidLow(), this.deps.guidHigh()),
+      buildSetActiveMover(this.deps.selfGuid()),
     );
   }
 
@@ -571,19 +533,12 @@ export class ControlRuntime {
   }
 
   handleTeleportAck(r: PacketReader): void {
-    r.packedGuid();
-    const counter = r.uint32LE();
-    const dest = parseMovementInfo(r);
+    const { counter, info: dest } = parseTeleportAck(r);
     this.teleporting = false;
     this.abortUnsafe("teleport");
     this.deps.send(
       GameOpcode.MSG_MOVE_TELEPORT_ACK,
-      buildTeleportAck(
-        this.deps.guidLow(),
-        this.deps.guidHigh(),
-        counter,
-        this.deps.ticks(),
-      ),
+      buildTeleportAck(this.deps.selfGuid(), counter, this.deps.ticks()),
     );
     this.applyForcedPose(dest, "teleport");
   }
@@ -616,7 +571,7 @@ export class ControlRuntime {
     this.deps.send(GameOpcode.MSG_MOVE_WORLDPORT_ACK);
     this.deps.send(
       GameOpcode.CMSG_SET_ACTIVE_MOVER,
-      buildSetActiveMover(this.deps.guidLow(), this.deps.guidHigh()),
+      buildSetActiveMover(this.deps.selfGuid()),
     );
     this.emit("server_correction", "new_world");
   }
@@ -637,23 +592,17 @@ export class ControlRuntime {
   }
 
   handleKnockBack(r: PacketReader): void {
-    r.packedGuid();
-    const counter = r.uint32LE();
-    const vCos = r.floatLE();
-    const vSin = r.floatLE();
-    const xySpeed = r.floatLE();
-    const zSpeed = r.floatLE();
+    const { counter, fall } = parseKnockBack(r);
     this.abortUnsafe("knockback");
     this.observedFlags |= MovementFlag.FALLING;
     this.moveFlags |= MovementFlag.FALLING;
-    this.fall = { zSpeed, sinAngle: vSin, cosAngle: vCos, xySpeed };
+    this.fall = fall;
     this.ackRoot(GameOpcode.CMSG_MOVE_KNOCK_BACK_ACK, counter);
     this.emit("server_correction", "knockback");
   }
 
   handleClientControl(r: PacketReader): void {
-    const guid = r.packedGuidBig();
-    const allow = r.uint8() !== 0;
+    const { guid, allow } = parseClientControl(r);
     const self = this.deps.selfGuid();
     if (guid !== 0n && guid !== self) {
       this.clientControl = false;
@@ -669,29 +618,16 @@ export class ControlRuntime {
   handleForceSpeed(r: PacketReader, opcode: number): void {
     const spec = speedAckFor(opcode);
     if (!spec) return;
-    r.packedGuid();
-    const counter = r.uint32LE();
-    if ("extraByte" in spec && spec.extraByte) r.uint8();
-    const speed = r.floatLE();
+    const { counter, speed } = parseForceSpeed(r, spec);
     this.integrate();
     if ("field" in spec && spec.field === "runSpeed") this.runSpeed = speed;
     if ("field" in spec && spec.field === "runBackSpeed")
       this.runBackSpeed = speed;
-    this.deps.send(
-      spec.ack,
-      buildSpeedAck(
-        this.deps.guidLow(),
-        this.deps.guidHigh(),
-        counter,
-        this.movementInfo(),
-        speed,
-      ),
-    );
+    this.deps.send(spec.ack, buildSpeedAck(this.moveAck(counter), speed));
   }
 
   handleCanFly(r: PacketReader, enable: boolean): void {
-    r.packedGuid();
-    const counter = r.uint32LE();
+    const { counter } = parseMoveCounter(r);
     this.abortUnsafe(enable ? "flying" : "unset_can_fly");
     if (enable) {
       this.observedFlags |= MovementFlag.CAN_FLY;
@@ -702,13 +638,7 @@ export class ControlRuntime {
     }
     this.deps.send(
       GameOpcode.CMSG_MOVE_SET_CAN_FLY_ACK,
-      buildCanFlyAck(
-        this.deps.guidLow(),
-        this.deps.guidHigh(),
-        counter,
-        this.movementInfo(),
-        enable,
-      ),
+      buildCanFlyAck(this.moveAck(counter), enable),
     );
     this.emitAllowed(enable ? "flying" : undefined);
   }
@@ -1024,11 +954,7 @@ export class ControlRuntime {
   private sendMove(opcode: number): void {
     this.deps.send(
       opcode,
-      buildMoveMessage(
-        this.deps.guidLow(),
-        this.deps.guidHigh(),
-        this.movementInfo(),
-      ),
+      buildMoveMessage(this.deps.selfGuid(), this.movementInfo()),
     );
   }
 
@@ -1049,15 +975,11 @@ export class ControlRuntime {
   }
 
   private ackRoot(opcode: number, counter: number): void {
-    this.deps.send(
-      opcode,
-      buildRootAck(
-        this.deps.guidLow(),
-        this.deps.guidHigh(),
-        counter,
-        this.movementInfo(),
-      ),
-    );
+    this.deps.send(opcode, buildRootAck(this.moveAck(counter)));
+  }
+
+  private moveAck(counter: number): MoveAck {
+    return { guid: this.deps.selfGuid(), counter, info: this.movementInfo() };
   }
 
   private setServerPose(position: Position): void {

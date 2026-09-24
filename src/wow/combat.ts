@@ -7,6 +7,8 @@ import {
   parseAttackStart,
   parseAttackStop,
   parseAuraUpdate,
+  parseAuraUpdateAll,
+  parseSpellDelayed,
   parseCastFailed,
   parseInitialSpells,
   parseLearnedSpell,
@@ -596,10 +598,9 @@ export class CombatRuntime {
   }
 
   applySpellDelayed(r: PacketReader): void {
-    const caster = r.packedGuidBig();
-    const delay = r.uint32LE();
+    const { caster, delayMs } = parseSpellDelayed(r);
     if (caster !== this.deps.selfGuid() || !this.casting) return;
-    this.casting.durationMs += delay;
+    this.casting.durationMs += delayMs;
     this.emit("cast_started", "cast_delayed");
   }
 
@@ -669,10 +670,10 @@ export class CombatRuntime {
   }
 
   applyAuraAll(r: PacketReader): void {
-    const unit = r.packedGuidBig();
+    const { unit, auras } = parseAuraUpdateAll(r);
     for (const [key, aura] of this.auras)
       if (aura.unit === unit) this.auras.delete(key);
-    while (r.remaining > 0) this.storeAura(parseAuraUpdate(r, unit));
+    for (const aura of auras) this.storeAura(aura);
     this.emit("aura");
   }
 
