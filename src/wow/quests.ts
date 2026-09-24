@@ -1,9 +1,11 @@
 import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
 import {
-  ObjectType,
-  PLAYER_FIELDS,
-  UNIT_FIELDS,
-} from "wow/protocol/entity-fields";
+  questLogChanges,
+  readQuestLog,
+  sameSlot,
+  type QuestLog,
+} from "wow/quest-slots";
+import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildGossipHello,
@@ -32,21 +34,6 @@ import {
   type QuestUpdateAddKill,
   type QuestUpdateAddItem,
 } from "wow/protocol/quest-log";
-
-export type QuestLogSlot = {
-  slot: number;
-  questId: number | undefined;
-  flags: number | undefined;
-  counters: [
-    number | undefined,
-    number | undefined,
-    number | undefined,
-    number | undefined,
-  ];
-  expiresAtSeconds: number | undefined;
-};
-
-export type QuestLog = { complete: boolean; slots: QuestLogSlot[] };
 
 export type QuestDialog =
   | { kind: "gossip"; data: GossipMessage }
@@ -145,61 +132,6 @@ export type QuestDeps = {
   selfGuid: () => bigint;
   getEntity: EntityLookup;
 };
-
-function logSlot(
-  entity: Entity | undefined,
-  slot: number,
-  idsVisible: boolean,
-): QuestLogSlot {
-  const offset = PLAYER_FIELDS.QUEST_LOG.offset + slot * 5;
-  const low = fieldOf(entity, offset + 2);
-  const high = fieldOf(entity, offset + 3);
-  return {
-    slot,
-    questId: entity?.rawFields.get(offset) ?? (idsVisible ? 0 : undefined),
-    flags: fieldOf(entity, offset + 1),
-    counters: [
-      low === undefined ? undefined : low & 0xffff,
-      low === undefined ? undefined : low >>> 16,
-      high === undefined ? undefined : high & 0xffff,
-      high === undefined ? undefined : high >>> 16,
-    ],
-    expiresAtSeconds: fieldOf(entity, offset + 4),
-  };
-}
-
-export function readQuestLog(
-  selfGuid: bigint,
-  getEntity: QuestDeps["getEntity"],
-  questIdsVisibleAtCreate = false,
-): QuestLog {
-  const candidate = selfGuid === 0n ? undefined : getEntity(selfGuid);
-  const entity =
-    candidate?.guid === selfGuid && candidate.objectType === ObjectType.PLAYER
-      ? candidate
-      : undefined;
-  const idsVisible = !!entity?.createComplete && questIdsVisibleAtCreate;
-  const slots = Array.from({ length: 25 }, (_, slot) =>
-    logSlot(entity, slot, idsVisible),
-  );
-  const complete = slots.every(
-    (slot) =>
-      slot.questId !== undefined &&
-      slot.flags !== undefined &&
-      slot.expiresAtSeconds !== undefined &&
-      slot.counters.every((count) => count !== undefined),
-  );
-  return { complete, slots };
-}
-
-function sameSlot(a: QuestLogSlot, b: QuestLogSlot): boolean {
-  return (
-    a.questId === b.questId &&
-    a.flags === b.flags &&
-    a.expiresAtSeconds === b.expiresAtSeconds &&
-    a.counters.every((count, i) => count === b.counters[i])
-  );
-}
 
 function positiveId(id: number): void {
   if (!Number.isInteger(id) || id <= 0 || id > 0xffffffff)
@@ -638,49 +570,10 @@ export class QuestRuntime {
   }
 
   private transitions(previous: QuestLog, next: QuestLog): void {
-    const before = new Map(
-      previous.slots
-        .filter((slot) => slot.questId)
-        .map((slot) => [slot.questId!, slot]),
-    );
-    const after = new Map(
-      next.slots
-        .filter((slot) => slot.questId)
-        .map((slot) => [slot.questId!, slot]),
-    );
-    const beforeKnown = previous.slots.every(
-      (slot) => slot.questId !== undefined,
-    );
-    const afterKnown = next.slots.every((slot) => slot.questId !== undefined);
-    for (const [id, slot] of after) {
-      const old = before.get(id);
-      if (!old && beforeKnown) {
-        this.resolve("accept", id);
-        this.emit("accepted", "quest_log", id);
-        if (slot.flags !== undefined && slot.flags & 1)
-          this.emit("completed", "quest_log", id);
-        if (slot.flags !== undefined && slot.flags & 2)
-          this.emit("failed", "quest_log", id);
-      }
-      if (old) this.slotProgress(old, slot);
+    for (const { type, questId } of questLogChanges(previous, next)) {
+      if (type === "accepted") this.resolve("accept", questId);
+      if (type === "removed") this.resolve("abandon", questId);
+      this.emit(type, "quest_log", questId);
     }
-    if (!afterKnown) return;
-    for (const id of before.keys()) {
-      if (after.has(id)) continue;
-      this.resolve("abandon", id);
-      this.emit("removed", "quest_log", id);
-    }
-  }
-
-  private slotProgress(previous: QuestLogSlot, next: QuestLogSlot): void {
-    const flags = next.flags;
-    if (flags !== undefined && previous.flags !== undefined) {
-      if (flags & 1 && !(previous.flags & 1))
-        this.emit("completed", "quest_log", next.questId);
-      if (flags & 2 && !(previous.flags & 2))
-        this.emit("failed", "quest_log", next.questId);
-    }
-    if (!sameSlot(previous, next))
-      this.emit("progress", "quest_log", next.questId);
   }
 }

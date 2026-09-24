@@ -7,7 +7,8 @@ import {
 } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { QuestRuntime, readQuestLog, type QuestEvent } from "wow/quests";
+import { QuestRuntime, type QuestEvent } from "wow/quests";
+import { readQuestLog } from "wow/quest-slots";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { registerQuestHandlers } from "wow/gameplay-handlers";
 import type { WorldConn } from "wow/client";
