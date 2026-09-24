@@ -1,12 +1,13 @@
 export type FramingVariant = "none" | "minimal" | "mechanics";
 
-export const FRAMING_VARIANTS = ["none", "minimal", "mechanics"] as const;
+const FRAMING_VARIANTS: readonly FramingVariant[] = [
+  "none",
+  "minimal",
+  "mechanics",
+];
 
-export function isFramingVariant(value: unknown): value is FramingVariant {
-  return (
-    typeof value === "string" &&
-    FRAMING_VARIANTS.includes(value as FramingVariant)
-  );
+function isFramingVariant(value: string): value is FramingVariant {
+  return FRAMING_VARIANTS.some((variant) => variant === value);
 }
 
 export function parseFramingVariant(value: string | undefined): FramingVariant {

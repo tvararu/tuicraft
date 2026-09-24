@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildFraming,
-  isFramingVariant,
-  parseFramingVariant,
-} from "wow/framing";
+import { buildFraming, parseFramingVariant } from "wow/framing";
 
 describe("parseFramingVariant", () => {
   test("defaults undefined or empty string to none", () => {
@@ -24,17 +20,6 @@ describe("parseFramingVariant", () => {
     expect(() => parseFramingVariant("combat")).toThrow(
       'Unknown framing variant: "combat". Must be one of: none, minimal, mechanics',
     );
-  });
-});
-
-describe("isFramingVariant", () => {
-  test("checks valid and invalid values", () => {
-    expect(isFramingVariant("none")).toBe(true);
-    expect(isFramingVariant("minimal")).toBe(true);
-    expect(isFramingVariant("mechanics")).toBe(true);
-    expect(isFramingVariant("other")).toBe(false);
-    expect(isFramingVariant(123)).toBe(false);
-    expect(isFramingVariant(null)).toBe(false);
   });
 });
 
