@@ -7,7 +7,6 @@ import { socketPath, pidPath, runtimeDir, logPath } from "lib/paths";
 import { SessionLog } from "lib/session-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import {
-  parseIpcCommand,
   dispatchCommand,
   onChatMessage,
   onGroupEvent,
@@ -27,6 +26,7 @@ import {
   type EventEntry,
   type IpcSocket,
 } from "daemon/commands";
+import { parseIpcCommand } from "daemon/parse";
 
 type SocketState = {
   buffer: string;

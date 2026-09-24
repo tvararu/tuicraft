@@ -1,7 +1,23 @@
+import { parseFramingVariant } from "wow/framing";
+import type { FramingVariant } from "wow/framing";
 import type { MovementDirection } from "wow/control";
 import type { WalkTarget } from "wow/client";
-import { DEFAULT_FIGHT_INSTRUCTION } from "wow/tactics";
-import { parseFramingVariant, type FramingVariant } from "wow/framing";
+import {
+  parseBare,
+  parseGuidArg,
+  parseBoundedArg,
+  parseQuestId,
+  parseMove,
+  parseFace,
+  parseGoto,
+  parseWalkToward,
+  parseCast,
+  parseResurrect,
+  parseOptionId,
+  parseFight,
+  parseCycle,
+  type Parsed,
+} from "cli/tokens";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -59,7 +75,7 @@ export type CliAction =
       mode: "cycle";
       guids: bigint[];
       instruction: string;
-      maxStarts: number;
+      maxStarts?: number;
       json?: true;
     }
   | { mode: "cycling"; json: boolean }
@@ -240,13 +256,64 @@ function parseSend(args: string[]): CliAction {
   return { mode: "say", message, json, wait };
 }
 
+const FIXED = new Map<string, CliAction>([
+  ["start", { mode: "start" }],
+  ["stop", { mode: "stop" }],
+  ["status", { mode: "status" }],
+  ["logs", { mode: "logs" }],
+  ["help", { mode: "help" }],
+  ["version", { mode: "version" }],
+  ["skill", { mode: "skill" }],
+  ["halt", { mode: "halt" }],
+  ["cancel-cast", { mode: "cancel_cast" }],
+  ["stop-attack", { mode: "stop_attack" }],
+]);
+
+const STRICT = new Map<string, CliAction>(
+  (
+    [
+      "query_corpse",
+      "release_spirit",
+      "reclaim_corpse",
+      "accept_quest",
+      "request_reward",
+      "cancel_interaction",
+      "take_money",
+      "release_loot",
+    ] as const
+  ).map((mode): [string, CliAction] => [mode.replaceAll("_", "-"), { mode }]),
+);
+
+const INSPECTIONS = [
+  "control",
+  "combat",
+  "spells",
+  "tactics",
+  "cycling",
+  "navigation",
+  "recovery",
+  "quests",
+  "inventory",
+  "loot",
+] as const;
+
+function isInspection(cmd: string): cmd is (typeof INSPECTIONS)[number] {
+  return INSPECTIONS.some((view) => view === cmd);
+}
+
 function parseSubcommand(args: string[]): CliAction | undefined {
   const cmd = args[0];
   if (!cmd || !SUBCOMMANDS.has(cmd)) return undefined;
-
+  const rest = args.slice(1);
+  const fixed = FIXED.get(cmd);
+  if (fixed) return fixed;
+  const strict = STRICT.get(cmd);
+  if (strict) {
+    take(parseBare(rest, cmd));
+    return strict;
+  }
+  if (isInspection(cmd)) return { mode: cmd, json: hasFlag(rest, "--json") };
   switch (cmd) {
-    case "start":
-      return { mode: "start" };
     case "read":
       return parseRead(args);
     case "tail":
@@ -255,133 +322,16 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseSend(args);
     case "who":
       return parseWho(args);
-    case "control":
-      return {
-        mode: "control",
-        json: hasFlag(args.slice(1), "--json"),
-      };
     case "nearby": {
-      const all = hasFlag(args.slice(1), "--all");
+      const all = hasFlag(rest, "--all");
       return {
         mode: "nearby",
-        json: hasFlag(args.slice(1), "--json"),
+        json: hasFlag(rest, "--json"),
         ...(all ? { all: true } : {}),
       };
     }
-    case "move":
-      return parseMove(args);
-    case "face":
-      return parseFace(args);
-    case "face-guid":
-      return parseFaceGuid(args);
-    case "walk-toward":
-      return parseWalkToward(args);
-    case "target":
-      return parseTarget(args);
-    case "halt":
-      return { mode: "halt" };
-    case "combat":
-    case "spells":
-    case "tactics":
-    case "cycling":
-    case "navigation":
-    case "recovery":
-    case "quests":
-    case "inventory":
-    case "loot":
-      return { mode: cmd, json: hasFlag(args.slice(1), "--json") };
-    case "cast":
-      return parseCast(args);
-    case "attack":
-      return parseAttack(args);
-    case "cancel-cast":
-      return { mode: "cancel_cast" };
-    case "stop-attack":
-      return { mode: "stop_attack" };
-    case "fight":
-      return parseFight(args);
-    case "cycle":
-      return parseCycle(args);
-    case "goto":
-      return parseGoto(args);
-    case "query-corpse":
-      if (args.length !== 1) throw new Error("Invalid query-corpse arguments");
-      return { mode: "query_corpse" };
-    case "release-spirit":
-      if (args.length !== 1)
-        throw new Error("Invalid release-spirit arguments");
-      return { mode: "release_spirit" };
-    case "reclaim-corpse":
-      if (args.length !== 1)
-        throw new Error("Invalid reclaim-corpse arguments");
-      return { mode: "reclaim_corpse" };
-    case "spirit-healer": {
-      if (args.length !== 2) throw new Error("Invalid spirit-healer arguments");
-      const guid = parseGuid(args[1]!);
-      if (guid === undefined || guid === 0n)
-        throw new Error("Invalid spirit-healer guid");
-      return { mode: "spirit_healer", guid };
-    }
-    case "resurrect":
-      if (args.length !== 2 || (args[1] !== "accept" && args[1] !== "decline"))
-        throw new Error("Invalid resurrect arguments");
-      return { mode: "resurrect", accept: args[1] === "accept" };
-    case "talk": {
-      if (args.length !== 2) throw new Error("Invalid talk arguments");
-      const guid = parseGuid(args[1]!);
-      if (guid === undefined || guid === 0n)
-        throw new Error("Invalid talk guid");
-      return { mode: "talk", guid };
-    }
-    case "query-quest":
-      return {
-        mode: "query_quest",
-        questId: parseBoundedArgument(args, 1, 0xffff_ffff),
-      };
-    case "select-quest":
-      return {
-        mode: "select_quest",
-        questId: parseBoundedArgument(args, 1, 0xffff_ffff),
-      };
-    case "complete-quest":
-      return {
-        mode: "complete_quest",
-        questId: parseBoundedArgument(args, 1, 0xffff_ffff),
-      };
-    case "choose-reward":
-      return { mode: "choose_reward", index: parseBoundedArgument(args, 0, 5) };
-    case "abandon-quest":
-      return { mode: "abandon_quest", slot: parseBoundedArgument(args, 0, 24) };
-    case "select-option":
-      return parseSelectOption(args);
-    case "accept-quest":
-      if (args.length !== 1) throw new Error("Invalid accept-quest arguments");
-      return { mode: "accept_quest" };
-    case "request-reward":
-      if (args.length !== 1)
-        throw new Error("Invalid request-reward arguments");
-      return { mode: "request_reward" };
-    case "cancel-interaction":
-      if (args.length !== 1)
-        throw new Error("Invalid cancel-interaction arguments");
-      return { mode: "cancel_interaction" };
-    case "open-loot": {
-      if (args.length !== 2) throw new Error("Invalid open-loot arguments");
-      const guid = parseGuid(args[1]!);
-      if (guid === undefined || guid === 0n)
-        throw new Error("Invalid loot guid");
-      return { mode: "open_loot", guid };
-    }
-    case "take-loot":
-      return { mode: "take_loot", slot: parseBoundedArgument(args, 0, 255) };
-    case "take-money":
-      if (args.length !== 1) throw new Error("Invalid take-money arguments");
-      return { mode: "take_money" };
-    case "release-loot":
-      if (args.length !== 1) throw new Error("Invalid release-loot arguments");
-      return { mode: "release_loot" };
     default:
-      return { mode: cmd } as CliAction;
+      return parseGameplay(cmd, rest);
   }
 }
 
@@ -534,278 +484,77 @@ export function parseArgs(args: string[]): CliAction {
   );
 }
 
-const DIRECTIONS: readonly MovementDirection[] = [
-  "forward",
-  "backward",
-  "left",
-  "right",
-];
-const DEFAULT_MOVE_MS = 1000;
-const MIN_MOVE_MS = 1;
-const MAX_MOVE_MS = 10_000;
-const MAX_GUID = 0xffff_ffff_ffff_ffffn;
-
-function parseDirection(
-  raw: string | undefined,
-): MovementDirection | undefined {
-  if (!raw) return undefined;
-  const value = raw.toLowerCase() as MovementDirection;
-  return DIRECTIONS.includes(value) ? value : undefined;
+function take<T>(parsed: Parsed<T>): T {
+  if (!parsed.ok) throw new Error(parsed.reason);
+  return parsed.value;
 }
 
-function parseDuration(raw: string | undefined): number | undefined {
-  if (raw === undefined) return DEFAULT_MOVE_MS;
-  if (!/^[0-9]+$/.test(raw)) return undefined;
-  const ms = Number(raw);
-  if (ms < MIN_MOVE_MS || ms > MAX_MOVE_MS) return undefined;
-  return ms;
+function parseFightArgs(rest: string[]): CliAction {
+  const fight = take(parseFight(rest));
+  const framing =
+    fight.framing ?? parseFramingVariant(process.env["WOW_JEV_FRAMING"]);
+  return { mode: "fight", ...fight, framing };
 }
 
-function parseGuid(raw: string): bigint | undefined {
-  if (!/^0[xX][0-9a-fA-F]+$/.test(raw) && !/^[0-9]+$/.test(raw)) {
-    return undefined;
-  }
-  try {
-    const guid = BigInt(raw);
-    if (guid <= MAX_GUID) return guid;
-  } catch {}
-  return undefined;
-}
-
-function parseMove(args: string[]): CliAction {
-  const rest = args.slice(1);
-  const direction = parseDirection(rest[0]);
-  if (!direction) {
-    throw new Error(`Invalid move direction: ${rest[0] ?? ""}`);
-  }
-  if (rest.length > 2) throw new Error("Invalid move arguments");
-  const durationMs = parseDuration(rest[1]);
-  if (durationMs === undefined) {
-    throw new Error(`Invalid move duration: ${rest[1]}`);
-  }
-  return { mode: "move", direction, durationMs };
-}
-
-function parseFace(args: string[]): CliAction {
-  const raw = args[1];
-  if (raw === undefined || args.length !== 2 || raw.trim() === "") {
-    throw new Error("Invalid face arguments");
-  }
-  const orientation = Number(raw);
-  if (!Number.isFinite(orientation)) {
-    throw new Error(`Invalid facing: ${raw}`);
-  }
-  return { mode: "face", orientation };
-}
-function parseFaceGuid(args: string[]): CliAction {
-  const guid = args.length === 2 ? parseGuid(args[1]!) : undefined;
-  if (guid === undefined || guid === 0n)
-    throw new Error("Invalid face-guid arguments");
-  return { mode: "face_guid", guid };
-}
-
-function parseWalkToward(args: string[]): CliAction {
-  const yards = args[1] === undefined ? undefined : parseFiniteNumber(args[1]);
-  if (yards === undefined || yards <= 0 || yards > 20)
-    throw new Error("Invalid walk-toward distance");
-  if (args.length === 3) {
-    const guid = parseGuid(args[2]!);
-    if (guid === undefined || guid === 0n)
-      throw new Error("Invalid walk-toward target");
-    return { mode: "walk_toward", yards, target: { kind: "guid", guid } };
-  }
-  if (args.length !== 5) throw new Error("Invalid walk-toward destination");
-  const x = parseFiniteNumber(args[2]!);
-  const y = parseFiniteNumber(args[3]!);
-  const z = parseFiniteNumber(args[4]!);
-  if (x === undefined || y === undefined || z === undefined)
-    throw new Error("Invalid walk-toward destination");
-  return { mode: "walk_toward", yards, target: { kind: "point", x, y, z } };
-}
-
-function parseTarget(args: string[]): CliAction {
-  const raw = args[1];
-  if (raw === undefined || args.length !== 2) {
-    throw new Error("Invalid target arguments");
-  }
-  const guid = parseGuid(raw);
-  if (guid === undefined) throw new Error(`Invalid target guid: ${raw}`);
-  return { mode: "target", guid };
-}
-
-const MAX_SPELL_ID = 0xffff_ffff;
-
-function parseSpellId(raw: string): number | undefined {
-  if (!/^[0-9]+$/.test(raw)) return undefined;
-  const id = Number(raw);
-  if (!Number.isInteger(id) || id < 1 || id > MAX_SPELL_ID) return undefined;
-  return id;
-}
-
-function parseFiniteNumber(raw: string): number | undefined {
-  const value = Number(raw);
-  if (raw.trim() === "" || !Number.isFinite(value)) return undefined;
-  return value;
-}
-
-function parseCast(args: string[]): CliAction {
-  const spellRaw = args[1];
-  const guidRaw = args[2];
-  if (spellRaw === undefined || guidRaw === undefined || args.length !== 3) {
-    throw new Error("Invalid cast arguments");
-  }
-  const spellId = parseSpellId(spellRaw);
-  if (spellId === undefined) throw new Error(`Invalid spell id: ${spellRaw}`);
-  const guid = parseGuid(guidRaw);
-  if (guid === undefined) throw new Error(`Invalid target guid: ${guidRaw}`);
-  return { mode: "cast", spellId, guid };
-}
-
-function parseAttack(args: string[]): CliAction {
-  const raw = args[1];
-  if (raw === undefined || args.length !== 2) {
-    throw new Error("Invalid attack arguments");
-  }
-  const guid = parseGuid(raw);
-  if (guid === undefined) throw new Error(`Invalid target guid: ${raw}`);
-  return { mode: "attack", guid };
-}
-
-function parseFight(args: string[]): CliAction {
-  const rest = args.slice(1);
-  if (rest.length === 0) throw new Error("Invalid fight arguments");
-  let framing: FramingVariant | undefined;
-  const filtered: string[] = [];
-  for (let i = 0; i < rest.length; i++) {
-    const part = rest[i]!;
-    if (part === "--framing") {
-      const next = rest[i + 1];
-      if (!next) throw new Error("Missing value for --framing");
-      framing = parseFramingVariant(next);
-      i++;
-    } else if (part.startsWith("--framing=")) {
-      const val = part.slice("--framing=".length);
-      framing = parseFramingVariant(val);
-    } else {
-      filtered.push(part);
-    }
-  }
-  framing ??= parseFramingVariant(process.env["WOW_JEV_FRAMING"]);
-  const raw = filtered[0];
-  if (raw === undefined) throw new Error("Invalid fight arguments");
-  const guid = parseGuid(raw);
-  if (guid === undefined) throw new Error(`Invalid target guid: ${raw}`);
-  const instruction = filtered.slice(1).join(" ") || DEFAULT_FIGHT_INSTRUCTION;
-  if (/[\r\n]/.test(instruction)) {
-    throw new Error("Fight instruction must not contain line breaks");
-  }
-  return { mode: "fight", guid, instruction, framing };
-}
-
-const DEFAULT_CYCLE_MAX_STARTS = 10;
-const CYCLE_FLAGS = ["--max", "--instruction"];
-
-function isCycleFlag(token: string): boolean {
-  return CYCLE_FLAGS.some(
-    (flag) => token === flag || token.startsWith(`${flag}=`),
-  );
-}
-
-function parseCycleMax(raw: string): number {
-  if (!/^[0-9]+$/.test(raw)) throw new Error("Invalid cycle max");
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error("Invalid cycle max");
-  }
-  return value;
-}
-
-function parseCycle(args: string[]): CliAction {
-  const rest = args.slice(1);
-  if (rest.length === 0) throw new Error("Invalid cycle arguments");
-  let maxStarts: number | undefined;
-  let instructionWords: string[] | undefined;
-  const guidTokens: string[] = [];
-  for (let i = 0; i < rest.length; i++) {
-    const part = rest[i]!;
-    if (part === "--max") {
-      const next = rest[i + 1];
-      if (next === undefined) throw new Error("Invalid cycle max");
-      maxStarts = parseCycleMax(next);
-      i++;
-    } else if (part.startsWith("--max=")) {
-      maxStarts = parseCycleMax(part.slice("--max=".length));
-    } else if (part === "--instruction") {
-      const words: string[] = [];
-      let j = i + 1;
-      while (j < rest.length && !isCycleFlag(rest[j]!)) {
-        words.push(rest[j]!);
-        j++;
-      }
-      instructionWords = words;
-      i = j - 1;
-    } else if (part.startsWith("--instruction=")) {
-      instructionWords = [part.slice("--instruction=".length)];
-    } else {
-      guidTokens.push(part);
-    }
-  }
-  if (guidTokens.length === 0) throw new Error("Invalid cycle arguments");
-  const guids: bigint[] = [];
-  for (const token of guidTokens) {
-    const guid = parseGuid(token);
-    if (guid === undefined || guid === 0n) {
-      throw new Error("Invalid cycle guid");
-    }
-    guids.push(guid);
-  }
-  const instruction = instructionWords?.join(" ") || DEFAULT_FIGHT_INSTRUCTION;
-  if (/[\r\n]/.test(instruction)) {
-    throw new Error("Cycle instruction must not contain line breaks");
-  }
-  return {
-    mode: "cycle",
-    guids,
-    instruction,
-    maxStarts: maxStarts ?? DEFAULT_CYCLE_MAX_STARTS,
-  };
-}
-
-function parseGoto(args: string[]): CliAction {
-  if (args.length !== 4) throw new Error("Invalid goto arguments");
-  const x = parseFiniteNumber(args[1]!);
-  const y = parseFiniteNumber(args[2]!);
-  const z = parseFiniteNumber(args[3]!);
-  if (x === undefined || y === undefined || z === undefined) {
-    throw new Error("Invalid goto arguments");
-  }
-  return { mode: "goto", x, y, z };
-}
-
-function parseBoundedArgument(
-  args: string[],
-  min: number,
-  max: number,
-): number {
-  if (args.length !== 2) throw new Error(`Invalid ${args[0]} arguments`);
-  const value = parseUnsignedInteger(args[1]!);
-  if (value === undefined || value < min || value > max)
-    throw new Error(`Invalid ${args[0]} value`);
-  return value;
-}
-
-function parseUnsignedInteger(raw: string): number | undefined {
-  if (!/^[0-9]+$/.test(raw)) return undefined;
-  const value = Number(raw);
-  return Number.isInteger(value) && value <= 0xffff_ffff ? value : undefined;
-}
-
-function parseSelectOption(args: string[]): CliAction {
-  if (args.length < 2 || args.length > 3)
-    throw new Error("Invalid select-option arguments");
-  const optionId = parseUnsignedInteger(args[1]!);
-  if (optionId === undefined) throw new Error("Invalid gossip option id");
-  const code = args[2];
-  if (code?.includes("\0")) throw new Error("Invalid gossip code");
+function parseSelectOption(rest: string[]): CliAction {
+  const optionId = rest.length <= 2 ? parseOptionId(rest[0]) : undefined;
+  if (optionId === undefined) throw new Error("invalid gossip option id");
+  const code = rest[1];
+  if (code?.includes("\0")) throw new Error("invalid gossip code");
   return { mode: "select_option", optionId, code };
+}
+
+function parseGameplay(cmd: string, rest: string[]): CliAction | undefined {
+  switch (cmd) {
+    case "move":
+      return { mode: "move", ...take(parseMove(rest)) };
+    case "face":
+      return { mode: "face", ...take(parseFace(rest)) };
+    case "face-guid":
+      return { mode: "face_guid", ...take(parseGuidArg(rest, true)) };
+    case "walk-toward":
+      return { mode: "walk_toward", ...take(parseWalkToward(rest)) };
+    case "target":
+      return { mode: "target", ...take(parseGuidArg(rest)) };
+    case "cast":
+      return { mode: "cast", ...take(parseCast(rest)) };
+    case "attack":
+      return { mode: "attack", ...take(parseGuidArg(rest)) };
+    case "fight":
+      return parseFightArgs(rest);
+    case "cycle":
+      return { mode: "cycle", ...take(parseCycle(rest)) };
+    case "goto":
+      return { mode: "goto", ...take(parseGoto(rest)) };
+    case "spirit-healer":
+      return { mode: "spirit_healer", ...take(parseGuidArg(rest, true)) };
+    case "resurrect":
+      return { mode: "resurrect", ...take(parseResurrect(rest)) };
+    case "talk":
+      return { mode: "talk", ...take(parseGuidArg(rest, true)) };
+    case "query-quest":
+      return { mode: "query_quest", ...take(parseQuestId(rest)) };
+    case "select-quest":
+      return { mode: "select_quest", ...take(parseQuestId(rest)) };
+    case "complete-quest":
+      return { mode: "complete_quest", ...take(parseQuestId(rest)) };
+    case "choose-reward": {
+      const index = take(parseBoundedArg(rest, 0, 5, "invalid reward index"));
+      return { mode: "choose_reward", index };
+    }
+    case "abandon-quest": {
+      const slot = take(parseBoundedArg(rest, 0, 24, "invalid quest slot"));
+      return { mode: "abandon_quest", slot };
+    }
+    case "select-option":
+      return parseSelectOption(rest);
+    case "open-loot":
+      return { mode: "open_loot", ...take(parseGuidArg(rest, true)) };
+    case "take-loot": {
+      const slot = take(parseBoundedArg(rest, 0, 255, "invalid loot slot"));
+      return { mode: "take_loot", slot };
+    }
+    default:
+      return undefined;
+  }
 }

@@ -390,8 +390,8 @@ async function main() {
       await ensureDaemon();
       const destination =
         action.target.kind === "guid"
-          ? `GUID 0x${action.target.guid.toString(16)}`
-          : `POINT ${action.target.x} ${action.target.y} ${action.target.z}`;
+          ? `0x${action.target.guid.toString(16)}`
+          : `${action.target.x} ${action.target.y} ${action.target.z}`;
       const lines = await sendToSocket(
         `WALK_TOWARD ${action.yards} ${destination}`,
       );
@@ -483,7 +483,7 @@ async function main() {
         .join(" ");
       printControlReply(
         await sendToSocket(
-          `CYCLE ${guidsPart} --max ${action.maxStarts} --instruction ${action.instruction}`,
+          `CYCLE ${guidsPart}${action.maxStarts ? ` --max ${action.maxStarts}` : ""} --instruction ${action.instruction}`,
         ),
       );
       break;

@@ -417,24 +417,24 @@ describe("parseArgs", () => {
   });
 
   test("move rejects unknown direction without sending", () => {
-    expect(() => parseArgs(["move", "up"])).toThrow("Invalid move direction");
+    expect(() => parseArgs(["move", "up"])).toThrow("invalid direction");
   });
 
   test("move rejects nonfinite duration", () => {
     expect(() => parseArgs(["move", "forward", "1.5"])).toThrow(
-      "Invalid move duration",
+      "invalid duration",
     );
   });
 
   test("move rejects duration below 1", () => {
     expect(() => parseArgs(["move", "forward", "0"])).toThrow(
-      "Invalid move duration",
+      "invalid duration",
     );
   });
 
   test("move rejects duration above 10000", () => {
     expect(() => parseArgs(["move", "forward", "10001"])).toThrow(
-      "Invalid move duration",
+      "invalid duration",
     );
   });
 
@@ -446,13 +446,13 @@ describe("parseArgs", () => {
   });
 
   test("face rejects nonfinite", () => {
-    expect(() => parseArgs(["face", "NaN"])).toThrow("Invalid facing");
-    expect(() => parseArgs(["face", "Infinity"])).toThrow("Invalid facing");
+    expect(() => parseArgs(["face", "NaN"])).toThrow("invalid facing");
+    expect(() => parseArgs(["face", "Infinity"])).toThrow("invalid facing");
   });
 
   test("face rejects empty and whitespace before IPC", () => {
-    expect(() => parseArgs(["face", ""])).toThrow("Invalid face arguments");
-    expect(() => parseArgs(["face", "   "])).toThrow("Invalid face arguments");
+    expect(() => parseArgs(["face", ""])).toThrow("invalid facing");
+    expect(() => parseArgs(["face", "   "])).toThrow("invalid facing");
   });
 
   test("face-guid preserves a current entity GUID", () => {
@@ -488,10 +488,10 @@ describe("parseArgs", () => {
   });
 
   test("target rejects malformed guid", () => {
-    expect(() => parseArgs(["target", "-1"])).toThrow("Invalid target guid");
-    expect(() => parseArgs(["target", "0x"])).toThrow("Invalid target guid");
+    expect(() => parseArgs(["target", "-1"])).toThrow("invalid guid");
+    expect(() => parseArgs(["target", "0x"])).toThrow("invalid guid");
     expect(() => parseArgs(["target", "18446744073709551616"])).toThrow(
-      "Invalid target guid",
+      "invalid guid",
     );
   });
 
@@ -531,7 +531,7 @@ describe("parseArgs", () => {
       'Unknown framing variant: "bogus". Must be one of: none, minimal, mechanics',
     );
     expect(() => parseArgs(["fight", "--framing"])).toThrow(
-      "Missing value for --framing",
+      "missing framing variant",
     );
     expect(parseArgs(["goto", "1.5", "2", "3"])).toEqual({
       mode: "goto",
@@ -539,11 +539,9 @@ describe("parseArgs", () => {
       y: 2,
       z: 3,
     });
-    expect(() => parseArgs(["cast", "585"])).toThrow("Invalid cast arguments");
-    expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow(
-      "Invalid goto arguments",
-    );
-    expect(() => parseArgs(["fight"])).toThrow("Invalid fight arguments");
+    expect(() => parseArgs(["cast", "585"])).toThrow("invalid cast");
+    expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow("invalid goto");
+    expect(() => parseArgs(["fight"])).toThrow("invalid fight");
     expect(parseArgs(["combat", "--json"])).toEqual({
       mode: "combat",
       json: true,
@@ -564,7 +562,6 @@ describe("cycle arguments", () => {
       mode: "cycle",
       guids: [0xan],
       instruction: "kill fast",
-      maxStarts: 10,
     });
     expect(
       parseArgs([
@@ -589,23 +586,23 @@ describe("cycle arguments", () => {
   });
 
   test("rejects missing guids, invalid guids and non-positive max", () => {
-    expect(() => parseArgs(["cycle"])).toThrow("Invalid cycle arguments");
-    expect(() => parseArgs(["cycle", "0"])).toThrow("Invalid cycle guid");
+    expect(() => parseArgs(["cycle"])).toThrow("invalid cycle");
+    expect(() => parseArgs(["cycle", "0"])).toThrow("invalid guid");
     expect(() => parseArgs(["cycle", "0xa", "--max", "0"])).toThrow(
-      "Invalid cycle max",
+      "invalid cycle max",
     );
     expect(() => parseArgs(["cycle", "0xa", "--max", "-1"])).toThrow(
-      "Invalid cycle max",
+      "invalid cycle max",
     );
     expect(() => parseArgs(["cycle", "0xa", "--max"])).toThrow(
-      "Invalid cycle max",
+      "invalid cycle max",
     );
   });
 
   test("rejects multiline cycle instructions", () => {
     expect(() =>
       parseArgs(["cycle", "0xa", "--instruction", "line1\nline2"]),
-    ).toThrow("Cycle instruction must not contain line breaks");
+    ).toThrow("instruction must not contain line breaks");
   });
 });
 
@@ -850,7 +847,6 @@ describe("daemon JSON arguments", () => {
       mode: "cycle",
       guids: [10n],
       instruction: "hold threat",
-      maxStarts: 10,
       json: true,
     });
     expect(parseArgs(["-w", "--json", "Xiara", "follow me"])).toEqual({
