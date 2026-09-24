@@ -147,13 +147,15 @@ import {
   handleDuelInBounds,
   handleGuildCommandResult,
   handleGuildInvitePacket,
-  registerMovementHandlers,
-  registerCombatHandlers,
-  registerQuestHandlers,
-  registerLootHandlers,
-  registerRecoveryHandlers,
   selfGuid,
 } from "wow/world-handlers";
+import { registerMovementHandlers } from "wow/movement-handlers";
+import {
+  registerCombatHandlers,
+  registerLootHandlers,
+  registerQuestHandlers,
+  registerRecoveryHandlers,
+} from "wow/gameplay-handlers";
 
 export type ClientConfig = {
   host: string;

@@ -16,11 +16,7 @@ import {
   handleGuildCommandResult,
   handleGuildInvitePacket,
   handleChatMessage,
-  registerMovementHandlers,
-  registerCombatHandlers,
 } from "wow/world-handlers";
-import { ControlRuntime } from "wow/control";
-import { CombatRuntime } from "wow/combat";
 import type { AuthResult } from "wow/auth";
 import { startMockWorldServer } from "test/mock-world-server";
 import { PacketWriter, PacketReader } from "wow/protocol/packet";
@@ -35,16 +31,12 @@ import {
 import type { EntityEvent } from "wow/entity-store";
 import { readLife, type PlayerLifeState } from "wow/player-state";
 import {
-  ObjectType,
   UpdateFlag,
   OBJECT_FIELDS,
   UNIT_FIELDS,
   GAMEOBJECT_FIELDS,
   PLAYER_FIELDS,
 } from "wow/protocol/entity-fields";
-import { OpcodeDispatch } from "wow/protocol/world";
-import { writeMovementInfo } from "wow/protocol/movement";
-import { EntityStore } from "wow/entity-store";
 import {
   FIXTURE_ACCOUNT,
   FIXTURE_PASSWORD,
@@ -3964,131 +3956,5 @@ describe("handleGuildInvitePacket", () => {
     expect(() =>
       handleGuildInvitePacket(conn, new PacketReader(w.finish())),
     ).not.toThrow();
-  });
-});
-
-describe("handleNearTeleport", () => {
-  function nearTeleportBody(guidLow: number): Uint8Array {
-    const w = new PacketWriter();
-    w.packedGuid(guidLow, 0);
-    writeMovementInfo(w, {
-      flags: 0,
-      extraFlags: 0,
-      time: 1,
-      x: 100,
-      y: 200,
-      z: 50,
-      orientation: 1,
-      fallTime: 0,
-    });
-    return w.finish();
-  }
-
-  function fakeConn(control: unknown, store: EntityStore): WorldConn {
-    return {
-      dispatch: new OpcodeDispatch(),
-      selfGuidLow: 0x0764,
-      selfGuidHigh: 0,
-      control,
-      entityStore: store,
-    } as unknown as WorldConn;
-  }
-
-  test("0x0C5 routes self teleport to control with exact pose", () => {
-    const store = new EntityStore();
-    const sent: { opcode: number; body: Uint8Array }[] = [];
-    const runtime = new ControlRuntime({
-      send: (opcode, body) => {
-        sent.push({ opcode, body: body ?? new Uint8Array() });
-      },
-      ticks: () => 0,
-      now: () => 10_000,
-      selfGuid: () => 0x0764n,
-      findHeight: (_mapId, _x, _y, from) => from?.z ?? 70.34,
-    });
-    runtime.loginVerified({
-      mapId: 530,
-      x: 8709.46,
-      y: -6671.76,
-      z: 70.34,
-      orientation: 0.5,
-    });
-    sent.length = 0;
-    const conn = fakeConn(runtime, store);
-    registerMovementHandlers(conn);
-    expect(conn.dispatch.has(GameOpcode.MSG_MOVE_TELEPORT)).toBe(true);
-    conn.dispatch.handle(
-      GameOpcode.MSG_MOVE_TELEPORT,
-      new PacketReader(nearTeleportBody(0x0764)),
-    );
-    expect(runtime.snapshot().moving).toBe(false);
-    expect(runtime.snapshot().pose?.source).toBe("server");
-    expect(runtime.snapshot().serverPose).toMatchObject({
-      x: 100,
-      y: 200,
-      z: 50,
-      orientation: 1,
-    });
-    expect(sent.length).toBe(0);
-  });
-
-  test("0x0C5 from another unit updates the entity store", () => {
-    const store = new EntityStore();
-    store.create(0x99n, ObjectType.UNIT, {
-      position: { mapId: 530, x: 1, y: 2, z: 3, orientation: 0 },
-    });
-    let handled = 0;
-    const conn = fakeConn(
-      {
-        currentMapId: () => 530,
-        nearTeleport: () => {
-          handled++;
-        },
-      },
-      store,
-    );
-    registerMovementHandlers(conn);
-    conn.dispatch.handle(
-      GameOpcode.MSG_MOVE_TELEPORT,
-      new PacketReader(nearTeleportBody(0x99)),
-    );
-    expect(handled).toBe(0);
-    expect(store.get(0x99n)?.position).toEqual({
-      mapId: 530,
-      x: 100,
-      y: 200,
-      z: 50,
-      orientation: 1,
-    });
-  });
-});
-
-describe("registerCombatHandlers", () => {
-  test("attack swing errors are named, not opcode numbers", () => {
-    const combat = new CombatRuntime({
-      send() {},
-      now: () => 1,
-      selfGuid: () => 1n,
-      selectedGuid: () => 2n,
-      getEntity: () => undefined,
-      selfPose: () => undefined,
-    });
-    const conn = {
-      dispatch: new OpcodeDispatch(),
-      combat,
-    } as unknown as WorldConn;
-    registerCombatHandlers(conn);
-    combat.attack(2n);
-    conn.dispatch.handle(
-      GameOpcode.SMSG_ATTACKSWING_NOTINRANGE,
-      new PacketReader(new Uint8Array()),
-    );
-    const outcome = combat.snapshot().lastOutcome;
-    expect(outcome).toMatchObject({
-      kind: "attack",
-      status: "failed",
-      error: "not_in_range",
-    });
-    expect(outcome?.result).toBeUndefined();
   });
 });

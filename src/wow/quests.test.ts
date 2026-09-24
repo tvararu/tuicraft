@@ -9,7 +9,7 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { QuestRuntime, readQuestLog, type QuestEvent } from "wow/quests";
 import { OpcodeDispatch } from "wow/protocol/world";
-import { registerQuestHandlers } from "wow/world-handlers";
+import { registerQuestHandlers } from "wow/gameplay-handlers";
 import type { WorldConn } from "wow/client";
 
 const self = 1n;
