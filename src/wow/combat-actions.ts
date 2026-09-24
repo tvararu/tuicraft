@@ -17,8 +17,6 @@ type ActionDeps = {
   entity: EntityLookup;
   factions: () => FactionTemplateCatalog | undefined;
   now: () => number;
-  unreachableTimeoutMs?: number;
-  moveLeaseMs?: number;
 };
 
 type SpellAction = {
@@ -88,22 +86,17 @@ const SELF_BLOCK =
   UnitFlag.CONFUSED |
   UnitFlag.FLEEING;
 const AURAS = new Set([3, 8, 13, 22, 29, 69, 85]);
-const DEFAULT_UNREACHABLE_TIMEOUT_MS = 5000;
-const DEFAULT_MOVE_LEASE_MS = 2500;
+const UNREACHABLE_TIMEOUT_MS = 5000;
+const MOVE_LEASE_MS = 2500;
 
 export class CombatActions {
   private readonly deps: ActionDeps;
-  private readonly unreachableTimeoutMs: number;
-  private readonly moveLeaseMs: number;
   private startedAt = 0;
   private deadAt: number | undefined;
   private unreachableAt: number | undefined;
 
   constructor(deps: ActionDeps) {
     this.deps = deps;
-    this.unreachableTimeoutMs =
-      deps.unreachableTimeoutMs ?? DEFAULT_UNREACHABLE_TIMEOUT_MS;
-    this.moveLeaseMs = deps.moveLeaseMs ?? DEFAULT_MOVE_LEASE_MS;
   }
 
   activate(context: TacticsContext): void {
@@ -179,7 +172,7 @@ export class CombatActions {
     if (id === "wait") {
       const control = this.deps.control.snapshot();
       if (control.moving && control.direction)
-        this.deps.control.move(control.direction, this.moveLeaseMs);
+        this.deps.control.move(control.direction, MOVE_LEASE_MS);
       return;
     }
     if (id === "cancel") {
@@ -200,7 +193,7 @@ export class CombatActions {
     }
     const direction = MOVE_DIRECTION_BY_ID[id];
     if (direction) {
-      this.deps.control.move(direction, this.moveLeaseMs);
+      this.deps.control.move(direction, MOVE_LEASE_MS);
       return;
     }
     const state = this.deps.combat.snapshot(context.targetGuid);
@@ -421,7 +414,7 @@ export class CombatActions {
       return { status: "blocked", reason: "no_supported_combat_actions" };
     if (!this.targetReachable(context, state, spells)) {
       this.unreachableAt ??= now;
-      if (now - this.unreachableAt >= this.unreachableTimeoutMs)
+      if (now - this.unreachableAt >= UNREACHABLE_TIMEOUT_MS)
         return { status: "blocked", reason: "target_unreachable" };
     } else {
       this.unreachableAt = undefined;

@@ -106,7 +106,7 @@ function movementCompatibleSpell(): SpellDefinition {
 
 function setup(
   nowFn: () => number = () => 1000,
-  options: { observeTargetPosition?: boolean; moveLeaseMs?: number } = {},
+  options: { observeTargetPosition?: boolean } = {},
 ) {
   const store = new EntityStore();
   const fields = new Map<number, number>([
@@ -166,7 +166,6 @@ function setup(
     entity: (guid) => store.get(guid),
     factions: () => undefined,
     now: nowFn,
-    moveLeaseMs: options.moveLeaseMs,
   });
   actions.activate(context);
   return { store, control, combat, actions, fields };
@@ -649,32 +648,5 @@ test("a movement-compatible spell executed while moving does not release the lea
     expect(combat.snapshot().pendingCast?.spellId).toBe(17);
   } finally {
     definition.mockRestore();
-  }
-});
-
-test("the movement lease defaults to 2500ms and can be overridden via deps", () => {
-  const withDefault = setup();
-  const defaultDefinition = jest
-    .spyOn(withDefault.combat, "definition")
-    .mockReturnValue(spell());
-  const defaultMove = jest.spyOn(withDefault.control, "move");
-  try {
-    withDefault.actions.execute("move_forward", context);
-    expect(defaultMove).toHaveBeenCalledWith("forward", 2500);
-  } finally {
-    defaultMove.mockRestore();
-    defaultDefinition.mockRestore();
-  }
-  const withOverride = setup(undefined, { moveLeaseMs: 1200 });
-  const overrideDefinition = jest
-    .spyOn(withOverride.combat, "definition")
-    .mockReturnValue(spell());
-  const overrideMove = jest.spyOn(withOverride.control, "move");
-  try {
-    withOverride.actions.execute("move_backward", context);
-    expect(overrideMove).toHaveBeenCalledWith("backward", 1200);
-  } finally {
-    overrideMove.mockRestore();
-    overrideDefinition.mockRestore();
   }
 });
