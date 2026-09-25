@@ -43,6 +43,17 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("TAIL_WAIT and TAIL_WAIT_JSON", () => {
+    expect(parseIpcCommand("TAIL_WAIT 1000")).toEqual({
+      ms: 1000,
+      type: "tail_wait",
+    });
+    expect(parseIpcCommand("TAIL_WAIT_JSON 1000")).toEqual({
+      ms: 1000,
+      type: "tail_wait_json",
+    });
+  });
+
   test("WHO_JSON without filter", () => {
     expect(parseIpcCommand("WHO_JSON")).toEqual({ type: "who_json" });
   });

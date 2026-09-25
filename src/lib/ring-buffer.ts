@@ -3,6 +3,7 @@ export class RingBuffer<T> {
   private readonly capacity: number;
   private _writePos = 0;
   private cursor = 0;
+  private readonly listeners = new Set<() => void>();
 
   constructor(capacity: number) {
     this.capacity = capacity;
@@ -20,6 +21,12 @@ export class RingBuffer<T> {
     if (this.cursor < oldest) {
       this.cursor = oldest;
     }
+    for (const listener of this.listeners) listener();
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   drain(): T[] {

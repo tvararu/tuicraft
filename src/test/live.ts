@@ -381,7 +381,9 @@ describe("daemon IPC", () => {
       await Bun.sleep(1000);
 
       const read = await sendToSocket("READ_WAIT 2000", sockPath);
-      expect(read.length).toBeGreaterThanOrEqual(0);
+      expect(read.some((l) => l.includes("hello from ipc test"))).toBe(true);
+      const again = await sendToSocket("READ", sockPath);
+      expect(again.some((l) => l.includes("hello from ipc test"))).toBe(false);
     } finally {
       server.stop(true);
       handle.close();

@@ -171,51 +171,106 @@ describe("dispatchCommand", () => {
     expect(socket.written()).toBe("\n");
   });
 
-  test("read_wait delays then returns window events", async () => {
+  test("read_wait returns buffered events at once and drains them", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    events.push({ json: '{"type":"SAY"}', text: "[say] Old: before" });
+    const socket = createMockSocket();
+
+    await dispatchCommand(
+      { ms: 60_000, type: "read_wait" },
+      { cleanup: jest.fn(), events, handle, socket },
+    );
+
+    expect(socket.written()).toBe("[say] Old: before\n\n");
+    expect(events.drain()).toEqual([]);
+  });
+
+  test("read_wait returns as soon as a text event arrives", async () => {
     jest.useFakeTimers();
     try {
       const handle = createMockHandle();
       const events = new RingBuffer<EventEntry>(10);
       const socket = createMockSocket();
-      const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { ms: 1000, type: "read_wait" },
-        { cleanup, events, handle, socket },
+        { ms: 5000, type: "read_wait" },
+        { cleanup: jest.fn(), events, handle, socket },
       );
 
+      events.push({ json: '{"type":"ENTITY"}', text: undefined });
       expect(socket.written()).toBe("");
-      events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
-      jest.advanceTimersByTime(1000);
+      events.push({ json: '{"type":"SAY"}', text: "[say] New: during" });
       await promise;
-      expect(socket.written()).toBe("[say] Alice: hi\n\n");
+      expect(socket.written()).toBe("[say] New: during\n\n");
+      events.push({ json: '{"type":"SAY"}', text: "[say] Late: after" });
+      expect(socket.written()).toBe("[say] New: during\n\n");
+      expect(events.drain()).toEqual([
+        { json: '{"type":"SAY"}', text: "[say] Late: after" },
+      ]);
     } finally {
       jest.useRealTimers();
     }
   });
 
-  test("read_wait returns only events arriving during wait window", async () => {
+  test("read_wait writes an empty reply when nothing arrives", async () => {
+    jest.useFakeTimers();
+    try {
+      const handle = createMockHandle();
+      const events = new RingBuffer<EventEntry>(10);
+      const socket = createMockSocket();
+
+      const promise = dispatchCommand(
+        { ms: 1000, type: "read_wait" },
+        { cleanup: jest.fn(), events, handle, socket },
+      );
+
+      jest.advanceTimersByTime(999);
+      expect(socket.written()).toBe("");
+      jest.advanceTimersByTime(1);
+      await promise;
+      expect(socket.written()).toBe("\n");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("read_wait aborted by HALT writes nothing and keeps later events", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
+    const abort = new AbortController();
+
+    const promise = dispatchCommand(
+      { ms: 60_000, type: "read_wait" },
+      { abort: abort.signal, cleanup: jest.fn(), events, handle, socket },
+    );
+    abort.abort();
+    await promise;
+    events.push({ json: '{"type":"SAY"}', text: "[say] Late: after" });
+
+    expect(socket.written()).toBe("");
+    expect(events.drain()).toHaveLength(1);
+  });
+
+  test("tail_wait returns only window events without draining", async () => {
     jest.useFakeTimers();
     try {
       const handle = createMockHandle();
       const events = new RingBuffer<EventEntry>(10);
       events.push({ json: '{"type":"SAY"}', text: "[say] Old: before" });
       const socket = createMockSocket();
-      const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { ms: 1000, type: "read_wait" },
-        { cleanup, events, handle, socket },
+        { ms: 1000, type: "tail_wait" },
+        { cleanup: jest.fn(), events, handle, socket },
       );
 
       events.push({ json: '{"type":"SAY"}', text: "[say] New: during" });
       jest.advanceTimersByTime(1000);
       await promise;
       expect(socket.written()).toBe("[say] New: during\n\n");
-      expect(events.drain()).toEqual([
-        { json: '{"type":"SAY"}', text: "[say] Old: before" },
-        { json: '{"type":"SAY"}', text: "[say] New: during" },
-      ]);
+      expect(events.drain()).toHaveLength(2);
     } finally {
       jest.useRealTimers();
     }
@@ -309,41 +364,33 @@ describe("dispatchCommand", () => {
     );
   });
 
-  test("read_wait_json delays then returns window events", async () => {
-    jest.useFakeTimers();
-    try {
-      const handle = createMockHandle();
-      const events = new RingBuffer<EventEntry>(10);
-      const socket = createMockSocket();
-      const cleanup = jest.fn();
+  test("read_wait_json returns buffered and early events as json", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const socket = createMockSocket();
 
-      const promise = dispatchCommand(
-        { ms: 500, type: "read_wait_json" },
-        { cleanup, events, handle, socket },
-      );
+    const promise = dispatchCommand(
+      { ms: 60_000, type: "read_wait_json" },
+      { cleanup: jest.fn(), events, handle, socket },
+    );
+    events.push({ json: '{"type":"ENTITY"}', text: undefined });
+    await promise;
 
-      expect(socket.written()).toBe("");
-      events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
-      jest.advanceTimersByTime(500);
-      await promise;
-      expect(socket.written()).toBe('{"type":"SAY"}\n\n');
-    } finally {
-      jest.useRealTimers();
-    }
+    expect(socket.written()).toBe('{"type":"ENTITY"}\n\n');
+    expect(events.drain()).toEqual([]);
   });
 
-  test("read_wait_json returns only events arriving during wait window", async () => {
+  test("tail_wait_json returns only window events as json", async () => {
     jest.useFakeTimers();
     try {
       const handle = createMockHandle();
       const events = new RingBuffer<EventEntry>(10);
       events.push({ json: '{"old":true}', text: "[say] Old: before" });
       const socket = createMockSocket();
-      const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { ms: 500, type: "read_wait_json" },
-        { cleanup, events, handle, socket },
+        { ms: 500, type: "tail_wait_json" },
+        { cleanup: jest.fn(), events, handle, socket },
       );
 
       events.push({ json: '{"new":true}', text: "[say] New: during" });

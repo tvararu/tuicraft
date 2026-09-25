@@ -107,7 +107,34 @@ function send(socket: IpcSocket, lines: string[]): false {
   return false;
 }
 
-async function readWait(
+function readWait(
+  ctx: DispatchContext,
+  ms: number,
+  drain: (events: RingBuffer<EventEntry>) => string[],
+): Promise<false> {
+  const { promise, resolve } = Promise.withResolvers<false>();
+  const ready = drain(ctx.events);
+  if (ready.length > 0 || ms === 0)
+    return Promise.resolve(send(ctx.socket, ready));
+  if (ctx.abort?.aborted) return Promise.resolve(false);
+  const finish = (lines: string[] | undefined) => {
+    clearTimeout(timer);
+    unsubscribe();
+    ctx.abort?.removeEventListener("abort", onAbort);
+    if (lines) send(ctx.socket, lines);
+    resolve(false);
+  };
+  const onAbort = () => finish(undefined);
+  const timer = setTimeout(() => finish([]), ms);
+  const unsubscribe = ctx.events.subscribe(() => {
+    const lines = drain(ctx.events);
+    if (lines.length > 0) finish(lines);
+  });
+  ctx.abort?.addEventListener("abort", onAbort, { once: true });
+  return promise;
+}
+
+async function tailWait(
   ctx: DispatchContext,
   ms: number,
   slice: (events: RingBuffer<EventEntry>, from: number) => string[],
@@ -345,8 +372,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.getQuestState(), json),
   read: (_cmd, { events, socket }) => send(socket, drainText(events)),
   read_json: (_cmd, { events, socket }) => send(socket, drainJson(events)),
-  read_wait: (cmd, ctx) => readWait(ctx, cmd.ms, sliceText),
-  read_wait_json: (cmd, ctx) => readWait(ctx, cmd.ms, sliceJson),
+  read_wait: (cmd, ctx) => readWait(ctx, cmd.ms, drainText),
+  read_wait_json: (cmd, ctx) => readWait(ctx, cmd.ms, drainJson),
   reclaim_corpse: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.reclaimCorpse(), ok),
   recovery: (_cmd, { handle, socket }) =>
@@ -391,6 +418,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.getTacticsState(), pretty),
   tactics_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getTacticsState(), json),
+  tail_wait: (cmd, ctx) => tailWait(ctx, cmd.ms, sliceText),
+  tail_wait_json: (cmd, ctx) => tailWait(ctx, cmd.ms, sliceJson),
   take_loot: (cmd, { handle, socket }) =>
     reply(socket, () => handle.takeLoot(cmd.slot), ok),
   take_money: (_cmd, { handle, socket }) =>

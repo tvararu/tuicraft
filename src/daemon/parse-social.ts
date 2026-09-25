@@ -48,6 +48,16 @@ const MESSAGE_SOCIAL = new Map<
   ["GMOTD", "guild_motd"],
 ]);
 
+const WAIT_SOCIAL = new Map<
+  string,
+  Extract<IpcCommand, { ms: number }>["type"]
+>([
+  ["READ_WAIT", "read_wait"],
+  ["READ_WAIT_JSON", "read_wait_json"],
+  ["TAIL_WAIT", "tail_wait"],
+  ["TAIL_WAIT_JSON", "tail_wait_json"],
+]);
+
 function parseWhisper(rest: string): IpcCommand {
   const targetEnd = rest.indexOf(" ");
   if (targetEnd === -1) return { message: "", target: rest, type: "whisper" };
@@ -98,14 +108,6 @@ function parseSocialVerb(
   switch (verb) {
     case "WHISPER":
       return parseWhisper(rest);
-    case "READ_WAIT": {
-      const ms = parseWaitMs(rest);
-      return ms === undefined ? undefined : { ms, type: "read_wait" };
-    }
-    case "READ_WAIT_JSON": {
-      const ms = parseWaitMs(rest);
-      return ms === undefined ? undefined : { ms, type: "read_wait_json" };
-    }
     case "WHO":
       return rest ? { filter: rest, type: "who" } : { type: "who" };
     case "WHO_JSON":
@@ -140,5 +142,10 @@ export function parseSocial(
   if (targetType) return rest ? { target: rest, type: targetType } : undefined;
   const messageType = MESSAGE_SOCIAL.get(verb);
   if (messageType) return { message: rest, type: messageType };
+  const waitType = WAIT_SOCIAL.get(verb);
+  if (waitType) {
+    const ms = parseWaitMs(rest);
+    return ms === undefined ? undefined : { ms, type: waitType };
+  }
   return parseSocialVerb(line, verb, rest);
 }

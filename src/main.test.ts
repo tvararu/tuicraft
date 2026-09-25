@@ -262,7 +262,7 @@ describe("main CLI against a daemon socket", () => {
         data(socket, bytes) {
           const command = Buffer.from(bytes).toString().trim();
           if (command === "STATUS") socket.write("CONNECTED\n\n");
-          else if (command.startsWith("READ_WAIT_JSON")) {
+          else if (command.startsWith("TAIL_WAIT_JSON")) {
             polls++;
             if (polls === 1) socket.write("\n");
             else if (polls === 2)

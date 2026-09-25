@@ -359,8 +359,11 @@ Slash commands work too:
 ## Reading Events
 
     tuicraft read                  # buffered events since last read
-    tuicraft read --wait 5         # wait 5 seconds, then return events
-    tuicraft tail                  # continuous stream (blocks)
+    tuicraft read --wait 5         # same, waiting up to 5s for the first event
+    tuicraft tail                  # continuous stream (blocks, consumes nothing)
+
+`read`, `read --wait` and `send --wait` share one cursor: each event is
+returned once, so a later `read` never repeats it.
 
 Add `--json` for structured output. `read --json` returns one envelope with
 all event objects in `events[]`, including `events: []` when empty.
