@@ -38,9 +38,6 @@ mise.local.toml
 # Temp files
 tmp
 
-# Git worktrees
-.worktrees
-
 # Test coverage
 coverage
 
