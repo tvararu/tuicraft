@@ -50,8 +50,9 @@ loop takes a target GUID and never consults navigation.
 Done, per the roadmap outcome and commit `4ed0745`
 (`test: Run the five outstanding M2 items live`):
 
-- Evidence format; live cancellation re-proof; encounters 1 to 5; the
-  instruction contrast pair; loop rate recorded apart from decision rate.
+- Evidence format; live cancellation re-proof; encounters 1 to 5; loop rate
+  recorded apart from decision rate.
+- The instruction contrast pair ran, but it is one unreplicated pair.
 - Constructed faults: delayed past the age bound and past the timeout,
   obsolete decision, model unavailable (HTTP 503 and transport).
 - A 62-yard route with wrong-floor and obstructed rejections, and a short
@@ -60,6 +61,8 @@ Done, per the roadmap outcome and commit `4ed0745`
 
 Not done:
 
+- A demonstrated behaviour change from instructions. One pair cannot carry
+  the claim; this is an accepted gap.
 - Route planner verification on the 20-yard funnel corner (an accepted gap).
 - The prompt variant ladder beyond minimal framing. Framing variants
   `none`, `minimal` and `mechanics` exist; I could not determine whether the

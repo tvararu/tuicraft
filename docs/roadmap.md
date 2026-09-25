@@ -2,8 +2,10 @@
 
 Date: 2026-09-20. Condensed 2026-09-24 after the post-roadmap review.
 
-Status: milestones 1–4 are accepted, milestones 2 and 3 with recorded gaps
-(see each milestone). Milestones 3a, 3b, 5 and 6 remain. The capabilities
+Status: milestones 2 and 3 are accepted with recorded gaps (Theo's call).
+Milestone 4 exit evidence is recorded as met (`7da1f02`). Milestone 1 has live
+evidence but no separate acceptance decision. Milestones 3a, 3b, 5 and 6
+remain. The capabilities
 below are not all implemented. Detailed histories live in the linked
 evidence records and plan files.
 
@@ -519,7 +521,7 @@ The contract, in short:
 - The first rescue after M2 attempt 04 was repair-assisted and does not count
   toward the clean recovery criterion.
 
-#### Outcome: milestone 4 exit evidence accepted, 2026-09-23
+#### Outcome: milestone 4 exit evidence met, 2026-09-23 (`7da1f02`)
 
 Exit evidence met: one `cycle --max 2` completed two Stalker
 fights, two acknowledged loot windows, and raw item-stack gains. A later

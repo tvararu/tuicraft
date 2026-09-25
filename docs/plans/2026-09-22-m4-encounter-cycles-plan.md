@@ -58,5 +58,6 @@ Deviations from the plan text:
 
 ## Verification
 
-`mise ci` for each task, `mise test:live` for the daemon change, and live
-cycles recorded in `docs/evidence/m4/`.
+The plan required `mise ci` for each task and `mise test:live` for the
+daemon change. I could not determine from the records whether the live suite
+ran for each task. The live cycles are recorded in `docs/evidence/m4/`.
