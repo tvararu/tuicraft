@@ -92,7 +92,14 @@ the one-hour cap:
    `gh api repos/tvararu/tuicraft/statuses/$new -f state=success -f context=factory/ci -f description="mise ci passed after rebase"`
    and
    `gh api repos/tvararu/tuicraft/statuses/$new -f state=success -f context=factory/review -f description="range-diff clean vs reviewed ${old:0:7}"`.
-8. Merge: `gh pr merge M -R tvararu/tuicraft --rebase --match-head-commit $new`.
+8. Check `signoff/ci` is `success` on `$new`
+   (`gh api repos/tvararu/tuicraft/commits/$new/status`). The pre-push hook
+   (`mise ci --publish`) posts it when it pushes. When `$new` equals `$old`,
+   nothing was pushed. In that case step 5's `mise ci` posted it, because
+   HEAD was clean and matched its upstream. If it is still missing, run
+   `gh signoff ci`. All three of `signoff/ci`, `factory/ci` and
+   `factory/review` must be green before merging.
+   Merge: `gh pr merge M -R tvararu/tuicraft --rebase --match-head-commit $new`.
    If GitHub refuses (for example approval dismissed or checks pending),
    comment why, add `needs:pm`, remove `agent:landing`, and move on.
 9. Landed range: `git fetch origin main`, `after=$(git rev-parse origin/main)`,
