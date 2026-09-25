@@ -136,7 +136,7 @@ function registerObjectHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_GUILD_INVITE, (r) => handleGuildInvitePacket(conn, r));
 }
 
-export function registerWorldHandlers(conn: WorldConn): void {
+export function registerGameHandlers(conn: WorldConn): void {
   registerChatHandlers(conn);
   registerPartyHandlers(conn);
   registerObjectHandlers(conn);
@@ -145,6 +145,10 @@ export function registerWorldHandlers(conn: WorldConn): void {
   registerQuestHandlers(conn);
   registerLootHandlers(conn);
   registerRecoveryHandlers(conn);
+}
+
+export function registerWorldHandlers(conn: WorldConn): void {
+  registerGameHandlers(conn);
   registerStubs(conn.dispatch, (msg) => {
     if (conn.events.message.size === 0) return false;
     conn.events.message.emit({
