@@ -1,4 +1,4 @@
-import { bot, labels, repoSlug } from "factory/config";
+import { bot, labels, pm, repoSlug } from "factory/config";
 import { json, must } from "factory/exec";
 
 export type Reason = "dirty" | "unlanded-commits" | "over-cap-dirty";
@@ -9,160 +9,129 @@ export type Held = {
   reason: Reason;
   archive: string | null;
 };
-export type ReportIssue = { number: number; body: string; labels: string[] };
-export type ReportInput = {
-  held: Held[];
-  issue: ReportIssue | null;
-  lastCommentDay: string | null;
-  today: string;
-};
+export type ReportIssue = { number: number; title: string; body: string };
 export type ReportPlan = {
-  body: string;
-  edit: boolean;
-  create: boolean;
-  comment: string | null;
-  label: "add" | "remove" | null;
+  create: { title: string; body: string }[];
+  update: ReportIssue[];
+  close: { number: number; comment: string }[];
 };
 
-export const reportTitle = "Factory: reaper report";
-const heldRow = /^\| `([^`]+)` \|/gm;
+const titlePattern = /^Reaper: (\S+) held \(/;
 
-export function heldNames(body: string): string[] {
-  return [...body.matchAll(heldRow)].map((m) => m[1] ?? "");
+export function heldName(title: string): string | null {
+  return title.match(titlePattern)?.[1] ?? null;
 }
 
-export function reportBody(held: Held[]): string {
-  if (held.length === 0)
-    return "Nothing held. The reaper removes this label when the list is empty.\n";
-  const rows = held.map(
-    (h) =>
-      `| \`${h.name}\` | ${h.owner} | ${h.ageHours} | ${h.reason} | ${h.archive ?? "-"} |`,
-  );
-  return `Worktrees the reaper will not remove.\n\n| Worktree | Owner | Age (h) | Reason | Archive |\n|---|---|---|---|---|\n${rows.join("\n")}\n`;
+export function reportTitle(h: Held): string {
+  return `Reaper: ${h.name} held (${h.reason})`;
 }
 
-export function planReport({
-  held,
-  issue,
-  lastCommentDay,
-  today,
-}: ReportInput): ReportPlan | null {
-  if (!issue && held.length === 0) return null;
-  const body = reportBody(held);
-  if (!issue)
-    return { body, comment: null, create: true, edit: false, label: null };
-  const fresh = held.filter((h) => !heldNames(issue.body).includes(h.name));
-  const daily = held.length > 0 && lastCommentDay !== today;
-  const flagged = issue.labels.includes(labels.pm);
-  const want = held.length > 0;
-  let label: ReportPlan["label"] = null;
-  if (want !== flagged) label = want ? "add" : "remove";
-  return {
-    body,
-    comment: fresh.length > 0 || daily ? commentFor(held, fresh) : null,
-    create: false,
-    edit: body !== issue.body,
-    label,
-  };
+function fixFor(h: Held): string {
+  const rm = `\`orca-ide worktree rm --worktree name:${h.name} --force\``;
+  if (h.reason === "unlanded-commits")
+    return `The branch has commits that are not on \`main\`. Land them through a PR, or, if they are not wanted, remove the worktree with ${rm} and delete the branch.`;
+  const restore = h.archive
+    ? ` The archive restores it with \`git apply --binary ${h.archive}\` on the base SHA from \`MANIFEST.txt\`.`
+    : "";
+  return `The worktree has uncommitted work. Commit and land it, or discard it; the reaper removes the tree once it is clean and landed. If the work is not wanted, remove it with ${rm}.${restore}`;
 }
 
-function commentFor(held: Held[], fresh: Held[]): string {
-  if (fresh.length === 0)
-    return `Daily summary: ${held.length} worktree(s) held. See the table above.`;
-  return `New held worktree(s): ${fresh.map((h) => `\`${h.name}\` (${h.reason})`).join(", ")}.`;
+export function reportBody(h: Held): string {
+  return [
+    `@${pm}: the reaper will not remove the worktree \`${h.name}\`.`,
+    "",
+    `- Owner: ${h.owner}`,
+    `- Reason: ${h.reason}`,
+    `- Archive: ${h.archive ? `\`${h.archive}\`` : "none"}`,
+    "",
+    `What to do: ${fixFor(h)}`,
+    "",
+    "The reaper closes this issue on its first pass after the worktree is gone or no longer held.",
+    "",
+  ].join("\n");
 }
-async function findIssue(): Promise<ReportIssue | null> {
-  const cmd = [
+
+export function planReport(held: Held[], issues: ReportIssue[]): ReportPlan {
+  const open = new Map<string, ReportIssue>();
+  for (const issue of issues) {
+    const name = heldName(issue.title);
+    if (name && !open.has(name)) open.set(name, issue);
+  }
+  const plan: ReportPlan = { close: [], create: [], update: [] };
+  for (const h of held) {
+    const want = { body: reportBody(h), title: reportTitle(h) };
+    const issue = open.get(h.name);
+    if (!issue) plan.create.push(want);
+    else if (issue.title !== want.title || issue.body !== want.body)
+      plan.update.push({ ...want, number: issue.number });
+  }
+  const names = new Set(held.map((h) => h.name));
+  for (const [name, issue] of open)
+    if (!names.has(name))
+      plan.close.push({
+        comment: `\`${name}\` is no longer held: the worktree was removed or the reaper no longer needs to keep it.`,
+        number: issue.number,
+      });
+  return plan;
+}
+
+async function openReports(): Promise<ReportIssue[]> {
+  const list = await json<(ReportIssue & { author: { login: string } })[]>([
     "gh",
     "issue",
     "list",
     "-R",
     repoSlug,
-    "--author",
-    bot,
     "--state",
     "open",
-    "--search",
-    `"${reportTitle}" in:title`,
-  ];
-  const list = await json<
-    {
-      number: number;
-      title: string;
-      body: string;
-      labels: { name: string }[];
-    }[]
-  >([...cmd, "--json", "number,title,body,labels"]);
-  const found = list.find((i) => i.title === reportTitle);
-  return found
-    ? {
-        body: found.body,
-        labels: found.labels.map((l) => l.name),
-        number: found.number,
-      }
-    : null;
-}
-
-async function fetchLastCommentDay(
-  issue: ReportIssue | null,
-): Promise<string | null> {
-  if (!issue) return null;
-  const view = await json<{
-    comments: { author: { login: string }; createdAt: string }[];
-  }>([
-    "gh",
-    "issue",
-    "view",
-    String(issue.number),
-    "-R",
-    repoSlug,
+    "--limit",
+    "1000",
     "--json",
-    "comments",
+    "number,title,body,author",
   ]);
-  const mine = view.comments.filter((c) => c.author.login === bot);
-  return mine.at(-1)?.createdAt.slice(0, 10) ?? null;
+  return list
+    .filter((i) => i.author.login === bot && heldName(i.title))
+    .map(({ number, title, body }) => ({ body, number, title }));
 }
 
 export async function report(held: Held[]): Promise<void> {
-  const issue = await findIssue();
-  const plan = planReport({
-    held,
-    issue,
-    lastCommentDay: await fetchLastCommentDay(issue),
-    today: new Date().toISOString().slice(0, 10),
-  });
-  if (!plan) return;
-  if (plan.create)
-    return void (await must([
+  const plan = planReport(held, await openReports());
+  for (const { title, body } of plan.create)
+    await must([
       "gh",
       "issue",
       "create",
       "-R",
       repoSlug,
       "--title",
-      reportTitle,
+      title,
       "--body",
-      plan.body,
+      body,
       "--label",
       labels.pm,
-    ]));
-  const edit = ["gh", "issue", "edit", String(issue?.number), "-R", repoSlug];
-  if (plan.edit) await must([...edit, "--body", plan.body]);
-  if (plan.label)
-    await must([
-      ...edit,
-      plan.label === "add" ? "--add-label" : "--remove-label",
-      labels.pm,
     ]);
-  if (plan.comment)
+  for (const { number, title, body } of plan.update)
     await must([
       "gh",
       "issue",
-      "comment",
-      String(issue?.number),
+      "edit",
+      String(number),
       "-R",
       repoSlug,
+      "--title",
+      title,
       "--body",
-      plan.comment,
+      body,
+    ]);
+  for (const { number, comment } of plan.close)
+    await must([
+      "gh",
+      "issue",
+      "close",
+      String(number),
+      "-R",
+      repoSlug,
+      "--comment",
+      comment,
     ]);
 }
