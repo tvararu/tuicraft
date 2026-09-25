@@ -532,6 +532,16 @@ death/ghost/reclaim/life cycles needed no developer repair. See
 were unexercised live; this milestone does not claim those branches pass.
 Release-only opening denial still requires an ordinary reconnect.
 
+Caveat found on 2026-09-25: `parseInitialSpells` trusted the server's
+cooldown count. The server counts entries that it does not send, so the parser
+read past the end of the packet and left the spellbook empty. It gave no
+error. The session log has 20 `no_supported_combat_actions` skips with an
+empty unavailable list inside the 2026-09-23 run window. Some skips recorded
+there may therefore come from this defect, and are not real skips. `d2d5d27`
+fixes the parser. After the fix, a `cycle --max 2` on `41077d1` completed two
+kills with server kill credit and two loot windows
+(`tmp/review-2026-09-24/fix.md`). The acceptance is not reopened.
+
 ### 5. A selected questing loop
 
 Add the NPC interactions, quest state, inventory, and other capabilities required
