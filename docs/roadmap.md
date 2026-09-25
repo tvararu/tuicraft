@@ -1,9 +1,11 @@
 # Roadmap: a programmable, AI-playable WoW client
 
-Date: 2026-09-20
+Date: 2026-09-20. Condensed 2026-09-24 after the post-roadmap review.
 
-Status: the active goal spans all six milestones. Work lands in independently
-reviewed, verified increments; the capabilities below are not all implemented.
+Status: milestones 1–4 are accepted, milestones 2 and 3 with recorded gaps
+(see each milestone). Milestones 3a, 3b, 5 and 6 remain. The capabilities
+below are not all implemented. Detailed histories live in the linked
+evidence records and plan files.
 
 ## The ambition
 
@@ -31,24 +33,13 @@ into tuicraft.
 
 ## Current priorities and ownership
 
-The user delegates implementation, engineering decisions, code review, and
-integration to agents. Success means the client can actually play WoW and
-respects the protocol, not that the user has read and approved the code.
-
-Agent-playable capabilities come first. Human-facing usability and the spatial
-TUI remain worthwhile directions, to refine after user feedback rather than
-requiring them before the first gameplay loop.
-
-Keep sensible conventions and meaningful tests, but do not chase 100% coverage
-or undertake cosmetic refactors at the expense of working gameplay. Coverage
-is diagnostic information, not a percentage gate. Protocol correctness and
-observed server outcomes remain essential.
-
-Play as soon as a useful capability exists; finishing every milestone is not a
-prerequisite. Use real gameplay to expose gaps, improve the client, and continue
-normal play and leveling on the user's server within the active goal. If the
-coordinator lacks CLI access, delegate execution to a capable agent. Only one
-agent should control a given character at a time.
+Agents own implementation, engineering decisions, review and integration.
+Success means the client can actually play WoW and respects the protocol, not
+that the user has read and approved the code. Agent-playable capabilities come
+first; human-facing usability and the spatial TUI follow user feedback. Play as
+soon as a useful capability exists, and let real gameplay expose gaps. Only one
+agent controls a given character at a time. The working rules live in
+[AGENTS.md](../AGENTS.md).
 
 ## The new ingredient: TypeSafe and Jev
 
@@ -165,15 +156,8 @@ choosing correctly.
 
 The project slowed down largely because human review time was scarce. Producing
 another large branch of plausible agent-written code would not solve that.
-
-Shipping is direct-to-main: independent agents use
-local or Orca worktrees; one integration owner verifies the combined tree, then
-commits and pushes to `main`. Agents may commit and push automatically after
-that verification. Increments stay small and reviewable. Releases are paused.
-
-The development process must let agents implement and verify capabilities
-without requiring the user to inspect code. Produce compact, inspectable
-gameplay evidence and retain the user's control over objectives and priorities.
+Shipping is direct-to-main through one integration owner, as AGENTS.md
+describes. Releases are paused.
 
 Each increment should provide:
 
@@ -195,20 +179,17 @@ Protocol correctness and decision quality need separate evidence. Captured
 observations and outcomes can support reproducible protocol regressions and Jev
 scenario evaluations. Live runs establish whether the pieces actually work
 together. Neither high code coverage nor multiple agents agreeing is sufficient
-proof on its own.
-
-The factory should evolve alongside working capabilities. A minimal evidence
-format and repeatable scenarios come first; a sophisticated orchestration system
-is not a prerequisite for gameplay.
+proof on its own. Committed evidence lives in [docs/evidence/](evidence/);
+evidence that exists only in `tmp/` is gitignored and satisfies nothing.
 
 ## Milestones
 
-These are the agreed high-level milestones, not claims of completion or detailed
-implementation specifications. Each contains smaller, independently reviewable
-increments. Define concrete scenarios and acceptance criteria before starting an
-increment, then preserve useful scenarios as capabilities grow.
+These are the agreed high-level milestones. Each contains smaller,
+independently reviewable increments. Define concrete scenarios and acceptance
+criteria before starting an increment, then preserve useful scenarios as
+capabilities grow.
 
-The key sequencing decision is to prove a real Jev-controlled encounter before
+The key sequencing decision was to prove a real Jev-controlled encounter before
 completing general navigation. Do not implement the entire protocol surface
 before testing whether the observation/action boundaries support the intended
 control loop.
@@ -233,6 +214,31 @@ checks, live evidence, and independent review remain distinct.
 Missing two-account test credentials block scenarios needing those accounts, not
 unrelated single-character capabilities. Never substitute a normal login for
 evidence that the two-account suite passes.
+
+#### Outcome, 2026-09-20 and 2026-09-21
+
+No separate acceptance decision is recorded for this milestone. Its evidence:
+
+- Direct control ran live with Xiara, level 10, in Fairbreeze on map 530:
+  movement leases, HALT, facing, requested versus observed target, target
+  clearing and same-socket READ_WAIT cancellation. Relogin confirmed the server
+  position `8713.5126953125, -6669.2939453125, 70.33599853515625`; the last
+  prediction differed by about `0.000081` yards. The command records were
+  written to `tmp/xiara-m1*.json`, which is gitignored and was never committed.
+- Three fault paths ran live (`test: Prove fault paths on the live server`):
+  a forced `.tele` over 100 yards, `.freeze`/`.unfreeze`, and a WHO pipelined
+  with HALT. See
+  [2026-09-21-fault-paths-live-plan.md](plans/2026-09-21-fault-paths-live-plan.md).
+- The `0x4` authentication failures that looked like missing two-account
+  credentials were a client defect: SRP values were serialised at variable
+  width. `fix: Serialise SRP values at fixed byte width` fixed it. Six
+  consecutive 12/12 live runs and 1000 isolated handshakes followed.
+- Open, and not to be read as fixed: one earlier run failed `party management >
+  invite, accept, leader transfer, leave` with a 30-second timeout and no auth
+  error. The SRP fix cannot explain it. Treat it as unexplained.
+- Deferred with reasons: transport boarding (the server boards a passenger
+  only when the client sends `MOVEMENTFLAG_ONTRANSPORT`, which the client
+  never sets), flight and knockback.
 
 ### 2. A constrained Jev-controlled encounter
 
@@ -259,177 +265,66 @@ Jev choices, execution outcomes, and measured request latency. The supervising
 agent may select encounters, but must not supply tactical commands during them.
 Failed attempts and interventions remain part of the record.
 
-Before those encounters, verify the learned spellbook, actual casts, resource
-changes, and server rejections. Client spell metadata is not evidence that a
-spell is learned or currently usable. Moving creatures need current movement
-observations; their initial spawn positions are not sufficient.
+#### How it got there
 
-Live spellbook validation exposed blanket rejection of ordinary normal-form
-spells and an active loop with no supported actions. Independent review of
-`SpellInfo::CheckShapeshift` confirmed the repair: observe the high form byte
-of `UNIT_FIELD_BYTES_2`, support form zero, and apply the normal-form allowance
-flag to nonzero stance masks. Do not invent form state from class or whitelist
-spell IDs. Other forms and unsupported mechanics remain explicit limits.
+The design context is
+[2026-09-21-m2-encounter-context.md](plans/2026-09-21-m2-encounter-context.md).
+Live attempts exposed and repaired, in order:
 
-Verify actual learned spells become candidates, and revalidate form before
-execution. A structurally unsupported kit must stop with a concrete reason,
-including permanently unsupported hostile ranges. Temporary cooldowns and
-in-flight responses must remain waits, and viable facing/melee must remain
-available. Repeat live cancellation after the correlated-failure repair before
-counting the remaining autonomous encounters.
-Retain the actual terminal observation even when a block occurs before any Jev
-request; do not fabricate request or timing evidence for that case.
+- Normal-form spells were blanket-rejected. The repair observes the high form
+  byte of `UNIT_FIELD_BYTES_2` and supports form zero, per
+  `SpellInfo::CheckShapeshift`. A complete CREATE defines omitted public unit
+  fields as zero; incomplete or synthetic entities stay unknown.
+- A structurally unsupported kit must stop with a concrete reason; cooldowns
+  and in-flight responses stay waits.
+- Jev responses whose probabilities summed to 0.99 were rejected. The cause was
+  provider rounding to two decimals, not float drift. Commit `3e1f3aa`
+  renormalises totals within 2e-2 and rejects anything further out.
+- A mesh-backed approach was pulled forward from milestone 3: on-demand ADT
+  loading and a checked ground corridor, with no endpoint-Z interpolation,
+  invented heights or silent retries. A direct corridor is preferred only when
+  every connected-height, ambiguity, collision and headroom check passes.
 
-The rebuilt client confirmed cancellation through START, CAST_FAILED40 and
-SPELL_FAILURE40 without losing the cancel outcome or mana. Encounter attempt03
-then stopped before inference because the real self CREATE omitted the zero
-packed form word. Independent protocol review confirmed that complete CREATE
-omits zero visible fields. Record that network provenance per entity lifetime:
-PUBLIC unit fields omitted from a complete CREATE are zero; incomplete or
-synthetic entities remain unknown. Preserve this authority through sparse VALUES
-and reset it on destruction or replacement CREATE. Bound power-field offsets to
-the seven public power slots. Nonself form is client-visible state and can be
-masked by cross-faction grouping; it is not proof of another player's actual form.
-The next login confirmed self form zero and a usable candidate kit.
-
-Attempt04 selected Mind Blast through Jev and the server confirmed a successful
-cast: target health120→80 and mana547→501. Five further requests succeeded; the
-next response failed validation after2.55 seconds. The character subsequently
-died without tactical intervention, then the server automatically released the
-ghost. This remains a failed encounter: zero of five autonomous wins credited.
-The rejected body was not retained. Forty-one controlled replays did not
-reproduce the failure. Independent provider review approved field-specific
-diagnostics with raw exceptions retained only as causes; acceptance predicates,
-probability-total tolerance and transport behavior remain unchanged. Resume live
-encounters with those diagnostics rather than claiming an unproven provider fix.
-
-Attempt05 then completed the first genuine autonomous encounter: server kill
-credit, 108 experience, 14.8 seconds, zero interventions. Attempt06 failed
-immediately after, because a well-formed response summed to 0.99. The cause
-was provider rounding to two decimal places rather than floating-point drift:
-the observed deviation of 1e-2 was four orders of magnitude outside the
-earlier 1e-6 window at `src/wow/jev.ts:149`. The regression that appeared to
-cover this path, `src/wow/jev.test.ts:336-351`, exercised only a 1e-8 deviation
-and sat comfortably inside tolerance, satisfying the letter of the
-no-exact-equality requirement without testing the case that actually occurred.
-The failed request is retained at `tmp/jev-mass-request.json`. The resolution
-was to renormalise a near-unit total and reject anything further out:
-`src/wow/jev.ts:149-156` renormalises deviations between 1e-6 and 2e-2 by
-dividing each probability by the total, while rejecting any total deviating
-more than the 2e-2 tolerance at `src/wow/jev.ts:150`.
-
-Two further observations from the same audit, neither blocking. `src/wow/jev.ts`
-reads and type-validates `output_tokens` and then discards it, since
-`JevActionResult` has no field for it. `src/wow/tactics.ts` hardcodes its result
-age, interval and timeout bounds as bare literals with no recorded derivation,
-although the design note required a bound chosen from measured round-trip time;
-observed decision latency was about 258 ms against a 2000 ms bound.
-
-A narrow mesh-backed approach capability is pulled forward from milestone 3 to
-reach the first encounter safely. Independent data review identified the existing
-Expansion01 mesh and native path/height APIs. The decision is to load relevant
-ADTs on demand and follow a checked ground corridor, not to complete general
-navigation first. Reject the suggested endpoint-Z interpolation fallback: two
-observed endpoints do not establish intermediate terrain or obstacle clearance.
-
-This prerequisite must first pass a native-library/data smoke check and a short
-live approach with immediate interruption and server-position confirmation.
-Missing paths, ambiguous floors, unsupported movement, or corrections must stop
-the approach with a reason. No invented ground heights, bulk ADT loading, GM
-shortcuts, or silent retry loop. Following, general route robustness, and the
-remaining navigation evidence stay in milestone 3.
-
-Native execution exposed a funnel corner with no queryable height even though a
-fully checked direct ground corridor was usable. Independent geometry review
-recommended retaining native-path success and original endpoint/floor/snap gates,
-then preferring a direct corridor only when all connected-height, reverse-height,
-ambiguity, collision, and headroom checks pass. The equally checked funnel route
-is the alternative for expected geometry rejection; native ABI, lifecycle, and
-invalid-domain errors still fail. This is the adopted route-selection repair,
-not coordinate jitter, a relaxed tolerance, or a height fallback.
-
-Verify the repaired public planner on the observed 20-yard case, including
-non-anchor samples against the real native height query, exact original-start
-preservation, and rejection of wrong-floor and obstructed cases. The short live
-approach and interruption evidence above remain required. Ray checks and the
-native library's incomplete stacked-floor enumeration do not establish general
-capsule collision or multi-floor support.
+Attempt 03 stopped before inference on the missing form word. Attempt 04 cast
+Mind Blast successfully, then a response failed validation and the character
+died: zero credited wins. Attempt 05 was the first genuine autonomous win (kill
+credit, 108 experience, zero interventions) but predates the repairs, so it is
+history, not evidence. Attempt 06 failed on the 0.99 probability total.
 
 #### Outcome, 2026-09-21
 
-Five autonomous encounters completed, every one with server kill credit, all
-after the probability renormalisation in `3e1f3aa` and the ground-height repair
-in `c406db9`. Attempt05 is treated as history rather than as evidence because it
-predates the first of those. The records are in `docs/evidence/m2/`, one file
-per encounter, distilled from the session log by `mise evidence:encounter`.
-
-Cadence is recorded as two numbers together, because quoting one overstates the
-other. The loop rate is 3.76 to 3.88 requests per second, at average request
-latency 256 to 264 ms. The tactical decision rate counts only decisions whose
-offered set included a spell, attack, or face option: 0.49 to 0.67 per second
-across the five encounters. Between 64 and 86 per cent of decisions offered
-only `wait` and `cancel`, because a cast was in flight or the global cooldown
-was running, and Jev answered `wait` on those turns; whether waiting was the
-right call in each case is not in the records. Both numbers are in the
-evidence README with per-encounter figures recomputed from the JSON. No
-report may present the loop rate alone as the decision cadence.
-
-The instruction contrast is a suggestive unreplicated pair, not a
-demonstration. Encounters 04 and 05 ran back to back at one character level
-against creatures of the same level under the two texts now pinned in
-`src/wow/standing-instructions.ts`. Under the conserving instruction Jev
-chose neither Mind Blast nor Power Word: Shield and used the cheapest damage
-rank plus melee more often — but the whole difference is one Mind Blast
-choice and one shield choice, a noise-shaped margin for a stochastic judge
-over a single run per condition against different creature individuals. The
-operator reports no code differed between the runs; the records cannot
-verify that. Replication is still needed before the behaviour change
-milestone 2 asks for can be called demonstrated; the rest of the farm is
-uncontrolled and the prompt work yields an informed opinion, not evidence.
-
-Cancellation is proven live. The five outstanding items ran live on 2026-09-21:
-delayed responses past the age bound (`stale_age` discards) and past the
-request timeout (`jev_timeout`), an obsolete decision discarded as `aborted`,
-model unavailability as both `TypeSafe HTTP 503` and `fetch failed`, a 62-yard
-planned route walked to completion with wrong-floor (`ambiguous ground
-column`) and obstructed (`UNKNOWN_HEIGHT`) rejections stopping with reasons,
-and a short live approach halted mid-route with the halt pose confirmed
-against the server relogin position to 0.0005 yards. Records are in
-`docs/evidence/m2/fault-*.json`; injection tooling and the operator runbook
-remain at `docs/evidence/m2/fault-runbook.md`.
-
-One gap remains inside that. The planner verification above ran a 62-yard
-direct corridor, not the observed 20-yard funnel-corner case this milestone
-names. The behaviours that case was meant to exercise are evidenced, including
-non-anchor samples against the native height query, preservation of the
-original start, and rejection of wrong-floor and obstructed routes. The funnel
-corner itself was not reached, so the route-selection repair recorded above is
-not yet verified on the geometry that motivated it.
-
-Limits found live and not yet resolved. The client never chases, so a creature
-that leashes home cannot be finished; one was driven to 2 health and reset. It
-has no collision sensing, so walking into a structure is indistinguishable from
-a failed height query, and every approach and corpse run this session was
-steered by hand. Route planning is unusable in the tested area: `goto` to the
-server's own reported corpse position fails with `UNKNOWN_HEIGHT`. The working
-hypothesis, consistent with the observations, is an upstream defect in
-`namigator` rather than a data gap: Detour's `dtPointInPolygon` rejecting
-points lying exactly on a polygon boundary, with the corridor corners returned
-by `findPath` being polygon vertices, the tile present, and the column query
-returning one unambiguous height. That is a diagnosis from these observations,
-not an upstream-confirmed fact.
-
-One protocol defect was found and fixed. The client discarded every
-`SMSG_ATTACKSTART` in which it was not the attacker, so it never observed that
-a creature had begun attacking it. A creature of faction template 7, which the
-loaded data does not mark hostile, killed the character four times while
-`fight` refused it with `unverified_hostile_relation`. Whether template 7 is
-genuinely neutral to all here is unverified — the faction data may simply not
-mark the relation hostile — so the record calls the creature unfightable
-under the current verification, not neutral. Defending against an observed
-incoming attacker is now permitted; faction hostility is not forced, because
-forcing it risks attacking bystanders, a judgement about the untried fix
-rather than an observed outcome.
+- Five autonomous encounters completed, each with server kill credit, after
+  the probability renormalisation in `3e1f3aa` and the ground-height repair
+  in `c406db9`. Records: [docs/evidence/m2/](evidence/m2/), one file
+  per encounter, produced by `mise evidence:encounter`.
+- Cadence is two numbers and must be quoted together: a loop rate of 3.76–3.88
+  requests per second at 256–264 ms average latency, and a tactical decision
+  rate of 0.49–0.67 per second. Between 64 and 86 per cent of decisions offered
+  only `wait` and `cancel`. No report may present the loop rate alone as the
+  decision cadence.
+- The instruction contrast (encounters 04 and 05) is one unreplicated pair; the
+  whole difference is one Mind Blast and one shield choice. The instruction
+  texts are in the two records. They were pinned in
+  `src/wow/standing-instructions.ts`, which the 2026-09-24 review deleted.
+- Faults ran live: `stale_age` and `jev_timeout` discards, an obsolete decision
+  discarded as `aborted`, `TypeSafe HTTP 503` and `fetch failed`, a 62-yard
+  route with wrong-floor and obstructed rejections, and a halted approach
+  confirmed against the relogin position to 0.0005 yards. Records:
+  `docs/evidence/m2/fault-*.json` and the
+  [fault runbook](evidence/m2/fault-runbook.md).
+- One protocol defect was fixed: the client dropped every `SMSG_ATTACKSTART`
+  where it was not the attacker. Defending against an observed incoming
+  attacker is now permitted; faction hostility is not forced.
+- Limits found live: the client does not chase a leashing creature and has no
+  collision sensing. `goto` failed with `UNKNOWN_HEIGHT` in the tested area; the
+  working hypothesis, a Detour `dtPointInPolygon` boundary defect in namigator,
+  is a diagnosis from observations, not an upstream-confirmed fact.
+- Two observations, neither blocking: `src/wow/jev.ts` validates
+  `output_tokens` and then discards it, and the tactics age, interval and
+  timeout bounds in `src/wow/tactics.ts` (now the named constants
+  `DEFAULT_MAX_AGE_MS`, `DEFAULT_INTERVAL_MS`, `DEFAULT_TIMEOUT_MS`) still
+  have no recorded derivation. Observed decision latency was about 258 ms
+  against the 2000 ms age bound.
 
 #### Decision: milestone 2 accepted with two gaps, 2026-09-21
 
@@ -468,6 +363,7 @@ milestone. The funnel-corner planner verification travels with route planning.
 
 The design note is
 [docs/plans/2026-09-21-m3-tactical-movement-design.md](plans/2026-09-21-m3-tactical-movement-design.md).
+The live records are in [docs/evidence/m3/](evidence/m3/).
 
 **The lease.** A movement choice issues `move(direction, leaseMs)` against the
 existing primitive; every later decision naming the same direction refreshes it.
@@ -567,6 +463,11 @@ automatic retries.
 Verify following a moving character as a separate capability rather than
 coupling every navigation test to a second account.
 
+Stale after the 2026-09-24 review: the earlier `follow` command and the unused
+remote movement codec were deleted (commit `05ee035`), because no handler
+received remote `MSG_MOVE_*` broadcasts and no accepted milestone used them.
+This milestone starts from remote movement reception.
+
 Follow ownership must be distinct from Jev and manual control; stale cleanup
 must not stop a newer owner. Verify an actual moving character with standoff
 pause and resume, and exercise HALT and manual takeover, loss, unsupported
@@ -597,46 +498,30 @@ relevant, respond to trouble, and recover or report a concrete blocking
 condition. A rising kill count alone does not establish success. Death/recovery
 scenarios must not depend on a developer secretly repairing the session.
 
-Movement is an offered action since milestone 3: Jev selects among
-`move_forward`, `move_backward`, `strafe_left`, `strafe_right`, and
-`stop_moving`, held under a renewable 2500ms lease with ground safety
-outranking the lease. This milestone consumes that capability as is and
-changes no movement candidate, lease value, or movement judgment. Route
-planning to a destination lives under milestone 3a; corpse travel here
-uses bounded direct legs only, with no planner, destination sampling, or
-arrival logic.
+The design and plan are
+[2026-09-22-m4-encounter-cycles-design.md](plans/2026-09-22-m4-encounter-cycles-design.md)
+and [2026-09-22-m4-encounter-cycles-plan.md](plans/2026-09-22-m4-encounter-cycles-plan.md).
+The contract, in short:
 
-Independent state review approved explicit request-versus-observation tracking.
-Loot windows use offered slot permissions and a release acknowledgement barrier;
-slot removal alone is not personal inventory gain. Reconcile own item pushes and
-coinage with observed inventory slots/counts. Only authenticated self/owned-item
-visibility and complete-CREATE provenance can establish omitted zero fields.
+- Movement is consumed as milestone 3 left it: `move_forward`,
+  `move_backward`, `strafe_left`, `strafe_right` and `stop_moving`,
+  under a 2500 ms renewable lease, ground safety outranking the lease. Corpse
+  travel uses bounded direct legs only, with no planner.
+- Loot tracks request versus observation. Windows use offered slot permissions
+  and a release acknowledgement barrier; slot removal is not inventory gain.
+  Gains are proved by raw slot/count and coinage changes.
+- Recovery observes ghost flags before health and invalidates stale death-epoch
+  offers and queries. Graveyard markers and sent requests never prove release
+  or resurrection. No server edits or hidden session repair.
+- A release-only opening denial, including ordinary out-of-range denial,
+  requires an explicit ordinary reconnect. This is a functional limitation,
+  not completed denial/retry support.
+- The first rescue after M2 attempt 04 was repair-assisted and does not count
+  toward the clean recovery criterion.
 
-Recovery observes ghost flags before health, invalidates stale death-epoch
-offers/queries, and keeps unresolved response correlation across timeouts.
-Graveyard markers and sent requests never prove release or resurrection. Verify
-actual death, observed ghost, corpse map/range/delay constraints, reclaim intent,
-and observed life restoration without server edits or hidden session repair.
-Include denied/full/empty loot and current-offer resurrection behavior; report
-unexercised branches rather than infer success from codecs or fixtures.
+#### Outcome: milestone 4 exit evidence accepted, 2026-09-23
 
-The first rescue after attempt04 requires adding supported recovery controls and
-reconnecting. Record it as repair-assisted; it does not satisfy the clean recovery
-criterion above. A later complete death/ghost/reclaim/life cycle must use the
-already-working interface without developer repair. A rejected native preflight
-is not movement or a corpse query; actual corpse observations determine the
-destination and reclaim range.
-
-Independent loot review found that release packets do not uniquely acknowledge
-an explicit close or prove cleared server loot ownership. A same-GUID reopen can
-receive a preliminary release before its actual offer. Keep an opening request
-unanswered until a matching full response. A release-only opening denial,
-including ordinary out-of-range denial, currently requires an explicit ordinary
-reconnect; this is a functional limitation, not completed denial/retry support.
-Prove offered-item storage with raw slot/count changes, money with raw coinage,
-and another valid window after closure. Retain the unanswered boundary in reports.
-
-2026-09-23 exit evidence met: one `cycle --max 2` completed two Stalker
+Exit evidence met: one `cycle --max 2` completed two Stalker
 fights, two acknowledged loot windows, and raw item-stack gains. A later
 Wretched Hooligan fight offered 10 money; an explicit take raised observed
 coinage 6164->6174 and release was acknowledged. Two separate
@@ -685,123 +570,24 @@ Opcode coverage grows through the capabilities that need it.
 
 ## Working through the milestones
 
-Use whichever tools and process best deliver the active goal. A multi-agent
-`/vibe` session is one option, not a requirement. Superpowers and other
-frameworks are optional aids, not mandatory execution sequences.
+Milestones are progress and evidence checkpoints, not a requirement for the
+user to read code. Use whichever tools and process best deliver the active
+goal; frameworks are optional aids. For each goal, state the behavior,
+scenario, non-goals and completion evidence; keep one integration owner; verify
+the actual changed surface live; and leave a concise completion record with
+landed commits, commands and outcomes, known limits and the next slice.
+Escalate missing prerequisites or materially different user-facing scope.
+Never quietly weaken behavioral acceptance criteria. Passing tests, model
+confidence, and agent agreement are not substitutes for demonstrated gameplay.
+Material changes to the plan require independent advice, a recorded decision,
+and concrete live-verifiable acceptance criteria.
 
-Milestones are progress and evidence checkpoints. A `/goal` can cover a single
-milestone or an explicitly bounded objective spanning several. If the goal spans
-milestones, continue through them without waiting for routine human approval.
-Keep concrete completion criteria and verified increments rather than treating
-an unbounded feature list as a definition of done.
+## Other context
 
-For each goal:
-
-- State the behavior, scenario, dependencies, non-goals, and completion evidence.
-- Establish shared interfaces before dispatching independent work. Give agents
-  explicit ownership; use local or Orca worktrees where isolation is needed.
-- Keep one integration owner responsible for the combined result. Run final
-  checks after concurrent edits settle, not against an incomplete mixed tree.
-- Verify the actual changed surface: terminal interaction, server behavior, and
-  Jev decisions where applicable. Review independently against the contract.
-- Commit and push verified increments to `main` automatically, without PRs or
-  releases. Repository rules live in [AGENTS.md](../AGENTS.md).
-- Leave a concise completion record: landed commits, commands/scenarios and
-  outcomes, known limits, blockers, and the next actionable slice.
-
-A milestone gate is an evidence requirement, not a requirement for the user to
-read code. Agents own routine engineering decisions and continue autonomously
-within the active goal. Escalate missing prerequisites or materially different
-user-facing scope, not implementation choices the agent can resolve. Never
-quietly weaken behavioral acceptance criteria. Passing tests, model confidence,
-and agent agreement are not substitutes for demonstrated gameplay.
-
-The active goal continues through all six milestones without routine approval
-gates. Direct control is the first landing checkpoint; combat and Jev integration
-follow it. Material changes to the plan require independent advice, a recorded
-decision, and concrete live-verifiable acceptance criteria.
-
-## Existing work and present evidence
-
-The current direct-control scenario uses Xiara, level 10, in Fairbreeze on
-protocol map 530. Live checks exercised finite movement leases, explicit HALT,
-facing, requested versus observed target selection, target clearing, and
-same-socket READ_WAIT cancellation with coalesced and split command delivery.
-Health remained 187/187.
-
-Ordinary relogin confirmed server position
-`8713.5126953125, -6669.2939453125, 70.33599853515625` and orientation
-`0.5465620160102844`. The last predicted XY position differed by approximately
-`0.000081` yards. Prediction and server observation remain separate: ordinary
-movement did not echo the player's new position back to that same client.
-Local command/response records are in `tmp/xiara-m1b-report.json`,
-`tmp/xiara-m1b-evidence.json`, and `tmp/xiara-m1b-relogin.json`.
-
-An isolated IPC-server smoke check exercised the actual CLI's nonzero exit on a
-daemon `ERR` response. It did not establish that Xiara was rooted. Forced
-movement, denied control and held remote-query cancellation now have live
-evidence of their own, recorded below. Transport and flight remain covered only
-by protocol or daemon regressions; the ordinary live walk does not prove them.
-Independent review found and resolved cancellation and movement-envelope defects.
-Final local checks passed 1306 tests, type checking, formatting, and the binary
-build. The final rebuilt CLI also preserved STATUS after same-socket HALT and
-confirmed target selection/clearing without displacement; evidence is in
-`tmp/xiara-m1-final-report.json` and `tmp/xiara-m1-final-smoke.json`.
-
-The `0x4` authentication failure recorded above was never a missing-credentials
-problem. It was a client defect in `src/wow/crypto/srp.ts`, fixed by
-`fix: Serialise SRP values at fixed byte width`. Salt, A, B and S were
-serialised with a variable-width big-endian helper that drops leading zero
-bytes, so whenever one of those random 256-bit values had a zero top byte the
-client sent a 31-byte field. The server then computed a different proof and
-answered `WOW_FAIL_UNKNOWN_ACCOUNT` (0x4), which reads as a bad account rather
-than as a malformed packet. For A the short encoding also shortened the logon
-proof packet itself, shifting every field after it. At roughly one in fifty
-handshakes this failed about a third of full suite runs, and the misreading of
-0x4 is what caused two-account scenarios to be recorded as blocked on absent
-credentials. They were never blocked.
-
-The suite is now stable: six consecutive clean 12/12 runs on 2026-09-21, four
-from the investigating agent and two run directly by the integrating agent,
-plus 1000 isolated auth handshakes with zero rejections. A regression test
-pins the degenerate case by choosing an ephemeral exponent that makes A equal
-the one-byte value 7, which the old encoder truncated.
-
-One issue stays open and must not be read as fixed. An earlier run failed
-`party management > invite, accept, leader transfer, leave` with a 30 second
-timeout and no auth error, which is a different signature from the sub-second
-0x4 rejections. The SRP fix touched only the auth path, so it cannot explain
-that timeout, and six clean runs do not prove a rare fault absent. Treat it as
-unexplained.
-
-Three fault paths were proven live on 2026-09-21 and are committed as
-`test: Prove fault paths on the live server`. They passed in every full run
-made that day, including the runs where the auth defect above failed another
-test, so they were never implicated in it. A forced `.tele` relocated the
-character over 100 yards and the client recovered with no control error, a
-clean STATUS and a working MOVE. A `.freeze` denied movement with under 1.5
-yards of drift and `.unfreeze` restored it. A WHO pipelined with HALT on one
-socket returned both responses sanely and left the session usable. Design and
-acceptance are in `docs/plans/2026-09-21-fault-paths-live-plan.md`.
-
-Transport is deferred with a verified reason rather than unproven.
-`MovementHandler.cpp:419` boards a passenger only when the client itself sends
-`MOVEMENTFLAG_ONTRANSPORT` with the transport GUID, and `ControlRuntime` never
-sets it, so no fixture reaches the scenario. Boarding is a movement capability
-for a milestone that owns it. Flight and knockback stay deferred for their
-recorded reasons.
-
-That run also exposed suite hygiene worth keeping: the two proximity tests
-assert on SAY range and the visibility grid but never positioned the
-characters, so they inherited whatever a previous run left behind and were
-observed failing 1661 yards apart. They now position themselves, and the
-teleport scenario restores its starting position.
-
-Actual build-12340 spell tables were extracted with client MPQ patch precedence
-and recorded in `tmp/gameplay-data/provenance.json`. The matching Expansion01
-navigation data and native library are present, but their presence alone does
-not prove navigation. Combat codecs, a lazy spell catalog, and a Jev transport
-adapter are being prepared separately; they do not yet establish a combat loop.
+Build-12340 spell tables were extracted with client MPQ patch precedence and
+recorded in `tmp/gameplay-data/provenance.json` (gitignored). The matching
+Expansion01 navigation data and native library are present; their presence
+alone does not prove navigation.
 
 The unmerged `vibe` branch contains movement, namigator navigation, combat, and
 priest-hunting work, along with research notes and live-run journals. It is
@@ -813,12 +599,10 @@ An initial TypeSafe experiment used six synthetic WoW scenarios with
 `jev-1.13.0`. It demonstrated instruction-dependent action choices and measured
 227–695 ms end-to-end calls from the development machine. It did not demonstrate
 live gameplay, sustained 5 Hz operation, or domain-wide decision reliability.
-
-The experiment also exposed an important distinction: a forced choice can favor
-one of two equivalent actions while a separate judgment correctly says there is
-no reason to prefer either. Typed output guarantees the interface, not the truth
-or justification of a decision. Candidate design, uncertainty handling, and
-scenario evaluation remain necessary.
+It also showed that a forced choice can favor one of two equivalent actions
+while a separate judgment correctly says there is no reason to prefer either.
+Typed output guarantees the interface, not the truth or justification of a
+decision.
 
 ## What this document does not authorize
 
