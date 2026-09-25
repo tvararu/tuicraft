@@ -228,9 +228,18 @@ Choose the queued creature GUIDs from a current `nearby --json` result. The
 cycle never acquires targets itself.
 A target that dies, is unreachable, or fails to fight is skipped with a
 recorded cause instead of stopping the loop. A mid-fight death runs bounded
-recovery (release, corpse query, reclaim-delay wait, one direct travel leg)
-before resuming the queue; the loop stops instead of retrying indefinitely
-if recovery does not clear.
+recovery: release, one corpse query, then up to 40 `face` + `move forward`
+legs toward the corpse. Each leg takes its heading from the current pose and
+shortens so the ghost stops about 30 yd from the corpse, inside the 39 yd
+reclaim radius and away from a killer standing on it. A leg that does not
+move, or stops on `height_unresolved` or `obstructed`, retries at heading
+offsets of +/-0.4, 0.8 and 1.2 rad. After the reclaim delay the loop sends
+`reclaim-corpse`, waits for `alive`, and stops with `reclaimed`
+(`stopDetail` holds `pose`, `range` and `legs`). An accepted resurrection
+offer stops with `resurrected`. The remaining queue stays `queued`, because
+life returns at partial health near the killer; check `nearby` before
+starting a new cycle. The leg bound stops with `corpse_out_of_range`, and
+exhausted offsets stop with `corpse_unreachable`.
 After a kill the loop waits for the server update that shows the corpse at
 zero health. A corpse without the lootable flag, or one that despawns first,
 is recorded as `loot: "none"` on its queue entry and the loop continues.

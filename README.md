@@ -235,7 +235,9 @@ movement under a renewable lease (`wait` holds, `stop_moving` releases).
 not auto-acquire. It runs `fight` over the queue and requests loot after each
 completed target. A target that dies, is unreachable, or fails to fight is
 skipped with a recorded cause instead of stopping the loop. A mid-fight death
-runs bounded recovery before resuming. `--max` caps tactics-loop starts for
+releases the spirit, walks the ghost in bounded legs to about 30 yd from the
+corpse, reclaims it, and then stops with `reclaimed` (or `resurrected` after an
+accepted offer) so the caller can check the killer before queueing more. `--max` caps tactics-loop starts for
 the whole run (positive integer, default 10). Inspect `cycling --json` for
 each target's status and an open-ended `stopCause` with `stopDetail`. The loop waits for the server release acknowledgement after close; `loot_denied:timeout` and `loot_release_unconfirmed` stop without recording a gain.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
