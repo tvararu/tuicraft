@@ -65,7 +65,7 @@ async function sendToSocket(command: string): Promise<string[]> {
 }
 
 async function waitForEvents(wait: number | undefined): Promise<void> {
-  if (wait == null) return;
+  if (wait === undefined) return;
   const lines = await sendToSocket(`READ_WAIT ${wait * 1000}`);
   for (const line of lines) console.log(line);
 }
@@ -141,7 +141,7 @@ async function printSendReply(
   }
 
   let reply = decodeReply("send", slash ? "slash" : "intent", lines);
-  if (!reply.error && wait != null) {
+  if (!reply.error && wait !== undefined) {
     try {
       const waited = decodeReply(
         "read",
@@ -224,7 +224,7 @@ async function runRead(action: ActionOf<"read">): Promise<void> {
   await ensureDaemon();
   const base = action.json ? "READ_JSON" : "READ";
   const cmd =
-    action.wait == null
+    action.wait === undefined
       ? base
       : `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`;
   const lines = await sendToSocket(cmd);

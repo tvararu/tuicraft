@@ -125,7 +125,7 @@ function handleReconnectProof(
 export function startMockAuthServer(opts: {
   realmAddress: string;
   reconnect?: ReconnectConfig;
-}): Promise<{ port: number; stop(): void }> {
+}): Promise<{ port: number; stop: () => void }> {
   return new Promise((resolve) => {
     let listener: TCPSocketListener<undefined>;
 

@@ -22,7 +22,7 @@ import { ChatType } from "wow/protocol/opcodes";
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
   end: ReturnType<typeof jest.fn>;
-  written(): string;
+  written: () => string;
 } {
   const chunks: string[] = [];
   return {
@@ -2594,8 +2594,8 @@ describe("IPC round-trip", () => {
     let capturedData:
       | ((
           socket: {
-            write(data: string | Uint8Array): number;
-            end(): void;
+            write: (data: string | Uint8Array) => number;
+            end: () => void;
           },
           data: ArrayBuffer | ArrayBufferView,
         ) => void | Promise<void>)
@@ -2636,8 +2636,8 @@ describe("IPC round-trip", () => {
     let capturedData:
       | ((
           socket: {
-            write(data: string | Uint8Array): number;
-            end(): void;
+            write: (data: string | Uint8Array) => number;
+            end: () => void;
           },
           data: ArrayBuffer | ArrayBufferView,
         ) => void | Promise<void>)
@@ -2682,8 +2682,8 @@ describe("IPC round-trip", () => {
     let capturedData:
       | ((
           socket: {
-            write(data: string | Uint8Array): number;
-            end(): void;
+            write: (data: string | Uint8Array) => number;
+            end: () => void;
           },
           data: ArrayBuffer | ArrayBufferView,
         ) => void | Promise<void>)

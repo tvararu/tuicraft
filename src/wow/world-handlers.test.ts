@@ -3795,7 +3795,6 @@ describe("embedded chat sender names", () => {
       nameCache: {
         get: () => {
           nameQueries++;
-          return;
         },
       },
     } as unknown as WorldConn;

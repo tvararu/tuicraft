@@ -31,12 +31,12 @@ export type Runtimes = {
   quests: QuestRuntime;
   rewards: RewardsRuntime;
   cycle: EncounterCycleRuntime;
-  prepareCatalog(): Promise<void>;
-  navigation(): Navigation;
-  observedTarget(guid: bigint): NavPoint;
-  halt(): void;
-  override(): void;
-  dispose(sendStop: boolean): void;
+  prepareCatalog: () => Promise<void>;
+  navigation: () => Navigation;
+  observedTarget: (guid: bigint) => NavPoint;
+  halt: () => void;
+  override: () => void;
+  dispose: (sendStop: boolean) => void;
 };
 
 type LazyState = {
@@ -69,9 +69,7 @@ function createControl(
     findHeight: (mapId, x, y, from) => {
       try {
         return getNavigation().height(mapId, x, y, from);
-      } catch {
-        return;
-      }
+      } catch {}
     },
     isPathClear: (mapId, from, to) => {
       try {

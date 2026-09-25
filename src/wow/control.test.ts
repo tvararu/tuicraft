@@ -958,7 +958,6 @@ test("free movement stops with obstructed when an obstacle blocks forward path b
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return;
       },
     });
     sent.length = 0;
@@ -987,7 +986,6 @@ test("free movement stops with height_unresolved when the path ahead is clear bu
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return;
       },
       isPathClear: () => true,
     });
@@ -1014,7 +1012,6 @@ test("free movement stops with obstructed when the path ahead is not clear", () 
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return;
       },
       isPathClear: () => false,
     });
@@ -1039,7 +1036,6 @@ test("movement away from an obstruction clears blockedReason and succeeds", () =
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (x <= 8709.46) return from?.z ?? 70.34;
-        return;
       },
     });
     runtime.move("forward", 1000);
@@ -1069,7 +1065,6 @@ test("consecutive moves into an obstruction remain non-fatal and leave pose unch
     const { runtime, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return;
       },
     });
     for (let i = 0; i < 20; i++) {
@@ -1091,7 +1086,6 @@ test("explicit halt clears stale obstruction while obstruction halt preserves it
     const { runtime, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return;
       },
     });
     runtime.move("forward", 1000);

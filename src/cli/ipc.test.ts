@@ -14,7 +14,7 @@ const origSleep = Bun.sleep;
 
 let servers: ReturnType<typeof Bun.listen>[] = [];
 
-type FakeProc = { unref(): void; stderr: ReadableStream };
+type FakeProc = { unref: () => void; stderr: ReadableStream };
 
 function fakeProc(stderrText = ""): FakeProc {
   return {
@@ -72,15 +72,15 @@ afterEach(async () => {
   await rm(sockPath, { force: true, recursive: true });
 });
 
-type ClosingSocket = { end(): void };
+type ClosingSocket = { end: () => void };
 type ClosingResponse = {
   socket: {
-    data(socket: ClosingSocket, data: Uint8Array): void;
-    close(): void;
+    data: (socket: ClosingSocket, data: Uint8Array) => void;
+    close: () => void;
   };
 };
 type ErroringResponse = {
-  socket: { error(socket: unknown, error: Error): void };
+  socket: { error: (socket: unknown, error: Error) => void };
 };
 
 async function replyThenClose(reply: string): Promise<string[]> {

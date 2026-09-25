@@ -56,8 +56,8 @@ function buildSuccessProofResponse(): Uint8Array {
 }
 
 describe("mock integration", () => {
-  let authServer: { port: number; stop(): void };
-  let worldServer: { port: number; stop(): void };
+  let authServer: { port: number; stop: () => void };
+  let worldServer: { port: number; stop: () => void };
 
   beforeAll(async () => {
     worldServer = await startMockWorldServer();

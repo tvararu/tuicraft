@@ -49,7 +49,7 @@ export type CycleEvent = {
 };
 export type CycleDeps = {
   tactics: Pick<TacticsLoop, "start" | "stop"> & {
-    snapshot(): Pick<TacticsState, "lastOutcome">;
+    snapshot: () => Pick<TacticsState, "lastOutcome">;
   };
   rewards: Pick<
     RewardsRuntime,
@@ -64,7 +64,7 @@ export type CycleDeps = {
     | "respondResurrection"
   >;
   control: Pick<ControlRuntime, "face" | "move"> & {
-    snapshot(): Pick<ControlState, "pose" | "speed">;
+    snapshot: () => Pick<ControlState, "pose" | "speed">;
   };
   now: () => number;
 };
@@ -293,5 +293,4 @@ function skip(
   record.status = "skipped";
   record.cause = cause;
   record.outcome = outcome;
-  return;
 }

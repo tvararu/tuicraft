@@ -355,12 +355,12 @@ export function startMockWorldServer(opts?: {
   coalesceSelfCreate?: boolean;
 }): Promise<{
   port: number;
-  stop(): void;
-  inject(opcode: number, body: Uint8Array): void;
+  stop: () => void;
+  inject: (opcode: number, body: Uint8Array) => void;
   captured: CapturedPacket[];
-  waitForCapture(
+  waitForCapture: (
     predicate: (p: CapturedPacket) => boolean,
-  ): Promise<CapturedPacket>;
+  ) => Promise<CapturedPacket>;
 }> {
   const authStatus = opts?.authStatus ?? 0x0c;
   const sendTimeSync = opts?.sendTimeSyncAfterLogin ?? false;

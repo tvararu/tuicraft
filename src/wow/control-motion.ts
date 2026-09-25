@@ -3,13 +3,13 @@ import { collisionFree, GROUND_ERROR, type NavPoint } from "wow/navigation";
 import { MovementFlag } from "wow/protocol/entity-fields";
 
 export type Ground = {
-  findHeight(
+  findHeight: (
     mapId: number,
     x: number,
     y: number,
     from?: NavPoint,
-  ): number | undefined;
-  isPathClear(mapId: number, from: NavPoint, to: NavPoint): boolean;
+  ) => number | undefined;
+  isPathClear: (mapId: number, from: NavPoint, to: NavPoint) => boolean;
 };
 
 export type StepRefusal =
