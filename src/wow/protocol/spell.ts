@@ -286,7 +286,7 @@ export function parseInitialSpells(r: PacketReader): InitialSpells {
   }
   const cooldownCount = r.uint16LE();
   const cooldowns: InitialCooldown[] = [];
-  for (let i = 0; i < cooldownCount; i++) {
+  for (let i = 0; i < cooldownCount && r.remaining >= 16; i++) {
     cooldowns.push({
       spellId: r.uint32LE(),
       itemId: r.uint16LE(),

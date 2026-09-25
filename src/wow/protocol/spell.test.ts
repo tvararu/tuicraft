@@ -70,6 +70,26 @@ describe("parseInitialSpells", () => {
       },
     ]);
   });
+
+  test("stops at packet end when the cooldown count overstates entries", () => {
+    const result = parseInitialSpells(
+      reader([
+        0x00, 0x01, 0x00, 0x9c, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x9c,
+        0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe8, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00,
+      ]),
+    );
+    expect(result.spells).toEqual([{ spellId: 8092 }]);
+    expect(result.cooldowns).toEqual([
+      {
+        spellId: 8092,
+        itemId: 0,
+        category: 0,
+        cooldown: 1000,
+        categoryCooldown: 0,
+      },
+    ]);
+  });
 });
 
 describe("parseSpellStart", () => {
