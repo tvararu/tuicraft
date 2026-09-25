@@ -24,4 +24,7 @@ is what a reader inspects.
 
 ## Milestones
 
-- [m2/](m2/) — a constrained Jev-controlled encounter
+- [m2/](m2/README.md) — a constrained Jev-controlled encounter
+- [m3/](m3/README.md) — movement as a tactical action
+- [m3a/](m3a/funnel-corner.md) — reliable local navigation (funnel corner)
+- [m4/](m4/README.md) — repeatable encounter cycles
