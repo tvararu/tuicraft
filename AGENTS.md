@@ -41,10 +41,15 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise ci --publish` — used by the hk `pre-push` hook: pushes HEAD to a
   temporary `refs/signoff/<sha>` ref so the not-yet-pushed commit can be
   signed off, deletes that ref, and fails the push if signoff fails
-- `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
+- `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two game accounts via `WOW_*` (see Testing)
+- `bun src/factory/main.ts <precheck|soap|reap|setup>` — the dev factory CLI
+  (design: `docs/plans/2026-09-25-dev-factory-design.md`). Automations and
+  the reaper run it from the runner clone,
+  `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
-- `orca-ide worktree create --name <name> --agent omp` — create a worktree.
+- `orca-ide worktree create --name <name> --parent-worktree active --comment
+  "owner: <agent>, <purpose>" --agent omp` — create a worktree.
   Setup is `scripts.setup` in the committed `orca.yaml` (`mise trust -y &&
   mise bundle`) and the agent starts only after it finishes; no other flags
   needed, and a nested agent creating its own worktree inherits both setup
@@ -101,12 +106,19 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   tests for behavior, protocol boundaries, and failure recovery. Do not add
   tests or restructure code solely to reach a percentage.
 - **Always run `mise test:live` yourself after protocol or
-  daemon changes.** Do not ask the user to run it. Live tests need two
-  dedicated test accounts with their `WOW_*` credentials; ordinary client
-  config is not enough. Unit, type, format, and coverage checks are not live
-  evidence. Do not claim the live suite is passing without a successful run.
-  If it fails for infrastructure reasons (server down, missing test accounts
-  or env vars), defer to the user.
+  daemon changes.** Do not ask the user to run it. Run it on two throwaway
+  accounts of your own, never on anyone else's character:
+  `bun src/factory/main.ts soap create fresh --gm 2` (account 1, GM level 2
+  for the `.freeze` and `.tele` checks) and
+  `bun src/factory/main.ts soap create eversong10` (account 2). Set
+  `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
+  `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, and
+  delete both with `soap delete <ACCOUNT>` afterwards. Unit, type, format,
+  and coverage checks are not live evidence. Do not claim the live suite is
+  passing without a successful run. "Forced teleport relocates and recovers"
+  fails in the full run and passes alone (`-t "forced teleport"`); rerun it
+  alone before calling it a regression. If the suite fails for
+  infrastructure reasons (server down, SOAP unreachable), defer to the user.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
@@ -157,13 +169,15 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   Its acceptance and live-verification journals are **not** roadmap evidence,
   because nobody reviewed them. Never merge, rebase or cherry-pick it without
   Theo saying so.
-- `main` has a GitHub `required_linear_history` rule, so **merge commits are
-  rejected at push time**. Local merges, hooks and `mise ci` all pass first,
-  and the push then fails with `GH013: Repository rule violations found`
-  naming only a commit hash, which reads as an auth or branch-protection
-  fault rather than a history-shape one. Integrate worker branches by
-  cherry-picking their commits in order, not by merging. Note that
-  `git cherry-pick --continue` opens an editor, so pass `-c core.editor=true`.
+- `main` has a GitHub `required_linear_history` rule and allows only
+  rebase merges, so **merge commits are rejected at push time**. Local
+  merges, hooks and `mise ci` all pass first, and the push then fails with
+  `GH013: Repository rule violations found` naming only a commit hash, which
+  reads as an auth or branch-protection fault rather than a history-shape
+  one. Theo's admin bypass is the only direct push to `main`; it integrates
+  by cherry-picking commits in order, never by merging. Note that
+  `git cherry-pick --continue` opens an editor, so pass
+  `-c core.editor=true`.
 - The ten `gameplay-*` worktrees from the Astra run were removed on
   2026-09-21, but their uncommitted work was archived first, to
   `tmp/worktree-archive-2026-09-21/`. `tmp/` is gitignored, so **that archive
@@ -175,6 +189,27 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
       git worktree add --detach <dir> <base-sha-from-manifest>
       git -C <dir> apply --binary tmp/worktree-archive-2026-09-21/<name>.patch
+
+## Worktree lifecycle
+
+Theo must never find stale worktrees or idle agents in Orca.
+
+- Every worktree has exactly one owner, recorded in Orca lineage when it is
+  created: pass `--parent-worktree active` and
+  `--comment "owner: <agent>, <purpose>"`, never `--no-parent`. Factory run
+  worktrees (`auto-*`) belong to the reaper, and ones Theo makes in the
+  app belong to Theo. The main checkout is never removed.
+- The owner removes its worktree and branch once the work has landed
+  (`orca-ide worktree rm --worktree name:<name>`, then `git branch -D`).
+  Commit and push before you stop.
+- Factory runs never create worktrees; subagents work inside the run's own
+  worktree.
+- The reaper (`tuicraft-factory-reaper.timer`, every 10 minutes) is the
+  backstop. It removes finished or over-time `auto-*` runs, and removes
+  other worktrees only when they have landed on `main`, are clean, and have
+  been idle for more than 12 hours. It never deletes a dirty tree: it
+  archives a patch to `tmp/worktree-archive-<date>/` in the main checkout
+  and lists it in the "Factory: reaper report" issue.
 
 ## Reference Codebases
 
@@ -256,14 +291,27 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
 Shipping:
 
-- One integration owner commits and pushes to `main`. No PRs.
+- Everything reaches `main` through a pull request that Theo (`tvararu`)
+  approves on github.com. Approvals clicked inside Orca are sent as
+  `OpenHubris`, the PR author, and never count.
+- The dev factory works issues that Theo has labelled `ready`: workers open
+  PRs as `OpenHubris` from `factory/<issue>-<slug>` branches, reviewers post
+  `factory/ci` and `factory/review`, and only the merger lands them, by
+  rebase-merge. Do not land or relabel factory PRs by hand.
+- Other PRs are landed by their author with `gh pr merge <N> --rebase` once
+  Theo has approved and `signoff/ci` and the other required checks are
+  green.
+- Rebase-merge lands every commit of a PR on `main` by itself. Each must be
+  a Conventional Commit that passes the hooks and `mise ci` on its own:
+  clean the history with `git commit --fixup` and
+  `git rebase -i --autosquash` before review. No WIP or "address review"
+  commits.
 - `git add` the intended files, then `git commit` as a separate step. Do
   not stage unrelated work.
 - Independent agents work in their own worktree and commit there freely.
   Never instruct a worker to leave its work uncommitted.
-- The integration owner commits each coherent unit as soon as it passes
-  `mise ci`. Do not hold integrated work uncommitted until a milestone
-  is verified.
 - Do not force-push, delete branches, or bypass hooks without permission.
+  The exception is your own PR branch: force-push it with
+  `--force-with-lease` after cleaning its history.
 - Releases are paused; do not run release-please or publish versions.
 - NEVER add a Claude Code attribution footer
