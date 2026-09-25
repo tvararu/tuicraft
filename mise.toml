@@ -1,10 +1,11 @@
 [tools]
 "npm:@biomejs/biome" = "latest"
+"npm:typescript-language-server" = "latest"
 bun = "latest"
 gh = "latest"
-hk = "2.0.1"
-pkl = "0.32.1"
-jq = "1.8.1"
+hk = "latest"
+jq = "latest"
+pkl = "latest"
 
 [settings]
 npm.package_manager = "bun"
@@ -87,11 +88,3 @@ run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 description = "Distil an encounter record from the session log"
 raw = true
 run = "bun run src/tools/distil-encounter.ts"
-
-[tasks.main]
-description = "Switch to main and fast-forward"
-run = '''
-set -e
-git switch main
-git pull --ff-only
-'''
