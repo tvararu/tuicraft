@@ -1,8 +1,8 @@
 # Pi Harness Design
 
-Spike findings and proposed direction, 2026-09-25. This is a design input
-for a future epic. It is not approved roadmap work, and it does not change
-[docs/roadmap.md](../roadmap.md).
+Spike findings and chosen direction, 2026-09-25. Theo tried both
+prototypes hands-on and chose stock Pi. This is the design input for a
+future epic; milestones are candidates, not approved roadmap work.
 
 ## Problem
 
@@ -48,8 +48,9 @@ was out of scope; it needs a proper eval.
 
 ## What was built
 
-Two throwaway prototypes, one per base, both in gitignored `tmp/` and not
-committed. Each implemented the same probe:
+Two throwaway prototypes, one per base. The Pi prototype is kept as a
+reference in [`2026-09-25-pi-harness-spike/`](2026-09-25-pi-harness-spike/);
+the omp one stayed local. Each implemented the same probe:
 
 1. Boot the agent TUI.
 2. `/connect` logs into WoW in-process via `authWithRetry` and
@@ -68,7 +69,7 @@ committed. Each implemented the same probe:
 | | Stock Pi | omp |
 |---|---|---|
 | Package | `@earendil-works/pi-coding-agent` 0.87.1 | `@oh-my-pi/pi-coding-agent` 18.3.1 |
-| Location | `tmp/spike-pi/` | `tmp/spike-omp/` |
+| Location | [`2026-09-25-pi-harness-spike/`](2026-09-25-pi-harness-spike/) (kept as reference) | `tmp/spike-omp/` (local only, not kept) |
 | Character | Xia (test account 1) | Yia (test account 2) |
 | Model used | `openai-codex/gpt-6-sol`, `anthropic/claude-opus-5` | `anthropic/claude-opus-5-5` |
 | Embedding | SDK: `createAgentSessionRuntime` + `new InteractiveMode(runtime).run()` | Deep import: `runRootCommand(parsed, argv, deps)` with injected session factory |
@@ -213,9 +214,11 @@ fanned out by hand to the transcript, the map and the status line. A
 harness with several consumers needs a multi-subscriber event API in the
 core.
 
-## Recommendation
+## Decision
 
 Build the harness on **stock Pi, embedded through its SDK under Bun**.
+Theo ran both prototypes side by side and chose stock Pi. omp is not
+pursued further.
 
 - The public SDK route (`createAgentSessionRuntime`, `InteractiveMode`)
   was sufficient. omp's clean-prompt route depends on `runRootCommand`
