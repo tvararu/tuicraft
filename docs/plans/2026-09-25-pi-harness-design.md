@@ -147,11 +147,10 @@ omp adds `aside` delivery, managed timers and `ctx.runEphemeralTurn`
   the cleanest non-waking option.
 - Whisper-wake produced a feedback loop when a character whispered itself.
   Real wake rules need sender filtering and a loop guard.
-- Every chat line, including tuicraft's many `[tuicraft] X is not yet
-  implemented` system lines, enters the model's context. This server runs
-  playerbots, so a busy zone would flood it. Event routing is a design
-  problem, not a detail; it is the natural first job for Jev as a
-  classifier.
+- In the spikes every chat line, including tuicraft's many `[tuicraft] X
+  is not yet implemented` system lines, entered the model's context. This
+  server runs playerbots, so a busy zone would flood it. The target model
+  is described in [Game logs](#game-logs).
 
 ### UI
 
@@ -256,8 +255,9 @@ flowchart TD
   Other agents and scripts keep driving tuicraft this way.
 - **Harness shell.** Owns a world session in-process and never shells out
   to the CLI or daemon. It contributes Pi tools and commands over the core,
-  an event router deciding what reaches the model and whether it wakes the
-  agent, and panels rendering world state for the human.
+  game logs the agent can query, a promotion path that pushes selected log
+  entries into the agent's context, and panels rendering world state for
+  the human.
 
 A monorepo (for example `packages/core`, `packages/cli`,
 `packages/harness` as Bun workspaces) is the likely end state but is not a
@@ -268,6 +268,22 @@ Adding Pi makes it tuicraft's first runtime dependency, and a large one.
 The 2026-02-20 TUI vision assumed zero runtime dependencies and a
 hand-built ANSI renderer; this design deliberately trades that for Pi's
 renderer and agent loop.
+
+### Game logs
+
+Chat and game events flow into buffered logs, not into the agent's
+context. A log is available to the agent the way a file is: it can read or
+search the whole content with tools when it wants to, much like tailing or
+grepping any other log. Nothing about chat is special compared with other
+logs.
+
+Some entries are promoted into the agent's context directly, either as a
+passive message or as one that wakes the agent. Promotion is the exception.
+Which entries qualify is not decided; one candidate is running Jev over
+each line and promoting the important ones. Simple rules (a whisper
+addressed to the character) are another.
+
+The human sees the logs in panels regardless of what the agent sees.
 
 ## Proposed milestones
 
@@ -291,10 +307,11 @@ verified live on the server.
    cycles. Long-running actions return promptly and are observable and
    cancellable via abort signals; tools sharing mutable state run
    sequentially.
-5. **Event routing.** Policy for which events reach the model and which
-   wake it: whispers and party wake with loop guards, open chat is batched
-   or summarised, system noise is dropped, entity churn is summarised
-   instead of sent per event. Rules first, then Jev as the classifier.
+5. **Game logs.** Buffered chat and event logs with agent tools to read
+   and search them, and a promotion path into the agent's context
+   (passive or waking) with loop guards. Promotion starts with simple
+   rules; Jev over each line is a candidate classifier. Entity churn is
+   summarised rather than logged per event.
 6. **Spatial panel.** Cached, dirty-flagged map component; hostility
    colouring from `FactionTemplateCatalog`; target and status panes; an
    interactive overlay for panning and inspection. Terrain via namigator
