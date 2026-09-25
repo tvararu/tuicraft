@@ -606,6 +606,31 @@ code to keep.
 ruleset change and the AGENTS.md cutover. Exit: several real issues land
 through the loop with no human code work. Theo only adds `ready` and approves.
 
+Phase 1 build (2026-09-25), in `src/factory/`, run as
+`bun ~/code/tuicraft/src/factory/main.ts <command>` from the main checkout:
+
+| Piece | Files | Verified |
+|---|---|---|
+| Prechecks: scope rule, blocked-by, WIP, reviewer and merger conditions, QA SHA | `github.ts`, `precheck.ts` | Unit tests. Live read-only against tvararu/tuicraft: each role 0.3-0.6 s. Worker, reviewer and merger exit 1 (no factory issues yet). QA exits 0 with `{"sha":…}` (no SHA stored) |
+| Per-run game accounts | `soap.ts`, `soap-cli.ts` | Unit tests. Live create and delete for all three presets, and a tuicraft daemon on the isolated XDG config. `pdump copy` now retries while a fresh account is not yet visible (seen once live) |
+| Reaper | `reaper.ts`, `reaper-report.ts`, `systemd/*` | Unit tests. Live `--dry-run` on today's worktrees. A real removal of a clean probe worktree, and a real archive-and-hold of a dirty one. The GitHub report writer is unit-tested only |
+| omp wrapper | `omp-factory` | Fake-omp argv checks: unmarked calls pass through unchanged, a marked call gets `--max-time`, `roles.env` adds `--model`/`--thinking`. `omp-factory --version` reaches the real omp |
+| Role prompts | `prompts/{worker,reviewer,merger,qa}.md` | Read through against this design. Not yet run by an automation |
+| Labels and automations | `setup.ts` | Unit tests. Dry-run plans: 9 labels and 4 disabled automations to create. Nothing applied |
+
+`mise test:live` on factory accounts: account 1 needs GM level 2 for the
+`.freeze` and `.tele` checks (`soap create fresh --gm 2`), and account 2 is
+`soap create eversong10`. The workers use this in place of the fixed `X`
+and `Y` accounts. In the full suite 13 of 14 pass. "Forced teleport
+relocates and recovers" fails in the full run but passes on its own, so it
+is order-dependent and not caused by the accounts. Look at it before
+relying on `mise test:live` as proof.
+
+Cutover steps still open (Theo's go needed): `setup labels --apply`,
+`setup automations --apply` (disabled), install the reaper timer, Theo's
+ruleset change and Orca settings (omp wrapper as `agentCmdOverrides.omp`,
+agent sleep at 120 minutes), the AGENTS.md cutover, then `--enable`.
+
 **Phase 2: remove Theo's approval.** Required approvals go to 0. Candidate
 additions: holdout scenarios, a reviewer on a different model. Exit criteria
 are for Theo to set from phase 1 experience.
