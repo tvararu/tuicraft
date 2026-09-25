@@ -160,19 +160,33 @@ describe("reviewer", () => {
 describe("merger", () => {
   test("picks an approved pr with both statuses green", () => {
     const issues = [issue(4, ["agent:merging"], { prs: [pr({ number: 50 })] })];
-    expect(decideMerger(issues)).toEqual({
+    expect(decideMerger(issues, true)).toEqual({
       ok: true,
-      out: { issue: 4, pr: 50 },
+      out: { approval: "required", issue: 4, pr: 50 },
     });
   });
 
-  test("requires approval", () => {
+  test("requires approval when the pm gate is on", () => {
     for (const decision of [null, "REVIEW_REQUIRED", "CHANGES_REQUESTED"]) {
       expect(
-        decideMerger([issue(4, ["agent:merging"], { prs: [pr({ decision })] })])
-          .ok,
+        decideMerger(
+          [issue(4, ["agent:merging"], { prs: [pr({ decision })] })],
+          true,
+        ).ok,
       ).toBe(false);
     }
+  });
+
+  test("lands without approval when the pm gate is off", () => {
+    const issues = [
+      issue(4, ["agent:merging"], {
+        prs: [pr({ decision: null, number: 50 })],
+      }),
+    ];
+    expect(decideMerger(issues, false)).toEqual({
+      ok: true,
+      out: { approval: "not-required", issue: 4, pr: 50 },
+    });
   });
 
   test("requires both factory statuses to succeed", () => {
