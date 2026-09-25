@@ -45,8 +45,11 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
 - `orca-ide worktree create --name <name> --agent omp` — create a worktree.
-  Setup runs by default; no other flags needed, and a nested agent creating
-  its own worktree inherits both setup and lineage.
+  Setup is `scripts.setup` in the committed `orca.yaml` (`mise trust -y &&
+  mise bundle`) and the agent starts only after it finishes; no other flags
+  needed, and a nested agent creating its own worktree inherits both setup
+  and lineage. Automation worktrees skip setup unless the automation has
+  "Run setup for each new workspace" on.
 - `orca-ide worktree rm --worktree name:<name>` — remove a worktree and its
   branch. No `--run-hooks`: there is no archive hook and passing it only adds
   a way for removal to fail.
