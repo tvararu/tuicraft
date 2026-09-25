@@ -26,7 +26,8 @@
         "useLiteralKeys": "off",
         "useMaxParams": "error",
         "useSimplifiedLogicExpression": "error",
-        "useWhile": "error"
+        "useWhile": "error",
+        "noUselessReturn": "error"
       },
       "correctness": {
         "noGlobalDirnameFilename": "error",
@@ -92,7 +93,21 @@
         "useThrowNewError": "error",
         "useThrowOnlyError": "error",
         "useTrimStartEnd": "error",
-        "useUnifiedTypeSignatures": "error"
+        "useUnifiedTypeSignatures": "error",
+        "useConsistentMethodSignatures": {
+          "level": "error",
+          "options": {
+            "style": "property"
+          }
+        },
+        "useErrorCause": "error",
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 500,
+            "skipBlankLines": true
+          }
+        }
       },
       "suspicious": {
         "noAlert": "error",
@@ -110,7 +125,11 @@
         "useErrorMessage": "error",
         "useGuardForIn": "error",
         "useNumberToFixedDigitsArgument": "error",
-        "useStaticResponseMethods": "error"
+        "useStaticResponseMethods": "error",
+        "useAwait": "error",
+        "noShadow": "error",
+        "noEqualsToNull": "error",
+        "noEmptyBlockStatements": "error"
       }
     }
   },
@@ -146,6 +165,10 @@
           },
           "security": {
             "noSecrets": "off"
+          },
+          "suspicious": {
+            "useAwait": "off",
+            "noEmptyBlockStatements": "off"
           }
         }
       }
@@ -175,7 +198,8 @@
       "linter": {
         "rules": {
           "style": {
-            "useNumericSeparators": "off"
+            "useNumericSeparators": "off",
+            "noExcessiveLinesPerFile": "off"
           }
         }
       }
