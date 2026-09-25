@@ -1,12 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { must } from "test/must";
 import {
-  CORPSE_END,
-  CORPSE_FIELDS,
-  DYNAMICOBJECT_END,
-  DYNAMICOBJECT_FIELDS,
-  fieldForBit,
-  GAMEOBJECT_END,
   GAMEOBJECT_FIELDS,
   MovementFlag,
   OBJECT_END,
@@ -67,18 +60,6 @@ describe("end constants", () => {
 
   test("UNIT_END is 0x0094", () => {
     expect(UNIT_END).toBe(0x00_94);
-  });
-
-  test("GAMEOBJECT_END is 0x0012", () => {
-    expect(GAMEOBJECT_END).toBe(0x00_12);
-  });
-
-  test("DYNAMICOBJECT_END is 0x000C", () => {
-    expect(DYNAMICOBJECT_END).toBe(0x00_0c);
-  });
-
-  test("CORPSE_END is 0x0024", () => {
-    expect(CORPSE_END).toBe(0x00_24);
   });
 });
 
@@ -163,126 +144,5 @@ describe("GAMEOBJECT_FIELDS", () => {
   test("PARENTROTATION has size 4", () => {
     expect(GAMEOBJECT_FIELDS.PARENTROTATION.offset).toBe(OBJECT_END + 0x00_04);
     expect(GAMEOBJECT_FIELDS.PARENTROTATION.size).toBe(4);
-  });
-});
-
-describe("DYNAMICOBJECT_FIELDS", () => {
-  test("CASTER offset is OBJECT_END + 0x0000", () => {
-    expect(DYNAMICOBJECT_FIELDS.CASTER.offset).toBe(OBJECT_END);
-    expect(DYNAMICOBJECT_FIELDS.CASTER.type).toBe("u64");
-  });
-
-  test("RADIUS is f32", () => {
-    expect(DYNAMICOBJECT_FIELDS.RADIUS.type).toBe("f32");
-    expect(DYNAMICOBJECT_FIELDS.RADIUS.offset).toBe(OBJECT_END + 0x00_04);
-  });
-});
-
-describe("CORPSE_FIELDS", () => {
-  test("OWNER offset is OBJECT_END + 0x0000", () => {
-    expect(CORPSE_FIELDS.OWNER.offset).toBe(OBJECT_END);
-    expect(CORPSE_FIELDS.OWNER.size).toBe(2);
-  });
-
-  test("ITEM has size 19", () => {
-    expect(CORPSE_FIELDS.ITEM.offset).toBe(OBJECT_END + 0x00_05);
-    expect(CORPSE_FIELDS.ITEM.size).toBe(19);
-  });
-
-  test("FLAGS offset", () => {
-    expect(CORPSE_FIELDS.FLAGS.offset).toBe(OBJECT_END + 0x00_1b);
-  });
-});
-
-describe("fieldForBit", () => {
-  test("finds UNIT_FIELD_HEALTH for correct bit index", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.HEALTH.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("health");
-    expect(must(result).type).toBe("u32");
-  });
-
-  test("finds OBJECT_FIELD_GUID for bit 0 on unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, 0);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("guid");
-    expect(must(result).type).toBe("u64");
-  });
-
-  test("finds OBJECT_FIELD_ENTRY for bit 3 on unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, 3);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("entry");
-  });
-
-  test("finds level for unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.LEVEL.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("level");
-  });
-
-  test("finds target for unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.TARGET.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("target");
-  });
-
-  test("finds displayId for unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.DISPLAYID.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("displayId");
-  });
-
-  test("finds npcFlags for unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.NPC_FLAGS.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("npcFlags");
-  });
-
-  test("finds gameobject displayId", () => {
-    const result = fieldForBit(
-      ObjectType.GAMEOBJECT,
-      GAMEOBJECT_FIELDS.DISPLAYID.offset,
-    );
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("displayId");
-  });
-
-  test("finds gameobject flags", () => {
-    const result = fieldForBit(
-      ObjectType.GAMEOBJECT,
-      GAMEOBJECT_FIELDS.FLAGS.offset,
-    );
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("flags");
-  });
-
-  test("returns undefined for unknown offset", () => {
-    expect(fieldForBit(ObjectType.UNIT, 0x05_00)).toBeUndefined();
-  });
-
-  test("returns undefined for gap offset in unit fields", () => {
-    expect(fieldForBit(ObjectType.UNIT, OBJECT_END + 0x00_10)).toBeUndefined();
-  });
-
-  test("finds maxHealth for unit", () => {
-    const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.MAXHEALTH.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("maxHealth");
-  });
-
-  test("finds corpse owner", () => {
-    const result = fieldForBit(ObjectType.CORPSE, CORPSE_FIELDS.OWNER.offset);
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("owner");
-  });
-
-  test("finds dynamicobject spellId", () => {
-    const result = fieldForBit(
-      ObjectType.DYNAMICOBJECT,
-      DYNAMICOBJECT_FIELDS.SPELLID.offset,
-    );
-    expect(result).toBeDefined();
-    expect(must(result).name).toBe("spellId");
   });
 });

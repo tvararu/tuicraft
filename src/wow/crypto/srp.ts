@@ -7,7 +7,7 @@ export type SRPResult = {
   M2: bigint;
 };
 
-export function sha1(...buffers: Uint8Array[]): Uint8Array {
+function sha1(...buffers: Uint8Array[]): Uint8Array {
   const hash = createHash("sha1");
   for (const buf of buffers) hash.update(buf);
   return new Uint8Array(hash.digest());

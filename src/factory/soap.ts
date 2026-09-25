@@ -72,7 +72,7 @@ function required(env: Record<string, string>, key: string): string {
   return value;
 }
 
-export function escapeXml(text: string): string {
+function escapeXml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -155,7 +155,7 @@ async function post(command: string): Promise<SoapResult> {
   return parseResponse(await res.text());
 }
 
-export function soap(command: string): Promise<SoapResult> {
+function soap(command: string): Promise<SoapResult> {
   return withLock(() => post(command));
 }
 

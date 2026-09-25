@@ -150,7 +150,7 @@ export function handleDestroyObject(conn: WorldConn, r: PacketReader): void {
   conn.quests?.observeQuestLog();
 }
 
-export function lookupCachedName(
+function lookupCachedName(
   conn: WorldConn,
   guid: bigint,
   objectType: number,
@@ -167,7 +167,7 @@ export function lookupCachedName(
   return undefined;
 }
 
-export function queryEntityName(
+function queryEntityName(
   conn: WorldConn,
   guid: bigint,
   objectType: number,

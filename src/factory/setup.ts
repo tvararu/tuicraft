@@ -108,7 +108,7 @@ export function missingLabels(desired: Label[], existing: string[]): Label[] {
   return desired.filter((label) => !have.has(label.name));
 }
 
-export function diff(spec: Spec, current: Automation): string[] {
+function diff(spec: Spec, current: Automation): string[] {
   const checks: [string, boolean][] = [
     ["prompt", current.prompt !== spec.prompt],
     ["provider", current.agentId !== provider],

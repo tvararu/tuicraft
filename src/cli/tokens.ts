@@ -25,13 +25,13 @@ export function tokenize(rest: string): string[] {
   return rest.split(WHITESPACE).filter(Boolean);
 }
 
-export function parseGuid(raw: string): bigint | undefined {
+function parseGuid(raw: string): bigint | undefined {
   if (!GUID_PATTERN.test(raw)) return undefined;
   const guid = BigInt(raw);
   return guid <= MAX_GUID ? guid : undefined;
 }
 
-export function parseUnsigned(
+function parseUnsigned(
   raw: string,
   min: number,
   max: number,
@@ -41,7 +41,7 @@ export function parseUnsigned(
   return value >= min && value <= max ? value : undefined;
 }
 
-export function parseFiniteNumber(raw: string): number | undefined {
+function parseFiniteNumber(raw: string): number | undefined {
   const value = Number(raw);
   return raw.trim() !== "" && Number.isFinite(value) ? value : undefined;
 }
@@ -113,7 +113,7 @@ export function parseFace(tokens: string[]): Parsed<{ orientation: number }> {
     : ok({ orientation });
 }
 
-export function parsePoint(
+function parsePoint(
   tokens: string[],
 ): { x: number; y: number; z: number } | undefined {
   if (tokens.length !== 3) return undefined;

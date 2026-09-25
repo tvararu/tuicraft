@@ -146,7 +146,7 @@ export function writeUpdateMask(w: PacketWriter, fields: Map<number, number>) {
   }
 }
 
-export function nameQueryGuidMask(guidLow: number): number {
+function nameQueryGuidMask(guidLow: number): number {
   if (guidLow === 0) return 0;
   if (guidLow <= 0xff) return 0x01;
   return 0x03;

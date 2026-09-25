@@ -211,10 +211,7 @@ function runTuiHandler<K extends TuiCommand["type"]>(
   return handler(cmd, state);
 }
 
-export async function executeCommand(
-  state: TuiState,
-  cmd: Command,
-): Promise<boolean> {
+async function executeCommand(state: TuiState, cmd: Command): Promise<boolean> {
   if (cmd.type === "quit") return true;
   const pending = runTuiHandler(cmd, state);
   if (pending) await pending;

@@ -247,7 +247,7 @@ export type FakeCorpse =
       position: { x: number; y: number; z: number };
     };
 
-export function positionedReclaim(
+function positionedReclaim(
   corpse: Extract<FakeCorpse, { status: "found" }>,
   pose: ControlPose,
   remainingMs: number | undefined,
@@ -327,7 +327,7 @@ export function fakeControl(
   };
 }
 
-export function blockedReclaim(
+function blockedReclaim(
   reason: RecoveryReclaim["reason"],
   remainingMs: number | undefined,
   pose: ControlPose | undefined,

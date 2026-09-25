@@ -1,6 +1,6 @@
 import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
-export const SpellTargetFlag = {
+const SpellTargetFlag = {
   UNIT: 0x00_00_00_02,
   ITEM: 0x00_00_00_10,
   SOURCE_LOCATION: 0x00_00_00_20,
@@ -13,7 +13,7 @@ export const SpellTargetFlag = {
   MINIPET: 0x00_01_00_00,
 } as const;
 
-export const SpellCastFlag = {
+const SpellCastFlag = {
   PROJECTILE: 0x00_00_00_20,
   POWER_LEFT_SELF: 0x00_00_08_00,
   ADJUST_MISSILE: 0x00_02_00_00,

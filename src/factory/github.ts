@@ -34,7 +34,7 @@ const query = `query($q:String!){search(type:ISSUE,query:$q,first:100){nodes{...
     statusCheckRollup{contexts(first:50){nodes{__typename
       ... on StatusContext{context state} ... on CheckRun{name conclusion}}}}}}}}}}`;
 
-export function searchQuery(): string {
+function searchQuery(): string {
   const names = Object.values(labels).map((name) => `"${name}"`);
   return `repo:${repoSlug} is:issue is:open label:${names.join(",")}`;
 }
@@ -52,7 +52,7 @@ export async function fetchIssues(): Promise<Issue[]> {
   return parseIssues(await json<unknown>(cmd));
 }
 
-export function parseIssues(body: unknown): Issue[] {
+function parseIssues(body: unknown): Issue[] {
   const search = obj(obj(obj(body)["data"])["search"]);
   return nodes(search).map(parseIssue);
 }
