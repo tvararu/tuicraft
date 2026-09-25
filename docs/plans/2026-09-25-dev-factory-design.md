@@ -239,8 +239,10 @@ unapproved PR must not wake the merger every hour to find nothing to land.
 2. Order them by issue priority, then by age. Flag dependency or ordering
    ambiguity with `needs:pm`.
 3. One at a time: rebase the PR branch onto `origin/main` and force-push the
-   `factory/` branch (never `main`). Run `mise ci` again, post new statuses
-   on the new head, then rebase-merge with
+   `factory/` branch (never `main`). The pre-push hook's `mise ci --publish`
+   posts `signoff/ci` on the new head. Run `mise ci` again, post
+   `factory/ci` and `factory/review` on the new head, check that all three
+   statuses are green, then rebase-merge with
    `gh pr merge <N> --rebase --match-head-commit <sha>`. Compare with
    `git range-diff` before and after the rebase. If it shows a content change
    (a resolved conflict), Theo's approval no longer covers that code, so set
@@ -479,10 +481,23 @@ ephemeral, while labels are durable.
 
 The factory runs `mise ci` itself and posts results with
 `gh api repos/tvararu/tuicraft/statuses/<sha> -f state=… -f context=factory/ci`.
-The ruleset then requires `factory/ci` and `factory/review`. This needs no
-runner and matches the repo's existing hook-based CI. Anyone with write access
-can post these statuses. Today that is only `tvararu` and `OpenHubris`, so the
-risk is accepted.
+This needs no runner and matches the repo's existing hook-based CI. Anyone
+with write access can post these statuses. Today that is only `tvararu` and
+`OpenHubris`, so the risk is accepted.
+
+Required checks on `main`:
+
+- **`signoff/ci`**: required now. Theo set it on 2026-09-25 with the
+  `main` ruleset, not strict, and any integration may post it. The pre-push
+  hook (`mise ci --publish`) posts it for every pushed HEAD, including the
+  worker's and merger's force-pushes of a `factory/` branch.
+- **`factory/ci`** and **`factory/review`**: added at the cutover.
+
+With rebase-merge, GitHub checks the required statuses on the PR head and
+then writes new commits to `main`. The new commits carry no statuses of
+their own ([INFERENCE] from GitHub's rebase-merge behaviour; confirm on the
+first factory PR). Before merging, the merger therefore checks that the head
+it lands has all three statuses, `signoff/ci` included.
 
 `gh signoff` is an option for posting. `mise ci` already posts `signoff/ci`
 through it when HEAD is clean and pushed, and the pre-push hook posts it for
@@ -545,9 +560,11 @@ blocks the direct pushes that current work depends on.
      rebase-and-force-push would dismiss Theo's approval on every landing
      ([INFERENCE]; confirm at cutover). The merger's `range-diff` check
      replaces it: any content change after approval goes back to Theo.
-   - Add **Require status checks to pass**: `factory/ci`, `factory/review`.
-     Turn on "Require branches to be up to date before merging". The merger
-     rebases anyway.
+   - **Require status checks to pass**: `signoff/ci` is already required
+     (not strict). Add `factory/ci` and `factory/review`. Leave "require
+     branches to be up to date" off, matching Theo's `signoff/ci` choice:
+     the merger rebases onto `main` and re-runs CI before every landing
+     anyway.
    - Bypass list: add Repository admin (Theo) so emergency fixes stay
      possible.
 2. Phase 2: change required approvals from 1 to 0. Everything else stays.
