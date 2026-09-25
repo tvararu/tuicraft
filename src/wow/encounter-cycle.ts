@@ -1,5 +1,5 @@
 import { messageOf } from "lib/errors";
-import type { ControlRuntime, ControlState } from "wow/control";
+import type { ControlEvent, ControlRuntime, ControlState } from "wow/control";
 import { recoverCorpse } from "wow/corpse-run";
 import type { CycleStop } from "wow/cycle-stop";
 import type { EntityEvent } from "wow/entity-store";
@@ -64,7 +64,7 @@ export type CycleDeps = {
     | "respondResurrection"
   >;
   control: Pick<ControlRuntime, "face" | "move"> & {
-    snapshot(): Pick<ControlState, "pose">;
+    snapshot(): Pick<ControlState, "pose" | "speed">;
   };
   now: () => number;
 };
@@ -77,6 +77,7 @@ export class EncounterCycleRuntime {
   private run: AbortController | undefined;
   private disposed = false;
   private recoveryEvents: EventWaiter<RecoveryEvent> | undefined;
+  private motionEvents: EventWaiter<ControlEvent> | undefined;
   private rewardsEvents: EventWaiter<RewardsEvent> | undefined;
   private bodyEvents:
     | { guid: bigint; waiter: EventWaiter<EntityEvent> }
@@ -112,6 +113,10 @@ export class EncounterCycleRuntime {
 
   observeRecovery(event: RecoveryEvent): void {
     this.recoveryEvents?.push(event);
+  }
+
+  observeControl(event: ControlEvent): void {
+    this.motionEvents?.push(event);
   }
 
   observeRewards(event: RewardsEvent): void {
@@ -223,19 +228,21 @@ export class EncounterCycleRuntime {
   private async recover(
     record: CycleTargetRecord,
     signal: AbortSignal,
-  ): Promise<CycleStop | undefined> {
+  ): Promise<CycleStop> {
     record.status = "skipped";
     record.cause = "died";
     this.state.phase = "recovering";
     this.emit("recovery");
     const events = new EventWaiter<RecoveryEvent>();
+    const motion = new EventWaiter<ControlEvent>();
     this.recoveryEvents = events;
+    this.motionEvents = motion;
     try {
       const { recovery, control } = this.deps;
-      const result = await recoverCorpse({ recovery, control, events, signal });
-      return result.ok ? undefined : result;
+      return await recoverCorpse({ recovery, control, events, motion, signal });
     } finally {
       if (this.recoveryEvents === events) this.recoveryEvents = undefined;
+      if (this.motionEvents === motion) this.motionEvents = undefined;
     }
   }
 

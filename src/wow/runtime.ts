@@ -167,6 +167,7 @@ export function createRuntimes(
   conn.cycle = cycle;
   control.onEvent((event) => {
     conn.onControlEvent?.(event);
+    cycle.observeControl(event);
   });
   recovery.onEvent((event) => {
     if (

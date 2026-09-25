@@ -33,7 +33,7 @@ USAGE
   tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target)
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
-  tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire
+  tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death reclaims, then stops
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
   tuicraft goto <x> <y> <z> [--json]  Walk a ground route
   tuicraft navigation [--json]  Navigation state and refusal next step
