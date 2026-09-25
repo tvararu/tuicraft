@@ -15,7 +15,7 @@ import {
   parseWalkToward,
   tokenize,
 } from "cli/tokens";
-import { parseCommand } from "ui/commands";
+import { type Command, parseCommand } from "ui/commands";
 import type { WalkTarget } from "wow/client";
 import type { MovementDirection } from "wow/control";
 import type { FramingVariant } from "wow/framing";
@@ -133,79 +133,116 @@ export type IpcCommand =
   | { type: "guild_decline" }
   | { type: "unimplemented"; feature: string };
 
-export function parseIpcCommand(line: string): IpcCommand | undefined {
-  if (line.startsWith("/")) {
-    const parsed = parseCommand(line);
-    switch (parsed.type) {
-      case "say":
-      case "yell":
-      case "guild":
-      case "party":
-      case "emote":
-      case "dnd":
-      case "afk":
-        return parsed;
-      case "whisper":
-        return parsed;
-      case "who":
-        return parsed.target
-          ? { filter: parsed.target, type: "who" }
-          : { type: "who" };
-      case "invite":
-      case "kick":
-      case "leave":
-      case "leader":
-      case "accept":
-      case "decline":
-        return parsed;
-      case "join-channel":
-        return {
-          channel: parsed.channel,
-          password: parsed.password,
-          type: "join_channel",
-        };
-      case "leave-channel":
-        return { channel: parsed.channel, type: "leave_channel" };
-      case "friends":
-        return { type: "friends" };
-      case "add-friend":
-        return { target: parsed.target, type: "add_friend" };
-      case "remove-friend":
-        return { target: parsed.target, type: "del_friend" };
-      case "ignored":
-        return { type: "ignored" };
-      case "add-ignore":
-        return { target: parsed.target, type: "add_ignore" };
-      case "remove-ignore":
-        return { target: parsed.target, type: "del_ignore" };
-      case "roll":
-        return parsed;
-      case "guild-roster":
-        return { type: "guild_roster" };
-      case "guild-invite":
-        return { target: parsed.target, type: "guild_invite" };
-      case "guild-kick":
-        return { target: parsed.target, type: "guild_kick" };
-      case "guild-leave":
-        return { type: "guild_leave" };
-      case "guild-promote":
-        return { target: parsed.target, type: "guild_promote" };
-      case "guild-demote":
-        return { target: parsed.target, type: "guild_demote" };
-      case "guild-leader":
-        return { target: parsed.target, type: "guild_leader" };
-      case "guild-motd":
-        return { message: parsed.message, type: "guild_motd" };
-      case "guild-accept":
-        return { type: "guild_accept" };
-      case "guild-decline":
-        return { type: "guild_decline" };
-      case "unimplemented":
-        return parsed;
-      default:
-        return { message: line, type: "say" };
-    }
+type TargetIpcType = Exclude<
+  Extract<IpcCommand, { target: string }>,
+  { message: string }
+>["type"];
+
+type SlashTargetType =
+  | "add-friend"
+  | "remove-friend"
+  | "add-ignore"
+  | "remove-ignore"
+  | "guild-invite"
+  | "guild-kick"
+  | "guild-promote"
+  | "guild-demote"
+  | "guild-leader";
+
+type SlashBareType =
+  | "friends"
+  | "ignored"
+  | "guild-roster"
+  | "guild-leave"
+  | "guild-accept"
+  | "guild-decline";
+
+const SLASH_TARGET_TYPES: Record<SlashTargetType, TargetIpcType> = {
+  "add-friend": "add_friend",
+  "add-ignore": "add_ignore",
+  "guild-demote": "guild_demote",
+  "guild-invite": "guild_invite",
+  "guild-kick": "guild_kick",
+  "guild-leader": "guild_leader",
+  "guild-promote": "guild_promote",
+  "remove-friend": "del_friend",
+  "remove-ignore": "del_ignore",
+};
+
+const SLASH_BARE_TYPES: Record<
+  SlashBareType,
+  | "friends"
+  | "ignored"
+  | "guild_roster"
+  | "guild_leave"
+  | "guild_accept"
+  | "guild_decline"
+> = {
+  friends: "friends",
+  "guild-accept": "guild_accept",
+  "guild-decline": "guild_decline",
+  "guild-leave": "guild_leave",
+  "guild-roster": "guild_roster",
+  ignored: "ignored",
+};
+
+function fromSlashCommand(parsed: Command, line: string): IpcCommand {
+  switch (parsed.type) {
+    case "say":
+    case "yell":
+    case "guild":
+    case "party":
+    case "emote":
+    case "dnd":
+    case "afk":
+    case "whisper":
+    case "invite":
+    case "kick":
+    case "leave":
+    case "leader":
+    case "accept":
+    case "decline":
+    case "roll":
+    case "unimplemented":
+      return parsed;
+    case "who":
+      return parsed.target
+        ? { filter: parsed.target, type: "who" }
+        : { type: "who" };
+    case "join-channel":
+      return {
+        channel: parsed.channel,
+        password: parsed.password,
+        type: "join_channel",
+      };
+    case "leave-channel":
+      return { channel: parsed.channel, type: "leave_channel" };
+    case "guild-motd":
+      return { message: parsed.message, type: "guild_motd" };
+    case "add-friend":
+    case "remove-friend":
+    case "add-ignore":
+    case "remove-ignore":
+    case "guild-invite":
+    case "guild-kick":
+    case "guild-promote":
+    case "guild-demote":
+    case "guild-leader":
+      return { target: parsed.target, type: SLASH_TARGET_TYPES[parsed.type] };
+    case "friends":
+    case "ignored":
+    case "guild-roster":
+    case "guild-leave":
+    case "guild-accept":
+    case "guild-decline":
+      return { type: SLASH_BARE_TYPES[parsed.type] };
+    default:
+      return { message: line, type: "say" };
   }
+}
+
+export function parseIpcCommand(line: string): IpcCommand | undefined {
+  if (line.startsWith("/")) return fromSlashCommand(parseCommand(line), line);
 
   const spaceIdx = line.indexOf(" ");
   const verb = spaceIdx === -1 ? line : line.slice(0, spaceIdx);
@@ -264,10 +301,11 @@ function from<T>(
 }
 
 function parseSelectOption(tokens: string[], rest: string): IpcCommand {
-  const optionId = parseOptionId(tokens[0]);
-  if (optionId === undefined)
+  const [first] = tokens;
+  const optionId = parseOptionId(first);
+  if (first === undefined || optionId === undefined)
     return { reason: "invalid gossip option id", type: "invalid" };
-  const raw = rest.trim().slice(tokens[0]!.length).trim();
+  const raw = rest.trim().slice(first.length).trim();
   let code: unknown = null;
   try {
     if (raw) code = JSON.parse(raw);
@@ -277,6 +315,94 @@ function parseSelectOption(tokens: string[], rest: string): IpcCommand {
   if (code !== null && (typeof code !== "string" || code.includes("\0")))
     return { reason: "invalid gossip code", type: "invalid" };
   return { code: code ?? undefined, optionId, type: "select_option" };
+}
+
+type GuidIpcType =
+  | "face_guid"
+  | "target"
+  | "attack"
+  | "spirit_healer"
+  | "talk"
+  | "open_loot";
+
+const GUID_VERBS = new Map<string, { nonzero: boolean; type: GuidIpcType }>([
+  ["FACE_GUID", { nonzero: true, type: "face_guid" }],
+  ["TARGET", { nonzero: false, type: "target" }],
+  ["ATTACK", { nonzero: false, type: "attack" }],
+  ["SPIRIT_HEALER", { nonzero: true, type: "spirit_healer" }],
+  ["TALK", { nonzero: true, type: "talk" }],
+  ["OPEN_LOOT", { nonzero: true, type: "open_loot" }],
+]);
+
+const QUEST_VERBS = new Map<
+  string,
+  Extract<IpcCommand, { questId: number }>["type"]
+>([
+  ["QUERY_QUEST", "query_quest"],
+  ["SELECT_QUEST", "select_quest"],
+  ["COMPLETE_QUEST", "complete_quest"],
+]);
+
+function parseIndexed(verb: string, tokens: string[]): IpcCommand | undefined {
+  const guidVerb = GUID_VERBS.get(verb);
+  if (guidVerb) {
+    const { nonzero, type } = guidVerb;
+    return from(parseGuidArg(tokens, nonzero), (v) => ({ type, ...v }));
+  }
+  const questType = QUEST_VERBS.get(verb);
+  if (questType)
+    return from(parseQuestId(tokens), (v) => ({ type: questType, ...v }));
+  switch (verb) {
+    case "CHOOSE_REWARD":
+      return from(
+        parseBoundedArg(tokens, 0, 5, "invalid reward index"),
+        (index) => ({ index, type: "choose_reward" }),
+      );
+    case "ABANDON_QUEST":
+      return from(
+        parseBoundedArg(tokens, 0, 24, "invalid quest slot"),
+        (slot) => ({ slot, type: "abandon_quest" }),
+      );
+    case "TAKE_LOOT":
+      return from(
+        parseBoundedArg(tokens, 0, 255, "invalid loot slot"),
+        (slot) => ({ slot, type: "take_loot" }),
+      );
+    default:
+      return;
+  }
+}
+
+function parseMotion(
+  verb: string,
+  tokens: string[],
+  rest: string,
+): IpcCommand | undefined {
+  switch (verb) {
+    case "MOVE":
+      return from(parseMove(tokens), (v) => ({ type: "move", ...v }));
+    case "FACE":
+      return from(parseFace(tokens), (v) => ({ type: "face", ...v }));
+    case "WALK_TOWARD":
+      return from(parseWalkToward(tokens), (v) => ({
+        type: "walk_toward",
+        ...v,
+      }));
+    case "CAST":
+      return from(parseCast(tokens), (v) => ({ type: "cast", ...v }));
+    case "FIGHT":
+      return from(parseFight(tokens), (v) => ({ type: "fight", ...v }));
+    case "CYCLE":
+      return from(parseCycle(tokens), (v) => ({ type: "cycle", ...v }));
+    case "GOTO":
+      return from(parseGoto(tokens), (v) => ({ type: "goto", ...v }));
+    case "RESURRECT":
+      return from(parseResurrect(tokens), (v) => ({ type: "resurrect", ...v }));
+    case "SELECT_OPTION":
+      return parseSelectOption(tokens, rest);
+    default:
+      return;
+  }
 }
 
 function parseGameplay(verb: string, rest: string): IpcCommand | undefined {
@@ -289,153 +415,121 @@ function parseGameplay(verb: string, rest: string): IpcCommand | undefined {
       parseBare(tokens, verb.toLowerCase().replaceAll("_", "-")),
       () => strict,
     );
-  switch (verb) {
-    case "MOVE":
-      return from(parseMove(tokens), (v) => ({ type: "move", ...v }));
-    case "FACE":
-      return from(parseFace(tokens), (v) => ({ type: "face", ...v }));
-    case "FACE_GUID":
-      return from(parseGuidArg(tokens, true), (v) => ({
-        type: "face_guid",
-        ...v,
-      }));
-    case "WALK_TOWARD":
-      return from(parseWalkToward(tokens), (v) => ({
-        type: "walk_toward",
-        ...v,
-      }));
-    case "TARGET":
-      return from(parseGuidArg(tokens), (v) => ({ type: "target", ...v }));
-    case "CAST":
-      return from(parseCast(tokens), (v) => ({ type: "cast", ...v }));
-    case "ATTACK":
-      return from(parseGuidArg(tokens), (v) => ({ type: "attack", ...v }));
-    case "FIGHT":
-      return from(parseFight(tokens), (v) => ({ type: "fight", ...v }));
-    case "CYCLE":
-      return from(parseCycle(tokens), (v) => ({ type: "cycle", ...v }));
-    case "GOTO":
-      return from(parseGoto(tokens), (v) => ({ type: "goto", ...v }));
-    case "SPIRIT_HEALER":
-      return from(parseGuidArg(tokens, true), (v) => ({
-        type: "spirit_healer",
-        ...v,
-      }));
-    case "RESURRECT":
-      return from(parseResurrect(tokens), (v) => ({ type: "resurrect", ...v }));
-    case "TALK":
-      return from(parseGuidArg(tokens, true), (v) => ({ type: "talk", ...v }));
-    case "QUERY_QUEST":
-      return from(parseQuestId(tokens), (v) => ({ type: "query_quest", ...v }));
-    case "SELECT_QUEST":
-      return from(parseQuestId(tokens), (v) => ({
-        type: "select_quest",
-        ...v,
-      }));
-    case "COMPLETE_QUEST":
-      return from(parseQuestId(tokens), (v) => ({
-        type: "complete_quest",
-        ...v,
-      }));
-    case "CHOOSE_REWARD":
-      return from(
-        parseBoundedArg(tokens, 0, 5, "invalid reward index"),
-        (index) => ({ index, type: "choose_reward" }),
-      );
-    case "ABANDON_QUEST":
-      return from(
-        parseBoundedArg(tokens, 0, 24, "invalid quest slot"),
-        (slot) => ({ slot, type: "abandon_quest" }),
-      );
-    case "OPEN_LOOT":
-      return from(parseGuidArg(tokens, true), (v) => ({
-        type: "open_loot",
-        ...v,
-      }));
-    case "SELECT_OPTION":
-      return parseSelectOption(tokens, rest);
-    case "TAKE_LOOT":
-      return from(
-        parseBoundedArg(tokens, 0, 255, "invalid loot slot"),
-        (slot) => ({ slot, type: "take_loot" }),
-      );
-    default:
-      return undefined;
-  }
+  return parseIndexed(verb, tokens) ?? parseMotion(verb, tokens, rest);
 }
 
-function parseSocial(
+const BARE_SOCIAL = new Map<string, IpcCommand>([
+  ["READ", { type: "read" }],
+  ["READ_JSON", { type: "read_json" }],
+  ["STOP", { type: "stop" }],
+  ["STATUS", { type: "status" }],
+  ["ACCEPT", { type: "accept" }],
+  ["DECLINE", { type: "decline" }],
+  ["FRIENDS", { type: "friends" }],
+  ["FRIENDS_JSON", { type: "friends_json" }],
+  ["IGNORED", { type: "ignored" }],
+  ["IGNORED_JSON", { type: "ignored_json" }],
+  ["GUILD_ROSTER", { type: "guild_roster" }],
+  ["GUILD_ROSTER_JSON", { type: "guild_roster_json" }],
+  ["GLEAVE", { type: "guild_leave" }],
+  ["GACCEPT", { type: "guild_accept" }],
+  ["GDECLINE", { type: "guild_decline" }],
+  ["MAIL", { feature: "Mail reading", type: "unimplemented" }],
+]);
+
+const TARGET_SOCIAL = new Map<string, TargetIpcType>([
+  ["INVITE", "invite"],
+  ["KICK", "kick"],
+  ["LEADER", "leader"],
+  ["ADD_FRIEND", "add_friend"],
+  ["DEL_FRIEND", "del_friend"],
+  ["ADD_IGNORE", "add_ignore"],
+  ["DEL_IGNORE", "del_ignore"],
+  ["GINVITE", "guild_invite"],
+  ["GKICK", "guild_kick"],
+  ["GPROMOTE", "guild_promote"],
+  ["GDEMOTE", "guild_demote"],
+  ["GLEADER", "guild_leader"],
+]);
+
+const MESSAGE_SOCIAL = new Map<
+  string,
+  Exclude<Extract<IpcCommand, { message: string }>, { target: string }>["type"]
+>([
+  ["SAY", "say"],
+  ["YELL", "yell"],
+  ["GUILD", "guild"],
+  ["PARTY", "party"],
+  ["EMOTE", "emote"],
+  ["DND", "dnd"],
+  ["AFK", "afk"],
+  ["GMOTD", "guild_motd"],
+]);
+
+function parseWhisper(rest: string): IpcCommand {
+  const targetEnd = rest.indexOf(" ");
+  if (targetEnd === -1) return { message: "", target: rest, type: "whisper" };
+  return {
+    message: rest.slice(targetEnd + 1),
+    target: rest.slice(0, targetEnd),
+    type: "whisper",
+  };
+}
+
+function parseWaitMs(rest: string): number | undefined {
+  const ms = Number.parseInt(rest, 10);
+  if (!Number.isFinite(ms) || ms < 0) return;
+  return Math.min(ms, 60_000);
+}
+
+function parseLeave(rest: string): IpcCommand {
+  if (!rest) return { type: "leave" };
+  const space = rest.indexOf(" ");
+  const channel = space === -1 ? rest : rest.slice(0, space);
+  return { channel, type: "leave_channel" };
+}
+
+function parseJoin(rest: string): IpcCommand | undefined {
+  if (!rest) return;
+  const [channel, password] = rest.split(" ") as [string, string?];
+  return { channel, password, type: "join_channel" };
+}
+
+function parseRoll(rest: string): IpcCommand {
+  const [first, second] = rest.split(" ").filter(Boolean);
+  if (first !== undefined && second !== undefined)
+    return {
+      max: Number.parseInt(second, 10),
+      min: Number.parseInt(first, 10),
+      type: "roll",
+    };
+  if (first !== undefined)
+    return { max: Number.parseInt(first, 10), min: 1, type: "roll" };
+  return { max: 100, min: 1, type: "roll" };
+}
+
+function parseSocialVerb(
   line: string,
   verb: string,
   rest: string,
 ): IpcCommand | undefined {
   switch (verb) {
-    case "SAY":
-    case "YELL":
-    case "GUILD":
-    case "PARTY":
-    case "EMOTE":
-    case "DND":
-    case "AFK":
-      return {
-        message: rest,
-        type: verb.toLowerCase() as
-          | "say"
-          | "yell"
-          | "guild"
-          | "party"
-          | "emote"
-          | "dnd"
-          | "afk",
-      };
-    case "WHISPER": {
-      const targetEnd = rest.indexOf(" ");
-      if (targetEnd === -1)
-        return { message: "", target: rest, type: "whisper" };
-      return {
-        message: rest.slice(targetEnd + 1),
-        target: rest.slice(0, targetEnd),
-        type: "whisper",
-      };
-    }
-    case "READ":
-      return { type: "read" };
-    case "READ_JSON":
-      return { type: "read_json" };
+    case "WHISPER":
+      return parseWhisper(rest);
     case "READ_WAIT": {
-      const ms = Number.parseInt(rest, 10);
-      if (!Number.isFinite(ms) || ms < 0) return undefined;
-      return { ms: Math.min(ms, 60_000), type: "read_wait" };
+      const ms = parseWaitMs(rest);
+      return ms === undefined ? undefined : { ms, type: "read_wait" };
     }
     case "READ_WAIT_JSON": {
-      const ms = Number.parseInt(rest, 10);
-      if (!Number.isFinite(ms) || ms < 0) return undefined;
-      return { ms: Math.min(ms, 60_000), type: "read_wait_json" };
+      const ms = parseWaitMs(rest);
+      return ms === undefined ? undefined : { ms, type: "read_wait_json" };
     }
-    case "STOP":
-      return { type: "stop" };
-    case "STATUS":
-      return { type: "status" };
     case "WHO":
       return rest ? { filter: rest, type: "who" } : { type: "who" };
     case "WHO_JSON":
       return rest ? { filter: rest, type: "who_json" } : { type: "who_json" };
-    case "INVITE":
-      return rest ? { target: rest, type: "invite" } : undefined;
-    case "KICK":
-      return rest ? { target: rest, type: "kick" } : undefined;
     case "LEAVE":
-      if (rest) {
-        const channel = rest.split(" ")[0]!;
-        return { channel, type: "leave_channel" };
-      }
-      return { type: "leave" };
-    case "LEADER":
-      return rest ? { target: rest, type: "leader" } : undefined;
-    case "ACCEPT":
-      return { type: "accept" };
-    case "DECLINE":
-      return { type: "decline" };
+      return parseLeave(rest);
     case "NEARBY":
       return rest.trim().toLowerCase() === "all"
         ? { all: true, type: "nearby" }
@@ -444,64 +538,25 @@ function parseSocial(
       return rest.trim().toLowerCase() === "all"
         ? { all: true, type: "nearby_json" }
         : { type: "nearby_json" };
-    case "FRIENDS":
-      return { type: "friends" };
-    case "FRIENDS_JSON":
-      return { type: "friends_json" };
-    case "ADD_FRIEND":
-      return rest ? { target: rest, type: "add_friend" } : undefined;
-    case "DEL_FRIEND":
-      return rest ? { target: rest, type: "del_friend" } : undefined;
-    case "IGNORED":
-      return { type: "ignored" };
-    case "IGNORED_JSON":
-      return { type: "ignored_json" };
-    case "ADD_IGNORE":
-      return rest ? { target: rest, type: "add_ignore" } : undefined;
-    case "DEL_IGNORE":
-      return rest ? { target: rest, type: "del_ignore" } : undefined;
-    case "JOIN": {
-      if (!rest) return undefined;
-      const [channel, password] = rest.split(" ") as [string, string?];
-      return { channel, password, type: "join_channel" };
-    }
-    case "GUILD_ROSTER":
-      return { type: "guild_roster" };
-    case "GUILD_ROSTER_JSON":
-      return { type: "guild_roster_json" };
-    case "GINVITE":
-      return rest ? { target: rest, type: "guild_invite" } : undefined;
-    case "GKICK":
-      return rest ? { target: rest, type: "guild_kick" } : undefined;
-    case "GLEAVE":
-      return { type: "guild_leave" };
-    case "GPROMOTE":
-      return rest ? { target: rest, type: "guild_promote" } : undefined;
-    case "GDEMOTE":
-      return rest ? { target: rest, type: "guild_demote" } : undefined;
-    case "GLEADER":
-      return rest ? { target: rest, type: "guild_leader" } : undefined;
-    case "GMOTD":
-      return { message: rest, type: "guild_motd" };
-    case "GACCEPT":
-      return { type: "guild_accept" };
-    case "GDECLINE":
-      return { type: "guild_decline" };
-    case "MAIL":
-      return { feature: "Mail reading", type: "unimplemented" };
-    case "ROLL": {
-      const parts = rest.split(" ").filter(Boolean);
-      if (parts.length >= 2)
-        return {
-          max: Number.parseInt(parts[1]!, 10),
-          min: Number.parseInt(parts[0]!, 10),
-          type: "roll",
-        };
-      if (parts.length === 1)
-        return { max: Number.parseInt(parts[0]!, 10), min: 1, type: "roll" };
-      return { max: 100, min: 1, type: "roll" };
-    }
+    case "JOIN":
+      return parseJoin(rest);
+    case "ROLL":
+      return parseRoll(rest);
     default:
       return line ? { message: line, type: "chat" } : undefined;
   }
+}
+
+function parseSocial(
+  line: string,
+  verb: string,
+  rest: string,
+): IpcCommand | undefined {
+  const bare = BARE_SOCIAL.get(verb);
+  if (bare) return bare;
+  const targetType = TARGET_SOCIAL.get(verb);
+  if (targetType) return rest ? { target: rest, type: targetType } : undefined;
+  const messageType = MESSAGE_SOCIAL.get(verb);
+  if (messageType) return { message: rest, type: messageType };
+  return parseSocialVerb(line, verb, rest);
 }

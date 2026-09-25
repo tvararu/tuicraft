@@ -338,12 +338,13 @@ function parseSubcommand(args: string[]): CliAction | undefined {
 function filterFlags(args: string[]): string[] {
   const result: string[] = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--json") continue;
-    if (args[i] === "--wait") {
+    const arg = args[i];
+    if (arg === "--json") continue;
+    if (arg === "--wait") {
       i++;
       continue;
     }
-    result.push(args[i]!);
+    if (arg !== undefined) result.push(arg);
   }
   return result;
 }
@@ -415,7 +416,12 @@ const SETUP_VALUE_FLAGS: Record<string, true> = {
 export function hasJsonOption(args: string[]): boolean {
   if (args[0] !== "setup") return args.includes("--json");
   for (let i = 1; i < args.length; i++) {
-    if (args[i] === "--json" && !SETUP_VALUE_FLAGS[args[i - 1]!]) return true;
+    const prev = args[i - 1];
+    if (
+      args[i] === "--json" &&
+      !(prev !== undefined && SETUP_VALUE_FLAGS[prev])
+    )
+      return true;
   }
   return false;
 }
@@ -492,7 +498,7 @@ function take<T>(parsed: Parsed<T>): T {
 function parseFightArgs(rest: string[]): CliAction {
   const fight = take(parseFight(rest));
   const framing =
-    fight.framing ?? parseFramingVariant(process.env["WOW_JEV_FRAMING"]);
+    fight.framing ?? parseFramingVariant(Bun.env["WOW_JEV_FRAMING"]);
   return { mode: "fight", ...fight, framing };
 }
 

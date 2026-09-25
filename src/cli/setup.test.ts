@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { PassThrough } from "node:stream";
 import { parseSetupFlags, runSetupWizard } from "cli/setup";
+import { must } from "test/must";
 
 describe("parseSetupFlags", () => {
   test("extracts all flags", () => {
@@ -73,7 +74,7 @@ function setupMock(
     close() {},
     output,
     question(prompt: string, cb: (answer: string) => void) {
-      const answer = lines[lineIndex++]!;
+      const answer = must(lines[lineIndex++]);
       if (prompt) output.write(prompt);
       echoAnswer(output, answer);
       cb(answer);

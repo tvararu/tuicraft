@@ -16,6 +16,7 @@ import {
   formatMessageObj,
   formatPrompt,
 } from "ui/format";
+import type { Entity } from "wow/entity-store";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -448,7 +449,7 @@ describe("formatEntityEvent", () => {
         level: 1,
         name: undefined,
         objectType: ObjectType.UNIT,
-      } as any,
+      } as unknown as Entity,
       type: "appear",
     });
     expect(result).toBeUndefined();
@@ -523,7 +524,7 @@ describe("formatEntityEvent", () => {
   test("update returns undefined for non-name changes", () => {
     const result = formatEntityEvent({
       changed: ["health"],
-      entity: { guid: 1n } as any,
+      entity: { guid: 1n } as unknown as Entity,
       type: "update",
     });
     expect(result).toBeUndefined();
@@ -537,7 +538,7 @@ describe("formatEntityEvent", () => {
         level: 1,
         name: "Springpaw Cub",
         objectType: ObjectType.UNIT,
-      } as any,
+      } as unknown as Entity,
       type: "update",
     });
     expect(result).toBe("[world] Springpaw Cub appeared (NPC, level 1)");
@@ -725,7 +726,7 @@ describe("formatEntityEventObj", () => {
   test("update returns undefined", () => {
     const result = formatEntityEventObj({
       changed: ["health"],
-      entity: { guid: 1n, objectType: ObjectType.UNIT } as any,
+      entity: { guid: 1n, objectType: ObjectType.UNIT } as unknown as Entity,
       type: "update",
     });
     expect(result).toBeUndefined();

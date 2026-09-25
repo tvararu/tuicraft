@@ -8,6 +8,7 @@ import { startDaemonServer } from "daemon/server";
 import { RingBuffer } from "lib/ring-buffer";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
+import { must } from "test/must";
 import type { ControlEvent, ControlState } from "wow/control";
 import type { CycleState } from "wow/encounter-cycle";
 import type {
@@ -208,10 +209,7 @@ describe("dispatchCommand", () => {
 
     const result = await dispatchCommand(
       { message: "hello", type: "say" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(result).toBe(false);
@@ -227,10 +225,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "HEY", type: "yell" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendYell).toHaveBeenCalledWith("HEY");
@@ -245,10 +240,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "inv pls", type: "guild" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendGuild).toHaveBeenCalledWith("inv pls");
@@ -263,10 +255,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "pull", type: "party" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendParty).toHaveBeenCalledWith("pull");
@@ -281,10 +270,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "waves hello", type: "emote" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendEmote).toHaveBeenCalledWith("waves hello");
@@ -299,10 +285,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "busy", type: "dnd" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendDnd).toHaveBeenCalledWith("busy");
@@ -317,10 +300,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "grabbing coffee", type: "afk" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendAfk).toHaveBeenCalledWith("grabbing coffee");
@@ -335,10 +315,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { max: 100, min: 1, type: "roll" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendRoll).toHaveBeenCalledWith(1, 100);
@@ -353,10 +330,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "hey", target: "Xiara", type: "whisper" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.sendWhisper).toHaveBeenCalledWith("Xiara", "hey");
@@ -371,7 +345,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "read" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "read" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(socket.written()).toBe("[say] Alice: hi\n[say] Bob: hey\n\n");
   });
@@ -382,7 +359,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "read" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "read" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(socket.written()).toBe("\n");
   });
@@ -397,10 +377,7 @@ describe("dispatchCommand", () => {
 
       const promise = dispatchCommand(
         { ms: 1000, type: "read_wait" },
-        handle,
-        events,
-        socket,
-        cleanup,
+        { cleanup, events, handle, socket },
       );
 
       expect(socket.written()).toBe("");
@@ -424,10 +401,7 @@ describe("dispatchCommand", () => {
 
       const promise = dispatchCommand(
         { ms: 1000, type: "read_wait" },
-        handle,
-        events,
-        socket,
-        cleanup,
+        { cleanup, events, handle, socket },
       );
 
       events.push({ json: '{"type":"SAY"}', text: "[say] New: during" });
@@ -449,7 +423,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "status" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "status" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(socket.written()).toBe("CONNECTED\n\n");
   });
@@ -462,10 +439,7 @@ describe("dispatchCommand", () => {
 
     const result = await dispatchCommand(
       { type: "stop" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(result).toBe(true);
@@ -492,10 +466,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { filter: "mage", type: "who" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.who).toHaveBeenCalledWith({ name: "mage" });
@@ -509,7 +480,7 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "who" }, handle, events, socket, cleanup);
+    await dispatchCommand({ type: "who" }, { cleanup, events, handle, socket });
 
     expect(handle.who).toHaveBeenCalledWith({});
   });
@@ -526,10 +497,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "read_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(socket.written()).toBe(
@@ -547,10 +515,7 @@ describe("dispatchCommand", () => {
 
       const promise = dispatchCommand(
         { ms: 500, type: "read_wait_json" },
-        handle,
-        events,
-        socket,
-        cleanup,
+        { cleanup, events, handle, socket },
       );
 
       expect(socket.written()).toBe("");
@@ -574,10 +539,7 @@ describe("dispatchCommand", () => {
 
       const promise = dispatchCommand(
         { ms: 500, type: "read_wait_json" },
-        handle,
-        events,
-        socket,
-        cleanup,
+        { cleanup, events, handle, socket },
       );
 
       events.push({ json: '{"new":true}', text: "[say] New: during" });
@@ -597,10 +559,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Voidtrix", type: "invite" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.invite).toHaveBeenCalledWith("Voidtrix");
@@ -615,10 +574,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Voidtrix", type: "kick" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.uninvite).toHaveBeenCalledWith("Voidtrix");
@@ -631,7 +587,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "leave" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "leave" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(handle.leaveGroup).toHaveBeenCalled();
     expect(socket.written()).toBe("OK\n\n");
@@ -645,10 +604,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { channel: "Trade", type: "join_channel" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.joinChannel).toHaveBeenCalledWith("Trade", undefined);
@@ -663,10 +619,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { channel: "Secret", password: "hunter2", type: "join_channel" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.joinChannel).toHaveBeenCalledWith("Secret", "hunter2");
@@ -681,10 +634,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { channel: "Trade", type: "leave_channel" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.leaveChannel).toHaveBeenCalledWith("Trade");
@@ -699,10 +649,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Voidtrix", type: "leader" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.setLeader).toHaveBeenCalledWith("Voidtrix");
@@ -715,7 +662,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "accept" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "accept" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(handle.acceptInvite).toHaveBeenCalled();
     expect(socket.written()).toBe("OK\n\n");
@@ -727,7 +677,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "decline" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "decline" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(handle.declineInvite).toHaveBeenCalled();
     expect(socket.written()).toBe("OK\n\n");
@@ -752,10 +705,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { filter: "mage", type: "who_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.who).toHaveBeenCalledWith({ name: "mage" });
@@ -810,7 +760,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "nearby" },
+      { cleanup, events, handle, socket },
+    );
 
     const output = socket.written();
     expect(output).toContain(
@@ -852,14 +805,11 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     const lines = socket.written().trim().split("\n").filter(Boolean);
-    const parsed = JSON.parse(lines[0]!);
+    const parsed = JSON.parse(must(lines[0]));
     expect(parsed.guid).toBe("0x1");
     expect(parsed.type).toBe("unit");
     expect(parsed.name).toBe("Thrall");
@@ -877,7 +827,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "nearby" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(socket.written()).toBe("\n");
   });
@@ -913,7 +866,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "nearby" },
+      { cleanup, events, handle, socket },
+    );
 
     const output = socket.written();
     expect(output).toContain(
@@ -939,7 +895,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "nearby" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "nearby" },
+      { cleanup, events, handle, socket },
+    );
 
     const output = socket.written();
     expect(output).toContain("Entity 0xab (type 7)");
@@ -1002,17 +961,14 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     const lines = socket.written().trim().split("\n").filter(Boolean);
     expect(lines).toHaveLength(3);
-    const player = JSON.parse(lines[0]!);
-    const go = JSON.parse(lines[1]!);
-    const corpse = JSON.parse(lines[2]!);
+    const player = JSON.parse(must(lines[0]));
+    const go = JSON.parse(must(lines[1]));
+    const corpse = JSON.parse(must(lines[2]));
     expect(player.type).toBe("player");
     expect(player.level).toBe(70);
     expect(player.health).toBe(8000);
@@ -1107,10 +1063,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
 
     const rows = socket
@@ -1119,22 +1077,22 @@ describe("dispatchCommand", () => {
       .split("\n")
       .map((line) => JSON.parse(line));
     expect(rows).toHaveLength(3);
-    expect(rows[0]!.guid).toBe("0x1");
-    expect(rows[0]!.self).toBe(true);
-    expect(rows[0]!.distance).toBe(0);
-    expect(rows[0]!.x).toBe(10);
-    expect(rows[0]!.y).toBe(10);
-    expect(rows[0]!.bearingRadians).toBeNull();
-    expect(rows[0]!.turnRadians).toBeNull();
-    expect(rows[1]!.guid).toBe("0x2");
-    expect(rows[1]!.distance).toBe(5);
-    expect(rows[1]!.horizontalDistance).toBe(5);
-    expect(rows[1]!.bearingRadians).toBeCloseTo(0.927_295_218, 8);
-    expect(rows[1]!.turnRadians).toBeCloseTo(0.927_295_218, 8);
-    expect(rows[1]!.originSource).toBe("predicted");
-    expect(rows[1]!.originUpdatedAt).toBe(1000);
-    expect(rows[2]!.guid).toBe("0x3");
-    expect(rows[2]!.distance).toBe(10);
+    expect(must(rows[0]).guid).toBe("0x1");
+    expect(must(rows[0]).self).toBe(true);
+    expect(must(rows[0]).distance).toBe(0);
+    expect(must(rows[0]).x).toBe(10);
+    expect(must(rows[0]).y).toBe(10);
+    expect(must(rows[0]).bearingRadians).toBeNull();
+    expect(must(rows[0]).turnRadians).toBeNull();
+    expect(must(rows[1]).guid).toBe("0x2");
+    expect(must(rows[1]).distance).toBe(5);
+    expect(must(rows[1]).horizontalDistance).toBe(5);
+    expect(must(rows[1]).bearingRadians).toBeCloseTo(0.927_295_218, 8);
+    expect(must(rows[1]).turnRadians).toBeCloseTo(0.927_295_218, 8);
+    expect(must(rows[1]).originSource).toBe("predicted");
+    expect(must(rows[1]).originUpdatedAt).toBe(1000);
+    expect(must(rows[2]).guid).toBe("0x3");
+    expect(must(rows[2]).distance).toBe(10);
   });
 
   test("nearby excludes a target beyond 100 yards before rounding", async () => {
@@ -1161,10 +1119,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("\n");
   });
@@ -1242,10 +1202,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { all: true, type: "nearby_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
 
     const rows = socket
@@ -1254,17 +1216,17 @@ describe("dispatchCommand", () => {
       .split("\n")
       .map((line) => JSON.parse(line));
     expect(rows).toHaveLength(4);
-    expect(rows[0]!.guid).toBe("0x1");
-    expect(rows[0]!.distance).toBe(0);
-    expect(rows[1]!.guid).toBe("0x2");
-    expect(rows[1]!.distance).toBe(5);
-    expect(rows[2]!.guid).toBe("0x4");
-    expect(rows[2]!.distance).toBe(200);
-    expect(rows[3]!.guid).toBe("0x5");
-    expect(rows[3]!.distance).toBeNull();
-    expect(rows[3]!.horizontalDistance).toBeNull();
-    expect(rows[3]!.bearingRadians).toBeNull();
-    expect(rows[3]!.turnRadians).toBeNull();
+    expect(must(rows[0]).guid).toBe("0x1");
+    expect(must(rows[0]).distance).toBe(0);
+    expect(must(rows[1]).guid).toBe("0x2");
+    expect(must(rows[1]).distance).toBe(5);
+    expect(must(rows[2]).guid).toBe("0x4");
+    expect(must(rows[2]).distance).toBe(200);
+    expect(must(rows[3]).guid).toBe("0x5");
+    expect(must(rows[3]).distance).toBeNull();
+    expect(must(rows[3]).horizontalDistance).toBeNull();
+    expect(must(rows[3]).bearingRadians).toBeNull();
+    expect(must(rows[3]).turnRadians).toBeNull();
   });
 
   test("nearby plain text filters by range and supports all", async () => {
@@ -1333,10 +1295,12 @@ describe("dispatchCommand", () => {
     const socket1 = createMockSocket();
     await dispatchCommand(
       { type: "nearby" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket1,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket: socket1,
+      },
     );
     const lines1 = socket1.written().trim().split("\n");
     expect(lines1).toHaveLength(2);
@@ -1353,10 +1317,12 @@ describe("dispatchCommand", () => {
     const socket2 = createMockSocket();
     await dispatchCommand(
       { all: true, type: "nearby" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket2,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket: socket2,
+      },
     );
     const lines2 = socket2.written().trim().split("\n");
     expect(lines2).toHaveLength(3);
@@ -1372,7 +1338,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "friends" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "friends" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(handle.getFriends).toHaveBeenCalled();
     expect(socket.written()).toContain("No friends on your list");
@@ -1387,10 +1356,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "friends_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.getFriends).toHaveBeenCalled();
@@ -1407,10 +1373,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Arthas", type: "add_friend" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.addFriend).toHaveBeenCalledWith("Arthas");
@@ -1425,10 +1388,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Arthas", type: "del_friend" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.removeFriend).toHaveBeenCalledWith("Arthas");
@@ -1442,7 +1402,10 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
-    await dispatchCommand({ type: "ignored" }, handle, events, socket, cleanup);
+    await dispatchCommand(
+      { type: "ignored" },
+      { cleanup, events, handle, socket },
+    );
 
     expect(handle.getIgnored).toHaveBeenCalled();
     expect(socket.written()).toContain("Ignore list is empty");
@@ -1457,10 +1420,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "ignored_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.getIgnored).toHaveBeenCalled();
@@ -1477,10 +1437,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Spammer", type: "add_ignore" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.addIgnore).toHaveBeenCalledWith("Spammer");
@@ -1495,10 +1452,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Spammer", type: "del_ignore" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.removeIgnore).toHaveBeenCalledWith("Spammer");
@@ -1513,10 +1467,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_roster" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.requestGuildRoster).toHaveBeenCalled();
@@ -1531,10 +1482,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_roster_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.requestGuildRoster).toHaveBeenCalled();
@@ -1575,10 +1523,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_roster" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(socket.written()).toContain("Horde Elite");
@@ -1617,10 +1562,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_roster_json" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     const parsed = JSON.parse(socket.written().replace(/\n+$/, ""));
@@ -1637,10 +1579,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Thrall", type: "guild_invite" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildInvite).toHaveBeenCalledWith("Thrall");
@@ -1655,10 +1594,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Garrosh", type: "guild_kick" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildRemove).toHaveBeenCalledWith("Garrosh");
@@ -1673,10 +1609,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_leave" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildLeave).toHaveBeenCalled();
@@ -1691,10 +1624,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Jaina", type: "guild_promote" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildPromote).toHaveBeenCalledWith("Jaina");
@@ -1709,10 +1639,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Arthas", type: "guild_demote" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildDemote).toHaveBeenCalledWith("Arthas");
@@ -1727,10 +1654,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { target: "Sylvanas", type: "guild_leader" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildLeader).toHaveBeenCalledWith("Sylvanas");
@@ -1745,10 +1669,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "Raid tonight", type: "guild_motd" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.guildMotd).toHaveBeenCalledWith("Raid tonight");
@@ -1763,10 +1684,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_accept" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.acceptGuildInvite).toHaveBeenCalled();
@@ -1781,10 +1699,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { type: "guild_decline" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(handle.declineGuildInvite).toHaveBeenCalled();
@@ -1799,10 +1714,7 @@ describe("dispatchCommand", () => {
 
     const result = await dispatchCommand(
       { feature: "Friends list", type: "unimplemented" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(result).toBe(false);
@@ -1820,10 +1732,7 @@ describe("dispatchCommand", () => {
 
     const result = await dispatchCommand(
       { message: "hello", type: "chat" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(result).toBe(false);
@@ -1843,10 +1752,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "follow me", type: "chat" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(socket.written()).toBe("OK WHISPER Xiara\n\n");
@@ -1864,10 +1770,7 @@ describe("dispatchCommand", () => {
 
     await dispatchCommand(
       { message: "hello general", type: "chat" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
 
     expect(socket.written()).toBe("OK CHANNEL General\n\n");
@@ -1880,10 +1783,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
     const result = await dispatchCommand(
       { direction: "forward", durationMs: 1000, type: "move" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
     expect(result).toBe(false);
     expect(handle.move).toHaveBeenCalledWith("forward", 1000);
@@ -1897,10 +1797,7 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { reason: "invalid direction", type: "invalid" },
-      handle,
-      events,
-      socket,
-      jest.fn(),
+      { cleanup: jest.fn(), events, handle, socket },
     );
     expect(handle.move).not.toHaveBeenCalled();
     expect(handle.face).not.toHaveBeenCalled();
@@ -1917,10 +1814,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { direction: "forward", durationMs: 500, type: "move" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(handle.move).toHaveBeenCalled();
     expect(socket.written()).toBe("ERR rooted\n\n");
@@ -1932,10 +1831,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "control_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const parsed = JSON.parse(socket.written().trim());
     expect(parsed.selfGuid).toBe("0xabcde");
@@ -1960,10 +1861,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "control_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const parsed = JSON.parse(socket.written().trim());
     expect(parsed.moving).toBe(false);
@@ -1979,10 +1882,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "control_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(JSON.parse(socket.written().trim()).nextStep).toContain(
       "different short heading",
@@ -2002,10 +1907,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "navigation_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written().trim());
     expect(state.blockedReason).toBe("ambiguous ground column");
@@ -2020,10 +1927,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "control" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const output = socket.written();
     expect(output).toContain("current pose predicted");
@@ -2070,10 +1979,12 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const parsed = JSON.parse(socket.written().trim());
     expect(parsed.guid).toBe("0x11");
@@ -2122,18 +2033,20 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "nearby_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const rows = socket
       .written()
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    expect(rows[0]!.self).toBe(true);
-    expect(rows[1]!.self).toBe(false);
+    expect(must(rows[0]).self).toBe(true);
+    expect(must(rows[1]).self).toBe(false);
   });
 
   test("halt does not teardown while stop does", async () => {
@@ -2143,19 +2056,13 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
     const halted = await dispatchCommand(
       { type: "halt" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
     expect(halted).toBe(false);
     expect(cleanup).not.toHaveBeenCalled();
     const stopped = await dispatchCommand(
       { type: "stop" },
-      handle,
-      events,
-      socket,
-      cleanup,
+      { cleanup, events, handle, socket },
     );
     expect(stopped).toBe(true);
     expect(cleanup).toHaveBeenCalledTimes(1);
@@ -2663,7 +2570,7 @@ describe("IPC round-trip", () => {
     startTestServer();
     handle.getControlState.mockReturnValue(sampleState());
     const lines = await sendToSocket("CONTROL_JSON", sockPath);
-    const parsed = JSON.parse(lines[0]!);
+    const parsed = JSON.parse(must(lines[0]));
     expect(parsed.pose.source).toBe("predicted");
     expect(parsed.serverPose.source).toBe("server");
     expect(parsed.selfGuid).toBe("0xabcde");
@@ -2671,12 +2578,12 @@ describe("IPC round-trip", () => {
 
   test("control events reach the ring buffer", async () => {
     startTestServer();
-    const cb = handle.onControlEvent.mock.calls[0]![0] as (
+    const cb = must(handle.onControlEvent.mock.calls[0])[0] as (
       event: ControlEvent,
     ) => void;
     cb({ state: sampleState(), type: "movement_started" });
     const jsonLines = await sendToSocket("READ_JSON", sockPath);
-    const parsed = JSON.parse(jsonLines[0]!);
+    const parsed = JSON.parse(must(jsonLines[0]));
     expect(parsed.type).toBe("CONTROL");
     expect(parsed.event).toBe("movement_started");
     expect(parsed.pose.source).toBe("predicted");
@@ -2711,8 +2618,8 @@ describe("IPC round-trip", () => {
       });
       const socket = createMockSocket();
 
-      capturedData!(socket, Buffer.from("STA"));
-      capturedData!(socket, Buffer.from("TUS\n"));
+      must(capturedData)(socket, Buffer.from("STA"));
+      must(capturedData)(socket, Buffer.from("TUS\n"));
       await Promise.resolve();
 
       expect(socket.written()).toBe("CONNECTED\n\n");
@@ -2755,11 +2662,11 @@ describe("IPC round-trip", () => {
       });
       const socket = createMockSocket();
 
-      capturedData!(socket, Buffer.from("STATUS\nSTA"));
+      must(capturedData)(socket, Buffer.from("STATUS\nSTA"));
       await Bun.sleep(0);
       expect(socket.written()).toBe("CONNECTED\n\n");
 
-      capturedData!(socket, Buffer.from("TUS\n"));
+      must(capturedData)(socket, Buffer.from("TUS\n"));
       await Bun.sleep(0);
       expect(socket.written()).toBe("CONNECTED\n\nCONNECTED\n\n");
 
@@ -2799,7 +2706,7 @@ describe("IPC round-trip", () => {
       });
       const socket = createMockSocket();
 
-      capturedData!(socket, Buffer.from("STATUS\nSTATUS\n"));
+      must(capturedData)(socket, Buffer.from("STATUS\nSTATUS\n"));
       await Bun.sleep(0);
 
       expect(socket.written()).toBe("CONNECTED\n\nCONNECTED\n\n");
@@ -2870,7 +2777,7 @@ describe("IPC round-trip", () => {
       .calls[0] as [(opcode: number, err: Error) => void];
     cb(0x01_2a, new RangeError("Out of bounds access"));
     const lines = await sendToSocket("READ_JSON", sockPath);
-    expect(JSON.parse(lines[0]!)).toEqual({
+    expect(JSON.parse(must(lines[0]))).toEqual({
       data: {
         error: "Out of bounds access",
         opcode: 0x01_2a,
@@ -2939,7 +2846,7 @@ describe("IPC round-trip", () => {
       type: "appear",
     });
     const lines = await sendToSocket("READ_JSON", sockPath);
-    const parsed = JSON.parse(lines[0]!);
+    const parsed = JSON.parse(must(lines[0]));
     expect(parsed.type).toBe("ENTITY_APPEAR");
     expect(parsed.name).toBe("Test NPC");
   });
@@ -3097,10 +3004,12 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "release_spirit" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("OK\n\n");
   });
@@ -3114,10 +3023,12 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "reclaim_corpse" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR Cannot request reclaim: wrong_map\n\n");
   });
@@ -3131,10 +3042,12 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { guid: 10n, type: "spirit_healer" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe(
       "ERR Observed creature is not a spirit healer\n\n",
@@ -3166,10 +3079,12 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "recovery_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written());
     expect(state.selfGuid).toBe("0xffffffffffffffff");
@@ -3191,10 +3106,12 @@ describe("recovery IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "recovery" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR session_closed\n\n");
   });
@@ -3213,10 +3130,12 @@ describe("cycle IPC boundary", () => {
         maxStarts: 3,
         type: "cycle",
       },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(handle.startCycle).toHaveBeenCalledWith([1n, 2n], "kill fast", 3);
     expect(socket.written()).toBe("OK\n\n");
@@ -3231,10 +3150,12 @@ describe("cycle IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { guids: [1n], instruction: "fight", maxStarts: 10, type: "cycle" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR self_not_alive\n\n");
   });
@@ -3258,10 +3179,12 @@ describe("cycle IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "cycling_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written());
     expect(state.phase).toBe("fighting");
@@ -3278,10 +3201,12 @@ describe("cycle IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "cycling" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR session_closed\n\n");
   });
@@ -3294,8 +3219,8 @@ describe("cycle IPC boundary", () => {
     const state = createMockHandle().getCycleState();
     onDomainEvent("cycle", { at: 1000, state, type: "started" }, events, log);
     const drained = events.drain();
-    expect(drained[0]!.text).toBe("[cycle] started");
-    expect(JSON.parse(drained[0]!.json).type).toBe("CYCLE");
+    expect(must(drained[0]).text).toBe("[cycle] started");
+    expect(JSON.parse(must(drained[0]).json).type).toBe("CYCLE");
   });
 });
 
@@ -3359,10 +3284,12 @@ describe("quest IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "accept_quest" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR quest_reply_unanswered\n\n");
   });
@@ -3384,10 +3311,12 @@ describe("quest IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "quests_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written());
     expect(state.giver).toBe("0xffffffffffffffff");
@@ -3429,10 +3358,12 @@ describe("loot IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { slot: 0, type: "take_loot" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR Loot slot was not offered\n\n");
     expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
@@ -3455,10 +3386,12 @@ describe("loot IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "loot_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written());
     expect(state.loot.phase).toBe("opening");
@@ -3493,10 +3426,12 @@ describe("loot IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "inventory_json" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     const state = JSON.parse(socket.written());
     expect(state.slots[0].guid).toBe("0xffffffffffffffff");
@@ -3514,10 +3449,12 @@ describe("loot IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       { type: "loot" },
-      handle,
-      new RingBuffer<EventEntry>(10),
-      socket,
-      jest.fn(),
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
     );
     expect(socket.written()).toBe("ERR session_closed\n\n");
   });

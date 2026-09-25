@@ -137,7 +137,8 @@ function isStale({ cmd }: Queued): boolean {
 function promoteHalt(state: SocketState): void {
   const haltIdx = state.queue.findIndex(({ cmd }) => cmd?.type === "halt");
   if (haltIdx === -1) return;
-  const halt = state.queue[haltIdx]!;
+  const halt = state.queue[haltIdx];
+  if (halt === undefined) return;
   const before = state.queue.slice(0, haltIdx);
   const after = state.queue.slice(haltIdx + 1);
   state.queue = [halt, ...before.filter((q) => !isStale(q)), ...after];
@@ -191,7 +192,13 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
     },
   };
   abort.signal.addEventListener("abort", () => finish(false), { once: true });
-  dispatchCommand(cmd, ctx.handle, ctx.events, gated, ctx.cleanup, abort.signal)
+  dispatchCommand(cmd, {
+    abort: abort.signal,
+    cleanup: ctx.cleanup,
+    events: ctx.events,
+    handle: ctx.handle,
+    socket: gated,
+  })
     .then((shouldExit) => {
       finish(shouldExit);
     })

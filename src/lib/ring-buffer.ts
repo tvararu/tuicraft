@@ -1,6 +1,6 @@
 export class RingBuffer<T> {
-  private items: (T | undefined)[];
-  private capacity: number;
+  private readonly items: (T | undefined)[];
+  private readonly capacity: number;
   private _writePos = 0;
   private cursor = 0;
 

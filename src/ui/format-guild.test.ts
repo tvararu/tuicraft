@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { formatGuildRoster, formatGuildRosterJson } from "ui/format";
 import type { GuildMember, GuildRoster } from "wow/guild-store";
 import { GuildMemberStatus } from "wow/protocol/guild";
@@ -107,7 +108,7 @@ describe("formatGuildRoster", () => {
       members: [makeMember({ status: GuildMemberStatus.ONLINE })],
     });
     const result = formatGuildRoster(roster);
-    const firstLine = result.split("\n")[0]!;
+    const firstLine = must(result.split("\n")[0]);
     expect(firstLine).toBe("[guild] 1/1 online");
   });
 
@@ -308,7 +309,7 @@ describe("formatGuildRoster", () => {
   test("header includes guild name with dash separator", () => {
     const roster = makeRoster({ guildName: "Shadow Council" });
     const result = formatGuildRoster(roster);
-    const firstLine = result.split("\n")[0]!;
+    const firstLine = must(result.split("\n")[0]);
     expect(firstLine).toBe("[guild] Shadow Council — 0/0 online");
   });
 });

@@ -11,6 +11,7 @@ import { rm } from "node:fs/promises";
 import type { Interface as ReadlineInterface } from "node:readline";
 import { runSetup, runSetupWizard } from "cli/setup";
 import { parseConfig } from "lib/config";
+import { must } from "test/must";
 import { pathsUnder } from "test/temp-paths";
 
 let answers: string[] = [];
@@ -106,7 +107,7 @@ describe("runSetup", () => {
       answers = ["a", "b", "C", "", "", ""];
       await runSetup([], fakeCreateInterface as never, paths);
       expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(logSpy.mock.calls[0]![0]).toContain("config.toml");
+      expect(must(logSpy.mock.calls[0])[0]).toContain("config.toml");
     } finally {
       logSpy.mockRestore();
     }

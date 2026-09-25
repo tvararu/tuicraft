@@ -88,7 +88,7 @@ export function formatInventoryState(state: InventoryState): string[] {
   }
   const unknown = state.slots.filter((slot) => slot.status === "unknown");
   lines.push(`Unknown slots: ${unknown.length}`);
-  if (state.issues.length)
+  if (state.issues.length > 0)
     lines.push(`Inventory issues: ${state.issues.length}`);
   return lines;
 }

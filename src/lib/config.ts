@@ -19,7 +19,15 @@ const DEFAULTS: Partial<Config> = {
   timeout_minutes: 30,
 };
 
-export function parseConfig(text: string): Config {
+function parseValue(raw: string): string | number {
+  if (raw.startsWith('"') && raw.endsWith('"')) {
+    return raw.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  const n = Number(raw);
+  return Number.isNaN(n) ? raw : n;
+}
+
+function parseLines(text: string): Record<string, string | number> {
   const result: Record<string, string | number> = { ...DEFAULTS };
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
@@ -27,17 +35,12 @@ export function parseConfig(text: string): Config {
     const eq = trimmed.indexOf("=");
     if (eq === -1) continue;
     const key = trimmed.slice(0, eq).trim();
-    const raw = trimmed.slice(eq + 1).trim();
-    if (raw.startsWith('"') && raw.endsWith('"')) {
-      result[key] = raw
-        .slice(1, -1)
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, "\\");
-    } else {
-      const n = Number(raw);
-      result[key] = Number.isNaN(n) ? raw : n;
-    }
+    result[key] = parseValue(trimmed.slice(eq + 1).trim());
   }
+  return result;
+}
+
+function validateConfig(result: Record<string, string | number>): void {
   for (const field of ["account", "password", "character"] as const) {
     if (typeof result[field] !== "string") {
       throw new Error(`Missing required config field: ${field}`);
@@ -61,6 +64,11 @@ export function parseConfig(text: string): Config {
     )
       throw new Error(`Invalid ${field}: must be a non-empty string`);
   }
+}
+
+export function parseConfig(text: string): Config {
+  const result = parseLines(text);
+  validateConfig(result);
   return result as unknown as Config;
 }
 
@@ -92,7 +100,7 @@ export async function writeConfig(
 ): Promise<void> {
   const { mkdir, writeFile } = await import("node:fs/promises");
   await mkdir(paths.configDir, { recursive: true });
-  await writeFile(paths.configPath, serializeConfig(cfg) + "\n", {
+  await writeFile(paths.configPath, `${serializeConfig(cfg)}\n`, {
     mode: 0o600,
   });
 }
@@ -102,10 +110,10 @@ export function clientConfig(cfg: Config) {
     account: cfg.account.toUpperCase(),
     character: cfg.character,
     host: cfg.host,
-    jevApiKey: process.env["TYPESAFE_API_KEY"],
+    jevApiKey: Bun.env["TYPESAFE_API_KEY"],
     jevEndpointUrl:
-      process.env["JEV_ENDPOINT_URL"] ?? process.env["TYPESAFE_ENDPOINT_URL"],
-    jevFault: process.env["JEV_FAULT"],
+      Bun.env["JEV_ENDPOINT_URL"] ?? Bun.env["TYPESAFE_ENDPOINT_URL"],
+    jevFault: Bun.env["JEV_FAULT"],
     language: cfg.language,
     navigationDataDir: cfg.navigation_data_dir,
     navigationLibrary: cfg.navigation_library,
