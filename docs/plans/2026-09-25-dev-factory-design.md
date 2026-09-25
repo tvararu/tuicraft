@@ -50,17 +50,20 @@ Success means:
 - A worker may, at its own discretion, fan out parallel omp subagents inside
   its own run and worktree and land one PR (decided 2026-09-25). See
   [Worker fan-out](#worker-fan-out).
-- Theo enabled squash and merge commits on 2026-09-25. Both default to the PR
-  title and description.
+- Merge settings trial (Theo, 2026-09-25, verified with `gh api`):
+  `allow_rebase_merge=true`, `allow_squash_merge=false`,
+  `allow_merge_commit=false`, and `main` keeps `required_linear_history`.
+  PRs therefore land by rebase-merge, and every PR commit lands on `main`.
+  Theo may relax this later.
 
 ### Assumptions (correct if wrong)
 
 - The tracker is GitHub Issues, with labels as states. Linear is an optional
   cockpit for Theo later, not part of phase 1.
-- `main` keeps `required_linear_history`, and PRs land by squash, one commit
-  per issue. Merge commits are enabled in repository settings, but the ruleset
-  still refuses them on `main`. That only changes if we drop linear history
-  (see the register).
+- `main` keeps `required_linear_history`, and PRs land by rebase-merge, so
+  each commit of a PR becomes a commit on `main`. Squash and merge commits
+  are disabled in the repository settings. That only changes if Theo ends
+  the trial (see the register).
 - Each factory role is an Orca Automation. Phase 0 confirmed that `omp`
   works as an automation provider, with three gaps the factory must close
   itself: no per-run time cap, no worktree or process cleanup, and no setup
@@ -77,7 +80,7 @@ flowchart LR
   R -->|rework| W
   R -->|factory/review ok| P{Phase 1: Theo approves}
   P --> M[Merger]
-  M -->|squash to main| Q[QA on main]
+  M -->|rebase-merge to main| Q[QA on main]
   Q -->|files issue as OpenHubris| N[needs:pm]
   N -->|Theo adds ready| W
   M -->|conflict / ordering| N
@@ -160,17 +163,27 @@ only concurrency guards.
    `agent:working`, then re-read the issue to detect a race with another run.
 2. Start with `mise trust -y && mise bundle`: automation worktrees do not run
    the repo setup script (phase 0).
-3. Work in a fresh worktree per run (`--workspace-mode new-per-run`), on a
-   branch named `factory/<issue>-<slug>`. For rework, reuse the existing
-   branch.
+3. Work in the run's fresh worktree (`--workspace-mode new-per-run`). Check
+   out `factory/<issue>-<slug>` as the worktree's branch: a new branch from
+   `origin/main`, or for rework the existing remote branch. Then run
+   `orca-ide worktree set --worktree active --issue <N>
+   --workspace-status in-progress --comment "<one-line workpad status>"`
+   (see [Orca integration](#orca-integration)).
 4. Keep exactly one workpad comment on the issue (Symphony's "Codex Workpad"),
    edited in place. First write the acceptance criteria and test plan, then
    update progress and blockers.
 5. Create a SOAP account and character for this run. Live-test against the
    real server, and tear the account down at the end.
-6. Open or update the PR as `OpenHubris` with `Fixes #N` and proof attached
-   (below). Set `agent:review`.
-7. Stop conditions: a per-run time cap enforced by the reaper (below), a cap
+6. Clean the history before review. Every commit lands on `main` on its
+   own (rebase-merge), so each must stand alone: a Conventional Commit with
+   a subject of 50 characters or fewer, passing the hk commit hooks and
+   `mise ci`. Use `git commit --fixup` and `git rebase -i --autosquash`.
+   No "WIP", "address review" or "fix typo" commits. Rework is folded into
+   the commits it corrects, then force-pushed to the `factory/` branch.
+7. Open or update the PR as `OpenHubris` with `Fixes #N` and proof attached
+   (below). Set `agent:review` and `--workspace-status in-review`.
+8. Stop conditions: a per-run time cap (the omp wrapper's `--max-time`, with
+   the reaper as backstop, see [Orca integration](#orca-integration)), a cap
    on attempts per issue, and a `needs:pm` escalation instead of spinning.
 
 <a id="worker-fan-out"></a>**Worker fan-out.** A worker may run parallel omp
@@ -199,8 +212,15 @@ has `agent:review`.
 1. Start from a fresh context with a skeptical prompt. It gets the diff, the
    issue, the workpad and the proof, but not the worker's transcript.
 2. Run `mise ci` on the PR head in its own worktree. Post the commit statuses
-   `factory/ci` and `factory/review` to the head SHA.
-3. If it passes, set `agent:merging`. Otherwise post one review comment and
+   `factory/ci` and `factory/review` to the head SHA. Orca's PR Checks panel
+   shows commit statuses natively.
+3. Check commit hygiene as well as the diff. Every commit on the PR is
+   Conventional, has a subject of 50 characters or fewer and passes hk.
+   Each one makes sense on its own and builds (`git rebase -x "mise
+   typecheck" origin/main` on a scratch branch). There are no fixup, WIP or
+   review-response commits. A history failure is a rework reason like a
+   code failure.
+4. If it passes, set `agent:merging`. Otherwise post one review comment and
    set `agent:rework`.
 
 **Merger.** Trigger: hourly. The precheck passes when an issue has
@@ -211,9 +231,18 @@ unapproved PR must not wake the merger every hour to find nothing to land.
    Theo has approved.
 2. Order them by issue priority, then by age. Flag dependency or ordering
    ambiguity with `needs:pm`.
-3. One at a time: rebase onto `main`, run `mise ci` again, post new statuses
-   on the new head, and squash-merge. On a conflict it cannot resolve cleanly,
-   set `agent:rework` with a note.
+3. One at a time: rebase the PR branch onto `origin/main` and force-push the
+   `factory/` branch (never `main`). Run `mise ci` again, post new statuses
+   on the new head, then rebase-merge with
+   `gh pr merge <N> --rebase --match-head-commit <sha>`. Compare with
+   `git range-diff` before and after the rebase. If it shows a content change
+   (a resolved conflict), Theo's approval no longer covers that code, so set
+   `needs:pm` for re-approval. On a conflict it cannot resolve cleanly, set
+   `agent:rework` with a note.
+4. After the merge: comment the landed range (`main` before and after, and
+   the commit count) on the PR, so a revert can cover every commit of the
+   issue. Run `orca-ide worktree set --workspace-status completed` on the
+   issue's worktree if one still exists. The issue closes via `Fixes #N`.
 
 **QA.** Trigger: when `main` has moved since the last QA run. The precheck
 compares `git rev-parse origin/main` with a stored SHA.
@@ -260,8 +289,8 @@ which is why the flag must be explicit. Factory runs never create worktrees
   that runs it. The reaper removes them after `completed`.
 - The coordinator runs `orca-ide worktree rm` after cherry-picking a
   worker's commits onto `main` and pushing. It then deletes the branch.
-  Orca keeps any branch it cannot prove is merged, so a squash or
-  cherry-pick leaves it behind.
+  Orca keeps any branch it cannot prove is merged, so a rebase-merge or
+  cherry-pick often leaves it behind.
 - Theo removes his own worktrees. The reaper's backstop covers the ones he
   forgets.
 
@@ -281,12 +310,13 @@ checkout, never from a worktree it might delete. Each pass:
    - **Landed.** Any one of these proves it:
      - a merged PR for the branch whose `headRefOid` equals the local tip
        (`gh pr list --head <branch> --state merged --json headRefOid`);
-     - `git cherry origin/main <branch>` prints only `-` lines, which
-       covers cherry-picked integration;
+     - `git cherry origin/main <branch>` prints only `-` lines. This covers
+       cherry-picked integration and rebase-merged PRs, because a rebase
+       keeps each commit's patch-id unless it had to resolve a conflict;
      - the patch-id of the whole branch diff (`git diff
        $(git merge-base origin/main <branch>) <branch> | git patch-id
-       --stable`) equals the patch-id of a commit on `origin/main`, which
-       covers squash merges;
+       --stable`) equals the patch-id of a commit on `origin/main`. This
+       covers squash merges, which the trial disables but Theo may re-enable;
      - the branch has no commits beyond `origin/main`.
 
      `git branch --merged` is never used. Phase 0 checked this on a
@@ -347,13 +377,95 @@ supported sessions when you open them again". Findings from the Orca
 - The logic lives in the renderer bundle, so it probably works only while
   the Orca app is running ([INFERENCE]).
 - It frees processes, not worktrees or disk.
+- It cannot put a working factory run to sleep. The automation runner
+  marks a run `completed` on the first agent status `done`
+  (`handleAgentDone` in the same bundle), and `done` is also the sleep
+  condition. So a pane can only sleep after Orca already considers its run
+  finished. An omp run waiting on a long tool call reports `working`. The
+  residual risk is an agent that wrongly reports `done` mid-task, which
+  would end the Orca run as well, sleep or no sleep.
 
-Recommendation: turn it on at 30 minutes. Idle agents mostly sit in Theo's
-and the coordinator's interactive worktrees, and factory runs are removed
-within 10 minutes of completing anyway. It is experimental and global, and
-it changes Theo's own sessions, so Theo switches it on himself. Phase 1 then
-checks that an omp session resumes with its history. Agent sleep is an
-addition to the reaper, not a replacement: it never removes a worktree.
+Recommendation: turn it on, but with a long idle window (120 minutes)
+rather than 30. The code rules out sleeping a working run, but that has not
+been observed live on a factory run. A 2-hour window is still far shorter
+than the reaper's N-hour backstop. Idle agents mostly sit in Theo's and the
+coordinator's interactive worktrees, and factory runs are removed within 10
+minutes of completing. It is experimental and global, and it changes Theo's
+own sessions, so Theo switches it on himself. Phase 1 then checks two
+things: an omp session resumes with its history, and a long `sleep` inside
+an automation run is not put to sleep. Agent sleep is an addition to the
+reaper, not a replacement: it never removes a worktree.
+
+### Orca integration
+
+The factory uses Orca's native surfaces, and GitHub labels stay the only
+state store. Orca's board status is a mirror that the factory writes. It
+never writes labels back (only Linear has status sync), so no state is
+double-written.
+
+1. **Link each run worktree to its issue.** Right after the claim, the
+   worker runs `orca-ide worktree set --worktree active --issue <N>`.
+   Checked in phase 0: `--issue`, `--workspace-status` and `--comment` all
+   take effect (`linkedIssue: 69`, `workspaceStatus: in-review`). Orca
+   resolves the PR for the card, PR tab, checks and review state from the
+   worktree's checked-out branch when it displays them. `linkedPR` stays
+   `null` in the CLI. Orca picked up a branch switch inside the worktree
+   within seconds, so the worker checks out `factory/<issue>-<slug>`
+   directly instead of pushing from the run branch. Whether the PR tab
+   lights up is checked visually on the first real factory PR.
+2. **Board status at every transition:** `in-progress` on claim,
+   `in-review` when the PR opens, `completed` after the merge.
+   `--comment` is a one-line mirror of the workpad.
+3. **Cleanup is entirely ours.** Orca never removes automation worktrees
+   by itself, so the reaper is required. Phase 0 also found that after a
+   branch switch, `worktree rm` deleted the checked-out branch it could
+   prove merged, but kept the run's original `OpenHubris/auto-…` branch.
+   The reaper deletes that run branch as well.
+4. **Agent sleep:** see above.
+5. **Per-role model, flags and time cap.** Automations have no per-run
+   argv. The automation launcher (`aG` in the renderer bundle) applies the
+   global settings `agentCmdOverrides`, `agentDefaultArgs` and
+   `agentDefaultEnv` to every omp launch. `agentDefaultArgs.omp` is unset
+   today. Other agents carry flags such as `--dangerously-skip-permissions`
+   there. Proposal: set `agentCmdOverrides.omp` to a small wrapper,
+   `~/.local/bin/omp-factory`. If the prompt starts with a role marker
+   (`[factory:worker]` and so on), the wrapper adds that role's
+   `--model`, `--thinking`, `--max-time` and `--profile`. Otherwise it
+   execs `omp` with its arguments unchanged, so Theo's interactive sessions
+   behave as before. This also gives every role a real `--max-time`, with
+   the reaper kept as backstop. It is a global Orca setting, so Theo
+   applies it. Phase 1 checks that an unmarked launch is byte-for-byte
+   pass-through.
+6. **Merge button.** Orca's PR panel offers whichever merge methods the
+   repository allows. When squash and merge commits were enabled, its
+   default on PR #84 was "Create merge commit", which `main` refuses under
+   linear history. With the rebase-only trial, the button offers only
+   rebase, so that trap is gone. The ruleset still pins "allowed merge
+   methods: Rebase", so relaxing repository settings cannot bring the trap
+   back.
+7. **Approval identity: Orca approvals do not count.** Orca's GitHub reads
+   and writes go through the host's `gh`. The bundle parses
+   `gh auth status` and runs `gh pr merge`, `gh pr edit` and
+   `gh api graphql` under the active account. On this VM, `gh auth status`
+   lists only `OpenHubris`, and Theo's Tasks header reads
+   "GitHub · openhubris". An approval clicked in Orca would therefore come
+   from the PR author, and GitHub refuses self-approval, so it can never
+   satisfy the gate. Theo approves on github.com or in the GitHub mobile
+   app as `tvararu`. Treat Orca approvals as invalid until an account
+   switch to `tvararu` is shown to work.
+8. **`--source-context`** (TaskSourceContext). The shape Orca stored for the
+   phase 0 automations was `{kind: "task-source", provider: "github",
+   projectId, hostId, repoId, providerIdentity: {owner, repo},
+   accountLabel}`. It picks the host and account for Orca's own task and
+   provider data. The factory's agents call `gh` directly, so it adds
+   nothing. Not used.
+
+Works as is: the Tasks (GitHub Projects) view, the linked-review sidebar,
+Automations run history including precheck-skipped runs, agent-finished
+notifications, and native display of commit statuses in the Checks panel.
+Orca records no usage for omp, so token accounting comes from omp.
+Orca orchestration (Runs, Tasks, Dispatch) stays deferred: its state is
+ephemeral, while labels are durable.
 
 ### Local CI and statuses
 
@@ -395,8 +507,9 @@ Two cases need more than a transcript:
 
 - `WIP`: at most N concurrent workers, enforced by the precheck count. Start
   at 2.
-- Per-run time cap on every role, enforced by the reaper. Orca launches
-  `omp '<prompt>'` with no flags, so `--max-time` is not available.
+- Per-run time cap on every role: `--max-time` added by the omp wrapper
+  ([Orca integration](#orca-integration) item 5), with the reaper as
+  backstop. Orca itself launches `omp '<prompt>'` with no flags.
 - A cap on attempts per issue, after which the issue gets `needs:pm`.
 - Only Theo's `ready` dispatches (scope rule), so issues that QA or the
   coordinator file never dispatch on their own. This stops QA from feeding
@@ -418,7 +531,12 @@ blocks the direct pushes that current work depends on.
    - Keep: Restrict creations, Restrict deletions, Block force pushes,
      Require linear history.
    - Add **Require a pull request before merging**: 1 required approval,
-     dismiss stale approvals on new commits, allowed merge methods: Squash.
+     allowed merge methods: **Rebase**. Pinning the method keeps the Orca
+     merge button safe even if repository settings are relaxed. Leave
+     "dismiss stale approvals on new commits" off. The merger's
+     rebase-and-force-push would dismiss Theo's approval on every landing
+     ([INFERENCE]; confirm at cutover). The merger's `range-diff` check
+     replaces it: any content change after approval goes back to Theo.
    - Add **Require status checks to pass**: `factory/ci`, `factory/review`.
      Turn on "Require branches to be up to date before merging". The merger
      rebases anyway.
@@ -426,9 +544,9 @@ blocks the direct pushes that current work depends on.
      possible.
 2. Phase 2: change required approvals from 1 to 0. Everything else stays.
 
-Already done by Theo on 2026-09-25: squash and merge commits enabled, default
-commit message set to PR title and description. Rebase merge and auto-merge
-remain enabled.
+History of the merge settings: on 2026-09-25 Theo first enabled squash and
+merge commits, then switched to a rebase-only trial (`allow_rebase_merge`
+only). Auto-merge remains enabled.
 
 ## AGENTS.md changes at cutover
 
@@ -439,6 +557,9 @@ The current shipping rules assume one integration owner who cherry-picks onto
   the factory flow: PRs from `OpenHubris`, merged only by the merger.
 - Remove the cherry-pick integration guidance, or keep it only for the admin
   bypass.
+- Add to "Commits": every commit on a factory PR lands on `main` by itself
+  (rebase-merge), so each must pass the commit rules and `mise ci` on its
+  own. Clean the history with fixup and autosquash before review.
 - Change "Always run `mise test:live` yourself" to per-agent live testing on
   SOAP-created accounts. The two fixed test accounts stay for `mise test:live`
   until it provisions its own.
@@ -470,8 +591,8 @@ code to keep.
   delete the account. Collect the credentials Theo supplies and keep them out
   of git.
 - Exit: each question is answered yes or no, with the fallback chosen.
-- Result: see [Phase 0 findings](#phase-0-findings). Automations and `omp -p`
-  are answered. SOAP is pending the provisioning report from t1.
+- Result: every question is answered; see
+  [Phase 0 findings](#phase-0-findings).
 
 **Phase 1: the loop with Theo approving.** Roles, labels, statuses, the
 ruleset change and the AGENTS.md cutover. Exit: several real issues land
@@ -574,26 +695,71 @@ and for token accounting. A role must never signal its result through the
 exit code. Its result is the GitHub state it leaves (labels, statuses,
 workpad).
 
-### 3. SOAP: pending
+### 3. SOAP: yes
 
-Theo is provisioning the SOAP credentials and template characters on t1
-through a separate agent. This probe waits for that report. Verified so far:
+Theo had a separate agent provision t1 (report relayed on 2026-09-25):
 
-- `t1:7878` answers. A request with no credentials gets HTTP 401, and wrong
-  credentials get an empty reply. `ACSoap.cpp` returns 401 for a missing
-  login, an unknown account or a bad password, and 403 when the account's
-  security level is below `SEC_ADMINISTRATOR`.
-- Console-capable commands (`Console::Yes`) exist for the whole lifecycle:
-  `account create <name> <pass>`, `account delete <name>` (which also deletes
-  the account's characters), `character level <name> <level>` (works
-  offline), `pdump copy <character> <account> [<newname>]`,
-  `send items <name> "<subject>" "<text>" <item[:count]> …` (works offline,
-  by mail). `additem` needs the character online.
-- No command creates a character. Theo chose presets as template characters
-  cloned with `pdump copy` into the run's account, already levelled and
-  geared.
-- Credentials will live in `~/.config/tuicraft-factory/soap.env`, mode 0600,
-  outside every worktree.
+- SOAP account `TCFACTORY`, level 3 with full console rights.
+- Template account `TCPRESETS` with three offline Blood Elf priest presets:
+  `Tplfresh` (level 1), `Tpleversong` (level 10, green gear, in Fairbreeze
+  Village) and `Tplmax` (level 80, ilvl 200 blues, progression tier 18, in
+  Dalaran).
+- A backup sweep script on t1.
+
+Credentials are in `~/.config/tuicraft-factory/soap.env`: mode 600, outside
+every worktree, holding `TUICRAFT_SOAP_*` and `TUICRAFT_PRESET_*`. Theo
+says this local test server's secrets need no special handling.
+
+Probe from this VM: a throwaway Bun script made serial SOAP calls to
+`http://t1:7878/` (Basic auth, `urn:AC` `executeCommand`), then logged in
+with tuicraft's own `authHandshake` and `worldSession`:
+
+```text
+> account create FAC6AB6E41DDB ***                    [200, 19 ms]  Account created
+> pdump copy Tpleversong FAC6AB6E41DDB Fgklgoebnnl    [200, 24 ms]  Character loaded successfully!
+> pinfo Fgklgoebnnl   Account: FAC6AB6E41DDB, GMLevel: 0, Level: 10, Female Blood Elf, Priest,
+                      Money: 5g, Zone: Eversong Woods
+tuicraft login        "logged in as Fgklgoebnnl"; pinfo while connected: Area: Fairbreeze Village, Online for: 3s
+> account delete FAC6AB6E41DDB                         [200, 11 ms]  Account deleted
+> pinfo Fgklgoebnnl                                    [500]  Character 'Fgklgoebnnl' does not exist.
+> account delete FAC6AB6E41DDB   (again, later)        [500]  Account not exist
+```
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Create an account over SOAP? | Yes | `account create`, about 20 ms |
+| Character at a preset level and gear? | Yes | `pdump copy <template> <account> <name>`. `pinfo` shows level 10, our account, GM level 0. The copy logged in with tuicraft at the preset's position |
+| Delete the account? | Yes | `account delete` removes the account and its character. It works while the character is online, and the report checked all related tables with SQL |
+
+Gotchas found in addition to the report's:
+
+- `lookup player account` lags the database in both directions. On the
+  first run it said "No players found!" straight after a successful
+  `pdump copy`. After a delete, it still listed the character for a moment.
+  Verify a new character with `pinfo <name>` and check that its
+  `Account:` is ours. That check also catches the report's worst gotcha:
+  `pdump copy` reports success when the name is taken, and renames the copy.
+  Verify a deletion with `pinfo` returning "does not exist".
+- Copies inherit the template's played time (`1m28s`).
+
+Rules for the factory's SOAP helper, from the report:
+
+- Accounts are `FAC` + 10 hex digits (8 of Unix time, 2 random); the sweep
+  regex is `^FAC[0-9A-F]{10}$`. Characters are `F` + those digits mapped to
+  `a`-`p`. Regenerate the name if it has three identical letters in a row.
+- Send one SOAP request at a time; the server handles them serially.
+- After tuicraft closes its socket, the character stays in the world for
+  about 40 s. Teleport only offline characters: tuicraft does not
+  acknowledge teleports.
+- Never touch `ADMIN`, `DEITY`, `X`, `Y`, `AUCTIONHOUSE`, `TCFACTORY`,
+  `TCPRESETS` or `RNDBOT*`. Never log in to `TCPRESETS`. Never send
+  `.ip set` over SOAP.
+- A factory character counts as a real player and wakes the playerbots.
+  Filter bot chat in tests, and invite only factory characters, by exact
+  name.
+- No SOAP command lists accounts by prefix. Each run records the account it
+  created. The reaper deletes `FAC` accounts older than the longest time
+  cap, by name age, and the t1 `sweep.sh` is the backup.
 
 ## Open questions
 
@@ -604,9 +770,15 @@ through a separate agent. This probe waits for that report. Verified so far:
   `usage.cost`. `omp usage`/`omp stats` are still unexamined.
 - Which models fit each role? Reviewer diversity is in the register. An
   automation cannot choose the model per role, because the launch has no
-  flags. That needs an omp profile or config per role.
+  flags. Proposed answer: the role-marker wrapper in
+  [Orca integration](#orca-integration) item 5.
 - ~~Where do SOAP credentials live?~~ `~/.config/tuicraft-factory/soap.env`,
-  mode 0600, outside every worktree.
+  mode 600, outside every worktree (provisioned by t1).
+- Which extra presets should t1 build (the report suggests `warrior10`/`80`,
+  `shaman10`, `dk55`)? Only once an issue needs one.
+- Does a force-push rebase dismiss Theo's approval even with "dismiss stale
+  approvals" off, and does "require up to date" plus rebase-merge land
+  cleanly? Check on the first factory PR.
 - How do factory workers get model access for live proof of harness features
   (Pi needs a provider) without sharing Theo's refresh tokens? Proposal: a
   factory-owned credential, either an API key with a spend limit in the
@@ -660,8 +832,9 @@ sources are in the research doc.
 | Reaper: owner of `auto-*` runs and backstop for all tuicraft worktrees (landed + clean + idle), archive and report instead of deleting dirty trees | adopted | Phase 0: the omp process and worktree outlive each run, and automations can't pass `--max-time`. Theo's hard requirement: no stale worktrees or idle agents. See [Worktree lifecycle](#worktree-lifecycle) |
 | Reaper as a precheck-only automation (precheck does the work, always exits 1) | rejected | It works, but it records a "skipped" run every 10 minutes and ties cleanup to precheck timeouts. A systemd user timer is plainer |
 | Worktree comment as the owner record | rejected | Agents rewrite comments at every checkpoint. Lineage (`parentWorktreeId`, `cliProvenance`) is set once when the worktree is created. Comments stay as a human label |
-| Orca Agent sleep (`experimentalAgentHibernation`, 30 min) | adopted, Theo switches it on | Frees RAM from idle `done` agents, and omp sessions are resumable. It is global and experimental, and does not remove worktrees, so it adds to the reaper rather than replacing it |
-| Global Orca `agentDefaultArgs`/`agentCmdOverrides` for omp flags (`--max-time`, `--model`) | rejected | They apply to every omp launch, including Theo's interactive worktrees |
+| Orca Agent sleep (`experimentalAgentHibernation`) at a 120-minute window | adopted, Theo switches it on | Frees RAM from idle `done` agents, and omp sessions are resumable. It cannot sleep a working run, because a run completes on the same `done` status. It is global and experimental, and does not remove worktrees, so it adds to the reaper rather than replacing it |
+| Global `agentDefaultArgs.omp` for factory flags | rejected | It applies the same flags to every omp launch, including Theo's interactive worktrees |
+| `agentCmdOverrides.omp` pointing at a role-marker wrapper (`[factory:<role>]` prefix adds `--model`, `--max-time`, `--profile`; anything else passes through unchanged) | adopted, Theo applies it | Automations use `agentCmdOverrides` (checked in the bundle). Gives per-role models and a real time cap without touching interactive sessions. Revisit if Orca adds per-automation arguments |
 | Run Symphony's Elixir reference directly | rejected | Built around Codex app-server; Elixir runtime; engineering preview |
 | Orca orchestration (Runs, Tasks, Dispatch, supervised workers, decision gates) | deferred | Use if we need supervised runs or DAGs across agents |
 | omp built-in task/worktree/agent features | partly adopted | Theo, 2026-09-25: a worker may fan out omp `task` subagents inside its own run and worktree, capped at 4 per run, `sonic` preferred for mechanical slices, one PR per issue. omp-created worktrees stay out: Orca is the one control plane and the reaper only sees Orca run worktrees |
@@ -679,10 +852,11 @@ sources are in the research doc.
 
 | Idea | Status | Why / when to revisit |
 |---|---|---|
-| Merger agent: periodic, priority order, rebase + re-test + squash, `needs:pm` on ambiguity | adopted | Theo's design. Same as Symphony's `Merging` state plus its `land` skill |
+| Merger agent: periodic, priority order, rebase + re-test + rebase-merge, `needs:pm` on ambiguity | adopted | Theo's design. Same as Symphony's `Merging` state plus its `land` skill. `git range-diff` sends post-approval content changes back to Theo |
 | GitHub native merge queue | rejected | Only available to organizations. Not needed, since Symphony lands without it. Revisit if merge throughput becomes the bottleneck (a free org for an open-source project) |
-| Squash merge with linear history kept | adopted | One commit per issue. No GH013 surprises |
-| Merge commits with linear history dropped | deferred | Theo enabled merge commits. Revisit only if per-commit history inside PRs turns out to matter |
+| Rebase-merge with linear history kept; every PR commit lands on `main`, so the worker cleans history and the reviewer checks it | adopted (Theo's trial, 2026-09-25) | Keeps per-commit history without merge commits. It costs a history-cleanup step per PR |
+| Squash merge with linear history kept | deferred | Was the initial design (one commit per issue). Theo disabled squash for the rebase trial. Revisit if history cleanup costs too much |
+| Merge commits with linear history dropped | rejected for now | Theo disabled merge commits. Orca's merge button defaulted to "Create merge commit", which `main` refused |
 | Auto-merge button driven by required checks | deferred | Could replace the merger's final step. The merger still decides order |
 | Bot approvals satisfying required reviews (GitHub App or Copilot review approvals) | deferred | Unverified for custom Apps. Needed only if phase 2 wants a review record, not 0 approvals |
 | Separate GitHub Apps for worker and reviewer, with App-pinned required checks | deferred | Stops a worker from posting its own review status. Worth doing if the reviewer is ever gamed |
@@ -702,7 +876,7 @@ sources are in the research doc.
 | Paid AI reviewers (Copilot review, Claude Code Review, Bugbot, CodeRabbit, Greptile) | rejected for now | Cost per PR or per seat. Greptile's free tier excludes AGPL. Our own reviewer runs locally |
 | Digital twin: grow the mock world server into a validated clone | deferred | Theo: we use the one real server. Mock stays for unit/integration tests |
 | Private AzerothCore in Docker | rejected | Theo: one server, and accounts are trivial |
-| Revert-on-red for `main` after QA | deferred | Reverts are plain commits and compatible with linear history. Candidate QA action once QA is reliable |
+| Revert-on-red for `main` after QA | deferred | Reverts are plain commits and compatible with linear history. With rebase-merge, an issue lands as several commits, and GitHub rewrites their SHAs. The merger therefore records the landed range (`main` before and after) in the PR's merge comment, and a revert covers every commit in that range, newest first. Candidate QA action once QA is reliable |
 | tmux `capture-pane -p` text snapshots of the rendered screen in the Proof section | adopted for TUI and harness issues | Minimum proof for screen output with no new dependency. Checked in phase 0 |
 | Terminal recordings (VHS GIFs), Showboat-style demos | deferred | Richer proof than text snapshots |
 | Daily or weekly digest (Linear Pulse-like) | deferred | PM surface for phase 2 when Theo stops approving |
