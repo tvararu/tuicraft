@@ -21,4 +21,5 @@
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": true,
   },
+  "exclude": ["node_modules", "tmp", "docs/plans/2026-09-25-pi-harness-spike"],
 }
