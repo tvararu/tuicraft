@@ -1,4 +1,5 @@
 import { afterEach, jest } from "bun:test";
+import { rm } from "node:fs/promises";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
@@ -200,11 +201,14 @@ export type IpcServer = {
 export function useIpcServer(): IpcServer {
   let exitSpy: ReturnType<typeof jest.fn> | undefined;
   let result: ReturnType<typeof startDaemonServer> | undefined;
+  let logPath: string | undefined;
   const server = {
     start(opts?: { onActivity?: () => void }) {
-      server.sockPath = `./tmp/test-daemon-${++sockCounter}-${Date.now()}.sock`;
+      const base = `./tmp/test-daemon-${++sockCounter}-${Date.now()}`;
+      server.sockPath = `${base}.sock`;
+      logPath = `${base}.jsonl`;
       server.handle = attachControl(createMockHandle());
-      const log = new SessionLog(`./tmp/test-daemon-${sockCounter}.jsonl`);
+      const log = new SessionLog(logPath);
       exitSpy = jest
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
@@ -222,6 +226,13 @@ export function useIpcServer(): IpcServer {
   afterEach(async () => {
     exitSpy?.mockRestore();
     result?.cleanup();
+    if (logPath) {
+      await Promise.all([
+        rm(logPath, { force: true }),
+        rm(server.sockPath, { force: true }),
+      ]);
+      logPath = undefined;
+    }
   });
 
   return server;
