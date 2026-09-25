@@ -168,9 +168,9 @@ only concurrency guards.
    `blockedBy` list has an open issue (Symphony's "not blocked" rule) or
    whose latest `ready` was not added by `tvararu`. Swap `ready` for
    `agent:working`, then re-read the issue to detect a race with another run.
-2. Setup: until the factory automations run the committed `orca.yaml` setup
-   (see phase 0 finding 1), the prompt starts with
-   `mise trust -y && mise bundle`. Drop that line once they do.
+2. Setup: Orca runs the committed `orca.yaml` setup
+   (`mise trust -y && mise bundle`) before the agent starts, because the
+   factory automations have `setupDecision: run` (phase 0 finding 1).
 3. Work in the run's fresh worktree (`--workspace-mode new-per-run`). Check
    out `factory/<issue>-<slug>` as the worktree's branch: a new branch from
    `origin/main`, or for rework the existing remote branch. Then run
@@ -730,12 +730,14 @@ Gaps found, and how the design closes them:
   `setupDecision: run` (the Automations page toggle "Run setup for each new
   workspace"), a run executes the repo's `orca.yaml` setup, and with
   `setupAgentStartupPolicy: wait-for-setup` the agent waits for it (PR
-  #86). `orca-ide automations create`/`edit` have no flag for it, and
-  `automations list --json` does not show it, so it is set in the Orca UI.
-  Fix: once #86 is on `main`, turn the toggle on for the four `factory-*`
-  automations, check that one run's worktree has `node_modules` before its
-  prompt starts, then drop the `mise trust -y && mise bundle` line from the
-  role prompts.
+  #86). `orca-ide automations create` and `edit` have no flag for it, and
+  `automations list --json` does not show it. The runtime's
+  `automation.update` RPC accepts it, though, so on 2026-09-25 it was set
+  that way (`updates: {setupDecision: "run"}`, sent through the CLI's own
+  `RuntimeClient` under Orca's Electron in node mode). `automation.show`
+  reads back `run` for all four `factory-*` automations, and the role
+  prompts no longer run setup themselves. Still to check on the first real
+  run: its worktree has `node_modules` before the prompt starts.
 - **No usage data.** Every run recorded `usage.status: unavailable`,
   `provider_unsupported`. The token budget needs another data source (see
   finding 2).
