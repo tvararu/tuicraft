@@ -31,7 +31,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise typecheck` — type-check (`tsc --noEmit`)
 - `mise format` — check formatting (`biome format`)
 - `mise format:fix` — fix formatting (`biome format --write`)
-- `mise ci` — `typecheck`, `test:coverage`, and `format` (no `gh signoff`, no remote CI)
+- `mise lint` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
+- `mise lint:fix` — apply safe lint fixes and assist actions (`biome check --write`)
+- `mise ci` — `typecheck`, `test:coverage`, `format`, and `lint` (no `gh signoff`, no remote CI)
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
@@ -63,7 +65,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - Strict TypeScript — `noUncheckedIndexedAccess`, `noUnusedLocals`,
   `noUnusedParameters`, all strict flags on (see tsconfig.json)
-- Never write comments
+- Never write comments, so never use `biome-ignore`; rule exceptions live as
+  path overrides in `biome.json` (protocol bit flags, wire-order literals in
+  `src/wow/**`, opcode hex, test files and `src/test/**`)
 - Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket`
   built-in, etc.)
 - `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
@@ -192,6 +196,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   in mock integration tests as a living spec
 - Chat messages must use a valid racial language (LANG_ORCISH=1 for Horde,
   LANG_COMMON=7 for Alliance) — server rejects LANG_UNIVERSAL (0) silently
+- Object literals evaluate in key order, and parsers read packets inside them
+  (`{ guid: r.packedGuidBig(), counter: r.uint32LE() }`). Never sort or
+  reorder such keys; `useSortedKeys` is off for `src/wow/**` for this reason
 
 ## WorldHandle
 
