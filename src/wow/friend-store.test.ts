@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
-  FriendStore,
   type FriendEntry,
   type FriendEvent,
+  FriendStore,
 } from "wow/friend-store";
 
 function makeFriend(overrides: Partial<FriendEntry> = {}): FriendEntry {

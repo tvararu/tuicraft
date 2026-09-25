@@ -1,13 +1,13 @@
-import { test, expect, describe } from "bun:test";
-import { PacketWriter, PacketReader } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import {
-  parseDuelRequested,
-  parseDuelCountdown,
-  parseDuelComplete,
-  parseDuelWinner,
   buildDuelAccepted,
   buildDuelCancelled,
+  parseDuelComplete,
+  parseDuelCountdown,
+  parseDuelRequested,
+  parseDuelWinner,
 } from "wow/protocol/duel";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 describe("duel protocol", () => {
   test("parseDuelRequested reads initiator and arbiter GUIDs", () => {

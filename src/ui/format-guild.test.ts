@@ -1,32 +1,32 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { formatGuildRoster, formatGuildRosterJson } from "ui/format";
-import { GuildMemberStatus } from "wow/protocol/guild";
 import type { GuildMember, GuildRoster } from "wow/guild-store";
+import { GuildMemberStatus } from "wow/protocol/guild";
 
 function makeMember(overrides: Partial<GuildMember> = {}): GuildMember {
   return {
-    guid: 1n,
-    name: "Xiara",
-    rankIndex: 0,
-    level: 80,
-    playerClass: 9,
-    gender: 0,
     area: 394,
+    gender: 0,
+    guid: 1n,
+    level: 80,
+    name: "Xiara",
+    officerNote: "",
+    playerClass: 9,
+    publicNote: "",
+    rankIndex: 0,
     status: GuildMemberStatus.ONLINE,
     timeOffline: 0,
-    publicNote: "",
-    officerNote: "",
     ...overrides,
   };
 }
 
 function makeRoster(overrides: Partial<GuildRoster> = {}): GuildRoster {
   return {
-    guildName: "Test Guild",
-    motd: "",
     guildInfo: "",
-    rankNames: ["Guild Master", "Officer", "Member"],
+    guildName: "Test Guild",
     members: [],
+    motd: "",
+    rankNames: ["Guild Master", "Officer", "Member"],
     ...overrides,
   };
 }
@@ -43,18 +43,18 @@ describe("formatGuildRoster", () => {
       members: [
         makeMember({
           guid: 1n,
-          name: "Arthas",
-          rankIndex: 0,
           level: 80,
+          name: "Arthas",
           playerClass: 6,
+          rankIndex: 0,
           status: GuildMemberStatus.ONLINE,
         }),
         makeMember({
           guid: 2n,
-          name: "Jaina",
-          rankIndex: 1,
           level: 80,
+          name: "Jaina",
           playerClass: 8,
+          rankIndex: 1,
           status: GuildMemberStatus.OFFLINE,
           timeOffline: 3.5,
         }),
@@ -68,8 +68,8 @@ describe("formatGuildRoster", () => {
 
   test("roster with MOTD and guild info", () => {
     const roster = makeRoster({
-      motd: "Welcome to the guild!",
       guildInfo: "Founded in 2008",
+      motd: "Welcome to the guild!",
     });
     const result = formatGuildRoster(roster);
     expect(result).toContain("MOTD: Welcome to the guild!");
@@ -78,8 +78,8 @@ describe("formatGuildRoster", () => {
 
   test("MOTD line appears before info line", () => {
     const roster = makeRoster({
-      motd: "Hello",
       guildInfo: "About us",
+      motd: "Hello",
     });
     const result = formatGuildRoster(roster);
     const motdIndex = result.indexOf("MOTD:");
@@ -88,14 +88,14 @@ describe("formatGuildRoster", () => {
   });
 
   test("omits MOTD line when empty", () => {
-    const roster = makeRoster({ motd: "", guildInfo: "About us" });
+    const roster = makeRoster({ guildInfo: "About us", motd: "" });
     const result = formatGuildRoster(roster);
     expect(result).not.toContain("MOTD:");
     expect(result).toContain("Info: About us");
   });
 
   test("omits guild info line when empty", () => {
-    const roster = makeRoster({ motd: "Hello", guildInfo: "" });
+    const roster = makeRoster({ guildInfo: "", motd: "Hello" });
     const result = formatGuildRoster(roster);
     expect(result).toContain("MOTD: Hello");
     expect(result).not.toContain("Info:");
@@ -113,7 +113,6 @@ describe("formatGuildRoster", () => {
 
   test("resolves rank name from rankNames array", () => {
     const roster = makeRoster({
-      rankNames: ["GM", "Officer", "Raider", "Member", "Initiate"],
       members: [
         makeMember({
           name: "Alpha",
@@ -121,18 +120,19 @@ describe("formatGuildRoster", () => {
           status: GuildMemberStatus.ONLINE,
         }),
         makeMember({
+          guid: 2n,
           name: "Beta",
           rankIndex: 2,
           status: GuildMemberStatus.ONLINE,
-          guid: 2n,
         }),
         makeMember({
+          guid: 3n,
           name: "Gamma",
           rankIndex: 4,
           status: GuildMemberStatus.ONLINE,
-          guid: 3n,
         }),
       ],
+      rankNames: ["GM", "Officer", "Raider", "Member", "Initiate"],
     });
     const result = formatGuildRoster(roster);
     expect(result).toContain("Alpha — GM,");
@@ -142,7 +142,6 @@ describe("formatGuildRoster", () => {
 
   test("falls back to Rank N when rank name is missing", () => {
     const roster = makeRoster({
-      rankNames: ["Guild Master"],
       members: [
         makeMember({
           name: "Orphan",
@@ -150,6 +149,7 @@ describe("formatGuildRoster", () => {
           status: GuildMemberStatus.ONLINE,
         }),
       ],
+      rankNames: ["Guild Master"],
     });
     const result = formatGuildRoster(roster);
     expect(result).toContain("Orphan — Rank 5,");
@@ -157,7 +157,6 @@ describe("formatGuildRoster", () => {
 
   test("falls back to Rank N for offline members too", () => {
     const roster = makeRoster({
-      rankNames: [],
       members: [
         makeMember({
           name: "Ghost",
@@ -166,6 +165,7 @@ describe("formatGuildRoster", () => {
           timeOffline: 0.5,
         }),
       ],
+      rankNames: [],
     });
     const result = formatGuildRoster(roster);
     expect(result).toContain("Ghost — Rank 3, Offline");
@@ -316,23 +316,23 @@ describe("formatGuildRoster", () => {
 describe("formatGuildRosterJson", () => {
   test("basic roster data structure", () => {
     const roster = makeRoster({
-      guildName: "Horde Elite",
-      motd: "Lok'tar Ogar!",
       guildInfo: "PvP guild",
-      rankNames: ["Warchief", "General", "Grunt"],
+      guildName: "Horde Elite",
       members: [
         makeMember({
-          guid: 0xabcn,
-          name: "Thrall",
-          rankIndex: 0,
-          level: 80,
-          playerClass: 7,
-          status: GuildMemberStatus.ONLINE,
           area: 1637,
-          publicNote: "leader",
+          guid: 0xabcn,
+          level: 80,
+          name: "Thrall",
           officerNote: "alt: Garrosh",
+          playerClass: 7,
+          publicNote: "leader",
+          rankIndex: 0,
+          status: GuildMemberStatus.ONLINE,
         }),
       ],
+      motd: "Lok'tar Ogar!",
+      rankNames: ["Warchief", "General", "Grunt"],
     });
     const result = JSON.parse(formatGuildRosterJson(roster));
     expect(result.type).toBe("GUILD_ROSTER");
@@ -346,20 +346,20 @@ describe("formatGuildRosterJson", () => {
 
   test("member fields are correct", () => {
     const roster = makeRoster({
-      rankNames: ["Guild Master", "Officer"],
       members: [
         makeMember({
-          guid: 0xffn,
-          name: "Sylvanas",
-          rankIndex: 1,
-          level: 80,
-          playerClass: 3,
-          status: GuildMemberStatus.ONLINE,
           area: 4395,
-          publicNote: "ranger",
+          guid: 0xffn,
+          level: 80,
+          name: "Sylvanas",
           officerNote: "promote soon",
+          playerClass: 3,
+          publicNote: "ranger",
+          rankIndex: 1,
+          status: GuildMemberStatus.ONLINE,
         }),
       ],
+      rankNames: ["Guild Master", "Officer"],
     });
     const result = JSON.parse(formatGuildRosterJson(roster));
     const member = result.members[0];
@@ -411,8 +411,8 @@ describe("formatGuildRosterJson", () => {
 
   test("falls back to Rank N in JSON when rank name missing", () => {
     const roster = makeRoster({
-      rankNames: ["GM"],
       members: [makeMember({ name: "Orphan", rankIndex: 7 })],
+      rankNames: ["GM"],
     });
     const result = JSON.parse(formatGuildRosterJson(roster));
     expect(result.members[0].rank).toBe("Rank 7");

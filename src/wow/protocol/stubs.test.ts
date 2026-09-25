@@ -1,8 +1,8 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
-import { OpcodeDispatch } from "wow/protocol/world";
+import { describe, expect, test } from "bun:test";
 import { GameOpcode } from "wow/protocol/opcodes";
-import { STUBS, registerStubs } from "wow/protocol/stubs";
+import { PacketReader } from "wow/protocol/packet";
+import { registerStubs, STUBS } from "wow/protocol/stubs";
+import { OpcodeDispatch } from "wow/protocol/world";
 
 describe("registerStubs", () => {
   test("registers SMSG opcodes that aren't already handled", () => {

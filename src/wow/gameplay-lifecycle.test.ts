@@ -1,31 +1,31 @@
 import { describe, expect, jest, test } from "bun:test";
-import { worldSession, type WorldHandle } from "wow/client";
-import { ControlRuntime, type ControlMode } from "wow/control";
+import {
+  clientPrivateKey,
+  clientSeed,
+  FIXTURE_ACCOUNT,
+  FIXTURE_CHARACTER,
+  FIXTURE_PASSWORD,
+  sessionKey,
+} from "test/fixtures";
+import { startMockWorldServer } from "test/mock-world-server";
+import { type WorldHandle, worldSession } from "wow/client";
+import { type ControlMode, ControlRuntime } from "wow/control";
 import type { DbcFile } from "wow/dbc";
 import * as factionData from "wow/faction-template";
 import * as jev from "wow/jev";
 import * as navigation from "wow/navigation";
 import type { NativeMap } from "wow/navigation-native";
-import * as spellData from "wow/spell-catalog";
-import * as worldHandlers from "wow/world-handlers";
 import {
   ObjectType,
   UNIT_FIELDS,
   UpdateFlag,
   UpdateType,
 } from "wow/protocol/entity-fields";
+import { writeMovementInfo } from "wow/protocol/movement";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketWriter } from "wow/protocol/packet";
-import { writeMovementInfo } from "wow/protocol/movement";
-import { startMockWorldServer } from "test/mock-world-server";
-import {
-  FIXTURE_ACCOUNT,
-  FIXTURE_PASSWORD,
-  FIXTURE_CHARACTER,
-  clientPrivateKey,
-  clientSeed,
-  sessionKey,
-} from "test/fixtures";
+import * as spellData from "wow/spell-catalog";
+import * as worldHandlers from "wow/world-handlers";
 
 const realSetTimeout = globalThis.setTimeout;
 const realClearTimeout = globalThis.clearTimeout;
@@ -91,9 +91,9 @@ function writeUnit(writer: PacketWriter, guid: number, x: number): void {
     new Map([
       [UNIT_FIELDS.HEALTH.offset, 100],
       [UNIT_FIELDS.MAXHEALTH.offset, 100],
-      [UNIT_FIELDS.FLAGS.offset, self ? 0 : 0x80000],
+      [UNIT_FIELDS.FLAGS.offset, self ? 0 : 0x8_00_00],
       [UNIT_FIELDS.TARGET.offset, self ? 0 : selfGuid],
-      [UNIT_FIELDS.COMBATREACH.offset, 0x3fc00000],
+      [UNIT_FIELDS.COMBATREACH.offset, 0x3f_c0_00_00],
     ]),
   );
 }

@@ -1,4 +1,4 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export const SocialFlag = {
   FRIEND: 0x01,

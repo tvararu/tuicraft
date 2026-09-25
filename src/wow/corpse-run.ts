@@ -1,14 +1,14 @@
 import { pause } from "lib/abort";
 import type { ControlEvent } from "wow/control";
 import { legDetail, walkToCorpse } from "wow/corpse-legs";
-import { cycleStop as stop, type CycleStop } from "wow/cycle-stop";
+import { type CycleStop, cycleStop as stop } from "wow/cycle-stop";
 import type { CycleDeps } from "wow/encounter-cycle";
 import type { EventWaiter } from "wow/event-waiter";
 import type { PlayerLife } from "wow/player-state";
 import type { RecoveryEvent, RecoveryState } from "wow/recovery";
 
 const RECLAIM_MARGIN_MS = 2000;
-const RECOVERY_WAIT_MS = 30000;
+const RECOVERY_WAIT_MS = 30_000;
 
 export type CorpseRun = Pick<CycleDeps, "recovery" | "control"> & {
   events: EventWaiter<RecoveryEvent>;

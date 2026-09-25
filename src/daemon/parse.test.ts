@@ -1,115 +1,115 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseIpcCommand } from "daemon/parse";
 
 describe("parseIpcCommand", () => {
   test("SAY", () => {
     expect(parseIpcCommand("SAY hello world")).toEqual({
-      type: "say",
       message: "hello world",
+      type: "say",
     });
   });
 
   test("YELL", () => {
     expect(parseIpcCommand("YELL hey everyone")).toEqual({
-      type: "yell",
       message: "hey everyone",
+      type: "yell",
     });
   });
 
   test("GUILD", () => {
     expect(parseIpcCommand("GUILD inv pls")).toEqual({
-      type: "guild",
       message: "inv pls",
+      type: "guild",
     });
   });
 
   test("PARTY", () => {
     expect(parseIpcCommand("PARTY pull now")).toEqual({
-      type: "party",
       message: "pull now",
+      type: "party",
     });
   });
 
   test("EMOTE", () => {
     expect(parseIpcCommand("EMOTE waves hello")).toEqual({
-      type: "emote",
       message: "waves hello",
+      type: "emote",
     });
   });
 
   test("DND", () => {
     expect(parseIpcCommand("DND busy right now")).toEqual({
-      type: "dnd",
       message: "busy right now",
+      type: "dnd",
     });
   });
 
   test("DND without message", () => {
     expect(parseIpcCommand("DND")).toEqual({
-      type: "dnd",
       message: "",
+      type: "dnd",
     });
   });
 
   test("AFK", () => {
     expect(parseIpcCommand("AFK grabbing coffee")).toEqual({
-      type: "afk",
       message: "grabbing coffee",
+      type: "afk",
     });
   });
 
   test("AFK without message", () => {
     expect(parseIpcCommand("AFK")).toEqual({
-      type: "afk",
       message: "",
+      type: "afk",
     });
   });
 
   test("ROLL defaults to 1-100", () => {
     expect(parseIpcCommand("ROLL")).toEqual({
-      type: "roll",
-      min: 1,
       max: 100,
+      min: 1,
+      type: "roll",
     });
   });
 
   test("ROLL with max", () => {
     expect(parseIpcCommand("ROLL 50")).toEqual({
-      type: "roll",
-      min: 1,
       max: 50,
+      min: 1,
+      type: "roll",
     });
   });
 
   test("ROLL with min and max", () => {
     expect(parseIpcCommand("ROLL 10 20")).toEqual({
-      type: "roll",
-      min: 10,
       max: 20,
+      min: 10,
+      type: "roll",
     });
   });
 
   test("/roll via slash style", () => {
     expect(parseIpcCommand("/roll 50")).toEqual({
-      type: "roll",
-      min: 1,
       max: 50,
+      min: 1,
+      type: "roll",
     });
   });
 
   test("WHISPER", () => {
     expect(parseIpcCommand("WHISPER Xiara follow me")).toEqual({
-      type: "whisper",
-      target: "Xiara",
       message: "follow me",
+      target: "Xiara",
+      type: "whisper",
     });
   });
 
   test("WHISPER without message", () => {
     expect(parseIpcCommand("WHISPER Xiara")).toEqual({
-      type: "whisper",
-      target: "Xiara",
       message: "",
+      target: "Xiara",
+      type: "whisper",
     });
   });
 
@@ -119,8 +119,8 @@ describe("parseIpcCommand", () => {
 
   test("READ_WAIT", () => {
     expect(parseIpcCommand("READ_WAIT 3000")).toEqual({
-      type: "read_wait",
       ms: 3000,
+      type: "read_wait",
     });
   });
 
@@ -138,8 +138,8 @@ describe("parseIpcCommand", () => {
 
   test("WHO with filter", () => {
     expect(parseIpcCommand("WHO mage")).toEqual({
-      type: "who",
       filter: "mage",
+      type: "who",
     });
   });
 
@@ -149,8 +149,8 @@ describe("parseIpcCommand", () => {
 
   test("READ_WAIT_JSON", () => {
     expect(parseIpcCommand("READ_WAIT_JSON 2000")).toEqual({
-      type: "read_wait_json",
       ms: 2000,
+      type: "read_wait_json",
     });
   });
 
@@ -160,22 +160,22 @@ describe("parseIpcCommand", () => {
 
   test("WHO_JSON with filter", () => {
     expect(parseIpcCommand("WHO_JSON mage")).toEqual({
-      type: "who_json",
       filter: "mage",
+      type: "who_json",
     });
   });
 
   test("INVITE", () => {
     expect(parseIpcCommand("INVITE Voidtrix")).toEqual({
-      type: "invite",
       target: "Voidtrix",
+      type: "invite",
     });
   });
 
   test("KICK", () => {
     expect(parseIpcCommand("KICK Voidtrix")).toEqual({
-      type: "kick",
       target: "Voidtrix",
+      type: "kick",
     });
   });
 
@@ -185,8 +185,8 @@ describe("parseIpcCommand", () => {
 
   test("LEADER", () => {
     expect(parseIpcCommand("LEADER Voidtrix")).toEqual({
-      type: "leader",
       target: "Voidtrix",
+      type: "leader",
     });
   });
 
@@ -208,12 +208,12 @@ describe("parseIpcCommand", () => {
 
   test("NEARBY all and NEARBY_JSON all", () => {
     expect(parseIpcCommand("NEARBY all")).toEqual({
-      type: "nearby",
       all: true,
+      type: "nearby",
     });
     expect(parseIpcCommand("NEARBY_JSON all")).toEqual({
-      type: "nearby_json",
       all: true,
+      type: "nearby_json",
     });
   });
 
@@ -224,60 +224,60 @@ describe("parseIpcCommand", () => {
 
   test("MOVE defaults to 1000ms", () => {
     expect(parseIpcCommand("MOVE forward")).toEqual({
-      type: "move",
       direction: "forward",
       durationMs: 1000,
+      type: "move",
     });
   });
 
   test("MOVE accepts duration bounds", () => {
     expect(parseIpcCommand("MOVE backward 1")).toEqual({
-      type: "move",
       direction: "backward",
       durationMs: 1,
+      type: "move",
     });
     expect(parseIpcCommand("MOVE left 10000")).toEqual({
-      type: "move",
       direction: "left",
-      durationMs: 10000,
+      durationMs: 10_000,
+      type: "move",
     });
   });
 
   test("MOVE rejects malformed and out-of-range args", () => {
     expect(parseIpcCommand("MOVE")).toEqual({
-      type: "invalid",
       reason: "invalid move",
+      type: "invalid",
     });
     expect(parseIpcCommand("MOVE up")).toEqual({
-      type: "invalid",
       reason: "invalid direction",
+      type: "invalid",
     });
     expect(parseIpcCommand("MOVE forward 0")).toEqual({
-      type: "invalid",
       reason: "invalid duration",
+      type: "invalid",
     });
     expect(parseIpcCommand("MOVE forward 10001")).toEqual({
-      type: "invalid",
       reason: "invalid duration",
+      type: "invalid",
     });
     expect(parseIpcCommand("MOVE forward 1.5")).toEqual({
-      type: "invalid",
       reason: "invalid duration",
+      type: "invalid",
     });
     expect(parseIpcCommand("MOVE forward Infinity")).toEqual({
-      type: "invalid",
       reason: "invalid duration",
+      type: "invalid",
     });
   });
 
   test("FACE accepts finite radians", () => {
     expect(parseIpcCommand("FACE 1.57")).toEqual({
-      type: "face",
       orientation: 1.57,
+      type: "face",
     });
     expect(parseIpcCommand("FACE 0")).toEqual({
-      type: "face",
       orientation: 0,
+      type: "face",
     });
   });
 
@@ -290,29 +290,29 @@ describe("parseIpcCommand", () => {
 
   test("FACE_GUID and WALK_TOWARD preserve typed destinations", () => {
     expect(parseIpcCommand("FACE_GUID 0x42")).toEqual({
-      type: "face_guid",
       guid: 0x42n,
+      type: "face_guid",
     });
     expect(parseIpcCommand("WALK_TOWARD 3 0x42")).toEqual({
+      target: { guid: 0x42n, kind: "guid" },
       type: "walk_toward",
       yards: 3,
-      target: { kind: "guid", guid: 0x42n },
     });
     expect(parseIpcCommand("WALK_TOWARD 2.5 1 -2 3")).toEqual({
+      target: { kind: "point", x: 1, y: -2, z: 3 },
       type: "walk_toward",
       yards: 2.5,
-      target: { kind: "point", x: 1, y: -2, z: 3 },
     });
     expect(parseIpcCommand("WALK_TOWARD 21 0x42")?.type).toBe("invalid");
     expect(parseIpcCommand("WALK_TOWARD 2 NaN 0 0")?.type).toBe("invalid");
   });
 
   test("TARGET accepts hex and decimal uint64", () => {
-    expect(parseIpcCommand("TARGET 0x1")).toEqual({ type: "target", guid: 1n });
-    expect(parseIpcCommand("TARGET 0")).toEqual({ type: "target", guid: 0n });
+    expect(parseIpcCommand("TARGET 0x1")).toEqual({ guid: 1n, type: "target" });
+    expect(parseIpcCommand("TARGET 0")).toEqual({ guid: 0n, type: "target" });
     expect(parseIpcCommand("TARGET 18446744073709551615")).toEqual({
-      type: "target",
       guid: 0xffff_ffff_ffff_ffffn,
+      type: "target",
     });
   });
 
@@ -331,64 +331,64 @@ describe("parseIpcCommand", () => {
 
   test("CAST ATTACK FIGHT GOTO parse exact arity", () => {
     expect(parseIpcCommand("CAST 585 0xa")).toEqual({
-      type: "cast",
-      spellId: 585,
       guid: 0xan,
+      spellId: 585,
+      type: "cast",
     });
     expect(parseIpcCommand("ATTACK 0xa")).toEqual({
-      type: "attack",
       guid: 0xan,
+      type: "attack",
     });
     expect(parseIpcCommand("FIGHT 0xa")).toEqual({
-      type: "fight",
       guid: 0xan,
       instruction:
         "defeat the selected target while keeping the character alive",
+      type: "fight",
     });
     expect(parseIpcCommand("FIGHT 0xa hold threat")).toEqual({
-      type: "fight",
       guid: 0xan,
       instruction: "hold threat",
+      type: "fight",
     });
     expect(parseIpcCommand("FIGHT --framing minimal 0xa")).toEqual({
-      type: "fight",
+      framing: "minimal",
       guid: 0xan,
       instruction:
         "defeat the selected target while keeping the character alive",
-      framing: "minimal",
+      type: "fight",
     });
     expect(
       parseIpcCommand("FIGHT --framing=mechanics 0xa conserve mana"),
     ).toEqual({
-      type: "fight",
+      framing: "mechanics",
       guid: 0xan,
       instruction: "conserve mana",
-      framing: "mechanics",
+      type: "fight",
     });
     expect(parseIpcCommand("FIGHT --framing invalid 0xa")?.type).toBe(
       "invalid",
     );
     expect(parseIpcCommand("FIGHT --framing")?.type).toBe("invalid");
     expect(parseIpcCommand("CYCLE 0xa 0xb")).toEqual({
-      type: "cycle",
       guids: [0xan, 0xbn],
       instruction:
         "defeat the selected target while keeping the character alive",
+      type: "cycle",
     });
     expect(parseIpcCommand("CYCLE 0xa --max 3")).toEqual({
-      type: "cycle",
       guids: [0xan],
       instruction:
         "defeat the selected target while keeping the character alive",
       maxStarts: 3,
+      type: "cycle",
     });
     expect(
       parseIpcCommand("CYCLE 0xa 0xb --instruction hold aggro --max 5"),
     ).toEqual({
-      type: "cycle",
       guids: [0xan, 0xbn],
       instruction: "hold aggro",
       maxStarts: 5,
+      type: "cycle",
     });
     expect(parseIpcCommand("CYCLE")?.type).toBe("invalid");
     expect(parseIpcCommand("CYCLE 0")?.type).toBe("invalid");
@@ -417,44 +417,44 @@ describe("parseIpcCommand", () => {
 
   test("slash /say maps to say", () => {
     expect(parseIpcCommand("/say hello")).toEqual({
-      type: "say",
       message: "hello",
+      type: "say",
     });
   });
 
   test("slash /whisper maps to whisper", () => {
     expect(parseIpcCommand("/whisper Xiara hi")).toEqual({
-      type: "whisper",
-      target: "Xiara",
       message: "hi",
+      target: "Xiara",
+      type: "whisper",
     });
   });
 
   test("slash /emote maps to emote", () => {
     expect(parseIpcCommand("/emote waves")).toEqual({
-      type: "emote",
       message: "waves",
+      type: "emote",
     });
   });
 
   test("slash /dnd maps to dnd", () => {
     expect(parseIpcCommand("/dnd busy")).toEqual({
-      type: "dnd",
       message: "busy",
+      type: "dnd",
     });
   });
 
   test("slash /afk maps to afk", () => {
     expect(parseIpcCommand("/afk brb")).toEqual({
-      type: "afk",
       message: "brb",
+      type: "afk",
     });
   });
 
   test("slash /who maps to who with filter", () => {
     expect(parseIpcCommand("/who mage")).toEqual({
-      type: "who",
       filter: "mage",
+      type: "who",
     });
   });
 
@@ -464,15 +464,15 @@ describe("parseIpcCommand", () => {
 
   test("slash /invite maps to invite", () => {
     expect(parseIpcCommand("/invite Voidtrix")).toEqual({
-      type: "invite",
       target: "Voidtrix",
+      type: "invite",
     });
   });
 
   test("slash /kick maps to kick", () => {
     expect(parseIpcCommand("/kick Voidtrix")).toEqual({
-      type: "kick",
       target: "Voidtrix",
+      type: "kick",
     });
   });
 
@@ -486,8 +486,8 @@ describe("parseIpcCommand", () => {
 
   test("slash /ignore maps to add_ignore", () => {
     expect(parseIpcCommand("/ignore someone")).toEqual({
-      type: "add_ignore",
       target: "someone",
+      type: "add_ignore",
     });
   });
 
@@ -501,36 +501,36 @@ describe("parseIpcCommand", () => {
 
   test("slash /unignore maps to del_ignore", () => {
     expect(parseIpcCommand("/unignore someone")).toEqual({
-      type: "del_ignore",
       target: "someone",
+      type: "del_ignore",
     });
   });
 
   test("slash /join maps to join_channel", () => {
     expect(parseIpcCommand("/join Trade")).toEqual({
-      type: "join_channel",
       channel: "Trade",
+      type: "join_channel",
     });
   });
 
   test("slash /leave channel maps to leave_channel", () => {
     expect(parseIpcCommand("/leave Trade")).toEqual({
-      type: "leave_channel",
       channel: "Trade",
+      type: "leave_channel",
     });
   });
 
   test("unknown slash command maps to say with full input", () => {
     expect(parseIpcCommand("/dance hello")).toEqual({
-      type: "say",
       message: "/dance hello",
+      type: "say",
     });
   });
 
   test("slash command unsupported by daemon falls back to say", () => {
     expect(parseIpcCommand("/r hello")).toEqual({
-      type: "say",
       message: "/r hello",
+      type: "say",
     });
   });
 
@@ -548,16 +548,16 @@ describe("parseIpcCommand", () => {
 
   test("JOIN parses channel", () => {
     expect(parseIpcCommand("JOIN Trade")).toEqual({
-      type: "join_channel",
       channel: "Trade",
+      type: "join_channel",
     });
   });
 
   test("JOIN parses channel with password", () => {
     expect(parseIpcCommand("JOIN Secret hunter2")).toEqual({
-      type: "join_channel",
       channel: "Secret",
       password: "hunter2",
+      type: "join_channel",
     });
   });
 
@@ -567,8 +567,8 @@ describe("parseIpcCommand", () => {
 
   test("LEAVE with channel parses leave_channel", () => {
     expect(parseIpcCommand("LEAVE Trade")).toEqual({
-      type: "leave_channel",
       channel: "Trade",
+      type: "leave_channel",
     });
   });
 
@@ -582,38 +582,38 @@ describe("parseIpcCommand", () => {
     for (const [input, feature] of cases) {
       test(`${input.split(" ")[0]} returns unimplemented`, () => {
         expect(parseIpcCommand(input)).toEqual({
-          type: "unimplemented",
           feature,
+          type: "unimplemented",
         });
       });
     }
 
     test("/mail slash path returns unimplemented", () => {
       expect(parseIpcCommand("/mail")).toEqual({
-        type: "unimplemented",
         feature: "Mail reading",
+        type: "unimplemented",
       });
     });
   });
 
   test("unrecognized verb becomes chat", () => {
     expect(parseIpcCommand("DANCE")).toEqual({
-      type: "chat",
       message: "DANCE",
+      type: "chat",
     });
   });
 
   test("unrecognized text becomes chat command", () => {
     expect(parseIpcCommand("hello world")).toEqual({
-      type: "chat",
       message: "hello world",
+      type: "chat",
     });
   });
 
   test("single word becomes chat command", () => {
     expect(parseIpcCommand("hello")).toEqual({
-      type: "chat",
       message: "hello",
+      type: "chat",
     });
   });
 
@@ -635,8 +635,8 @@ describe("parseIpcCommand", () => {
 
   test("READ_WAIT clamps to 60000ms", () => {
     expect(parseIpcCommand("READ_WAIT 120000")).toEqual({
-      type: "read_wait",
       ms: 60_000,
+      type: "read_wait",
     });
   });
 
@@ -646,8 +646,8 @@ describe("parseIpcCommand", () => {
 
   test("READ_WAIT_JSON clamps to 60000ms", () => {
     expect(parseIpcCommand("READ_WAIT_JSON 999999")).toEqual({
-      type: "read_wait_json",
       ms: 60_000,
+      type: "read_wait_json",
     });
   });
 
@@ -661,8 +661,8 @@ describe("parseIpcCommand", () => {
 
   test("ADD_FRIEND", () => {
     expect(parseIpcCommand("ADD_FRIEND Arthas")).toEqual({
-      type: "add_friend",
       target: "Arthas",
+      type: "add_friend",
     });
   });
 
@@ -672,8 +672,8 @@ describe("parseIpcCommand", () => {
 
   test("DEL_FRIEND", () => {
     expect(parseIpcCommand("DEL_FRIEND Arthas")).toEqual({
-      type: "del_friend",
       target: "Arthas",
+      type: "del_friend",
     });
   });
 
@@ -683,15 +683,15 @@ describe("parseIpcCommand", () => {
 
   test("slash /friend add maps to add_friend", () => {
     expect(parseIpcCommand("/friend add Arthas")).toEqual({
-      type: "add_friend",
       target: "Arthas",
+      type: "add_friend",
     });
   });
 
   test("slash /friend remove maps to del_friend", () => {
     expect(parseIpcCommand("/friend remove Arthas")).toEqual({
-      type: "del_friend",
       target: "Arthas",
+      type: "del_friend",
     });
   });
 
@@ -705,8 +705,8 @@ describe("parseIpcCommand", () => {
 
   test("ADD_IGNORE", () => {
     expect(parseIpcCommand("ADD_IGNORE Spammer")).toEqual({
-      type: "add_ignore",
       target: "Spammer",
+      type: "add_ignore",
     });
   });
 
@@ -716,8 +716,8 @@ describe("parseIpcCommand", () => {
 
   test("DEL_IGNORE", () => {
     expect(parseIpcCommand("DEL_IGNORE Spammer")).toEqual({
-      type: "del_ignore",
       target: "Spammer",
+      type: "del_ignore",
     });
   });
 
@@ -741,8 +741,8 @@ describe("parseIpcCommand", () => {
 
   test("GINVITE parses guild invite", () => {
     expect(parseIpcCommand("GINVITE Thrall")).toEqual({
-      type: "guild_invite",
       target: "Thrall",
+      type: "guild_invite",
     });
   });
 
@@ -752,8 +752,8 @@ describe("parseIpcCommand", () => {
 
   test("GKICK parses guild kick", () => {
     expect(parseIpcCommand("GKICK Garrosh")).toEqual({
-      type: "guild_kick",
       target: "Garrosh",
+      type: "guild_kick",
     });
   });
 
@@ -763,36 +763,36 @@ describe("parseIpcCommand", () => {
 
   test("GPROMOTE parses guild promote", () => {
     expect(parseIpcCommand("GPROMOTE Jaina")).toEqual({
-      type: "guild_promote",
       target: "Jaina",
+      type: "guild_promote",
     });
   });
 
   test("GDEMOTE parses guild demote", () => {
     expect(parseIpcCommand("GDEMOTE Arthas")).toEqual({
-      type: "guild_demote",
       target: "Arthas",
+      type: "guild_demote",
     });
   });
 
   test("GLEADER parses guild leader", () => {
     expect(parseIpcCommand("GLEADER Sylvanas")).toEqual({
-      type: "guild_leader",
       target: "Sylvanas",
+      type: "guild_leader",
     });
   });
 
   test("GMOTD parses guild motd", () => {
     expect(parseIpcCommand("GMOTD Raid tonight")).toEqual({
-      type: "guild_motd",
       message: "Raid tonight",
+      type: "guild_motd",
     });
   });
 
   test("GMOTD with empty message clears motd", () => {
     expect(parseIpcCommand("GMOTD")).toEqual({
-      type: "guild_motd",
       message: "",
+      type: "guild_motd",
     });
   });
 
@@ -806,8 +806,8 @@ describe("parseIpcCommand", () => {
 
   test("/ginvite via slash parses guild invite", () => {
     expect(parseIpcCommand("/ginvite Thrall")).toEqual({
-      type: "guild_invite",
       target: "Thrall",
+      type: "guild_invite",
     });
   });
 
@@ -821,8 +821,8 @@ describe("parseIpcCommand", () => {
 
   test("/gkick via slash parses guild kick", () => {
     expect(parseIpcCommand("/gkick Garrosh")).toEqual({
-      type: "guild_kick",
       target: "Garrosh",
+      type: "guild_kick",
     });
   });
 
@@ -832,29 +832,29 @@ describe("parseIpcCommand", () => {
 
   test("/gpromote via slash parses guild promote", () => {
     expect(parseIpcCommand("/gpromote Jaina")).toEqual({
-      type: "guild_promote",
       target: "Jaina",
+      type: "guild_promote",
     });
   });
 
   test("/gdemote via slash parses guild demote", () => {
     expect(parseIpcCommand("/gdemote Arthas")).toEqual({
-      type: "guild_demote",
       target: "Arthas",
+      type: "guild_demote",
     });
   });
 
   test("/gleader via slash parses guild leader", () => {
     expect(parseIpcCommand("/gleader Sylvanas")).toEqual({
-      type: "guild_leader",
       target: "Sylvanas",
+      type: "guild_leader",
     });
   });
 
   test("/gmotd via slash parses guild motd", () => {
     expect(parseIpcCommand("/gmotd Raid tonight")).toEqual({
-      type: "guild_motd",
       message: "Raid tonight",
+      type: "guild_motd",
     });
   });
 });

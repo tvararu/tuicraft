@@ -1,105 +1,105 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseCommand } from "ui/commands";
 
 describe("parseCommand", () => {
   test("bare text becomes chat", () => {
-    expect(parseCommand("hello")).toEqual({ type: "chat", message: "hello" });
+    expect(parseCommand("hello")).toEqual({ message: "hello", type: "chat" });
   });
 
   test("/s sends say", () => {
-    expect(parseCommand("/s hello")).toEqual({ type: "say", message: "hello" });
+    expect(parseCommand("/s hello")).toEqual({ message: "hello", type: "say" });
   });
 
   test("/say sends say", () => {
     expect(parseCommand("/say hello there")).toEqual({
-      type: "say",
       message: "hello there",
+      type: "say",
     });
   });
 
   test("/w sends whisper", () => {
     expect(parseCommand("/w Xiara follow me")).toEqual({
-      type: "whisper",
-      target: "Xiara",
       message: "follow me",
+      target: "Xiara",
+      type: "whisper",
     });
   });
 
   test("/w with target only sends whisper with empty message", () => {
     expect(parseCommand("/w Arthas")).toEqual({
-      type: "whisper",
-      target: "Arthas",
       message: "",
+      target: "Arthas",
+      type: "whisper",
     });
   });
 
   test("/whisper sends whisper", () => {
     expect(parseCommand("/whisper Xiara hi")).toEqual({
-      type: "whisper",
-      target: "Xiara",
       message: "hi",
+      target: "Xiara",
+      type: "whisper",
     });
   });
 
   test("/r sends reply", () => {
     expect(parseCommand("/r hello")).toEqual({
-      type: "reply",
       message: "hello",
+      type: "reply",
     });
   });
 
   test("/g sends guild", () => {
     expect(parseCommand("/g hello guild")).toEqual({
-      type: "guild",
       message: "hello guild",
+      type: "guild",
     });
   });
 
   test("/guild sends guild", () => {
     expect(parseCommand("/guild hi")).toEqual({
-      type: "guild",
       message: "hi",
+      type: "guild",
     });
   });
 
   test("/y sends yell", () => {
     expect(parseCommand("/y HELLO")).toEqual({
-      type: "yell",
       message: "HELLO",
+      type: "yell",
     });
   });
 
   test("/p sends party", () => {
-    expect(parseCommand("/p inv")).toEqual({ type: "party", message: "inv" });
+    expect(parseCommand("/p inv")).toEqual({ message: "inv", type: "party" });
   });
 
   test("/party sends party", () => {
     expect(parseCommand("/party inv")).toEqual({
-      type: "party",
       message: "inv",
+      type: "party",
     });
   });
 
   test("/raid sends raid", () => {
     expect(parseCommand("/raid pull")).toEqual({
-      type: "raid",
       message: "pull",
+      type: "raid",
     });
   });
 
   test("/1 sends channel 1", () => {
     expect(parseCommand("/1 hello general")).toEqual({
-      type: "channel",
-      target: "1",
       message: "hello general",
+      target: "1",
+      type: "channel",
     });
   });
 
   test("/2 sends channel 2", () => {
     expect(parseCommand("/2 lfg")).toEqual({
-      type: "channel",
-      target: "2",
       message: "lfg",
+      target: "2",
+      type: "channel",
     });
   });
 
@@ -109,8 +109,8 @@ describe("parseCommand", () => {
 
   test("/who with name filter", () => {
     expect(parseCommand("/who Xiara")).toEqual({
-      type: "who",
       target: "Xiara",
+      type: "who",
     });
   });
 
@@ -119,27 +119,27 @@ describe("parseCommand", () => {
   });
 
   test("empty string becomes chat with empty message", () => {
-    expect(parseCommand("")).toEqual({ type: "chat", message: "" });
+    expect(parseCommand("")).toEqual({ message: "", type: "chat" });
   });
 
   test("unknown slash command becomes say with full input", () => {
     expect(parseCommand("/dance hello")).toEqual({
-      type: "say",
       message: "/dance hello",
+      type: "say",
     });
   });
 
   test("/invite", () => {
     expect(parseCommand("/invite Voidtrix")).toEqual({
-      type: "invite",
       target: "Voidtrix",
+      type: "invite",
     });
   });
 
   test("/kick", () => {
     expect(parseCommand("/kick Voidtrix")).toEqual({
-      type: "kick",
       target: "Voidtrix",
+      type: "kick",
     });
   });
 
@@ -149,15 +149,15 @@ describe("parseCommand", () => {
 
   test("/leave with argument leaves channel", () => {
     expect(parseCommand("/leave Trade")).toEqual({
-      type: "leave-channel",
       channel: "Trade",
+      type: "leave-channel",
     });
   });
 
   test("/leader", () => {
     expect(parseCommand("/leader Voidtrix")).toEqual({
-      type: "leader",
       target: "Voidtrix",
+      type: "leader",
     });
   });
 
@@ -171,22 +171,22 @@ describe("parseCommand", () => {
 
   test("/invite with no target falls back to say", () => {
     expect(parseCommand("/invite")).toEqual({
-      type: "say",
       message: "/invite",
+      type: "say",
     });
   });
 
   test("/kick with no target falls back to say", () => {
     expect(parseCommand("/kick")).toEqual({
-      type: "say",
       message: "/kick",
+      type: "say",
     });
   });
 
   test("/leader with no target falls back to say", () => {
     expect(parseCommand("/leader")).toEqual({
-      type: "say",
       message: "/leader",
+      type: "say",
     });
   });
 
@@ -200,15 +200,15 @@ describe("parseCommand", () => {
 
   test("/friend add Arthas returns add-friend", () => {
     expect(parseCommand("/friend add Arthas")).toEqual({
-      type: "add-friend",
       target: "Arthas",
+      type: "add-friend",
     });
   });
 
   test("/friend remove Arthas returns remove-friend", () => {
     expect(parseCommand("/friend remove Arthas")).toEqual({
-      type: "remove-friend",
       target: "Arthas",
+      type: "remove-friend",
     });
   });
 
@@ -226,8 +226,8 @@ describe("parseCommand", () => {
 
   test("/ignore with name returns add-ignore", () => {
     expect(parseCommand("/ignore Foo")).toEqual({
-      type: "add-ignore",
       target: "Foo",
+      type: "add-ignore",
     });
   });
 
@@ -237,15 +237,15 @@ describe("parseCommand", () => {
 
   test("/unignore with name returns remove-ignore", () => {
     expect(parseCommand("/unignore Foo")).toEqual({
-      type: "remove-ignore",
       target: "Foo",
+      type: "remove-ignore",
     });
   });
 
   test("/unignore bare falls back to say", () => {
     expect(parseCommand("/unignore")).toEqual({
-      type: "say",
       message: "/unignore",
+      type: "say",
     });
   });
 
@@ -255,48 +255,48 @@ describe("parseCommand", () => {
 
   test("/join parses channel name", () => {
     expect(parseCommand("/join Trade")).toEqual({
-      type: "join-channel",
       channel: "Trade",
+      type: "join-channel",
     });
   });
 
   test("/join parses channel name with password", () => {
     expect(parseCommand("/join Secret hunter2")).toEqual({
-      type: "join-channel",
       channel: "Secret",
       password: "hunter2",
+      type: "join-channel",
     });
   });
 
   test("/join with no argument sends say", () => {
-    expect(parseCommand("/join")).toEqual({ type: "say", message: "/join" });
+    expect(parseCommand("/join")).toEqual({ message: "/join", type: "say" });
   });
 
   test("/ginvite parses target", () => {
     expect(parseCommand("/ginvite Thrall")).toEqual({
-      type: "guild-invite",
       target: "Thrall",
+      type: "guild-invite",
     });
   });
 
   test("/ginvite without target becomes say", () => {
     expect(parseCommand("/ginvite")).toEqual({
-      type: "say",
       message: "/ginvite",
+      type: "say",
     });
   });
 
   test("/gkick parses target", () => {
     expect(parseCommand("/gkick Garrosh")).toEqual({
-      type: "guild-kick",
       target: "Garrosh",
+      type: "guild-kick",
     });
   });
 
   test("/gkick without target becomes say", () => {
     expect(parseCommand("/gkick")).toEqual({
-      type: "say",
       message: "/gkick",
+      type: "say",
     });
   });
 
@@ -306,57 +306,57 @@ describe("parseCommand", () => {
 
   test("/gpromote parses target", () => {
     expect(parseCommand("/gpromote Jaina")).toEqual({
-      type: "guild-promote",
       target: "Jaina",
+      type: "guild-promote",
     });
   });
 
   test("/gpromote without target becomes say", () => {
     expect(parseCommand("/gpromote")).toEqual({
-      type: "say",
       message: "/gpromote",
+      type: "say",
     });
   });
 
   test("/gdemote parses target", () => {
     expect(parseCommand("/gdemote Arthas")).toEqual({
-      type: "guild-demote",
       target: "Arthas",
+      type: "guild-demote",
     });
   });
 
   test("/gdemote without target becomes say", () => {
     expect(parseCommand("/gdemote")).toEqual({
-      type: "say",
       message: "/gdemote",
+      type: "say",
     });
   });
 
   test("/gleader parses target", () => {
     expect(parseCommand("/gleader Sylvanas")).toEqual({
-      type: "guild-leader",
       target: "Sylvanas",
+      type: "guild-leader",
     });
   });
 
   test("/gleader without target becomes say", () => {
     expect(parseCommand("/gleader")).toEqual({
-      type: "say",
       message: "/gleader",
+      type: "say",
     });
   });
 
   test("/gmotd parses message", () => {
     expect(parseCommand("/gmotd Raid tonight at 8pm")).toEqual({
-      type: "guild-motd",
       message: "Raid tonight at 8pm",
+      type: "guild-motd",
     });
   });
 
   test("/gmotd with empty message clears motd", () => {
     expect(parseCommand("/gmotd")).toEqual({
-      type: "guild-motd",
       message: "",
+      type: "guild-motd",
     });
   });
 
@@ -371,65 +371,65 @@ describe("parseCommand", () => {
   describe("unimplemented commands", () => {
     test("/mail returns unimplemented", () => {
       expect(parseCommand("/mail")).toEqual({
-        type: "unimplemented",
         feature: "Mail reading",
+        type: "unimplemented",
       });
     });
     test("/roll defaults to 1-100", () => {
       expect(parseCommand("/roll")).toEqual({
-        type: "roll",
-        min: 1,
         max: 100,
+        min: 1,
+        type: "roll",
       });
     });
     test("/roll N sets 1-N", () => {
       expect(parseCommand("/roll 50")).toEqual({
-        type: "roll",
-        min: 1,
         max: 50,
+        min: 1,
+        type: "roll",
       });
     });
     test("/roll N M sets N-M", () => {
       expect(parseCommand("/roll 10 20")).toEqual({
-        type: "roll",
-        min: 10,
         max: 20,
+        min: 10,
+        type: "roll",
       });
     });
     test("/dnd sends dnd with message", () => {
       expect(parseCommand("/dnd busy right now")).toEqual({
-        type: "dnd",
         message: "busy right now",
+        type: "dnd",
       });
     });
     test("/dnd sends dnd with empty message", () => {
       expect(parseCommand("/dnd")).toEqual({
-        type: "dnd",
         message: "",
+        type: "dnd",
       });
     });
     test("/afk sends afk with message", () => {
       expect(parseCommand("/afk grabbing coffee")).toEqual({
-        type: "afk",
         message: "grabbing coffee",
+        type: "afk",
       });
     });
     test("/afk sends afk with empty message", () => {
       expect(parseCommand("/afk")).toEqual({
-        type: "afk",
         message: "",
+        type: "afk",
       });
     });
     test("/e sends emote", () => {
       expect(parseCommand("/e waves")).toEqual({
-        type: "emote",
         message: "waves",
+        type: "emote",
       });
     });
     test("/emote sends emote", () => {
       expect(parseCommand("/emote waves")).toEqual({
-        type: "emote",
         message: "waves",
+        type: "emote",
       });
     });
   });
@@ -439,8 +439,8 @@ describe("tuicraft parseCommand", () => {
   test("parseCommand handles /tuicraft entities on", () => {
     const cmd = parseCommand("/tuicraft entities on");
     expect(cmd).toEqual({
-      type: "tuicraft",
       subcommand: "entities",
+      type: "tuicraft",
       value: "on",
     });
   });
@@ -448,14 +448,14 @@ describe("tuicraft parseCommand", () => {
   test("parseCommand handles /tuicraft entities off", () => {
     const cmd = parseCommand("/tuicraft entities off");
     expect(cmd).toEqual({
-      type: "tuicraft",
       subcommand: "entities",
+      type: "tuicraft",
       value: "off",
     });
   });
 
   test("parseCommand handles /tuicraft with unknown subcommand", () => {
     const cmd = parseCommand("/tuicraft foo");
-    expect(cmd).toEqual({ type: "tuicraft", subcommand: "foo", value: "" });
+    expect(cmd).toEqual({ subcommand: "foo", type: "tuicraft", value: "" });
   });
 });

@@ -1,11 +1,11 @@
-import { test, expect, jest } from "bun:test";
+import { expect, jest, test } from "bun:test";
 import type { JevActionResult } from "wow/jev";
 import {
-  TacticsLoop,
   type TacticsContext,
   type TacticsDeps,
   type TacticsEvent,
   type TacticsFrame,
+  TacticsLoop,
 } from "wow/tactics";
 
 const context: TacticsContext = {

@@ -1,5 +1,5 @@
-import type { SpellDefinition } from "wow/spell-catalog";
 import type { InitialCooldown } from "wow/protocol/spell";
+import type { SpellDefinition } from "wow/spell-catalog";
 
 export type CombatCooldown = {
   spellId: number;

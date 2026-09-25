@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { registerCombatHandlers } from "wow/gameplay-handlers";
-import { CombatRuntime } from "wow/combat";
 import type { WorldConn } from "wow/client";
-import { PacketReader } from "wow/protocol/packet";
+import { CombatRuntime } from "wow/combat";
+import { registerCombatHandlers } from "wow/gameplay-handlers";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 
 describe("registerCombatHandlers", () => {

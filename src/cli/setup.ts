@@ -29,26 +29,26 @@ function maskEcho(output: NodeJS.WritableStream, label: string): () => void {
 export function parseSetupFlags(args: string[]): Config {
   const get = (name: string): string | undefined => {
     const idx = args.indexOf(`--${name}`);
-    return idx !== -1 ? args[idx + 1] : undefined;
+    return idx === -1 ? undefined : args[idx + 1];
   };
   const account = get("account");
   const password = get("password");
   const character = get("character");
-  if (!account || !password || !character) {
+  if (!(account && password && character)) {
     throw new Error("Required: --account, --password, --character");
   }
   const portStr = get("port");
-  if (portStr !== undefined && Number.isNaN(parseInt(portStr, 10))) {
+  if (portStr !== undefined && Number.isNaN(Number.parseInt(portStr, 10))) {
     throw new Error(`Invalid --port value: ${portStr}`);
   }
   return {
     account,
-    password,
     character,
     host: get("host") ?? "t1",
-    port: parseInt(portStr ?? "3724", 10),
-    language: parseInt(get("language") ?? "1", 10),
-    timeout_minutes: parseInt(get("timeout_minutes") ?? "30", 10),
+    language: Number.parseInt(get("language") ?? "1", 10),
+    password,
+    port: Number.parseInt(portStr ?? "3724", 10),
+    timeout_minutes: Number.parseInt(get("timeout_minutes") ?? "30", 10),
   };
 }
 
@@ -80,15 +80,15 @@ export async function runSetupWizard(
     const password = await askSecret(rl, "Password");
     const character = await ask(rl, "Character");
     const host = await ask(rl, "Host", "t1");
-    const port = parseInt(await ask(rl, "Port", "3724"), 10);
-    const language = parseInt(await ask(rl, "Language", "1"), 10);
+    const port = Number.parseInt(await ask(rl, "Port", "3724"), 10);
+    const language = Number.parseInt(await ask(rl, "Language", "1"), 10);
     return {
       account,
-      password,
       character,
       host,
-      port,
       language,
+      password,
+      port,
       timeout_minutes: 30,
     };
   } finally {

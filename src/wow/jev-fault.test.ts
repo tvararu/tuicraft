@@ -1,12 +1,12 @@
-import { test, expect, describe, jest } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
+import type { JevActionRequest, JevActionResult } from "wow/jev";
 import {
   createFaultSelect,
   faultMarker,
-  parseJevFault,
   type JevFault,
+  parseJevFault,
 } from "wow/jev-fault";
-import { TacticsLoop, type TacticsEvent } from "wow/tactics";
-import type { JevActionRequest, JevActionResult } from "wow/jev";
+import { type TacticsEvent, TacticsLoop } from "wow/tactics";
 
 const mockRequest: JevActionRequest = {
   instruction: "defeat target",

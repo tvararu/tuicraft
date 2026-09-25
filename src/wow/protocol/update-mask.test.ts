@@ -18,7 +18,7 @@ describe("parseUpdateMask", () => {
   test("single field set in first block", () => {
     const r = buildReader(
       (w) => w.uint8(1),
-      (w) => w.uint32LE(0x00000008),
+      (w) => w.uint32LE(0x00_00_00_08),
       (w) => w.uint32LE(42),
     );
     const result = parseUpdateMask(r);
@@ -29,15 +29,15 @@ describe("parseUpdateMask", () => {
   test("multiple fields across multiple blocks (wowm test data)", () => {
     const r = buildReader(
       (w) => w.uint8(3),
-      (w) => w.uint32LE(0x00000007),
-      (w) => w.uint32LE(0x00800000),
-      (w) => w.uint32LE(0x00000018),
+      (w) => w.uint32LE(0x00_00_00_07),
+      (w) => w.uint32LE(0x00_80_00_00),
+      (w) => w.uint32LE(0x00_00_00_18),
       (w) => w.uint32LE(8),
       (w) => w.uint32LE(0),
       (w) => w.uint32LE(0x19),
       (w) => w.uint32LE(1),
-      (w) => w.uint32LE(0x4d0c),
-      (w) => w.uint32LE(0x4d0c),
+      (w) => w.uint32LE(0x4d_0c),
+      (w) => w.uint32LE(0x4d_0c),
     );
     const result = parseUpdateMask(r);
     expect(result.size).toBe(6);
@@ -45,14 +45,14 @@ describe("parseUpdateMask", () => {
     expect(result.get(1)).toBe(0);
     expect(result.get(2)).toBe(0x19);
     expect(result.get(55)).toBe(1);
-    expect(result.get(67)).toBe(0x4d0c);
-    expect(result.get(68)).toBe(0x4d0c);
+    expect(result.get(67)).toBe(0x4d_0c);
+    expect(result.get(68)).toBe(0x4d_0c);
   });
 
   test("all 32 bits set in one block", () => {
     const w = new PacketWriter();
     w.uint8(1);
-    w.uint32LE(0xffffffff);
+    w.uint32LE(0xff_ff_ff_ff);
     for (let i = 0; i < 32; i++) w.uint32LE(i * 10);
     const r = new PacketReader(w.finish());
     const result = parseUpdateMask(r);
@@ -65,7 +65,7 @@ describe("parseUpdateMask", () => {
   test("reader position advances past all bytes", () => {
     const w = new PacketWriter();
     w.uint8(1);
-    w.uint32LE(0x00000008);
+    w.uint32LE(0x00_00_00_08);
     w.uint32LE(99);
     w.uint8(0xff);
     const r = new PacketReader(w.finish());
@@ -76,8 +76,8 @@ describe("parseUpdateMask", () => {
   test("two blocks, second block all zeros", () => {
     const r = buildReader(
       (w) => w.uint8(2),
-      (w) => w.uint32LE(0x00000005),
-      (w) => w.uint32LE(0x00000000),
+      (w) => w.uint32LE(0x00_00_00_05),
+      (w) => w.uint32LE(0x00_00_00_00),
       (w) => w.uint32LE(100),
       (w) => w.uint32LE(200),
     );
@@ -90,8 +90,8 @@ describe("parseUpdateMask", () => {
   test("bit at block boundary (bit 31 and bit 32)", () => {
     const r = buildReader(
       (w) => w.uint8(2),
-      (w) => w.uint32LE(0x80000000),
-      (w) => w.uint32LE(0x00000001),
+      (w) => w.uint32LE(0x80_00_00_00),
+      (w) => w.uint32LE(0x00_00_00_01),
       (w) => w.uint32LE(31_000),
       (w) => w.uint32LE(32_000),
     );

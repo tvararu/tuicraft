@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { packDbc } from "test/dbc";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { packDbc } from "test/dbc";
 import { loadSpellCatalog } from "wow/spell-catalog";
 
 const SPELL_FIELDS = 234;
@@ -192,7 +192,7 @@ describe("SpellCatalog.get", () => {
         spellRow({
           0: 133,
           1: 11,
-          4: 0x10000,
+          4: 0x1_00_00,
           16: 0x20,
           17: 8,
           28: 3,
@@ -205,7 +205,7 @@ describe("SpellCatalog.get", () => {
           42: 0,
           43: 2,
           46: 4,
-          52: 17056,
+          52: 17_056,
           60: 1,
           68: -1,
           71: 2,
@@ -243,11 +243,11 @@ describe("SpellCatalog.get", () => {
     expect(def.cooldown.recoveryTimeMs).toBe(8000);
     expect(def.cooldown.categoryRecoveryTimeMs).toBe(1500);
     expect(def.cooldown.startRecoveryTimeMs).toBe(1500);
-    expect(def.attributes.raw).toBe(0x10000);
+    expect(def.attributes.raw).toBe(0x1_00_00);
     expect(def.targets.targets).toBe(0x20);
     expect(def.targets.creatureType).toBe(8);
     expect(def.equippedItem.itemClass).toBe(-1);
-    expect(def.reagents).toEqual([{ itemId: 17056, count: 1 }]);
+    expect(def.reagents).toEqual([{ itemId: 17_056, count: 1 }]);
     expect(def.effects).toHaveLength(1);
     expect(def.effects[0]?.effect).toBe(2);
     expect(def.effects[0]?.basePoints).toBe(-1);
@@ -309,12 +309,12 @@ describe("SpellCatalog.get", () => {
       SPELL_FIELDS,
       [
         spellRow({
-          0: 24275,
+          0: 24_275,
           20: 2,
           21: 16,
           22: 4,
           23: 8,
-          24: 11129,
+          24: 11_129,
           25: 0,
           26: 0,
           27: 17,
@@ -323,13 +323,13 @@ describe("SpellCatalog.get", () => {
       new Uint8Array([0]),
     );
     await writeTables(dir, { ...extras, spell });
-    const aura = (await loadSpellCatalog(dir)).get(24275)?.auraRequirements;
+    const aura = (await loadSpellCatalog(dir)).get(24_275)?.auraRequirements;
     expect(aura).toEqual({
       casterAuraState: 2,
       targetAuraState: 16,
       casterAuraStateNot: 4,
       targetAuraStateNot: 8,
-      casterAuraSpell: 11129,
+      casterAuraSpell: 11_129,
       targetAuraSpell: 0,
       excludeCasterAuraSpell: 0,
       excludeTargetAuraSpell: 17,

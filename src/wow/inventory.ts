@@ -1,5 +1,4 @@
-import { joinGuid } from "wow/protocol/packet";
-import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
+import { type Entity, type EntityLookup, fieldOf } from "wow/entity-store";
 import { readSelfField } from "wow/player-state";
 import {
   CONTAINER_FIELDS,
@@ -8,6 +7,7 @@ import {
   ObjectType,
   PLAYER_FIELDS,
 } from "wow/protocol/entity-fields";
+import { joinGuid } from "wow/protocol/packet";
 
 export type InventoryItem = {
   guid: bigint;

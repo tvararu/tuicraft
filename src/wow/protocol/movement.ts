@@ -1,7 +1,7 @@
 import type { Position } from "wow/entity-store";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { MovementFlag, MovementFlagExtra } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export type FallData = {
   zSpeed: number;

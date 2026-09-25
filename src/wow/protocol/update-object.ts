@@ -1,9 +1,9 @@
 import type { Position } from "wow/entity-store";
-import type { PacketReader } from "wow/protocol/packet";
 import { ObjectType, UpdateType } from "wow/protocol/entity-fields";
-import { parseUpdateMask } from "wow/protocol/update-mask";
-import { parseMovementBlock } from "wow/protocol/movement-block";
 import type { CreateSpline } from "wow/protocol/monster-move";
+import { parseMovementBlock } from "wow/protocol/movement-block";
+import type { PacketReader } from "wow/protocol/packet";
+import { parseUpdateMask } from "wow/protocol/update-mask";
 
 type Movement = {
   position: Position;

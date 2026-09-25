@@ -1,7 +1,7 @@
-import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
-import type { FramingVariant } from "wow/framing";
-import { abortReason, abortable, bounded, pause } from "lib/abort";
+import { abortable, abortReason, bounded, pause } from "lib/abort";
 import { messageOf } from "lib/errors";
+import type { FramingVariant } from "wow/framing";
+import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
 
 const WAIT = {
   id: "wait",

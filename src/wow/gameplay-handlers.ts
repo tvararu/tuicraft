@@ -1,12 +1,47 @@
-import type { PacketReader } from "wow/protocol/packet";
-import { GameOpcode } from "wow/protocol/opcodes";
+import type { WorldConn } from "wow/client";
+import { parseAuraUpdate, parseAuraUpdateAll } from "wow/protocol/aura";
 import {
   ATTACK_SWING_ERRORS,
   parseAttackStart,
   parseAttackStop,
   parseXpGain,
 } from "wow/protocol/combat";
-import { parseAuraUpdate, parseAuraUpdateAll } from "wow/protocol/aura";
+import {
+  parseCorpseQuery,
+  parseCorpseReclaimDelay,
+  parseDeathReleaseLocation,
+  parseResurrectRequest,
+} from "wow/protocol/death";
+import { parseGossipMessage } from "wow/protocol/gossip";
+import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import {
+  parseItemPushResult,
+  parseLootMoneyNotify,
+  parseLootReleaseResponse,
+  parseLootRemoved,
+  parseLootResponse,
+} from "wow/protocol/loot";
+import { parseMonsterMove } from "wow/protocol/monster-move";
+import { GameOpcode } from "wow/protocol/opcodes";
+import type { PacketReader } from "wow/protocol/packet";
+import {
+  parseQuestFailed,
+  parseQuestInvalid,
+  parseQuestUpdateAddItem,
+  parseQuestUpdateAddKill,
+  parseQuestUpdateComplete,
+  parseQuestUpdateFailed,
+  parseQuestUpdateFailedTimer,
+} from "wow/protocol/quest-log";
+import { parseQuestQueryResponse } from "wow/protocol/quest-query";
+import {
+  parseQuestgiverOfferReward,
+  parseQuestgiverQuestComplete,
+  parseQuestgiverQuestDetails,
+  parseQuestgiverQuestList,
+  parseQuestgiverRequestItems,
+  parseQuestgiverStatus,
+} from "wow/protocol/questgiver";
 import {
   parseCastFailed,
   parseCooldownNotice,
@@ -20,42 +55,7 @@ import {
   parseSpellStart,
   parseSupersededSpell,
 } from "wow/protocol/spell";
-import { parseMonsterMove } from "wow/protocol/monster-move";
-import { parseGossipMessage } from "wow/protocol/gossip";
-import {
-  parseQuestgiverOfferReward,
-  parseQuestgiverQuestComplete,
-  parseQuestgiverQuestDetails,
-  parseQuestgiverQuestList,
-  parseQuestgiverRequestItems,
-  parseQuestgiverStatus,
-} from "wow/protocol/questgiver";
-import { parseQuestQueryResponse } from "wow/protocol/quest-query";
-import {
-  parseQuestFailed,
-  parseQuestInvalid,
-  parseQuestUpdateAddItem,
-  parseQuestUpdateAddKill,
-  parseQuestUpdateComplete,
-  parseQuestUpdateFailed,
-  parseQuestUpdateFailedTimer,
-} from "wow/protocol/quest-log";
-import {
-  parseItemPushResult,
-  parseLootMoneyNotify,
-  parseLootReleaseResponse,
-  parseLootRemoved,
-  parseLootResponse,
-} from "wow/protocol/loot";
-import { parseInventoryChangeFailure } from "wow/protocol/inventory";
-import {
-  parseCorpseQuery,
-  parseCorpseReclaimDelay,
-  parseDeathReleaseLocation,
-  parseResurrectRequest,
-} from "wow/protocol/death";
 import type { QuestDialog } from "wow/quests";
-import type { WorldConn } from "wow/client";
 
 export function registerCombatHandlers(conn: WorldConn): void {
   const on = (opcode: number, handle: (r: PacketReader) => void) =>

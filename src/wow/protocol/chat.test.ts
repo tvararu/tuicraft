@@ -1,21 +1,21 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { ChatType, ChannelNotify, Language } from "wow/protocol/opcodes";
+import { describe, expect, test } from "bun:test";
 import {
-  parseChatMessage,
   buildChatMessage,
-  buildNameQuery,
-  parseNameQueryResponse,
-  buildWhoRequest,
-  parseWhoResponse,
-  parseChannelNotify,
-  buildRandomRoll,
-  parseRandomRoll,
-  parseServerBroadcast,
-  parseNotification,
   buildJoinChannel,
   buildLeaveChannel,
+  buildNameQuery,
+  buildRandomRoll,
+  buildWhoRequest,
+  parseChannelNotify,
+  parseChatMessage,
+  parseNameQueryResponse,
+  parseNotification,
+  parseRandomRoll,
+  parseServerBroadcast,
+  parseWhoResponse,
 } from "wow/protocol/chat";
+import { ChannelNotify, ChatType, Language } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 describe("parseChatMessage", () => {
   test("parses a SAY message", () => {
@@ -603,15 +603,15 @@ describe("parseRandomRoll", () => {
     w.uint32LE(0);
     w.uint32LE(999);
     w.uint32LE(500);
-    w.uint32LE(0xdeadbeef);
-    w.uint32LE(0x00000001);
+    w.uint32LE(0xde_ad_be_ef);
+    w.uint32LE(0x00_00_00_01);
 
     const result = parseRandomRoll(new PacketReader(w.finish()));
     expect(result.min).toBe(0);
     expect(result.max).toBe(999);
     expect(result.result).toBe(500);
-    expect(result.guidLow).toBe(0xdeadbeef);
-    expect(result.guidHigh).toBe(0x00000001);
+    expect(result.guidLow).toBe(0xde_ad_be_ef);
+    expect(result.guidHigh).toBe(0x00_00_00_01);
   });
 });
 

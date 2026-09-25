@@ -1,11 +1,11 @@
-import type { Vec3 } from "wow/protocol/packet";
 import { bearing, distance } from "wow/geometry";
 import {
-  SplineFlag,
   type CreateSpline,
   type MonsterMovePath,
+  SplineFlag,
   type SplineInterpolation,
 } from "wow/protocol/monster-move";
+import type { Vec3 } from "wow/protocol/packet";
 
 export type SplineTrajectory = {
   points: Vec3[];

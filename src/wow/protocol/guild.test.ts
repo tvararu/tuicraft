@@ -1,24 +1,24 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import {
-  GuildMemberStatus,
-  GuildEventCode,
-  parseGuildRoster,
-  parseGuildQueryResponse,
-  parseGuildEvent,
-  buildGuildQuery,
-  buildGuildInvite,
-  buildGuildRemove,
-  buildGuildPromote,
   buildGuildDemote,
+  buildGuildInvite,
   buildGuildLeader,
   buildGuildMotd,
+  buildGuildPromote,
+  buildGuildQuery,
+  buildGuildRemove,
+  formatGuildCommandError,
   GuildCommand,
   GuildCommandResult,
+  GuildEventCode,
+  GuildMemberStatus,
   parseGuildCommandResult,
+  parseGuildEvent,
   parseGuildInvitePacket,
-  formatGuildCommandError,
+  parseGuildQueryResponse,
+  parseGuildRoster,
 } from "wow/protocol/guild";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 describe("GuildMemberStatus", () => {
   test("OFFLINE is 0", () => {
@@ -321,9 +321,9 @@ describe("buildGuildQuery", () => {
   });
 
   test("encodes large guild id", () => {
-    const body = buildGuildQuery(0xdeadbeef);
+    const body = buildGuildQuery(0xde_ad_be_ef);
     const r = new PacketReader(body);
-    expect(r.uint32LE()).toBe(0xdeadbeef);
+    expect(r.uint32LE()).toBe(0xde_ad_be_ef);
   });
 });
 

@@ -1,7 +1,7 @@
 import { messageOf } from "lib/errors";
 import type { ControlEvent } from "wow/control";
 import type { CorpseRun } from "wow/corpse-run";
-import { cycleStop as stop, type CycleStop } from "wow/cycle-stop";
+import { type CycleStop, cycleStop as stop } from "wow/cycle-stop";
 import { bearing, distance, normalizeAngle } from "wow/geometry";
 import type { Vec3 } from "wow/protocol/packet";
 import type { RecoveryReclaim } from "wow/recovery";

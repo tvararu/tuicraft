@@ -14,8 +14,8 @@ export type Config = {
 
 const DEFAULTS: Partial<Config> = {
   host: "t1",
-  port: 3724,
   language: 1,
+  port: 3724,
   timeout_minutes: 30,
 };
 
@@ -99,18 +99,18 @@ export async function writeConfig(
 
 export function clientConfig(cfg: Config) {
   return {
-    host: cfg.host,
-    port: cfg.port,
     account: cfg.account.toUpperCase(),
-    password: cfg.password.toUpperCase(),
     character: cfg.character,
-    language: cfg.language,
-    spellDataDir: cfg.spell_data_dir,
-    navigationDataDir: cfg.navigation_data_dir,
-    navigationLibrary: cfg.navigation_library,
+    host: cfg.host,
     jevApiKey: process.env["TYPESAFE_API_KEY"],
     jevEndpointUrl:
       process.env["JEV_ENDPOINT_URL"] ?? process.env["TYPESAFE_ENDPOINT_URL"],
     jevFault: process.env["JEV_FAULT"],
+    language: cfg.language,
+    navigationDataDir: cfg.navigation_data_dir,
+    navigationLibrary: cfg.navigation_library,
+    password: cfg.password.toUpperCase(),
+    port: cfg.port,
+    spellDataDir: cfg.spell_data_dir,
   };
 }

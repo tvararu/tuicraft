@@ -1,39 +1,39 @@
-import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
-import {
-  questLogChanges,
-  readQuestLog,
-  sameSlot,
-  type QuestLog,
-} from "wow/quest-slots";
+import { type Entity, type EntityLookup, fieldOf } from "wow/entity-store";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
-import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildGossipHello,
   buildGossipSelectOption,
   type GossipMessage,
 } from "wow/protocol/gossip";
+import { GameOpcode } from "wow/protocol/opcodes";
 import {
-  buildQuestgiverQueryQuest,
-  buildQuestgiverAcceptQuest,
-  buildQuestgiverCompleteQuest,
-  buildQuestgiverRequestReward,
-  buildQuestgiverChooseReward,
-  type QuestgiverStatus,
-  type QuestgiverQuestList,
-  type QuestgiverQuestDetails,
-  type QuestgiverRequestItems,
-  type QuestgiverOfferReward,
-  type QuestgiverQuestComplete,
-} from "wow/protocol/questgiver";
+  buildQuestLogRemoveQuest,
+  type QuestUpdateAddItem,
+  type QuestUpdateAddKill,
+} from "wow/protocol/quest-log";
 import {
   buildQuestQuery,
   type QuestQueryResponse,
 } from "wow/protocol/quest-query";
 import {
-  buildQuestLogRemoveQuest,
-  type QuestUpdateAddKill,
-  type QuestUpdateAddItem,
-} from "wow/protocol/quest-log";
+  buildQuestgiverAcceptQuest,
+  buildQuestgiverChooseReward,
+  buildQuestgiverCompleteQuest,
+  buildQuestgiverQueryQuest,
+  buildQuestgiverRequestReward,
+  type QuestgiverOfferReward,
+  type QuestgiverQuestComplete,
+  type QuestgiverQuestDetails,
+  type QuestgiverQuestList,
+  type QuestgiverRequestItems,
+  type QuestgiverStatus,
+} from "wow/protocol/questgiver";
+import {
+  type QuestLog,
+  questLogChanges,
+  readQuestLog,
+  sameSlot,
+} from "wow/quest-slots";
 
 export type QuestDialog =
   | { kind: "gossip"; data: GossipMessage }
@@ -134,7 +134,7 @@ export type QuestDeps = {
 };
 
 function positiveId(id: number): void {
-  if (!Number.isInteger(id) || id <= 0 || id > 0xffffffff)
+  if (!Number.isInteger(id) || id <= 0 || id > 0xff_ff_ff_ff)
     throw new Error("invalid_quest_id");
 }
 

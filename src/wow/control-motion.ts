@@ -1,5 +1,5 @@
 import type { Position } from "wow/entity-store";
-import { GROUND_ERROR, collisionFree, type NavPoint } from "wow/navigation";
+import { collisionFree, GROUND_ERROR, type NavPoint } from "wow/navigation";
 import { MovementFlag } from "wow/protocol/entity-fields";
 
 export type Ground = {

@@ -1,4 +1,8 @@
-import { PacketReader, PacketWriter, type Vec3 } from "wow/protocol/packet";
+import {
+  type PacketReader,
+  PacketWriter,
+  type Vec3,
+} from "wow/protocol/packet";
 
 export type CorpseQuery =
   | { found: false }
@@ -67,7 +71,7 @@ export function parseDeathReleaseLocation(
 ): DeathReleaseLocation {
   const mapId = r.uint32LE();
   const position = r.vec3();
-  if (mapId === 0xffffffff) return { kind: "clear" };
+  if (mapId === 0xff_ff_ff_ff) return { kind: "clear" };
   return { kind: "location", mapId, position };
 }
 

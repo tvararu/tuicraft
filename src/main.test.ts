@@ -1,11 +1,11 @@
-import { test, expect, describe, jest, afterEach } from "bun:test";
+import { afterEach, describe, expect, jest, test } from "bun:test";
 import { mkdir, unlink } from "node:fs/promises";
 import type { EventEntry } from "daemon/commands";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
-import { ObjectType } from "wow/protocol/entity-fields";
 import type { BaseEntity } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
 
 describe("main CLI against a daemon socket", () => {
   let sockCounter = 0;
@@ -31,21 +31,21 @@ describe("main CLI against a daemon socket", () => {
     exitSpy = jest
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
-    result = startDaemonServer({ handle, sock: sockPath, log, onActivity });
+    result = startDaemonServer({ handle, log, onActivity, sock: sockPath });
     for (const event of buffered) result.events.push(event);
     const proc = Bun.spawn({
       cmd: [process.execPath, `${import.meta.dir}/main.ts`, ...args],
       cwd: `${import.meta.dir}/..`,
       env: { ...process.env, XDG_RUNTIME_DIR: xdg },
-      stdout: "pipe",
       stderr: "pipe",
+      stdout: "pipe",
     });
     const [code, out, error] = await Promise.all([
       proc.exited,
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
     ]);
-    return { code, out, error };
+    return { code, error, out };
   }
 
   test("empty JSON read returns one parseable event envelope", async () => {
@@ -56,10 +56,10 @@ describe("main CLI against a daemon socket", () => {
     expect(out.trim().split("\n")).toHaveLength(1);
     expect(JSON.parse(out)).toEqual({
       command: "read",
-      kind: "events",
       data: null,
-      events: [],
       error: null,
+      events: [],
+      kind: "events",
     });
   });
 
@@ -67,27 +67,27 @@ describe("main CLI against a daemon socket", () => {
     handle = createMockHandle();
     const { code, out } = await runMain(
       ["read", "--json"],
-      [{ text: undefined, json: '{"type":"SAY","sender":"A","message":"hi"}' }],
+      [{ json: '{"type":"SAY","sender":"A","message":"hi"}', text: undefined }],
     );
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "read",
-      kind: "events",
       data: null,
-      events: [{ type: "SAY", sender: "A", message: "hi" }],
       error: null,
+      events: [{ message: "hi", sender: "A", type: "SAY" }],
+      kind: "events",
     });
   });
 
   test("JSON who keeps nonempty daemon result data", async () => {
     handle = createMockHandle();
     const player = {
-      name: "Aria",
+      classId: 8,
+      gender: 0,
       guild: "Wanderers",
       level: 42,
-      classId: 8,
+      name: "Aria",
       race: 1,
-      gender: 0,
       zone: 12,
     };
     handle.who = async () => [player];
@@ -95,10 +95,10 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "who",
-      kind: "result",
-      data: { type: "WHO", count: 1, results: [player] },
-      events: [],
+      data: { count: 1, results: [player], type: "WHO" },
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
@@ -108,23 +108,23 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "nearby",
-      kind: "result",
       data: [],
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
   test("JSON nearby keeps nonempty daemon entity data", async () => {
     handle = createMockHandle();
     const entity: BaseEntity = {
-      guid: 0x11n,
-      objectType: ObjectType.OBJECT,
-      name: "Marker",
       entry: 17,
-      scale: 1,
+      guid: 0x11n,
+      name: "Marker",
+      objectType: ObjectType.OBJECT,
       position: undefined,
       rawFields: new Map(),
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       entity,
@@ -133,24 +133,24 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "nearby",
-      kind: "result",
       data: [
         {
-          guid: "0x11",
-          type: "object",
-          name: "Marker",
-          entry: 17,
-          self: false,
-          distance: null,
-          horizontalDistance: null,
           bearingRadians: null,
-          turnRadians: null,
+          distance: null,
+          entry: 17,
+          guid: "0x11",
+          horizontalDistance: null,
+          name: "Marker",
           originSource: null,
           originUpdatedAt: null,
+          self: false,
+          turnRadians: null,
+          type: "object",
         },
       ],
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
@@ -167,10 +167,10 @@ describe("main CLI against a daemon socket", () => {
     expect(out.trim().split("\n")).toHaveLength(1);
     expect(JSON.parse(out)).toEqual({
       command: "send",
-      kind: "intent",
       data: null,
-      events: [],
       error: null,
+      events: [],
+      kind: "intent",
     });
   });
 
@@ -178,8 +178,8 @@ describe("main CLI against a daemon socket", () => {
     handle = createMockHandle();
     let requests = 0;
     const event = {
-      text: undefined,
       json: '{"type":"SAY","sender":"B","message":"reply"}',
+      text: undefined,
     };
     const { code, out } = await runMain(
       ["send", "hello", "--json", "--wait", "0.02"],
@@ -192,10 +192,10 @@ describe("main CLI against a daemon socket", () => {
     expect(out.trim().split("\n")).toHaveLength(1);
     expect(JSON.parse(out)).toEqual({
       command: "send",
-      kind: "intent",
       data: null,
-      events: [{ type: "SAY", sender: "B", message: "reply" }],
       error: null,
+      events: [{ message: "reply", sender: "B", type: "SAY" }],
+      kind: "intent",
     });
   });
 
@@ -203,7 +203,6 @@ describe("main CLI against a daemon socket", () => {
     const xdg = `${process.cwd()}/tmp/cli-wait-${++sockCounter}-${Date.now()}`;
     await mkdir(`${xdg}/tuicraft`, { recursive: true });
     const server = Bun.listen({
-      unix: `${xdg}/tuicraft/sock`,
       socket: {
         data(socket, bytes) {
           const command = Buffer.from(bytes).toString().trim();
@@ -217,6 +216,7 @@ describe("main CLI against a daemon socket", () => {
           socket.flush();
         },
       },
+      unix: `${xdg}/tuicraft/sock`,
     });
     try {
       const proc = Bun.spawn({
@@ -231,8 +231,8 @@ describe("main CLI against a daemon socket", () => {
         ],
         cwd: `${import.meta.dir}/..`,
         env: { ...process.env, XDG_RUNTIME_DIR: xdg },
-        stdout: "pipe",
         stderr: "pipe",
+        stdout: "pipe",
       });
       const [code, out] = await Promise.all([
         proc.exited,
@@ -242,10 +242,10 @@ describe("main CLI against a daemon socket", () => {
       expect(out.trim().split("\n")).toHaveLength(1);
       expect(JSON.parse(out)).toEqual({
         command: "send",
-        kind: "intent",
         data: null,
+        error: { message: "event_read_lost", stage: "wait" },
         events: [],
-        error: { stage: "wait", message: "event_read_lost" },
+        kind: "intent",
       });
     } finally {
       server.stop(true);
@@ -258,7 +258,6 @@ describe("main CLI against a daemon socket", () => {
     const path = `${xdg}/tuicraft/sock`;
     let polls = 0;
     const server = Bun.listen({
-      unix: path,
       socket: {
         data(socket, bytes) {
           const command = Buffer.from(bytes).toString().trim();
@@ -279,14 +278,15 @@ describe("main CLI against a daemon socket", () => {
           socket.flush();
         },
       },
+      unix: path,
     });
     try {
       const proc = Bun.spawn({
         cmd: [process.execPath, `${import.meta.dir}/main.ts`, "tail", "--json"],
         cwd: `${import.meta.dir}/..`,
         env: { ...process.env, XDG_RUNTIME_DIR: xdg },
-        stdout: "pipe",
         stderr: "pipe",
+        stdout: "pipe",
       });
       const [code, out] = await Promise.all([
         proc.exited,
@@ -300,22 +300,22 @@ describe("main CLI against a daemon socket", () => {
       expect(replies).toHaveLength(3);
       expect(replies[0]).toEqual({
         command: "tail",
-        kind: "events",
         data: null,
-        events: [{ type: "SAY", sender: "C", message: "tail" }],
         error: null,
+        events: [{ message: "tail", sender: "C", type: "SAY" }],
+        kind: "events",
       });
       expect(replies[1]).toEqual({
         command: "tail",
-        kind: "events",
         data: null,
-        events: [{ type: "WHISPER", sender: "D", message: "reply" }],
         error: null,
+        events: [{ message: "reply", sender: "D", type: "WHISPER" }],
+        kind: "events",
       });
       expect(replies[2]).toMatchObject({
         command: "tail",
-        kind: "error",
         error: { stage: "command" },
+        kind: "error",
       });
     } finally {
       server.stop(true);
@@ -328,10 +328,10 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "status",
-      kind: "result",
       data: { socket: "responsive" },
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
@@ -345,8 +345,8 @@ describe("main CLI against a daemon socket", () => {
         cmd: [process.execPath, `${import.meta.dir}/main.ts`, "stop", "--json"],
         cwd: `${import.meta.dir}/..`,
         env: { ...process.env, XDG_RUNTIME_DIR: xdg },
-        stdout: "pipe",
         stderr: "pipe",
+        stdout: "pipe",
       });
       const [code, out] = await Promise.all([
         proc.exited,
@@ -355,10 +355,10 @@ describe("main CLI against a daemon socket", () => {
       expect(code).toBe(1);
       expect(JSON.parse(out)).toMatchObject({
         command: "stop",
-        kind: "error",
         data: null,
-        events: [],
         error: { stage: "command" },
+        events: [],
+        kind: "error",
       });
     } finally {
       await unlink(path);
@@ -382,10 +382,10 @@ describe("main CLI against a daemon socket", () => {
     expect(requests).toBe(2);
     expect(JSON.parse(out)).toEqual({
       command: "send",
-      kind: "error",
       data: null,
+      error: { message: "internal", stage: "command" },
       events: [],
-      error: { stage: "command", message: "internal" },
+      kind: "error",
     });
   });
 
@@ -395,10 +395,10 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(0);
     expect(JSON.parse(out)).toEqual({
       command: "fight",
-      kind: "intent",
       data: null,
-      events: [],
       error: null,
+      events: [],
+      kind: "intent",
     });
   });
 
@@ -415,10 +415,10 @@ describe("main CLI against a daemon socket", () => {
     expect(handle.sendSay).not.toHaveBeenCalled();
     expect(JSON.parse(out)).toMatchObject({
       command: "send",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "arguments" },
+      events: [],
+      kind: "error",
     });
   });
 
@@ -436,10 +436,10 @@ describe("main CLI against a daemon socket", () => {
     const reply = JSON.parse(out);
     expect(reply).toMatchObject({
       command: "goto",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "arguments" },
+      events: [],
+      kind: "error",
     });
   });
 
@@ -449,8 +449,8 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(1);
     expect(JSON.parse(out)).toMatchObject({
       command: null,
-      kind: "error",
       error: { stage: "arguments" },
+      kind: "error",
     });
   });
 
@@ -473,10 +473,10 @@ describe("main CLI against a daemon socket", () => {
     expect(code).toBe(1);
     expect(JSON.parse(out)).toEqual({
       command: "spells",
-      kind: "error",
       data: null,
+      error: { message: "missing_spell_data", stage: "command" },
       events: [],
-      error: { stage: "command", message: "missing_spell_data" },
+      kind: "error",
     });
   });
 

@@ -45,19 +45,19 @@ describe("carried inventory authority", () => {
       complete.slots.find((slot) => slot.bag === 255 && slot.slot === 23)
         ?.status,
     ).toBe("empty");
-    expect(view([entity(1n, ObjectType.UNIT, [[0x492, 100]])]).status).toBe(
+    expect(view([entity(1n, ObjectType.UNIT, [[0x4_92, 100]])]).status).toBe(
       "unknown",
     );
     expect(
-      readInventory(1n, () => entity(2n, ObjectType.PLAYER, [[0x492, 100]])),
+      readInventory(1n, () => entity(2n, ObjectType.PLAYER, [[0x4_92, 100]])),
     ).toMatchObject({ status: "unknown", coinage: undefined });
   });
 
   test("reads literal player, item, and container offsets without inventing stack count one", () => {
     const self = entity(1n, ObjectType.PLAYER, [
-      [0x492, 987],
-      [0x16a, 2],
-      [0x172, 3],
+      [0x4_92, 987],
+      [0x1_6a, 2],
+      [0x1_72, 3],
     ]);
     const bag = entity(2n, ObjectType.CONTAINER, [
       [3, 100],
@@ -113,11 +113,11 @@ describe("carried inventory authority", () => {
   });
 
   test("requires both GUID halves unless complete CREATE establishes omitted zeros", () => {
-    const self = entity(1n, ObjectType.PLAYER, [[0x172, 3]], false);
+    const self = entity(1n, ObjectType.PLAYER, [[0x1_72, 3]], false);
     expect(view([self]).slots.find((slot) => slot.slot === 23)?.status).toBe(
       "unknown",
     );
-    self.rawFields.set(0x173, 0x80000000);
+    self.rawFields.set(0x1_73, 0x80_00_00_00);
     expect(view([self]).slots.find((slot) => slot.slot === 23)).toMatchObject({
       status: "occupied",
       guid: 0x8000000000000003n,
@@ -126,9 +126,9 @@ describe("carried inventory authority", () => {
 
   test("rejects other owners, wrong contained chains, aliased items and impossible bag sizes", () => {
     const self = entity(1n, ObjectType.PLAYER, [
-      [0x16a, 2],
-      [0x172, 3],
-      [0x174, 3],
+      [0x1_6a, 2],
+      [0x1_72, 3],
+      [0x1_74, 3],
     ]);
     const bag = entity(2n, ObjectType.CONTAINER, [
       [3, 100],
@@ -163,10 +163,10 @@ describe("carried inventory authority", () => {
 
   test("does not recursively follow a container cycle or count bank storage as carried", () => {
     const self = entity(1n, ObjectType.PLAYER, [
-      [0x16a, 2],
-      [0x192, 9],
-      [0x1f0, 3],
-      [0x230, 4],
+      [0x1_6a, 2],
+      [0x1_92, 9],
+      [0x1_f0, 3],
+      [0x2_30, 4],
     ]);
     const bag = entity(2n, ObjectType.CONTAINER, [
       [3, 100],
@@ -195,8 +195,8 @@ describe("carried inventory authority", () => {
 
   test("does not count one equipped bag twice through two ambiguous addresses", () => {
     const self = entity(1n, ObjectType.PLAYER, [
-      [0x16a, 2],
-      [0x16c, 2],
+      [0x1_6a, 2],
+      [0x1_6c, 2],
     ]);
     const bag = entity(2n, ObjectType.CONTAINER, [
       [3, 100],
@@ -216,8 +216,8 @@ describe("carried inventory authority", () => {
 
   test("tracks raw count and coinage updates without mutating a prior snapshot", () => {
     const self = entity(1n, ObjectType.PLAYER, [
-      [0x492, 10],
-      [0x172, 3],
+      [0x4_92, 10],
+      [0x1_72, 3],
     ]);
     const item = entity(3n, ObjectType.ITEM, [
       [3, 200],
@@ -226,7 +226,7 @@ describe("carried inventory authority", () => {
       [14, 2],
     ]);
     const before = view([self, item]);
-    self.rawFields.set(0x492, 19);
+    self.rawFields.set(0x4_92, 19);
     item.rawFields.set(14, 5);
     const after = view([self, item]);
     expect(before.coinage).toBe(10);

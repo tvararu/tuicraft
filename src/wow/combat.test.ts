@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { CombatRuntime } from "wow/combat";
-import { GameOpcode } from "wow/protocol/opcodes";
-import { ObjectType } from "wow/protocol/entity-fields";
 import { EntityStore } from "wow/entity-store";
-import type { CastFailed, SpellStart } from "wow/protocol/spell";
+import { ObjectType } from "wow/protocol/entity-fields";
 import type { MonsterMovePath } from "wow/protocol/monster-move";
+import { GameOpcode } from "wow/protocol/opcodes";
+import type { CastFailed, SpellStart } from "wow/protocol/spell";
 
 function path(over: Partial<MonsterMovePath>): MonsterMovePath {
   return {
@@ -272,7 +272,7 @@ test("a new open Catmull packet cannot promote old facing to authoritative launc
   combat.applyMonsterMove(
     path({
       start: { x: 0, y: 2, z: 0 },
-      flags: 0x40000,
+      flags: 0x4_00_00,
       points: [
         { x: 0, y: 2, z: 0 },
         { x: 0, y: 5, z: 0 },

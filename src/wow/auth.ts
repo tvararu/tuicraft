@@ -1,19 +1,19 @@
 import type { Socket } from "bun";
-import { PacketReader } from "wow/protocol/packet";
+import type { ClientConfig } from "wow/client";
 import { SRP, type SRPResult } from "wow/crypto/srp";
-import { AuthOpcode } from "wow/protocol/opcodes";
 import {
   buildLogonChallenge,
-  parseLogonChallengeResponse,
   buildLogonProof,
-  parseLogonProofResponse,
   buildRealmListRequest,
+  buildReconnectProof,
+  parseLogonChallengeResponse,
+  parseLogonProofResponse,
   parseRealmList,
   parseReconnectChallengeResponse,
-  buildReconnectProof,
 } from "wow/protocol/auth";
+import { AuthOpcode } from "wow/protocol/opcodes";
+import { PacketReader } from "wow/protocol/packet";
 import { AccumulatorBuffer } from "wow/protocol/world";
-import type { ClientConfig } from "wow/client";
 
 export type AuthResult = {
   sessionKey: Uint8Array;
@@ -195,7 +195,7 @@ export async function authWithRetry(
       if (!(err instanceof ReconnectRequiredError)) throw err;
       lastError = err;
       if (attempt + 1 < maxAttempts) {
-        const delay = Math.min(baseDelay * 2 ** attempt, 60000);
+        const delay = Math.min(baseDelay * 2 ** attempt, 60_000);
         await Bun.sleep(delay);
       }
     }

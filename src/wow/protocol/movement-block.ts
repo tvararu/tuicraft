@@ -1,10 +1,10 @@
-import type { PacketReader } from "wow/protocol/packet";
 import { MovementFlag, UpdateFlag } from "wow/protocol/entity-fields";
-import { parseMovementInfo } from "wow/protocol/movement";
 import {
-  parseCreateSpline,
   type CreateSpline,
+  parseCreateSpline,
 } from "wow/protocol/monster-move";
+import { parseMovementInfo } from "wow/protocol/movement";
+import type { PacketReader } from "wow/protocol/packet";
 
 export type MovementData = {
   updateFlags: number;

@@ -1,15 +1,15 @@
-import type { ControlEvent, ControlPose, ControlState } from "wow/control";
 import { formatGuid } from "ui/format";
+import type { ControlEvent, ControlPose, ControlState } from "wow/control";
 
 export function formatPoseObj(pose: ControlPose): Record<string, unknown> {
   return {
     mapId: pose.mapId,
-    x: pose.x,
-    y: pose.y,
-    z: pose.z,
     orientation: pose.orientation,
     source: pose.source,
     updatedAt: pose.updatedAt,
+    x: pose.x,
+    y: pose.y,
+    z: pose.z,
   };
 }
 
@@ -27,21 +27,21 @@ export function formatControlStateObj(
   state: ControlState,
 ): Record<string, unknown> {
   return {
-    selfGuid: formatGuid(state.selfGuid),
+    blockedReason: state.blockedReason ?? null,
+    direction: state.direction ?? null,
+    movementAllowed: state.movementAllowed,
+    moving: state.moving,
+    nextStep: nextStepFor(state.blockedReason),
+    owner: state.owner,
     pose: state.pose ? formatPoseObj(state.pose) : null,
-    serverPose: state.serverPose ? formatPoseObj(state.serverPose) : null,
-    target: state.target === undefined ? null : formatGuid(state.target),
     requestedTarget:
       state.requestedTarget === undefined
         ? null
         : formatGuid(state.requestedTarget),
-    moving: state.moving,
-    direction: state.direction ?? null,
-    movementAllowed: state.movementAllowed,
-    blockedReason: state.blockedReason ?? null,
-    nextStep: nextStepFor(state.blockedReason),
+    selfGuid: formatGuid(state.selfGuid),
+    serverPose: state.serverPose ? formatPoseObj(state.serverPose) : null,
     speed: state.speed,
-    owner: state.owner,
+    target: state.target === undefined ? null : formatGuid(state.target),
   };
 }
 
@@ -79,9 +79,9 @@ export function formatControlEventObj(
   event: ControlEvent,
 ): Record<string, unknown> {
   return {
-    type: "CONTROL",
     event: event.type,
     reason: event.reason,
+    type: "CONTROL",
     ...formatControlStateObj(event.state),
   };
 }

@@ -1,5 +1,5 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export const ATTACK_SWING_ERRORS = [
   [GameOpcode.SMSG_ATTACKSWING_NOTINRANGE, "not_in_range"],

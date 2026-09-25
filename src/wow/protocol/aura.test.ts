@@ -1,6 +1,6 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import { parseAuraUpdate, parseAuraUpdateAll } from "wow/protocol/aura";
+import { PacketReader } from "wow/protocol/packet";
 
 function reader(bytes: number[]): PacketReader {
   return new PacketReader(Uint8Array.from(bytes));
@@ -30,7 +30,7 @@ describe("parseAuraUpdate", () => {
       level: 60,
       stacks: 2,
       caster: 0x42n,
-      duration: 10000,
+      duration: 10_000,
       timeLeft: 1000,
     });
   });

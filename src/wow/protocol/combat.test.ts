@@ -1,11 +1,11 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import {
   buildAttackSwing,
   parseAttackStart,
   parseAttackStop,
   parseXpGain,
 } from "wow/protocol/combat";
+import { PacketReader } from "wow/protocol/packet";
 
 function reader(bytes: number[]): PacketReader {
   return new PacketReader(Uint8Array.from(bytes));

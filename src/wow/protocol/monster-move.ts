@@ -1,17 +1,17 @@
-import { PacketReader, type Vec3 } from "wow/protocol/packet";
+import type { PacketReader, Vec3 } from "wow/protocol/packet";
 
 export const SplineFlag = {
-  FALLING: 0x00000200,
-  PARABOLIC: 0x00000800,
-  FLYING: 0x00002000,
-  FINAL_POINT: 0x00008000,
-  FINAL_TARGET: 0x00010000,
-  FINAL_ANGLE: 0x00020000,
-  CATMULLROM: 0x00040000,
-  CYCLIC: 0x00080000,
-  ANIMATION: 0x00200000,
-  TRANSPORT_ENTER: 0x00800000,
-  TRANSPORT_EXIT: 0x01000000,
+  FALLING: 0x00_00_02_00,
+  PARABOLIC: 0x00_00_08_00,
+  FLYING: 0x00_00_20_00,
+  FINAL_POINT: 0x00_00_80_00,
+  FINAL_TARGET: 0x00_01_00_00,
+  FINAL_ANGLE: 0x00_02_00_00,
+  CATMULLROM: 0x00_04_00_00,
+  CYCLIC: 0x00_08_00_00,
+  ANIMATION: 0x00_20_00_00,
+  TRANSPORT_ENTER: 0x00_80_00_00,
+  TRANSPORT_EXIT: 0x01_00_00_00,
 } as const;
 
 const MASK_CATMULLROM = SplineFlag.FLYING | SplineFlag.CATMULLROM;
@@ -68,9 +68,9 @@ export type CreateSpline = {
 };
 
 function unpackXyz(packed: number): Vec3 {
-  const x = ((packed & 0x7ff) << 21) >> 21;
-  const y = (((packed >>> 11) & 0x7ff) << 21) >> 21;
-  const z = (((packed >>> 22) & 0x3ff) << 22) >> 22;
+  const x = ((packed & 0x7_ff) << 21) >> 21;
+  const y = (((packed >>> 11) & 0x7_ff) << 21) >> 21;
+  const z = (((packed >>> 22) & 0x3_ff) << 22) >> 22;
   return { x: x * 0.25, y: y * 0.25, z: z * 0.25 };
 }
 

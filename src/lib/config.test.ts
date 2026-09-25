@@ -1,13 +1,13 @@
-import { test, expect, describe, afterEach } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { rm, stat } from "node:fs/promises";
 import {
+  type Config,
   parseConfig,
   readConfig,
   serializeConfig,
   writeConfig,
-  type Config,
 } from "lib/config";
 import { pathsUnder } from "test/temp-paths";
-import { rm, stat } from "node:fs/promises";
 
 const tmpBase = `./tmp/config-test-${Date.now()}`;
 const paths = pathsUnder(tmpBase);
@@ -90,11 +90,11 @@ describe("serializeConfig", () => {
   test("round-trips through parse", () => {
     const cfg: Config = {
       account: "x",
-      password: "xwow2026",
       character: "Xia",
       host: "t1",
-      port: 3724,
       language: 1,
+      password: "xwow2026",
+      port: 3724,
       timeout_minutes: 30,
     };
     const text = serializeConfig(cfg);
@@ -105,11 +105,11 @@ describe("serializeConfig", () => {
   test("escapes backslash and double-quote in values", () => {
     const cfg: Config = {
       account: 'te"st',
-      password: "p\\w",
       character: "Z",
       host: "t1",
-      port: 3724,
       language: 1,
+      password: "p\\w",
+      port: 3724,
       timeout_minutes: 30,
     };
     const text = serializeConfig(cfg);
@@ -122,17 +122,17 @@ describe("serializeConfig", () => {
 
 const sampleConfig: Config = {
   account: "testuser",
-  password: "testpass",
   character: "Gandalf",
   host: "t1",
-  port: 3724,
   language: 1,
+  password: "testpass",
+  port: 3724,
   timeout_minutes: 30,
 };
 
 describe("readConfig", () => {
   afterEach(async () => {
-    await rm(tmpBase, { recursive: true, force: true });
+    await rm(tmpBase, { force: true, recursive: true });
   });
 
   test("throws when config file does not exist", async () => {
@@ -150,7 +150,7 @@ describe("readConfig", () => {
 
 describe("writeConfig", () => {
   afterEach(async () => {
-    await rm(tmpBase, { recursive: true, force: true });
+    await rm(tmpBase, { force: true, recursive: true });
   });
 
   test("creates directory and writes config", async () => {

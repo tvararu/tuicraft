@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { questLogChanges, type QuestLog } from "wow/quest-slots";
+import { type QuestLog, questLogChanges } from "wow/quest-slots";
 
 function log(entries: [number, number][]): QuestLog {
   const slots = Array.from({ length: 25 }, (_, slot) => ({

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { ObjectType } from "wow/protocol/entity-fields";
 import {
-  EntityStore,
   type EntityEvent,
-  type UnitEntity,
+  EntityStore,
   type GameObjectEntity,
+  type UnitEntity,
 } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
 
 describe("EntityStore", () => {
   test("create adds entity and fires appear event", () => {

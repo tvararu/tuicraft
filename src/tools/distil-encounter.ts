@@ -61,42 +61,42 @@ export function distil(
   const mine = stamped.filter((s) => s.event.runId === runId);
   const first = mine[0];
   const last = mine[mine.length - 1];
-  if (!first || !last) throw new Error(`No tactics events for run ${runId}`);
+  if (!(first && last)) throw new Error(`No tactics events for run ${runId}`);
   const draft: Draft = {
-    runId,
-    instruction: "",
-    promptVariant,
     character: {},
-    target: {},
     decisions: [],
     discarded: [],
-    transportErrors: [],
-    outcome: {},
+    instruction: "",
     model: undefined,
     offered: [],
+    outcome: {},
     pending: undefined,
+    promptVariant,
+    runId,
+    target: {},
+    transportErrors: [],
   };
   for (const { event } of mine) reduce(draft, event);
   const elapsedMs = last.at - first.at;
   const count = draft.decisions.length;
   const perSecond = elapsedMs > 0 ? (count / elapsedMs) * 1000 : 0;
   return {
-    runId,
-    recordedAt: new Date(first.at).toISOString(),
-    instruction: draft.instruction,
-    promptVariant: draft.promptVariant,
-    character: draft.character,
-    target: draft.target,
-    decisions: draft.decisions,
-    discarded: draft.discarded,
-    transportErrors: draft.transportErrors,
     cadence: {
       decisions: count,
       elapsedMs,
       perSecond: Math.round(perSecond * 1000) / 1000,
     },
-    outcome: draft.outcome,
+    character: draft.character,
+    decisions: draft.decisions,
+    discarded: draft.discarded,
+    instruction: draft.instruction,
     model: draft.model,
+    outcome: draft.outcome,
+    promptVariant: draft.promptVariant,
+    recordedAt: new Date(first.at).toISOString(),
+    runId,
+    target: draft.target,
+    transportErrors: draft.transportErrors,
     ...(draft.fault === undefined ? {} : { fault: draft.fault }),
     rawLines: mine.length,
   };
@@ -123,14 +123,14 @@ function reduce(draft: Draft, event: TacticsEvent): void {
       draft.discarded.push(
         event.actionId === undefined
           ? { reason: event.reason ?? "unknown" }
-          : { reason: event.reason ?? "unknown", actionId: event.actionId },
+          : { actionId: event.actionId, reason: event.reason ?? "unknown" },
       );
       return;
     case "transport":
       if (event.error !== undefined) draft.transportErrors.push(event.error);
       return;
     case "outcome":
-      draft.outcome = { status: event.status, reason: event.reason };
+      draft.outcome = { reason: event.reason, status: event.status };
       return;
   }
 }
@@ -147,15 +147,15 @@ function onRequest(
   if (self)
     draft.character = {
       level: num(self["level"]),
-      maxPower: num(self["maxPower"]),
       maxHealth: num(self["maxHealth"]),
+      maxPower: num(self["maxPower"]),
     };
   if (target)
     draft.target = {
       guid: str(target["guid"]) ?? draft.target.guid,
-      name: str(target["name"]),
       level: num(target["level"]),
       maxHealth: num(target["maxHealth"]),
+      name: str(target["name"]),
     };
 }
 
@@ -165,13 +165,13 @@ function onResult(
 ): void {
   draft.model = event.model ?? draft.model;
   draft.pending = {
-    n: draft.decisions.length + 1,
-    offered: draft.offered,
+    applied: false,
     choice: event.choice ?? "?",
     confidence: event.confidence ?? Number.NaN,
-    probabilities: event.probabilities ?? {},
     latencyMs: event.elapsedMs ?? Number.NaN,
-    applied: false,
+    n: draft.decisions.length + 1,
+    offered: draft.offered,
+    probabilities: event.probabilities ?? {},
   };
   draft.decisions.push(draft.pending);
 }

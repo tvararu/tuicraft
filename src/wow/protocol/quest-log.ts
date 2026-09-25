@@ -1,4 +1,4 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export type QuestUpdateAddKill = {
   questId: number;
@@ -30,7 +30,7 @@ export function buildQuestLogRemoveQuest(slot: number): Uint8Array {
 }
 
 export function npcOrGoId(encoded: number): number {
-  return encoded & 0x80000000 ? -(encoded & 0x7fffffff) : encoded;
+  return encoded & 0x80_00_00_00 ? -(encoded & 0x7f_ff_ff_ff) : encoded;
 }
 
 export function parseQuestUpdateAddKill(r: PacketReader): QuestUpdateAddKill {

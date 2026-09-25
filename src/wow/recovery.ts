@@ -1,14 +1,11 @@
-import type { Vec3 } from "wow/protocol/packet";
-import { distance } from "wow/geometry";
 import type { ControlPose } from "wow/control";
-import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
-import { isUnit, type EntityEvent, type EntityLookup } from "wow/entity-store";
+import { type EntityEvent, type EntityLookup, isUnit } from "wow/entity-store";
+import { distance } from "wow/geometry";
 import {
-  readLife,
   type PlayerLife,
   type PlayerLifeState,
+  readLife,
 } from "wow/player-state";
-import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildReclaimCorpse,
   buildRepopRequest,
@@ -19,6 +16,9 @@ import {
   type DeathReleaseLocation,
   type ResurrectRequest,
 } from "wow/protocol/death";
+import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
+import { GameOpcode } from "wow/protocol/opcodes";
+import type { Vec3 } from "wow/protocol/packet";
 
 export type RecoveryDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
@@ -301,7 +301,8 @@ export class RecoveryRuntime {
         "Resurrection response requires observed dead or ghost state",
       );
     const offer = this.resurrectionState();
-    if (!offer || !this.offer) throw new Error("No current resurrection offer");
+    if (!(offer && this.offer))
+      throw new Error("No current resurrection offer");
     if (offer.response !== "unanswered")
       throw new Error("Resurrection offer already answered");
     if (
@@ -479,18 +480,22 @@ export class RecoveryRuntime {
     if (this.corpse.mapId !== this.corpse.corpseMapId || this.corpse.mapId < 0)
       return "corpse_position_unknown";
     if (
-      !pose ||
-      !Number.isFinite(pose.x) ||
-      !Number.isFinite(pose.y) ||
-      !Number.isFinite(pose.z)
+      !(
+        pose &&
+        Number.isFinite(pose.x) &&
+        Number.isFinite(pose.y) &&
+        Number.isFinite(pose.z)
+      )
     )
       return "pose_unknown";
     if (pose.mapId !== this.corpse.corpseMapId) return "corpse_map_mismatch";
     const point = this.corpse.position;
     if (
-      !Number.isFinite(point.x) ||
-      !Number.isFinite(point.y) ||
-      !Number.isFinite(point.z)
+      !(
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        Number.isFinite(point.z)
+      )
     )
       return "corpse_position_unknown";
     return undefined;

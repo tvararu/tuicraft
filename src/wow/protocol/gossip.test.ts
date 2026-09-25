@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { bytes } from "test/hex";
 import {
   buildGossipHello,
   buildGossipSelectOption,
   parseGossipMessage,
 } from "wow/protocol/gossip";
 import { PacketReader } from "wow/protocol/packet";
-import { bytes } from "test/hex";
 
 const guid = 0x0102030405060708n;
 const menu = bytes(`
@@ -58,7 +58,7 @@ describe("parseGossipMessage", () => {
           questId: 42,
           icon: 8,
           level: -1,
-          flags: 0x80000200,
+          flags: 0x80_00_02_00,
           repeatable: 2,
           title: "Quest",
         },

@@ -1,5 +1,5 @@
 import { describe, expect, jest, test } from "bun:test";
-import { abortReason, abortable, bounded, pause } from "lib/abort";
+import { abortable, abortReason, bounded, pause } from "lib/abort";
 
 describe("abortReason", () => {
   test("keeps the signal's own abort error", () => {

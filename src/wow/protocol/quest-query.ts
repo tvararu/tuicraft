@@ -1,11 +1,11 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
+import { npcOrGoId } from "wow/protocol/quest-log";
 import {
   factions,
   items,
   type QuestFactionReward,
   type QuestItem,
 } from "wow/protocol/questgiver";
-import { npcOrGoId } from "wow/protocol/quest-log";
 
 export type QuestObjectiveTarget = {
   encodedNpcOrGoId: number;

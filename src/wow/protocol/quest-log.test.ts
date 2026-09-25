@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
+import { PacketReader } from "wow/protocol/packet";
 import {
   buildQuestLogRemoveQuest,
-  parseQuestUpdateAddKill,
-  parseQuestUpdateAddItem,
-  parseQuestUpdateComplete,
-  parseQuestInvalid,
   parseQuestFailed,
+  parseQuestInvalid,
+  parseQuestUpdateAddItem,
+  parseQuestUpdateAddKill,
+  parseQuestUpdateComplete,
   parseQuestUpdateFailed,
   parseQuestUpdateFailedTimer,
 } from "wow/protocol/quest-log";
@@ -30,10 +30,10 @@ describe("quest log notifications", () => {
       ),
     ).toEqual({
       questId: 42,
-      encodedNpcOrGoId: 0x80000141,
+      encodedNpcOrGoId: 0x80_00_01_41,
       npcOrGoId: -321,
-      currentCount: 65536,
-      requiredCount: 65537,
+      currentCount: 65_536,
+      requiredCount: 65_537,
       guid,
     });
   });
@@ -53,7 +53,7 @@ describe("quest log notifications", () => {
 
   test("keeps failure reason distinct from quest identity and preserves unknown reasons", () => {
     expect(parseQuestInvalid(new PacketReader(bytes("01000080")))).toEqual({
-      reason: 0x80000001,
+      reason: 0x80_00_00_01,
     });
     expect(
       parseQuestFailed(new PacketReader(bytes("2a000000 32000000"))),

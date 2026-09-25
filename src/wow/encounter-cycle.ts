@@ -292,5 +292,5 @@ function skip(
   record.status = "skipped";
   record.cause = cause;
   record.outcome = outcome;
-  return undefined;
+  return;
 }

@@ -1,4 +1,4 @@
-import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
+import { type Entity, type EntityLookup, fieldOf } from "wow/entity-store";
 import { ObjectType, PLAYER_FIELDS } from "wow/protocol/entity-fields";
 
 export type QuestLogSlot = {
@@ -37,9 +37,9 @@ function logSlot(
     questId: entity?.rawFields.get(offset) ?? (idsVisible ? 0 : undefined),
     flags: fieldOf(entity, offset + 1),
     counters: [
-      low === undefined ? undefined : low & 0xffff,
+      low === undefined ? undefined : low & 0xff_ff,
       low === undefined ? undefined : low >>> 16,
-      high === undefined ? undefined : high & 0xffff,
+      high === undefined ? undefined : high & 0xff_ff,
       high === undefined ? undefined : high >>> 16,
     ],
     expiresAtSeconds: fieldOf(entity, offset + 4),

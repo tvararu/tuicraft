@@ -1,7 +1,7 @@
-import { sendToSocket, ensureDaemon } from "cli/ipc";
+import { afterEach, describe, expect, jest, test } from "bun:test";
+import { mkdir, rm, unlink, writeFile } from "node:fs/promises";
+import { ensureDaemon, sendToSocket } from "cli/ipc";
 import { pathsUnder } from "test/temp-paths";
-import { jest, test, expect, describe, afterEach } from "bun:test";
-import { writeFile, mkdir, rm, unlink } from "node:fs/promises";
 
 const paths = pathsUnder(`./tmp/cli-ipc-${Date.now()}`);
 const rtDir = paths.runtimeDir;
@@ -18,47 +18,47 @@ type FakeProc = { unref(): void; stderr: ReadableStream };
 
 function fakeProc(stderrText = ""): FakeProc {
   return {
-    unref() {},
     stderr: new ReadableStream({
       start(c) {
         if (stderrText) c.enqueue(new TextEncoder().encode(stderrText));
         c.close();
       },
     }),
+    unref() {},
   };
 }
 
 function fakeProcWithOpenStderr(): FakeProc {
   return {
-    unref() {},
     stderr: new ReadableStream({
       start(c) {
         c.enqueue(new TextEncoder().encode("bind EADDRINUSE"));
       },
     }),
+    unref() {},
   };
 }
 
 function fakeProcWithErroredStderr(): FakeProc {
   return {
-    unref() {},
     stderr: new ReadableStream({
       start(c) {
         c.error(new Error("stderr read failed"));
       },
     }),
+    unref() {},
   };
 }
 
 function listenStatus(path: string): ReturnType<typeof Bun.listen> {
   const server = Bun.listen({
-    unix: path,
     socket: {
       data(socket) {
         socket.write("CONNECTED\n\n");
         socket.flush();
       },
     },
+    unix: path,
   });
   servers.push(server);
   return server;
@@ -69,7 +69,7 @@ afterEach(async () => {
   Bun.sleep = origSleep;
   for (const s of servers) s.stop(true);
   servers = [];
-  await rm(sockPath, { recursive: true, force: true });
+  await rm(sockPath, { force: true, recursive: true });
 });
 
 type ClosingSocket = { end(): void };
@@ -109,13 +109,13 @@ describe("sendToSocket", () => {
   test("resolves on terminator without waiting for close", async () => {
     const path = `./tmp/test-terminator-${Date.now()}.sock`;
     const server = Bun.listen({
-      unix: path,
       socket: {
         data(socket) {
           socket.write("OK\n\n");
           socket.flush();
         },
       },
+      unix: path,
     });
     try {
       const lines = await sendToSocket("SAY hi", path);
@@ -137,13 +137,13 @@ describe("sendToSocket", () => {
   test("accepts a terminated empty response frame", async () => {
     const path = `./tmp/test-empty-${Date.now()}.sock`;
     const server = Bun.listen({
-      unix: path,
       socket: {
         data(socket) {
           socket.write("\n");
           socket.flush();
         },
       },
+      unix: path,
     });
     try {
       expect(await sendToSocket("READ_JSON", path)).toEqual([]);
@@ -202,7 +202,7 @@ describe("ensureDaemon", () => {
     Bun.sleep = jest.fn(async () => {
       sleepCount++;
       if (sleepCount === 2) {
-        await rm(sockPath, { recursive: true, force: true });
+        await rm(sockPath, { force: true, recursive: true });
         listenStatus(sockPath);
       }
     }) as unknown as typeof Bun.sleep;

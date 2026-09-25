@@ -1,8 +1,8 @@
-import { test, expect } from "bun:test";
+import { expect, test } from "bun:test";
 import {
-  selectJevAction,
   type JevActionOptions,
   type JevActionRequest,
+  selectJevAction,
 } from "wow/jev";
 
 const request: JevActionRequest = {
@@ -343,12 +343,12 @@ test("rounded probabilities do not require exact floating point equality", async
         answers: {
           action: {
             ...validPayload.answers.action,
-            probabilities: { smite: 0.7, wait: 0.30000001 },
+            probabilities: { smite: 0.7, wait: 0.300_000_01 },
           },
         },
       }),
   });
-  expect(result.probabilities).toEqual({ smite: 0.7, wait: 0.30000001 });
+  expect(result.probabilities).toEqual({ smite: 0.7, wait: 0.300_000_01 });
 });
 
 test("token counts must be nonnegative safe integers", async () => {
@@ -370,10 +370,10 @@ test("token counts must be nonnegative safe integers", async () => {
 
 test("nonfinite numeric values fail the response boundary", async () => {
   for (const action of [
-    { ...validPayload.answers.action, confidence: NaN },
+    { ...validPayload.answers.action, confidence: Number.NaN },
     {
       ...validPayload.answers.action,
-      probabilities: { smite: Infinity, wait: 0 },
+      probabilities: { smite: Number.POSITIVE_INFINITY, wait: 0 },
     },
   ]) {
     await expect(

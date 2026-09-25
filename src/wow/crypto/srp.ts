@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 
 export interface SRPResult {
-  K: Uint8Array;
   A: Uint8Array;
+  K: Uint8Array;
   M1: Uint8Array;
   M2: bigint;
 }

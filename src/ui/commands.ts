@@ -42,7 +42,7 @@ export type Command =
   | { type: "unimplemented"; feature: string };
 
 export function parseCommand(input: string): Command {
-  if (!input.startsWith("/")) return { type: "chat", message: input };
+  if (!input.startsWith("/")) return { message: input, type: "chat" };
 
   const spaceIdx = input.indexOf(" ");
   const cmd = spaceIdx === -1 ? input : input.slice(0, spaceIdx);
@@ -51,48 +51,48 @@ export function parseCommand(input: string): Command {
   switch (cmd) {
     case "/s":
     case "/say":
-      return { type: "say", message: rest };
+      return { message: rest, type: "say" };
     case "/y":
     case "/yell":
-      return { type: "yell", message: rest };
+      return { message: rest, type: "yell" };
     case "/g":
     case "/guild":
-      return { type: "guild", message: rest };
+      return { message: rest, type: "guild" };
     case "/p":
     case "/party":
-      return { type: "party", message: rest };
+      return { message: rest, type: "party" };
     case "/raid":
-      return { type: "raid", message: rest };
+      return { message: rest, type: "raid" };
     case "/w":
     case "/whisper": {
       const targetEnd = rest.indexOf(" ");
       if (targetEnd === -1)
-        return { type: "whisper", target: rest, message: "" };
+        return { message: "", target: rest, type: "whisper" };
       return {
-        type: "whisper",
-        target: rest.slice(0, targetEnd),
         message: rest.slice(targetEnd + 1),
+        target: rest.slice(0, targetEnd),
+        type: "whisper",
       };
     }
     case "/r":
-      return { type: "reply", message: rest };
+      return { message: rest, type: "reply" };
     case "/who":
-      return rest ? { type: "who", target: rest } : { type: "who" };
+      return rest ? { target: rest, type: "who" } : { type: "who" };
     case "/invite":
       return rest
-        ? { type: "invite", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "invite" }
+        : { message: input, type: "say" };
     case "/kick":
       return rest
-        ? { type: "kick", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "kick" }
+        : { message: input, type: "say" };
     case "/leave":
-      if (rest) return { type: "leave-channel", channel: rest.split(" ")[0]! };
+      if (rest) return { channel: rest.split(" ")[0]!, type: "leave-channel" };
       return { type: "leave" };
     case "/leader":
       return rest
-        ? { type: "leader", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "leader" }
+        : { message: input, type: "say" };
     case "/accept":
       return { type: "accept" };
     case "/decline":
@@ -102,8 +102,8 @@ export function parseCommand(input: string): Command {
     case "/tuicraft": {
       const parts = rest.split(" ");
       return {
-        type: "tuicraft",
         subcommand: parts[0] ?? "",
+        type: "tuicraft",
         value: parts[1] ?? "",
       };
     }
@@ -115,78 +115,78 @@ export function parseCommand(input: string): Command {
       const parts = rest.split(" ");
       const sub = parts[0] ?? "";
       const target = parts.slice(1).join(" ");
-      if (sub === "add" && target) return { type: "add-friend", target };
-      if (sub === "remove" && target) return { type: "remove-friend", target };
+      if (sub === "add" && target) return { target, type: "add-friend" };
+      if (sub === "remove" && target) return { target, type: "remove-friend" };
       return { type: "friends" };
     }
     case "/ignore":
-      return rest ? { type: "add-ignore", target: rest } : { type: "ignored" };
+      return rest ? { target: rest, type: "add-ignore" } : { type: "ignored" };
     case "/unignore":
       return rest
-        ? { type: "remove-ignore", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "remove-ignore" }
+        : { message: input, type: "say" };
     case "/ignorelist":
       return { type: "ignored" };
     case "/join": {
-      if (!rest) return { type: "say", message: input };
+      if (!rest) return { message: input, type: "say" };
       const [channel, password] = rest.split(" ") as [string, string?];
-      return { type: "join-channel", channel, password };
+      return { channel, password, type: "join-channel" };
     }
     case "/groster":
       return { type: "guild-roster" };
     case "/ginvite":
       return rest
-        ? { type: "guild-invite", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "guild-invite" }
+        : { message: input, type: "say" };
     case "/gkick":
       return rest
-        ? { type: "guild-kick", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "guild-kick" }
+        : { message: input, type: "say" };
     case "/gleave":
       return { type: "guild-leave" };
     case "/gpromote":
       return rest
-        ? { type: "guild-promote", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "guild-promote" }
+        : { message: input, type: "say" };
     case "/gdemote":
       return rest
-        ? { type: "guild-demote", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "guild-demote" }
+        : { message: input, type: "say" };
     case "/gleader":
       return rest
-        ? { type: "guild-leader", target: rest }
-        : { type: "say", message: input };
+        ? { target: rest, type: "guild-leader" }
+        : { message: input, type: "say" };
     case "/gmotd":
-      return { type: "guild-motd", message: rest };
+      return { message: rest, type: "guild-motd" };
     case "/gaccept":
       return { type: "guild-accept" };
     case "/gdecline":
       return { type: "guild-decline" };
     case "/mail":
-      return { type: "unimplemented", feature: "Mail reading" };
+      return { feature: "Mail reading", type: "unimplemented" };
     case "/roll": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)
         return {
+          max: Number.parseInt(parts[1]!, 10),
+          min: Number.parseInt(parts[0]!, 10),
           type: "roll",
-          min: parseInt(parts[0]!, 10),
-          max: parseInt(parts[1]!, 10),
         };
       if (parts.length === 1)
-        return { type: "roll", min: 1, max: parseInt(parts[0]!, 10) };
-      return { type: "roll", min: 1, max: 100 };
+        return { max: Number.parseInt(parts[0]!, 10), min: 1, type: "roll" };
+      return { max: 100, min: 1, type: "roll" };
     }
     case "/dnd":
-      return { type: "dnd", message: rest };
+      return { message: rest, type: "dnd" };
     case "/afk":
-      return { type: "afk", message: rest };
+      return { message: rest, type: "afk" };
     case "/e":
     case "/emote":
-      return { type: "emote", message: rest };
+      return { message: rest, type: "emote" };
   }
 
   const channelMatch = cmd.match(/^\/(\d+)$/);
   return channelMatch
-    ? { type: "channel", target: channelMatch[1]!, message: rest }
-    : { type: "say", message: input };
+    ? { message: rest, target: channelMatch[1]!, type: "channel" }
+    : { message: input, type: "say" };
 }

@@ -1,4 +1,4 @@
-import { DbcTable, openDbc, u32, type DbcFile } from "wow/dbc";
+import { type DbcFile, DbcTable, openDbc, u32 } from "wow/dbc";
 
 export type FactionRelation = "friendly" | "hostile" | "neutral" | "unknown";
 
@@ -13,7 +13,7 @@ export type FactionTemplate = {
   friendFactions: number[];
 };
 
-const HATES_ALL_EXCEPT_FRIENDS = 0x2000;
+const HATES_ALL_EXCEPT_FRIENDS = 0x20_00;
 
 const LAYOUT = {
   file: "FactionTemplate.dbc",
@@ -38,7 +38,7 @@ export class FactionTemplateCatalog {
   ): FactionRelation {
     const source = this.get(sourceTemplateId);
     const target = this.get(targetTemplateId);
-    if (!source || !target) return "unknown";
+    if (!(source && target)) return "unknown";
     if (isHostileTo(source, target)) return "hostile";
     if (isFriendlyTo(source, target)) return "friendly";
     if (isFriendlyTo(target, source)) return "friendly";

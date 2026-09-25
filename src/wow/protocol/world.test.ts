@@ -1,16 +1,16 @@
-import { test, expect, describe, jest } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
+import { Arc4 } from "wow/crypto/arc4";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
-  buildWorldAuthPacket,
-  parseCharacterList,
-  OpcodeDispatch,
   AccumulatorBuffer,
   buildOutgoingPacket,
+  buildWorldAuthPacket,
   decryptIncomingHeader,
   INCOMING_HEADER_SIZE,
+  OpcodeDispatch,
   OUTGOING_HEADER_SIZE,
+  parseCharacterList,
 } from "wow/protocol/world";
-import { Arc4 } from "wow/crypto/arc4";
 
 test("buildWorldAuthPacket produces valid packet", async () => {
   const sessionKey = new Uint8Array(40);
@@ -131,11 +131,11 @@ test("AccumulatorBuffer peek does not consume", () => {
 
 test("buildOutgoingPacket creates correct header without encryption", () => {
   const body = new Uint8Array([0xaa, 0xbb]);
-  const pkt = buildOutgoingPacket(0x01ed, body);
+  const pkt = buildOutgoingPacket(0x01_ed, body);
   expect(pkt.byteLength).toBe(OUTGOING_HEADER_SIZE + 2);
   const view = new DataView(pkt.buffer, pkt.byteOffset, pkt.byteLength);
   expect(view.getUint16(0, false)).toBe(6);
-  expect(view.getUint32(2, true)).toBe(0x01ed);
+  expect(view.getUint32(2, true)).toBe(0x01_ed);
   expect(pkt[6]).toBe(0xaa);
   expect(pkt[7]).toBe(0xbb);
 });
@@ -145,7 +145,7 @@ test("buildOutgoingPacket encrypts header with arc4", () => {
   for (let i = 0; i < 40; i++) sessionKey[i] = i;
   const arc4 = new Arc4(sessionKey);
   const body = new Uint8Array([0xcc]);
-  const pkt = buildOutgoingPacket(0x01ed, body, arc4);
+  const pkt = buildOutgoingPacket(0x01_ed, body, arc4);
   expect(pkt.byteLength).toBe(OUTGOING_HEADER_SIZE + 1);
   expect(pkt[6]).toBe(0xcc);
 });
@@ -154,10 +154,10 @@ test("decryptIncomingHeader parses without encryption", () => {
   const header = new Uint8Array(4);
   const view = new DataView(header.buffer);
   view.setUint16(0, 10, false);
-  view.setUint16(2, 0x01ee, true);
+  view.setUint16(2, 0x01_ee, true);
   const result = decryptIncomingHeader(header);
   expect(result.size).toBe(10);
-  expect(result.opcode).toBe(0x01ee);
+  expect(result.opcode).toBe(0x01_ee);
 });
 
 test("INCOMING_HEADER_SIZE is 4", () => {
@@ -171,7 +171,7 @@ test("OUTGOING_HEADER_SIZE is 6", () => {
 describe("OpcodeDispatch", () => {
   test("has() returns false for unregistered opcode", () => {
     const d = new OpcodeDispatch();
-    expect(d.has(0x9999)).toBe(false);
+    expect(d.has(0x99_99)).toBe(false);
   });
 
   test("has() returns true after on()", () => {

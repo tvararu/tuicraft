@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   daemonCommandFailed,
-  walkCommandFailed,
   decodeReply,
   errorEnvelope,
   formatHumanIntent,
+  walkCommandFailed,
 } from "cli/send-output";
 
 describe("decodeReply", () => {
@@ -13,10 +13,10 @@ describe("decodeReply", () => {
     (line) => {
       expect(decodeReply("send", "intent", [line])).toEqual({
         command: "send",
-        kind: "intent",
         data: null,
-        events: [],
         error: null,
+        events: [],
+        kind: "intent",
       });
     },
   );
@@ -24,20 +24,20 @@ describe("decodeReply", () => {
   test("treats a slash OK reply as an intent", () => {
     expect(decodeReply("send", "slash", ["OK"])).toEqual({
       command: "send",
-      kind: "intent",
       data: null,
-      events: [],
       error: null,
+      events: [],
+      kind: "intent",
     });
   });
 
   test("reports ERR instead of fabricated chat success", () => {
     expect(decodeReply("send", "intent", ["ERR rooted"])).toEqual({
       command: "send",
-      kind: "error",
       data: null,
+      error: { message: "rooted", stage: "command" },
       events: [],
-      error: { stage: "command", message: "rooted" },
+      kind: "error",
     });
   });
 
@@ -46,10 +46,10 @@ describe("decodeReply", () => {
       decodeReply("send", "slash", ["UNIMPLEMENTED Mail reading"]),
     ).toEqual({
       command: "send",
-      kind: "error",
       data: null,
+      error: { message: "Mail reading", stage: "command" },
       events: [],
-      error: { stage: "command", message: "Mail reading" },
+      kind: "error",
     });
   });
 
@@ -58,10 +58,10 @@ describe("decodeReply", () => {
       decodeReply("read", "events", ['{"type":"SAY"}', "ERR read failed"]),
     ).toEqual({
       command: "read",
-      kind: "error",
       data: null,
+      error: { message: "read failed", stage: "command" },
       events: [],
-      error: { stage: "command", message: "read failed" },
+      kind: "error",
     });
   });
 
@@ -70,20 +70,20 @@ describe("decodeReply", () => {
       decodeReply("who", "json", ['{"players":[{"name":"Aria"}]}']),
     ).toEqual({
       command: "who",
-      kind: "result",
       data: { players: [{ name: "Aria" }] },
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
   test("keeps a single JSON array as result data", () => {
     expect(decodeReply("spells", "json", ['[{"id":5},9]'])).toEqual({
       command: "spells",
-      kind: "result",
       data: [{ id: 5 }, 9],
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
@@ -92,20 +92,20 @@ describe("decodeReply", () => {
       decodeReply("nearby", "nearby", ['{"guid":"0x1"}', '{"guid":"0x2"}']),
     ).toEqual({
       command: "nearby",
-      kind: "result",
       data: [{ guid: "0x1" }, { guid: "0x2" }],
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
   test("returns an empty result for an empty nearby reply", () => {
     expect(decodeReply("nearby", "nearby", [])).toEqual({
       command: "nearby",
-      kind: "result",
       data: [],
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
@@ -114,10 +114,10 @@ describe("decodeReply", () => {
       decodeReply("nearby", "nearby", ['{"guid":"0x1"}', "7"]),
     ).toMatchObject({
       command: "nearby",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "command" },
+      events: [],
+      kind: "error",
     });
   });
 
@@ -129,23 +129,23 @@ describe("decodeReply", () => {
       ]),
     ).toEqual({
       command: "read",
-      kind: "events",
       data: null,
-      events: [
-        { type: "SAY", message: "hi" },
-        { type: "WHISPER", message: "bye" },
-      ],
       error: null,
+      events: [
+        { message: "hi", type: "SAY" },
+        { message: "bye", type: "WHISPER" },
+      ],
+      kind: "events",
     });
   });
 
   test("returns an empty event envelope for an empty read", () => {
     expect(decodeReply("read", "events", [])).toEqual({
       command: "read",
-      kind: "events",
       data: null,
-      events: [],
       error: null,
+      events: [],
+      kind: "events",
     });
   });
 
@@ -154,46 +154,46 @@ describe("decodeReply", () => {
       decodeReply("send", "slash", ["[guild] No roster", '{"text":"raw"}']),
     ).toEqual({
       command: "send",
-      kind: "result",
       data: { lines: ["[guild] No roster", '{"text":"raw"}'] },
-      events: [],
       error: null,
+      events: [],
+      kind: "result",
     });
   });
 
   test("rejects a missing intent acknowledgment", () => {
     expect(decodeReply("send", "intent", [])).toMatchObject({
       command: "send",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "command" },
+      events: [],
+      kind: "error",
     });
   });
 
   test("rejects a non-acknowledgment intent reply", () => {
     expect(decodeReply("fight", "intent", ["CONNECTED"])).toMatchObject({
       command: "fight",
-      kind: "error",
       error: { stage: "command" },
+      kind: "error",
     });
   });
 
   test("rejects extra JSON documents instead of silently dropping them", () => {
     expect(decodeReply("who", "json", ["{}", "{}"])).toMatchObject({
       command: "who",
-      kind: "error",
       error: { stage: "command" },
+      kind: "error",
     });
   });
 
   test("reports malformed JSON as a command error", () => {
     expect(decodeReply("who", "json", ['{"players":'])).toMatchObject({
       command: "who",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "command" },
+      events: [],
+      kind: "error",
     });
   });
 
@@ -202,10 +202,10 @@ describe("decodeReply", () => {
       decodeReply("nearby", "nearby", ['{"guid":"0x1"}', "{"]),
     ).toMatchObject({
       command: "nearby",
-      kind: "error",
       data: null,
-      events: [],
       error: { stage: "command" },
+      events: [],
+      kind: "error",
     });
   });
 
@@ -214,10 +214,10 @@ describe("decodeReply", () => {
     (line) => {
       expect(decodeReply("read", "events", [line])).toMatchObject({
         command: "read",
-        kind: "error",
         data: null,
-        events: [],
         error: { stage: "command" },
+        events: [],
+        kind: "error",
       });
     },
   );
@@ -230,27 +230,27 @@ describe("envelope constructors", () => {
       errorEnvelope("send", "wait", "connection lost", acknowledged),
     ).toEqual({
       command: "send",
-      kind: "intent",
       data: null,
+      error: { message: "connection lost", stage: "wait" },
       events: [],
-      error: { stage: "wait", message: "connection lost" },
+      kind: "intent",
     });
   });
 
   test("retains prior data and events when a later wait fails", () => {
     const previous = {
       command: "send",
-      kind: "result" as const,
       data: { lines: ["joined"] },
-      events: [{ type: "SAY", message: "hi" }],
       error: null,
+      events: [{ message: "hi", type: "SAY" }],
+      kind: "result" as const,
     };
     expect(errorEnvelope("send", "wait", "connection lost", previous)).toEqual({
       command: "send",
-      kind: "result",
       data: { lines: ["joined"] },
-      events: [{ type: "SAY", message: "hi" }],
-      error: { stage: "wait", message: "connection lost" },
+      error: { message: "connection lost", stage: "wait" },
+      events: [{ message: "hi", type: "SAY" }],
+      kind: "result",
     });
   });
 });

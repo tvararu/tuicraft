@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { packDbc } from "test/dbc";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { packDbc } from "test/dbc";
 import { loadFactionTemplates } from "wow/faction-template";
 
 const FIELDS = 14;
@@ -123,7 +123,7 @@ describe("FactionTemplateCatalog.relation", () => {
   test("hates everyone except friends when flagged", async () => {
     const catalog = await loadFactionTemplates(
       await writeTemplates([
-        templateRow({ 0: 1, 1: 10, 2: 0x2000 }),
+        templateRow({ 0: 1, 1: 10, 2: 0x20_00 }),
         templateRow({ 0: 2, 1: 20 }),
       ]),
     );

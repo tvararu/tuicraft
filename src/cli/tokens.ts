@@ -1,13 +1,13 @@
 import { messageOf } from "lib/errors";
-import type { MovementDirection } from "wow/control";
 import type { WalkTarget } from "wow/client";
-import { parseFramingVariant, type FramingVariant } from "wow/framing";
+import type { MovementDirection } from "wow/control";
+import { type FramingVariant, parseFramingVariant } from "wow/framing";
 import { DEFAULT_FIGHT_INSTRUCTION } from "wow/tactics";
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; reason: string };
 
 const MAX_GUID = 0xffff_ffff_ffff_ffffn;
-const MAX_UINT32 = 0xffff_ffff;
+const MAX_UINT32 = 0xff_ff_ff_ff;
 const DEFAULT_MOVE_MS = 1000;
 const MAX_MOVE_MS = 10_000;
 const MAX_WALK_YARDS = 20;
@@ -126,11 +126,11 @@ export function parseWalkToward(
   if (rest.length === 1) {
     const guid = parseGuidArg(rest, true);
     if (!guid.ok) return guid;
-    return ok({ yards, target: { kind: "guid", guid: guid.value.guid } });
+    return ok({ target: { guid: guid.value.guid, kind: "guid" }, yards });
   }
   const point = parsePoint(rest);
   if (!point) return fail("invalid walk target");
-  return ok({ yards, target: { kind: "point", ...point } });
+  return ok({ target: { kind: "point", ...point }, yards });
 }
 
 export function parseCast(
@@ -141,7 +141,7 @@ export function parseCast(
   if (spellId === undefined) return fail("invalid spell");
   const guid = parseGuid(tokens[1]!);
   if (guid === undefined) return fail("invalid guid");
-  return ok({ spellId, guid });
+  return ok({ guid, spellId });
 }
 
 export function parseResurrect(tokens: string[]): Parsed<{ accept: boolean }> {
@@ -197,7 +197,7 @@ export function parseFight(tokens: string[]): Parsed<FightArgs> {
     return fail(words.length ? "invalid guid" : "invalid fight");
   const instruction = oneLine(words.slice(1).join(" "));
   if (!instruction.ok) return instruction;
-  return ok({ guid, instruction: instruction.value, framing });
+  return ok({ framing, guid, instruction: instruction.value });
 }
 
 export type CycleArgs = {

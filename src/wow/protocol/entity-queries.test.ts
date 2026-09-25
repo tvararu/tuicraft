@@ -1,11 +1,11 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "./packet";
+import { describe, expect, test } from "bun:test";
 import {
   buildCreatureQuery,
-  parseCreatureQueryResponse,
   buildGameObjectQuery,
+  parseCreatureQueryResponse,
   parseGameObjectQueryResponse,
 } from "./entity-queries";
+import { PacketReader, PacketWriter } from "./packet";
 
 describe("creature query", () => {
   test("buildCreatureQuery produces u32 entry + u64 guid", () => {
@@ -32,7 +32,7 @@ describe("creature query", () => {
 
   test("parseCreatureQueryResponse handles unknown entry", () => {
     const w = new PacketWriter();
-    w.uint32LE(1234 | 0x80000000);
+    w.uint32LE(1234 | 0x80_00_00_00);
     const r = new PacketReader(w.finish());
     const result = parseCreatureQueryResponse(r);
     expect(result.entry).toBe(1234);
@@ -72,7 +72,7 @@ describe("game object query", () => {
 
   test("parseGameObjectQueryResponse handles unknown entry", () => {
     const w = new PacketWriter();
-    w.uint32LE(5678 | 0x80000000);
+    w.uint32LE(5678 | 0x80_00_00_00);
     const r = new PacketReader(w.finish());
     const result = parseGameObjectQueryResponse(r);
     expect(result.entry).toBe(5678);

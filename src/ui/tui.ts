@@ -1,18 +1,18 @@
 import { createInterface } from "node:readline";
-import { ChatType } from "wow/protocol/opcodes";
-import type { WorldHandle } from "wow/client";
-import { parseCommand, type Command } from "ui/commands";
+import { type Command, parseCommand } from "ui/commands";
 import {
-  formatMessage,
-  formatError,
-  formatWhoResults,
-  formatPrompt,
-  formatGroupEvent,
   formatEntityEvent,
+  formatError,
   formatFriendList,
-  formatIgnoreList,
+  formatGroupEvent,
   formatGuildRoster,
+  formatIgnoreList,
+  formatMessage,
+  formatPrompt,
+  formatWhoResults,
 } from "ui/format";
+import type { WorldHandle } from "wow/client";
+import { ChatType } from "wow/protocol/opcodes";
 
 export type TuiState = {
   handle: WorldHandle;
@@ -58,20 +58,20 @@ export async function executeCommand(
       state.lastWhisperFrom = cmd.target;
       break;
     case "reply":
-      if (!state.lastWhisperFrom) {
-        state.write(formatError("No one has whispered you yet.") + "\n");
-      } else {
+      if (state.lastWhisperFrom) {
         state.handle.sendWhisper(state.lastWhisperFrom, cmd.message);
+      } else {
+        state.write(formatError("No one has whispered you yet.") + "\n");
       }
       break;
     case "channel": {
       const channel = /^\d+$/.test(cmd.target)
-        ? state.handle.getChannel(parseInt(cmd.target, 10))
+        ? state.handle.getChannel(Number.parseInt(cmd.target, 10))
         : cmd.target;
-      if (!channel) {
-        state.write(formatError(`Not in channel ${cmd.target}.`) + "\n");
-      } else {
+      if (channel) {
         state.handle.sendChannel(channel, cmd.message);
+      } else {
+        state.write(formatError(`Not in channel ${cmd.target}.`) + "\n");
       }
       break;
     }
@@ -204,9 +204,9 @@ export function startTui(
   const write = opts.write ?? ((s: string) => void process.stdout.write(s));
   const state: TuiState = {
     handle,
-    write,
     lastWhisperFrom: undefined,
     showEntityEvents: false,
+    write,
   };
 
   return new Promise<void>((resolve) => {

@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { bytes } from "test/hex";
 import type { Entity } from "wow/entity-store";
-import { RewardsRuntime, type RewardsEvent } from "wow/rewards";
 import { ObjectType } from "wow/protocol/entity-fields";
-import { PacketReader } from "wow/protocol/packet";
+import { parseInventoryChangeFailure } from "wow/protocol/inventory";
 import {
   parseItemPushResult,
   parseLootMoneyNotify,
@@ -11,7 +10,8 @@ import {
   parseLootRemoved,
   parseLootResponse,
 } from "wow/protocol/loot";
-import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import { PacketReader } from "wow/protocol/packet";
+import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 
 function entity(
   guid: bigint,
@@ -33,7 +33,7 @@ function entity(
 function fixture() {
   const self = entity(1n, ObjectType.PLAYER, [
     [0x18, 100],
-    [0x492, 10],
+    [0x4_92, 10],
   ]);
   const target = entity(2n, ObjectType.UNIT, [[0x4f, 1]]);
   const entities = new Map([
@@ -71,7 +71,7 @@ describe("authoritative loot runtime", () => {
     const f = fixture();
     expect(f.runtime.open(2n).loot.phase).toBe("opening");
     expect(f.sent).toEqual([
-      { opcode: 0x15d, body: bytes("0200000000000000") },
+      { opcode: 0x1_5d, body: bytes("0200000000000000") },
     ]);
     expect(() => f.runtime.open(3n)).toThrow();
     expect(() => f.runtime.take(4)).toThrow();
@@ -108,7 +108,7 @@ describe("authoritative loot runtime", () => {
     expect(() => f.runtime.take(1)).toThrow();
     expect(() => f.runtime.take(8)).toThrow();
     f.runtime.take(7);
-    expect(f.sent.at(-1)).toEqual({ opcode: 0x108, body: bytes("07") });
+    expect(f.sent.at(-1)).toEqual({ opcode: 0x1_08, body: bytes("07") });
     expect(() => f.runtime.take(4)).toThrow();
   });
 
@@ -136,7 +136,7 @@ describe("authoritative loot runtime", () => {
     expect(f.runtime.snapshot().lastItemPush).toMatchObject({
       guid: 1n,
       count: 3,
-      slot: 0xffffffff,
+      slot: 0xff_ff_ff_ff,
     });
     expect(
       f.runtime.snapshot().inventory.slots.find((slot) => slot.slot === 23)
@@ -149,7 +149,7 @@ describe("authoritative loot runtime", () => {
       [14, 3],
     ]);
     f.entities.set(5n, item);
-    f.self.rawFields.set(0x172, 5);
+    f.self.rawFields.set(0x1_72, 5);
     f.runtime.observeEntity({ type: "appear", entity: item });
     expect(
       f.runtime.snapshot().inventory.slots.find((slot) => slot.slot === 23),
@@ -165,7 +165,7 @@ describe("authoritative loot runtime", () => {
 
   test("observes a child item introduced by a later equipped-bag create", () => {
     const f = fixture();
-    f.self.rawFields.set(0x16a, 8);
+    f.self.rawFields.set(0x1_6a, 8);
     f.runtime.observeEntity({ type: "appear", entity: f.self });
     expect(
       f.runtime.snapshot().inventory.bags.find((bag) => bag.slot === 19)
@@ -211,7 +211,7 @@ describe("authoritative loot runtime", () => {
     const f = fixture();
     f.runtime.observeEntity({ type: "appear", entity: f.self });
     f.runtime.onEvent(undefined);
-    f.self.rawFields.set(0x172, 5);
+    f.self.rawFields.set(0x1_72, 5);
     f.runtime.observeEntity({
       type: "update",
       entity: f.self,
@@ -256,7 +256,7 @@ describe("authoritative loot runtime", () => {
       parseLootResponse(new PacketReader(bytes(loot))),
     );
     f.runtime.takeMoney();
-    expect(f.sent.at(-1)).toEqual({ opcode: 0x15e, body: undefined });
+    expect(f.sent.at(-1)).toEqual({ opcode: 0x1_5e, body: undefined });
     f.runtime.receiveLootMoneyCleared();
     expect(f.runtime.snapshot().loot).toMatchObject({ money: 0 });
     expect(f.runtime.snapshot().inventory.coinage).toBe(10);
@@ -268,7 +268,7 @@ describe("authoritative loot runtime", () => {
       alone: true,
     });
     expect(f.runtime.snapshot().inventory.coinage).toBe(10);
-    f.self.rawFields.set(0x492, 19);
+    f.self.rawFields.set(0x4_92, 19);
     f.runtime.observeEntity({
       type: "update",
       entity: f.self,
@@ -373,7 +373,7 @@ describe("authoritative loot runtime", () => {
     );
     expect(f.runtime.snapshot().loot.phase).toBe("open");
     f.runtime.take(7);
-    expect(f.sent.at(-1)).toEqual({ opcode: 0x108, body: bytes("07") });
+    expect(f.sent.at(-1)).toEqual({ opcode: 0x1_08, body: bytes("07") });
   });
 
   test("a release-only opening response is unanswered, not an offer or permission to retry", () => {
@@ -390,7 +390,7 @@ describe("authoritative loot runtime", () => {
     expect(() => f.runtime.take(4)).toThrow();
     expect(() => f.runtime.open(2n)).toThrow();
     expect(f.sent).toEqual([
-      { opcode: 0x15d, body: bytes("0200000000000000") },
+      { opcode: 0x1_5d, body: bytes("0200000000000000") },
     ]);
   });
 

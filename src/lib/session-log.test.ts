@@ -1,6 +1,6 @@
-import { test, expect, describe, afterEach } from "bun:test";
-import { SessionLog } from "lib/session-log";
+import { afterEach, describe, expect, test } from "bun:test";
 import { unlink } from "node:fs/promises";
+import { SessionLog } from "lib/session-log";
 
 const TEST_LOG = "./tmp/test-session.log";
 
@@ -13,7 +13,7 @@ afterEach(async () => {
 describe("SessionLog", () => {
   test("append writes JSONL line", async () => {
     const log = new SessionLog(TEST_LOG);
-    await log.append({ type: "SAY", sender: "Alice", message: "hi" });
+    await log.append({ message: "hi", sender: "Alice", type: "SAY" });
     const content = await Bun.file(TEST_LOG).text();
     const parsed = JSON.parse(content.trim());
     expect(parsed.type).toBe("SAY");
@@ -24,8 +24,8 @@ describe("SessionLog", () => {
 
   test("multiple appends create multiple lines", async () => {
     const log = new SessionLog(TEST_LOG);
-    await log.append({ type: "SAY", sender: "A", message: "1" });
-    await log.append({ type: "SAY", sender: "B", message: "2" });
+    await log.append({ message: "1", sender: "A", type: "SAY" });
+    await log.append({ message: "2", sender: "B", type: "SAY" });
     const lines = (await Bun.file(TEST_LOG).text()).trim().split("\n");
     expect(lines).toHaveLength(2);
   });

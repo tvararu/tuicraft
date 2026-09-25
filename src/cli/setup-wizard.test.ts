@@ -1,17 +1,17 @@
 import {
-  test,
-  expect,
+  afterEach,
+  beforeEach,
   describe,
+  expect,
   mock,
   spyOn,
-  beforeEach,
-  afterEach,
+  test,
 } from "bun:test";
-import { parseConfig } from "lib/config";
-import { runSetupWizard, runSetup } from "cli/setup";
-import { pathsUnder } from "test/temp-paths";
 import { rm } from "node:fs/promises";
 import type { Interface as ReadlineInterface } from "node:readline";
+import { runSetup, runSetupWizard } from "cli/setup";
+import { parseConfig } from "lib/config";
+import { pathsUnder } from "test/temp-paths";
 
 let answers: string[] = [];
 const mockClose = mock(() => {});
@@ -20,11 +20,11 @@ const fakeOutput = { write: () => true };
 
 function fakeCreateInterface(): ReadlineInterface {
   return {
+    close: mockClose,
     output: fakeOutput,
     question: (_prompt: string, cb: (answer: string) => void) => {
       cb(answers.shift() ?? "");
     },
-    close: mockClose,
   } as unknown as ReadlineInterface;
 }
 
@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await rm(tmpBase, { recursive: true, force: true });
+  await rm(tmpBase, { force: true, recursive: true });
 });
 
 describe("runSetupWizard", () => {
@@ -47,11 +47,11 @@ describe("runSetupWizard", () => {
     const cfg = await runSetupWizard(fakeCreateInterface as never);
     expect(cfg).toEqual({
       account: "testaccount",
-      password: "testpass",
       character: "Testchar",
       host: "myhost",
-      port: 1234,
       language: 7,
+      password: "testpass",
+      port: 1234,
       timeout_minutes: 30,
     });
     expect(mockClose).toHaveBeenCalledTimes(1);

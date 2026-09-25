@@ -1,4 +1,4 @@
-import { fieldOf, type Entity, type EntityLookup } from "wow/entity-store";
+import { type Entity, type EntityLookup, fieldOf } from "wow/entity-store";
 import {
   ObjectType,
   PLAYER_FIELDS,

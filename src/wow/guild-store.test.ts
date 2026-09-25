@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GuildStore, type GuildEvent, type GuildMember } from "wow/guild-store";
+import { type GuildEvent, type GuildMember, GuildStore } from "wow/guild-store";
 
 function makeMember(overrides: Partial<GuildMember> = {}): GuildMember {
   return {

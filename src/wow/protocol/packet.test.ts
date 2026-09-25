@@ -1,8 +1,8 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
+  joinGuid,
   PacketReader,
   PacketWriter,
-  joinGuid,
   splitGuid,
 } from "wow/protocol/packet";
 
@@ -15,23 +15,23 @@ test("PacketWriter writes and PacketReader reads uint8", () => {
 
 test("PacketWriter writes and PacketReader reads uint16LE", () => {
   const w = new PacketWriter();
-  w.uint16LE(0x1234);
+  w.uint16LE(0x12_34);
   const r = new PacketReader(w.finish());
-  expect(r.uint16LE()).toBe(0x1234);
+  expect(r.uint16LE()).toBe(0x12_34);
 });
 
 test("PacketWriter writes and PacketReader reads uint16BE", () => {
   const w = new PacketWriter();
-  w.uint16BE(0x1234);
+  w.uint16BE(0x12_34);
   const r = new PacketReader(w.finish());
-  expect(r.uint16BE()).toBe(0x1234);
+  expect(r.uint16BE()).toBe(0x12_34);
 });
 
 test("PacketWriter writes and PacketReader reads uint32LE", () => {
   const w = new PacketWriter();
-  w.uint32LE(0xdeadbeef);
+  w.uint32LE(0xde_ad_be_ef);
   const r = new PacketReader(w.finish());
-  expect(r.uint32LE()).toBe(0xdeadbeef);
+  expect(r.uint32LE()).toBe(0xde_ad_be_ef);
 });
 
 test("PacketReader reads cString (null-terminated)", () => {
@@ -120,8 +120,8 @@ test("PacketReader reads packed GUID with all bytes present", () => {
     new Uint8Array([0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]),
   );
   const { low, high } = r.packedGuid();
-  expect(low).toBe(0x04030201);
-  expect(high).toBe(0x08070605);
+  expect(low).toBe(0x04_03_02_01);
+  expect(high).toBe(0x08_07_06_05);
 });
 
 test("PacketReader reads packed GUID with only low bytes", () => {
@@ -200,21 +200,21 @@ describe("PacketWriter.packedGuid", () => {
   });
 
   test("low-only guid round-trips", () => {
-    const result = roundTrip(0x0764, 0);
-    expect(result.low).toBe(0x0764);
+    const result = roundTrip(0x07_64, 0);
+    expect(result.low).toBe(0x07_64);
     expect(result.high).toBe(0);
     expect(result.size).toBe(3);
   });
 
   test("full guid round-trips", () => {
-    const result = roundTrip(0x0d000764 | 0, 0xf1300040 | 0);
-    expect(result.low >>> 0).toBe(0x0d000764);
-    expect(result.high >>> 0).toBe(0xf1300040);
+    const result = roundTrip(0x0d_00_07_64 | 0, 0xf1_30_00_40 | 0);
+    expect(result.low >>> 0).toBe(0x0d_00_07_64);
+    expect(result.high >>> 0).toBe(0xf1_30_00_40);
   });
 
   test("skips zero bytes in the middle", () => {
     const w = new PacketWriter();
-    w.packedGuid(0x00ff00ff, 0);
+    w.packedGuid(0x00_ff_00_ff, 0);
     const bytes = w.finish();
     expect(bytes[0]).toBe(0b0101);
     expect(bytes.byteLength).toBe(3);
@@ -223,15 +223,17 @@ describe("PacketWriter.packedGuid", () => {
 
 describe("joinGuid", () => {
   test("joins signed halves as unsigned", () => {
-    expect(joinGuid(0xcafebabe | 0, 0xdeadbeef | 0)).toBe(0xdeadbeefcafebaben);
+    expect(joinGuid(0xca_fe_ba_be | 0, 0xde_ad_be_ef | 0)).toBe(
+      0xdeadbeefcafebaben,
+    );
   });
 });
 
 describe("splitGuid", () => {
   test("inverts joinGuid", () => {
     expect(splitGuid(0xdeadbeefcafebaben)).toEqual({
-      low: 0xcafebabe,
-      high: 0xdeadbeef,
+      low: 0xca_fe_ba_be,
+      high: 0xde_ad_be_ef,
     });
   });
 });

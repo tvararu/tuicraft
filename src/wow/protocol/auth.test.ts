@@ -1,8 +1,6 @@
-import { test, expect } from "bun:test";
+import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { leBytesToBigInt } from "wow/crypto/srp";
-import { ChallengeResult } from "wow/protocol/opcodes";
+import { beBytesToBigInt, leBytesToBigInt } from "wow/crypto/srp";
 import {
   buildLogonChallenge,
   buildLogonProof,
@@ -13,7 +11,8 @@ import {
   parseRealmList,
   parseReconnectChallengeResponse,
 } from "wow/protocol/auth";
-import { beBytesToBigInt } from "wow/crypto/srp";
+import { ChallengeResult } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 test("buildLogonChallenge produces correct packet", () => {
   const pkt = buildLogonChallenge("Test");
@@ -243,7 +242,7 @@ test("parseRealmList skips version info when flags & 0x04", () => {
   bodyWriter.uint8(3);
   bodyWriter.uint8(3);
   bodyWriter.uint8(5);
-  bodyWriter.uint16LE(12340);
+  bodyWriter.uint16LE(12_340);
 
   bodyWriter.uint8(0);
   bodyWriter.uint8(0);

@@ -1,5 +1,5 @@
-import { test, expect } from "bun:test";
-import { SRP, bigIntToLeBytes, leBytesToBigInt, modPow } from "wow/crypto/srp";
+import { expect, test } from "bun:test";
+import { bigIntToLeBytes, leBytesToBigInt, modPow, SRP } from "wow/crypto/srp";
 
 test("bigIntToLeBytes converts correctly", () => {
   const n = BigInt("0x0102030405060708");

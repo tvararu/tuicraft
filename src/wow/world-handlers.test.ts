@@ -1,50 +1,50 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { deflateSync } from "node:zlib";
 import {
-  worldSession,
-  type ChatMessage,
-  type GroupEvent,
-  type DuelEvent,
-  type WorldHandle,
-  type FriendEvent,
-  type IgnoreEvent,
-  type GuildEvent,
-  type WorldConn,
-} from "wow/client";
-import {
-  handleGuildEvent,
-  handleGuildCommandResult,
-  handleGuildInvitePacket,
-  handleChatMessage,
-} from "wow/world-handlers";
-import type { AuthResult } from "wow/auth";
-import { startMockWorldServer } from "test/mock-world-server";
-import { PacketWriter, PacketReader } from "wow/protocol/packet";
-import {
-  GameOpcode,
-  ChatType,
-  ChannelNotify,
-  PartyOperation,
-  PartyResult,
-  GroupUpdateFlag,
-} from "wow/protocol/opcodes";
-import type { EntityEvent } from "wow/entity-store";
-import { readLife, type PlayerLifeState } from "wow/player-state";
-import {
-  UpdateFlag,
-  OBJECT_FIELDS,
-  UNIT_FIELDS,
-  GAMEOBJECT_FIELDS,
-  PLAYER_FIELDS,
-} from "wow/protocol/entity-fields";
-import {
-  FIXTURE_ACCOUNT,
-  FIXTURE_PASSWORD,
-  FIXTURE_CHARACTER,
   clientPrivateKey,
   clientSeed,
+  FIXTURE_ACCOUNT,
+  FIXTURE_CHARACTER,
+  FIXTURE_PASSWORD,
   sessionKey,
 } from "test/fixtures";
+import { startMockWorldServer } from "test/mock-world-server";
+import type { AuthResult } from "wow/auth";
+import {
+  type ChatMessage,
+  type DuelEvent,
+  type FriendEvent,
+  type GroupEvent,
+  type GuildEvent,
+  type IgnoreEvent,
+  type WorldConn,
+  type WorldHandle,
+  worldSession,
+} from "wow/client";
+import type { EntityEvent } from "wow/entity-store";
+import { type PlayerLifeState, readLife } from "wow/player-state";
+import {
+  GAMEOBJECT_FIELDS,
+  OBJECT_FIELDS,
+  PLAYER_FIELDS,
+  UNIT_FIELDS,
+  UpdateFlag,
+} from "wow/protocol/entity-fields";
+import {
+  ChannelNotify,
+  ChatType,
+  GameOpcode,
+  GroupUpdateFlag,
+  PartyOperation,
+  PartyResult,
+} from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import {
+  handleChatMessage,
+  handleGuildCommandResult,
+  handleGuildEvent,
+  handleGuildInvitePacket,
+} from "wow/world-handlers";
 
 const base = {
   account: FIXTURE_ACCOUNT,
@@ -1394,7 +1394,7 @@ describe("world handler tests", () => {
       stats.uint8(0x42);
       stats.uint32LE(GroupUpdateFlag.STATUS | GroupUpdateFlag.CUR_HP);
       stats.uint16LE(0x01);
-      stats.uint32LE(12000);
+      stats.uint32LE(12_000);
       ws.inject(GameOpcode.SMSG_PARTY_MEMBER_STATS, stats.finish());
 
       const fullStats = new PacketWriter();
@@ -1833,7 +1833,7 @@ describe("world handler tests", () => {
         });
         await update(
           false,
-          new Map([[UNIT_FIELDS.BYTES_0.offset, 0xff000000]]),
+          new Map([[UNIT_FIELDS.BYTES_0.offset, 0xff_00_00_00]]),
         );
         expect(handle.getCombatState().self.powerType).toBe(255);
         expect(handle.getCombatState().self.power).toBeUndefined();
@@ -3753,7 +3753,7 @@ describe("embedded chat sender names", () => {
     w.uint8(ChatType.MONSTER_YELL);
     w.uint32LE(0);
     w.uint32LE(0x42);
-    w.uint32LE(0xf1300000);
+    w.uint32LE(0xf1_30_00_00);
     w.uint32LE(0);
     const name = new TextEncoder().encode("Zapetta");
     w.uint32LE(name.byteLength + 1);
@@ -3780,7 +3780,7 @@ describe("embedded chat sender names", () => {
       nameCache: {
         get: () => {
           nameQueries++;
-          return undefined;
+          return;
         },
       },
     } as unknown as WorldConn;

@@ -1,31 +1,31 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import { MovementFlag, MovementFlagExtra } from "wow/protocol/entity-fields";
 import {
-  writeMovementInfo,
-  parseMovementInfo,
-  parseWorldPosition,
+  buildCanFlyAck,
   buildMoveMessage,
-  buildTeleportAck,
-  buildSpeedAck,
   buildRootAck,
   buildSetActiveMover,
   buildSetSelection,
-  buildCanFlyAck,
-  parseMoveCounter,
-  parseTeleportAck,
-  parseKnockBack,
-  parseForceSpeed,
-  parseClientControl,
-  speedAckFor,
+  buildSpeedAck,
+  buildTeleportAck,
   type MovementInfo,
+  parseClientControl,
+  parseForceSpeed,
+  parseKnockBack,
+  parseMoveCounter,
+  parseMovementInfo,
+  parseTeleportAck,
+  parseWorldPosition,
+  speedAckFor,
+  writeMovementInfo,
 } from "wow/protocol/movement";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 const base: MovementInfo = {
   flags: 0,
   extraFlags: 0,
-  time: 123456,
+  time: 123_456,
   x: 8709.46,
   y: -6671.76,
   z: 70.34,
@@ -45,7 +45,7 @@ describe("MovementInfo round-trip", () => {
     writeMovementInfo(w, base);
     expect(w.finish().byteLength).toBe(30);
     const out = reserialize(base);
-    expect(out.time).toBe(123456);
+    expect(out.time).toBe(123_456);
     expect(out.x).toBeCloseTo(8709.46, 2);
     expect(out.fallTime).toBe(0);
     expect(out.pitch).toBeUndefined();
@@ -62,10 +62,15 @@ describe("MovementInfo round-trip", () => {
       ...base,
       flags: MovementFlag.FORWARD | MovementFlag.FALLING,
       fallTime: 250,
-      fall: { zSpeed: -7.9555473, cosAngle: 0.5, sinAngle: 0.866, xySpeed: 7 },
+      fall: {
+        zSpeed: -7.955_547_3,
+        cosAngle: 0.5,
+        sinAngle: 0.866,
+        xySpeed: 7,
+      },
     });
     expect(out.fallTime).toBe(250);
-    expect(out.fall?.zSpeed).toBeCloseTo(-7.9555473, 4);
+    expect(out.fall?.zSpeed).toBeCloseTo(-7.955_547_3, 4);
     expect(out.fall?.xySpeed).toBe(7);
   });
 
@@ -96,7 +101,7 @@ describe("MovementInfo round-trip", () => {
     w.floatLE(2);
     w.floatLE(3);
     w.floatLE(0.5);
-    w.packedGuid(0x1234, 0);
+    w.packedGuid(0x12_34, 0);
     w.floatLE(0);
     w.floatLE(0);
     w.floatLE(0);
@@ -116,13 +121,13 @@ describe("MovementInfo round-trip", () => {
   test("parser skips interpolated transport time", () => {
     const w = new PacketWriter();
     w.uint32LE(MovementFlag.ON_TRANSPORT);
-    w.uint16LE(0x0400);
+    w.uint16LE(0x04_00);
     w.uint32LE(42);
     w.floatLE(1);
     w.floatLE(2);
     w.floatLE(3);
     w.floatLE(0.5);
-    w.packedGuid(0x1234, 0);
+    w.packedGuid(0x12_34, 0);
     w.floatLE(0);
     w.floatLE(0);
     w.floatLE(0);
@@ -161,23 +166,23 @@ describe("packet builders", () => {
   test("buildMoveMessage prefixes the packed guid", () => {
     const body = buildMoveMessage(0x0764n, { ...base, flags: 1 });
     const r = new PacketReader(body);
-    expect(r.packedGuid()).toEqual({ low: 0x0764, high: 0 });
+    expect(r.packedGuid()).toEqual({ low: 0x07_64, high: 0 });
     const info = parseMovementInfo(r);
     expect(info.flags).toBe(1);
     expect(r.remaining).toBe(0);
   });
 
   test("buildTeleportAck echoes counter and time", () => {
-    const body = buildTeleportAck(0x0764n, 3, 456789);
+    const body = buildTeleportAck(0x0764n, 3, 456_789);
     const r = new PacketReader(body);
-    expect(r.packedGuid()).toEqual({ low: 0x0764, high: 0 });
+    expect(r.packedGuid()).toEqual({ low: 0x07_64, high: 0 });
     expect(r.uint32LE()).toBe(3);
-    expect(r.uint32LE()).toBe(456789);
+    expect(r.uint32LE()).toBe(456_789);
     expect(r.remaining).toBe(0);
   });
 
   test("buildSpeedAck echoes the exact f32 speed bits", () => {
-    const speed = Math.fround(7.1234567);
+    const speed = Math.fround(7.123_456_7);
     const body = buildSpeedAck(
       { guid: 0x0764n, counter: 5, info: base },
       speed,

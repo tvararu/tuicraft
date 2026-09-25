@@ -1,4 +1,4 @@
-import { PacketWriter, PacketReader } from "wow/protocol/packet";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export function buildCreatureQuery(entry: number, guid: bigint): Uint8Array {
   const w = new PacketWriter();
@@ -16,8 +16,8 @@ export function parseCreatureQueryResponse(
   r: PacketReader,
 ): CreatureQueryResult {
   const raw = r.uint32LE();
-  const masked = raw & 0x80000000;
-  const entry = raw & 0x7fffffff;
+  const masked = raw & 0x80_00_00_00;
+  const entry = raw & 0x7f_ff_ff_ff;
   if (masked) return { entry, name: undefined };
   const name = r.cString();
   return { entry, name };
@@ -40,8 +40,8 @@ export function parseGameObjectQueryResponse(
   r: PacketReader,
 ): GameObjectQueryResult {
   const raw = r.uint32LE();
-  const masked = raw & 0x80000000;
-  const entry = raw & 0x7fffffff;
+  const masked = raw & 0x80_00_00_00;
+  const entry = raw & 0x7f_ff_ff_ff;
   if (masked) return { entry, name: undefined, gameObjectType: undefined };
   const gameObjectType = r.uint32LE();
   r.uint32LE();

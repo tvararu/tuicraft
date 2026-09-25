@@ -1,4 +1,4 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { PassThrough } from "node:stream";
 import { parseSetupFlags, runSetupWizard } from "cli/setup";
 
@@ -70,6 +70,7 @@ function setupMock(
     buf += chunk.toString();
   });
   const mockRl: MockRl = {
+    close() {},
     output,
     question(prompt: string, cb: (answer: string) => void) {
       const answer = lines[lineIndex++]!;
@@ -77,12 +78,11 @@ function setupMock(
       echoAnswer(output, answer);
       cb(answer);
     },
-    close() {},
   };
   const factory = (() => mockRl) as unknown as Parameters<
     typeof runSetupWizard
   >[0];
-  return { factory, captured: () => buf };
+  return { captured: () => buf, factory };
 }
 
 describe("runSetupWizard password masking", () => {

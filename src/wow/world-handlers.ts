@@ -1,74 +1,74 @@
 import { inflateSync } from "node:zlib";
+import type { WorldConn } from "wow/client";
+import type { FriendEntry } from "wow/friend-store";
+import type { GuildMember } from "wow/guild-store";
+import type { IgnoreEntry } from "wow/ignore-store";
 import {
-  PacketReader,
-  PacketWriter,
-  joinGuid,
-  splitGuid,
-} from "wow/protocol/packet";
-import { GameOpcode, ChatType } from "wow/protocol/opcodes";
-import {
-  parseChatMessage,
   buildNameQuery,
-  parseNameQueryResponse,
   parseChannelNotify,
+  parseChatMessage,
+  parseNameQueryResponse,
+  parseNotification,
   parseRandomRoll,
   parseServerBroadcast,
-  parseNotification,
   type ChatMessage as RawChatMessage,
 } from "wow/protocol/chat";
-import { buildOutgoingPacket } from "wow/protocol/world";
 import {
-  parseDuelRequested,
-  parseDuelCountdown,
   parseDuelComplete,
+  parseDuelCountdown,
+  parseDuelRequested,
   parseDuelWinner,
 } from "wow/protocol/duel";
+import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
-  parsePartyCommandResult,
-  parseGroupInvite,
-  parseGroupSetLeader,
+  buildCreatureQuery,
+  buildGameObjectQuery,
+  parseCreatureQueryResponse,
+  parseGameObjectQueryResponse,
+} from "wow/protocol/entity-queries";
+import {
+  extractGameObjectFields,
+  extractObjectFields,
+  extractUnitFields,
+  type GameObjectFieldsResult,
+  type UnitFieldsResult,
+} from "wow/protocol/extract-fields";
+import {
   parseGroupDecline,
+  parseGroupInvite,
   parseGroupList,
+  parseGroupSetLeader,
+  parsePartyCommandResult,
   parsePartyMemberStats,
 } from "wow/protocol/group";
+import {
+  GuildCommandResult,
+  GuildEventCode,
+  parseGuildCommandResult,
+  parseGuildEvent,
+  parseGuildInvitePacket,
+  parseGuildQueryResponse,
+  parseGuildRoster,
+} from "wow/protocol/guild";
+import { ChatType, GameOpcode } from "wow/protocol/opcodes";
+import {
+  joinGuid,
+  PacketReader,
+  PacketWriter,
+  splitGuid,
+} from "wow/protocol/packet";
+import {
+  FriendResult,
+  FriendStatus,
+  parseContactList,
+  parseFriendStatus,
+  SocialFlag,
+} from "wow/protocol/social";
 import {
   parseUpdateObject,
   type UpdateEntry,
 } from "wow/protocol/update-object";
-import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
-import {
-  extractObjectFields,
-  extractUnitFields,
-  extractGameObjectFields,
-  type UnitFieldsResult,
-  type GameObjectFieldsResult,
-} from "wow/protocol/extract-fields";
-import {
-  buildCreatureQuery,
-  parseCreatureQueryResponse,
-  buildGameObjectQuery,
-  parseGameObjectQueryResponse,
-} from "wow/protocol/entity-queries";
-import {
-  parseContactList,
-  parseFriendStatus,
-  SocialFlag,
-  FriendStatus,
-  FriendResult,
-} from "wow/protocol/social";
-import {
-  parseGuildRoster,
-  parseGuildQueryResponse,
-  parseGuildEvent,
-  GuildEventCode,
-  parseGuildCommandResult,
-  parseGuildInvitePacket,
-  GuildCommandResult,
-} from "wow/protocol/guild";
-import type { FriendEntry } from "wow/friend-store";
-import type { IgnoreEntry } from "wow/ignore-store";
-import type { GuildMember } from "wow/guild-store";
-import type { WorldConn } from "wow/client";
+import { buildOutgoingPacket } from "wow/protocol/world";
 
 function ensureNameQuery(conn: WorldConn, guid: bigint): void {
   const { low, high } = splitGuid(guid);

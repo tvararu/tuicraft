@@ -1,21 +1,21 @@
-import { test, expect, describe } from "bun:test";
-import { authHandshake } from "wow/auth";
-import type { AuthResult } from "wow/auth";
-import { worldSession } from "wow/client";
-import { startMockAuthServer } from "test/mock-auth-server";
-import { startMockWorldServer } from "test/mock-world-server";
-import { GameOpcode } from "wow/protocol/opcodes";
-import { PacketWriter } from "wow/protocol/packet";
-import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
-import type { QuestEvent } from "wow/quests";
+import { describe, expect, test } from "bun:test";
 import {
-  FIXTURE_ACCOUNT,
-  FIXTURE_PASSWORD,
-  FIXTURE_CHARACTER,
   clientPrivateKey,
   clientSeed,
+  FIXTURE_ACCOUNT,
+  FIXTURE_CHARACTER,
+  FIXTURE_PASSWORD,
   sessionKey,
 } from "test/fixtures";
+import { startMockAuthServer } from "test/mock-auth-server";
+import { startMockWorldServer } from "test/mock-world-server";
+import type { AuthResult } from "wow/auth";
+import { authHandshake } from "wow/auth";
+import { worldSession } from "wow/client";
+import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
+import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketWriter } from "wow/protocol/packet";
+import type { QuestEvent } from "wow/quests";
 
 const base = {
   account: FIXTURE_ACCOUNT,
@@ -383,7 +383,9 @@ describe("session lifecycle", () => {
         { ...base, host: "127.0.0.1", port: worldServer.port },
         fakeAuth(worldServer.port),
       );
-      expect(() => handle.goTo(NaN, 0, 0)).toThrow("stop: invalid_destination");
+      expect(() => handle.goTo(Number.NaN, 0, 0)).toThrow(
+        "stop: invalid_destination",
+      );
 
       handle.close();
       await handle.closed;
