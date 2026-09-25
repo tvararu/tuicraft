@@ -45,7 +45,7 @@ hooks {
       }
       ["ci"] {
         depends = List("clean-worktree")
-        check = "mise ci"
+        check = "mise ci --publish"
       }
     }
   }

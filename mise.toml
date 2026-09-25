@@ -63,6 +63,34 @@ sed -n 's/.*<testcase name="\([^"]*\)".* time="\([^"]*\)".*/\2\t\1/p' \
 '''
 
 [tasks.ci]
+description = "Run ci:checks, then sign off a clean HEAD as signoff/ci"
+usage = '''
+flag "--publish" help="Push HEAD to a temporary ref so an unpushed commit can be signed off, and fail if signoff fails"
+'''
+run = '''
+set -eu
+head=$(git rev-parse HEAD)
+dirty=$(git status --porcelain)
+mise run ci:checks
+publish=${usage_publish:-false}
+if [ -n "$dirty" ] || [ -n "$(git status --porcelain)" ] || [ "$(git rev-parse HEAD)" != "$head" ]; then
+  echo "ci: checks passed, but the tree was not a clean HEAD throughout, so signoff/ci was not posted" >&2
+  [ "$publish" = true ] && exit 1
+  exit 0
+fi
+if [ "$publish" != true ]; then
+  gh signoff ci || echo "ci: checks passed; signoff/ci not posted (HEAD must be pushed to its upstream)" >&2
+  exit 0
+fi
+ref="refs/signoff/$head"
+git push -q --no-verify origin "$head:$ref" </dev/null
+status=0
+gh signoff create -f ci || status=$?
+git push -q --no-verify origin ":$ref" </dev/null
+exit "$status"
+'''
+
+[tasks."ci:checks"]
 description = "Run local typecheck, coverage tests, format, and lint checks"
 depends = ["typecheck", "test:coverage", "format", "lint"]
 
