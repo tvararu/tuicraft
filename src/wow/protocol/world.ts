@@ -91,9 +91,7 @@ export type WorldAuthOptions = {
   clientSeed?: Uint8Array;
 };
 
-export async function buildWorldAuthPacket(
-  options: WorldAuthOptions,
-): Promise<Uint8Array> {
+export function buildWorldAuthPacket(options: WorldAuthOptions): Uint8Array {
   const { account, sessionKey, serverSeed, realmId, clientSeed } = options;
   const upperAccount = account.toUpperCase();
   const seed = clientSeed ?? crypto.getRandomValues(new Uint8Array(4));

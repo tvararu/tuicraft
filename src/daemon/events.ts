@@ -1,4 +1,5 @@
 import type { EventEntry } from "daemon/commands";
+import { ignoreFailure } from "lib/ignore-failure";
 import type { RingBuffer } from "lib/ring-buffer";
 import type { LogEntry, SessionLog } from "lib/session-log";
 import {
@@ -76,7 +77,7 @@ export function onGroupEvent(
   const text = formatGroupEvent(event);
   const obj = formatGroupEventObj(event);
   events.push({ json: JSON.stringify(obj), text });
-  log.append(obj as LogEntry).catch(() => {});
+  log.append(obj as LogEntry).catch(ignoreFailure);
 }
 
 export function onChatMessage(
@@ -86,7 +87,7 @@ export function onChatMessage(
 ): void {
   const obj = formatMessageObj(msg);
   events.push({ json: JSON.stringify(obj), text: formatMessage(msg) });
-  log.append(obj).catch(() => {});
+  log.append(obj).catch(ignoreFailure);
 }
 
 export function onEntityEvent(
@@ -98,7 +99,7 @@ export function onEntityEvent(
   const obj = formatEntityEventObj(event);
   if (obj) {
     events.push({ json: JSON.stringify(obj), text });
-    log.append(obj as LogEntry).catch(() => {});
+    log.append(obj as LogEntry).catch(ignoreFailure);
   }
 }
 
@@ -111,7 +112,7 @@ export function onFriendEvent(
   const obj = formatFriendEventObj(event);
   if (obj) {
     events.push({ json: JSON.stringify(obj), text });
-    log.append(obj as LogEntry).catch(() => {});
+    log.append(obj as LogEntry).catch(ignoreFailure);
   }
 }
 
@@ -124,7 +125,7 @@ export function onIgnoreEvent(
   const obj = formatIgnoreEventObj(event);
   if (obj) {
     events.push({ json: JSON.stringify(obj), text });
-    log.append(obj as LogEntry).catch(() => {});
+    log.append(obj as LogEntry).catch(ignoreFailure);
   }
 }
 
@@ -256,7 +257,7 @@ export function onGuildEvent(
   const text = formatGuildEvent(event);
   const obj = formatGuildEventObj(event);
   events.push({ json: JSON.stringify(obj), text });
-  log.append(obj as LogEntry).catch(() => {});
+  log.append(obj as LogEntry).catch(ignoreFailure);
 }
 
 function formatDuelEvent(event: DuelEvent): string | undefined {
@@ -315,7 +316,7 @@ export function onDuelEvent(
   const obj = formatDuelEventObj(event);
   if (obj) {
     events.push({ json: JSON.stringify(obj), text });
-    log.append(obj as LogEntry).catch(() => {});
+    log.append(obj as LogEntry).catch(ignoreFailure);
   }
 }
 
@@ -329,7 +330,7 @@ export function onControlEvent(
     json: JSON.stringify(obj),
     text: formatControlEvent(event),
   });
-  log.append(obj as LogEntry).catch(() => {});
+  log.append(obj as LogEntry).catch(ignoreFailure);
 }
 
 export function onDomainEvent<E extends { type: string }>(
@@ -343,5 +344,5 @@ export function onDomainEvent<E extends { type: string }>(
     type: tag.toUpperCase(),
   };
   events.push({ json: JSON.stringify(obj), text: `[${tag}] ${event.type}` });
-  log.append(obj as LogEntry).catch(() => {});
+  log.append(obj as LogEntry).catch(ignoreFailure);
 }

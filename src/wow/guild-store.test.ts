@@ -23,7 +23,7 @@ describe("GuildStore", () => {
   test("setRoster() stores members and fires guild-roster event", () => {
     const store = new GuildStore();
     const events: GuildEvent[] = [];
-    store.onEvent((e) => events.push(e));
+    store.onEvent((event) => events.push(event));
 
     const members = [
       makeMember({ guid: 1n, name: "Thrall" }),
@@ -58,7 +58,7 @@ describe("GuildStore", () => {
   test("setGuildMeta() stores name and rank names, fires event if members exist", () => {
     const store = new GuildStore();
     const events: GuildEvent[] = [];
-    store.onEvent((e) => events.push(e));
+    store.onEvent((event) => events.push(event));
 
     store.setRoster("motd", "info", [makeMember({ guid: 1n, name: "Thrall" })]);
     events.length = 0;
@@ -159,7 +159,7 @@ describe("GuildStore", () => {
   test("event includes full roster data", () => {
     const store = new GuildStore();
     const events: GuildEvent[] = [];
-    store.onEvent((e) => events.push(e));
+    store.onEvent((event) => events.push(event));
 
     store.setGuildMeta("Horde Elite", ["GM", "Officer"]);
     store.setRoster("Welcome!", "Info", [

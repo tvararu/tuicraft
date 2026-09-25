@@ -417,9 +417,9 @@ export function startMockWorldServer(opts?: {
       waitForCapture(predicate: (p: CapturedPacket) => boolean) {
         const existing = captured.find(predicate);
         if (existing) return Promise.resolve(existing);
-        return new Promise<CapturedPacket>((resolve) => {
+        return new Promise<CapturedPacket>((resolveCapture) => {
           captureListeners.push((packet) => {
-            if (predicate(packet)) resolve(packet);
+            if (predicate(packet)) resolveCapture(packet);
           });
         });
       },

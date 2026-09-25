@@ -57,9 +57,9 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
 async function awaitCorpse(run: LootRun, guid: bigint): Promise<Corpse> {
   const first = tryOpen(run, guid);
   if (first !== NOT_DEAD) return first;
-  const died = (event: EntityEvent) =>
-    event.type === "disappear" ||
-    fieldOf(event.entity, UNIT_FIELDS.HEALTH.offset) === 0;
+  const died = (update: EntityEvent) =>
+    update.type === "disappear" ||
+    fieldOf(update.entity, UNIT_FIELDS.HEALTH.offset) === 0;
   const event = await run.bodies.find(died, LOOT_SETTLE_MS, run.signal);
   if (!event) return stop("target_death_unconfirmed");
   if (event.type === "disappear") return "empty";

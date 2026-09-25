@@ -1,5 +1,6 @@
 import { abortable, abortReason, bounded, pause } from "lib/abort";
 import { messageOf } from "lib/errors";
+import { ignoreFailure } from "lib/ignore-failure";
 import type { FramingVariant } from "wow/framing";
 import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
 
@@ -316,7 +317,7 @@ export class TacticsLoop {
   }
 
   private track(settling: Promise<void>): void {
-    const settled = settling.catch(() => {});
+    const settled = settling.catch(ignoreFailure);
     this.pending = settled;
     void settled.then(() => {
       if (this.pending === settled) this.pending = undefined;

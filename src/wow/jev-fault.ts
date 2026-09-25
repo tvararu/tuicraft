@@ -34,13 +34,9 @@ export function createFaultSelect(
   baseSelect: JevSelect,
 ): JevSelect {
   if (fault.kind === "http")
-    return async () => {
-      throw new Error(`TypeSafe HTTP ${fault.status}`);
-    };
+    return () => Promise.reject(new Error(`TypeSafe HTTP ${fault.status}`));
   if (fault.kind === "transport")
-    return async () => {
-      throw new TypeError("fetch failed");
-    };
+    return () => Promise.reject(new TypeError("fetch failed"));
   return async (request, options) => {
     const started = performance.now();
     const detached = new AbortController().signal;

@@ -18,6 +18,7 @@ import {
 } from "daemon/events";
 import { type IpcCommand, parseIpcCommand } from "daemon/parse";
 import { clientConfig, readConfig } from "lib/config";
+import { ignoreFailure } from "lib/ignore-failure";
 import { type Paths, resolvePaths } from "lib/paths";
 import { RingBuffer } from "lib/ring-buffer";
 import { SessionLog } from "lib/session-log";
@@ -252,7 +253,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
     cleaned = true;
     handle.close();
     server.stop();
-    unlink(sock).catch(() => {});
+    unlink(sock).catch(ignoreFailure);
   }
 
   const ctx: ServerCtx = { cleanup, events, handle, onActivity, onStop };
@@ -275,7 +276,7 @@ async function prepareDaemonPaths(
   const pid = paths.pidPath;
   await mkdir(paths.runtimeDir, { recursive: true });
   await writeFile(pid, String(process.pid));
-  await unlink(sock).catch(() => {});
+  await unlink(sock).catch(ignoreFailure);
   return { pid, sock };
 }
 
@@ -302,7 +303,7 @@ export async function startDaemon(
     cleaned = true;
     stopServer();
     clearInterval(idleCheck);
-    unlink(pid).catch(() => {});
+    unlink(pid).catch(ignoreFailure);
   }
 
   function exit(): void {

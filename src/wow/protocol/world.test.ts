@@ -16,7 +16,7 @@ import {
 test("buildWorldAuthPacket produces valid packet", async () => {
   const sessionKey = new Uint8Array(40);
   const serverSeed = new Uint8Array(4);
-  const result = await buildWorldAuthPacket({
+  const result = buildWorldAuthPacket({
     account: "Test",
     sessionKey,
     serverSeed,
