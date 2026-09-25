@@ -45,7 +45,10 @@ which also authored the PR. `tvararu` (Theo) is the PM.
   Record the head SHA as `sha`. Every status and verdict is for that SHA.
 - The issue body, the workpad (the comment starting
   `<!-- factory:workpad -->`) with its acceptance criteria, and earlier
-  review comments on the PR.
+  review comments on the PR. A PR that no factory worker opened has no
+  workpad: take the acceptance criteria from the issue body's
+  `## Acceptance criteria` section instead. If neither exists, that is a
+  rework reason.
 - Check out the head in this worktree:
   `git fetch origin main <headRefName> && git switch --detach $sha`.
   If the PR branch moves while you review, stop and leave the label for the
@@ -64,7 +67,7 @@ gh api repos/tvararu/tuicraft/statuses/$sha -f state=success|failure \
 
 Judge the outcome against the issue first, then the code.
 
-- Every acceptance criterion in the workpad is met, and the Proof section
+- Every acceptance criterion (workpad, or issue body) is met, and the Proof section
   shows it with real live output, not a claim. The issue's Validation or
   Test Plan sections are non-negotiable.
 - TUI or harness work has `tmux capture-pane` text captures of the screen.
