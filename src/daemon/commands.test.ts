@@ -2864,6 +2864,22 @@ describe("IPC round-trip", () => {
     expect(lines).toEqual(["[ignore] Ignore list is empty"]);
   });
 
+  test("onPacketError wiring reports the failed opcode", async () => {
+    startTestServer();
+    const [cb] = (handle.onPacketError as ReturnType<typeof jest.fn>).mock
+      .calls[0] as [(opcode: number, err: Error) => void];
+    cb(0x012a, new RangeError("Out of bounds access"));
+    const lines = await sendToSocket("READ_JSON", sockPath);
+    expect(JSON.parse(lines[0]!)).toEqual({
+      type: "PACKET",
+      data: {
+        type: "packet_error",
+        opcode: 0x012a,
+        error: "Out of bounds access",
+      },
+    });
+  });
+
   test("onEntityEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerEntityEvent({

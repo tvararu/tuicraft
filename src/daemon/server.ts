@@ -230,6 +230,14 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onRecoveryEvent(domain("recovery"));
   handle.onQuestEvent(domain("quest"));
   handle.onRewardsEvent(domain("rewards"));
+  handle.onPacketError((opcode, err) =>
+    onDomainEvent(
+      "packet",
+      { type: "packet_error", opcode, error: err.message },
+      events,
+      log,
+    ),
+  );
 
   let cleaned = false;
   function cleanup(): void {
