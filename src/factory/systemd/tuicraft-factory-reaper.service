@@ -1,0 +1,8 @@
+[Unit]
+Description=tuicraft factory worktree reaper
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/code/tuicraft
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/share/mise/shims/bun %h/code/tuicraft/src/factory/main.ts reap
