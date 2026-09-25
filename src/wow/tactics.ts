@@ -342,17 +342,25 @@ export class TacticsLoop {
     const ageMs = this.now() - sentAtMs;
     const choice = result.choice;
     const rejected = judge(choice, ageMs, this.maxResultAgeMs, candidates);
-    if (rejected) return this.discard(run, rejected, choice);
+    if (rejected) {
+      this.discard(run, rejected, choice);
+      return;
+    }
     const current = this.deps.observe(run.context);
     if (!this.live(run)) return;
-    if (current.outcome)
-      return this.finish(run, current.outcome, current.observation);
-    if (!offers(withWait(current.candidates), choice))
-      return this.discard(run, "unavailable", choice);
+    if (current.outcome) {
+      this.finish(run, current.outcome, current.observation);
+      return;
+    }
+    if (!offers(withWait(current.candidates), choice)) {
+      this.discard(run, "unavailable", choice);
+      return;
+    }
     try {
       this.deps.execute(choice, run.context);
     } catch (error) {
-      return this.discard(run, messageOf(error), choice);
+      this.discard(run, messageOf(error), choice);
+      return;
     }
     if (this.live(run)) this.applied(run, choice, ageMs);
   }

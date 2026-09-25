@@ -21,7 +21,7 @@ type FriendUpdateFields = Partial<
 >;
 
 export class FriendStore {
-  private friends: Map<bigint, FriendEntry>;
+  private readonly friends: Map<bigint, FriendEntry>;
   private listener?: (event: FriendEvent) => void;
 
   constructor() {

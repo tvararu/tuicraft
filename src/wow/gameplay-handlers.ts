@@ -58,6 +58,11 @@ import {
 import type { QuestDialog } from "wow/quests";
 
 export function registerCombatHandlers(conn: WorldConn): void {
+  registerSpellHandlers(conn);
+  registerMeleeHandlers(conn);
+}
+
+function registerSpellHandlers(conn: WorldConn): void {
   const on = (opcode: number, handle: (r: PacketReader) => void) =>
     conn.dispatch.on(opcode, handle);
   on(GameOpcode.SMSG_INITIAL_SPELLS, (r) =>
@@ -96,6 +101,11 @@ export function registerCombatHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_SPELL_DELAYED, (r) =>
     conn.combat?.applySpellDelayed(parseSpellDelayed(r)),
   );
+}
+
+function registerMeleeHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
   on(GameOpcode.SMSG_CANCEL_COMBAT, () => conn.combat?.applyCancelCombat());
   for (const [opcode, error] of ATTACK_SWING_ERRORS)
     on(opcode, () => conn.combat?.applyAttackError(error));
@@ -149,6 +159,12 @@ export function registerQuestHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, (r) =>
     conn.quests?.receiveQuery(parseQuestQueryResponse(r)),
   );
+  registerQuestProgressHandlers(conn);
+}
+
+function registerQuestProgressHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
   on(GameOpcode.SMSG_QUESTGIVER_QUEST_COMPLETE, (r) =>
     conn.quests?.receiveReward(parseQuestgiverQuestComplete(r)),
   );

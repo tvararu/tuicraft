@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   type EntityEvent,
   EntityStore,
@@ -17,7 +18,7 @@ describe("EntityStore", () => {
 
     expect(store.get(1n)).toBeDefined();
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("appear");
+    expect(must(events[0]).type).toBe("appear");
   });
 
   test("create with UNIT type has unit-specific fields", () => {
@@ -67,7 +68,7 @@ describe("EntityStore", () => {
     const store = new EntityStore();
     store.create(4n, ObjectType.CORPSE, {});
 
-    const entity = store.get(4n)!;
+    const entity = must(store.get(4n));
     expect(entity.objectType).toBe(ObjectType.CORPSE);
     expect("health" in entity).toBe(false);
     expect("displayId" in entity).toBe(false);
@@ -86,9 +87,10 @@ describe("EntityStore", () => {
     const entity = store.get(1n) as UnitEntity;
     expect(entity.health).toBe(50);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("update");
-    if (events[0]!.type === "update") {
-      expect(events[0]!.changed).toContain("health");
+    const event = must(events[0]);
+    expect(event.type).toBe("update");
+    if (event.type === "update") {
+      expect(event.changed).toContain("health");
     }
   });
 
@@ -103,9 +105,10 @@ describe("EntityStore", () => {
     store.update(1n, { health: 75, level: 10 });
 
     expect(events).toHaveLength(1);
-    if (events[0]!.type === "update") {
-      expect(events[0]!.changed).toContain("health");
-      expect(events[0]!.changed).toContain("level");
+    const event = must(events[0]);
+    if (event.type === "update") {
+      expect(event.changed).toContain("health");
+      expect(event.changed).toContain("level");
     }
   });
 
@@ -145,10 +148,11 @@ describe("EntityStore", () => {
 
     expect(store.get(1n)).toBeUndefined();
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("disappear");
-    if (events[0]!.type === "disappear") {
-      expect(events[0]!.guid).toBe(1n);
-      expect(events[0]!.name).toBe("TestUnit");
+    const event = must(events[0]);
+    expect(event.type).toBe("disappear");
+    if (event.type === "disappear") {
+      expect(event.guid).toBe(1n);
+      expect(event.name).toBe("TestUnit");
     }
   });
 
@@ -200,11 +204,12 @@ describe("EntityStore", () => {
 
     store.setName(1n, "Thrall");
 
-    const entity = store.get(1n)!;
+    const entity = must(store.get(1n));
     expect(entity.name).toBe("Thrall");
     expect(events).toHaveLength(1);
-    if (events[0]!.type === "update") {
-      expect(events[0]!.changed).toEqual(["name"]);
+    const event = must(events[0]);
+    if (event.type === "update") {
+      expect(event.changed).toEqual(["name"]);
     }
   });
 
@@ -219,11 +224,12 @@ describe("EntityStore", () => {
     const pos = { mapId: 1, x: 10, y: 20, z: 30, orientation: 1.5 };
     store.setPosition(1n, pos);
 
-    const entity = store.get(1n)!;
+    const entity = must(store.get(1n));
     expect(entity.position).toEqual(pos);
     expect(events).toHaveLength(1);
-    if (events[0]!.type === "update") {
-      expect(events[0]!.changed).toEqual(["position"]);
+    const event = must(events[0]);
+    if (event.type === "update") {
+      expect(event.changed).toEqual(["position"]);
     }
   });
 
@@ -296,7 +302,7 @@ describe("EntityStore", () => {
 
     expect(store.getByType(ObjectType.UNIT)).toHaveLength(0);
     expect(store.getByType(ObjectType.GAMEOBJECT)).toHaveLength(1);
-    expect(store.get(1n)!.objectType).toBe(ObjectType.GAMEOBJECT);
+    expect(must(store.get(1n)).objectType).toBe(ObjectType.GAMEOBJECT);
   });
 
   test("create replacing entity fires disappear then appear", () => {
@@ -311,14 +317,16 @@ describe("EntityStore", () => {
     store.create(1n, ObjectType.GAMEOBJECT, {});
 
     expect(events).toHaveLength(2);
-    expect(events[0]!.type).toBe("disappear");
-    if (events[0]!.type === "disappear") {
-      expect(events[0]!.guid).toBe(1n);
-      expect(events[0]!.name).toBe("OldUnit");
+    const event = must(events[0]);
+    expect(event.type).toBe("disappear");
+    if (event.type === "disappear") {
+      expect(event.guid).toBe(1n);
+      expect(event.name).toBe("OldUnit");
     }
-    expect(events[1]!.type).toBe("appear");
-    if (events[1]!.type === "appear") {
-      expect(events[1]!.entity.objectType).toBe(ObjectType.GAMEOBJECT);
+    const event1 = must(events[1]);
+    expect(event1.type).toBe("appear");
+    if (event1.type === "appear") {
+      expect(event1.entity.objectType).toBe(ObjectType.GAMEOBJECT);
     }
   });
 });

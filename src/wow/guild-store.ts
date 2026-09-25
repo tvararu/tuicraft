@@ -37,7 +37,7 @@ export type GuildEvent =
   | { type: "guild_invite"; inviter: string; guildName: string };
 
 export class GuildStore {
-  private members: Map<bigint, GuildMember>;
+  private readonly members: Map<bigint, GuildMember>;
   private guildName: string;
   private motd: string;
   private guildInfo: string;

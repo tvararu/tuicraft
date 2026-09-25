@@ -123,8 +123,8 @@ type EntityFields = Partial<
 >;
 
 export class EntityStore {
-  private entities: Map<bigint, Entity>;
-  private byType: Map<number, Set<bigint>>;
+  private readonly entities: Map<bigint, Entity>;
+  private readonly byType: Map<number, Set<bigint>>;
   private listener?: (event: EntityEvent) => void;
 
   constructor() {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
+import { must } from "test/must";
 import { authHandshake } from "wow/auth";
 import {
   type ChatMessage,
@@ -70,7 +71,7 @@ describe("two-client chat", () => {
 
     const whisper = received.find((m) => m.message === "hello from client 1");
     expect(whisper).toBeDefined();
-    expect(whisper!.sender).toBe(config1.character);
+    expect(must(whisper).sender).toBe(config1.character);
   }, 30_000);
 
   test("who query returns results", async () => {
@@ -137,25 +138,31 @@ describe("two-client chat", () => {
 
 type GpsFix = { map: number; x: number; y: number; z: number };
 
+type GpsPos = { x: number; y: number; z: number };
+
+function parseGpsPos(msg: string): GpsPos | undefined {
+  const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
+  if (!posMatch) return undefined;
+  return {
+    x: Number.parseFloat(must(posMatch[1])),
+    y: Number.parseFloat(must(posMatch[2])),
+    z: Number.parseFloat(must(posMatch[3])),
+  };
+}
+
+function parseGpsMap(msg: string): number | undefined {
+  const mapMatch = msg.match(/^Map: (\d+)/);
+  if (!mapMatch) return undefined;
+  return Number.parseInt(must(mapMatch[1]), 10);
+}
+
 function parseGps(messages: ChatMessage[]): GpsFix | undefined {
   let map: number | undefined;
-  let pos: { x: number; y: number; z: number } | undefined;
+  let pos: GpsPos | undefined;
   for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]!.message;
-    if (!pos) {
-      const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
-      if (posMatch) {
-        pos = {
-          x: Number.parseFloat(posMatch[1]!),
-          y: Number.parseFloat(posMatch[2]!),
-          z: Number.parseFloat(posMatch[3]!),
-        };
-      }
-    }
-    if (map === undefined) {
-      const mapMatch = msg.match(/^Map: (\d+)/);
-      if (mapMatch) map = Number.parseInt(mapMatch[1]!, 10);
-    }
+    const msg = must(messages[i]).message;
+    pos ??= parseGpsPos(msg);
+    map ??= parseGpsMap(msg);
     if (map !== undefined && pos !== undefined) break;
   }
   if (map === undefined || pos === undefined) return undefined;
@@ -218,7 +225,7 @@ describe("fault paths", () => {
       await Bun.sleep(2500);
       const after = parseGps(chat);
       expect(after).toBeDefined();
-      expect(dist2d(before!, after!)).toBeGreaterThan(100);
+      expect(dist2d(must(before), must(after))).toBeGreaterThan(100);
 
       expect(control.some((e) => e.type === "control_error")).toBe(false);
 
@@ -272,7 +279,7 @@ describe("fault paths", () => {
       await Bun.sleep(2500);
       const heldAfter = parseGps(chat);
       expect(heldAfter).toBeDefined();
-      expect(dist2d(held!, heldAfter!)).toBeLessThan(1.5);
+      expect(dist2d(must(held), must(heldAfter))).toBeLessThan(1.5);
 
       handle1.sendWhisper(config1.character, ".unfreeze");
       await Bun.sleep(2500);
@@ -337,7 +344,7 @@ describe("fault paths", () => {
       expect(lines).toContain("OK");
       const whoLine = lines.find((l) => l !== "OK");
       expect(whoLine).toBeDefined();
-      expect(() => JSON.parse(whoLine!)).not.toThrow();
+      expect(() => JSON.parse(must(whoLine))).not.toThrow();
 
       const status = await sendToSocket("STATUS", daemon.sock);
       expect(status).toEqual(["CONNECTED"]);
@@ -365,7 +372,7 @@ function waitForGroupEvent<T extends GroupEvent["type"]>(
     }, timeoutMs);
     const poll = setInterval(() => {
       for (let i = startIdx; i < events.length; i++) {
-        const e = events[i]!;
+        const e = must(events[i]);
         if (
           e.type === type &&
           (!filter || filter(e as Extract<GroupEvent, { type: T }>))
@@ -404,7 +411,7 @@ describe("party management", () => {
       await waitForGroupEvent(events2, "invite_received");
 
       handle2.acceptInvite();
-      const hasMembers = (e: { members: unknown[] }) => e.members.length >= 1;
+      const hasMembers = (e: { members: unknown[] }) => e.members.length > 0;
       const [list1, list2] = await Promise.all([
         waitForGroupEvent(events1, "group_list", hasMembers),
         waitForGroupEvent(events2, "group_list", hasMembers),
@@ -474,7 +481,7 @@ function waitForEntityEvent<T extends EntityEvent["type"]>(
     }, timeoutMs);
     const poll = setInterval(() => {
       for (let i = startIdx; i < events.length; i++) {
-        const e = events[i]!;
+        const e = must(events[i]);
         if (
           e.type === type &&
           (!filter || filter(e as Extract<EntityEvent, { type: T }>))
@@ -554,9 +561,9 @@ describe("entity tracking", () => {
       expect(withPosition.length).toBeGreaterThan(0);
 
       for (const e of withPosition) {
-        expect(e.position!.x).not.toBeNaN();
-        expect(e.position!.y).not.toBeNaN();
-        expect(e.position!.z).not.toBeNaN();
+        expect(must(e.position).x).not.toBeNaN();
+        expect(must(e.position).y).not.toBeNaN();
+        expect(must(e.position).z).not.toBeNaN();
       }
     } finally {
       handle1.close();

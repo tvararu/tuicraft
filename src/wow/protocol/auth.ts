@@ -7,15 +7,15 @@ import {
 import { AuthOpcode } from "wow/protocol/opcodes";
 import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
-export interface LogonChallengeResult {
+export type LogonChallengeResult = {
   B?: bigint;
   g?: bigint;
   N?: bigint;
   salt?: Uint8Array;
   status: number;
-}
+};
 
-export interface Realm {
+export type Realm = {
   characters: number;
   flags: number;
   host: string;
@@ -26,14 +26,14 @@ export interface Realm {
   population: number;
   port: number;
   timezone: number;
-}
+};
 
 function reverseString(s: string): string {
   return s.split("").reverse().join("");
 }
 
-export function buildLogonChallenge(account: string): Uint8Array {
-  account = account.toUpperCase();
+export function buildLogonChallenge(accountName: string): Uint8Array {
+  const account = accountName.toUpperCase();
   const w = new PacketWriter();
 
   w.uint8(AuthOpcode.LOGON_CHALLENGE);
@@ -81,10 +81,10 @@ export function parseLogonChallengeResponse(
   return { status, B, g, N, salt };
 }
 
-export interface ReconnectChallengeResult {
+export type ReconnectChallengeResult = {
   challengeData?: Uint8Array;
   status: number;
-}
+};
 
 export function parseReconnectChallengeResponse(
   r: PacketReader,

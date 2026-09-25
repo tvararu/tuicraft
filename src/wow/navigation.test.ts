@@ -408,7 +408,7 @@ describe("ground destinations", () => {
     );
   });
   test("primes the origin tile before the connected height query", () => {
-    const loaded: Array<[number, number]> = [];
+    const loaded: [number, number][] = [];
     const map = native({
       loadAdtAt: (x, y) => {
         loaded.push([x, y]);

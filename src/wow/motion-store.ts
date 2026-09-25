@@ -27,8 +27,11 @@ type Motion = {
 
 export class MotionStore {
   private readonly motions = new Map<bigint, Motion>();
+  private readonly now: () => number;
 
-  constructor(private readonly now: () => number) {}
+  constructor(now: () => number) {
+    this.now = now;
+  }
 
   observe(guid: bigint, position: Position, spline?: CreateSpline): void {
     const now = this.now();

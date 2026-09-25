@@ -14,12 +14,13 @@ export type DbcFile = {
 };
 
 const utf8 = new TextDecoder("utf-8");
+const TRAILING_SLASH = /\/$/;
 
 export async function openDbc(
   directory: string,
   spec: DbcSpec,
 ): Promise<DbcFile> {
-  const path = `${directory.replace(/\/$/, "")}/${spec.file}`;
+  const path = `${directory.replace(TRAILING_SLASH, "")}/${spec.file}`;
   const handle = Bun.file(path);
   if (!(await handle.exists()))
     throw new Error(`missing ${spec.file} in ${directory}`);
@@ -124,11 +125,13 @@ export function joinRow(file: DbcFile, id: number): number | undefined {
 
 export class DbcTable<T> {
   private readonly cache = new Map<number, T>();
+  readonly file: DbcFile;
+  private readonly decode: (file: DbcFile, row: number) => T;
 
-  constructor(
-    readonly file: DbcFile,
-    private readonly decode: (file: DbcFile, row: number) => T,
-  ) {}
+  constructor(file: DbcFile, decode: (file: DbcFile, row: number) => T) {
+    this.file = file;
+    this.decode = decode;
+  }
 
   get(id: number): T | undefined {
     const cached = this.cache.get(id);

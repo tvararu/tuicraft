@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { GAMEOBJECT_FIELDS, OBJECT_FIELDS, UNIT_FIELDS } from "./entity-fields";
 import {
   extractGameObjectFields,
@@ -115,8 +116,8 @@ describe("extractUnitFields", () => {
     ]);
     const result = extractUnitFields(raw);
     expect(result.power).toBeDefined();
-    expect(result.power![0]).toBe(3000);
-    expect(result.power![2]).toBe(100);
+    expect(must(result.power)[0]).toBe(3000);
+    expect(must(result.power)[2]).toBe(100);
   });
 
   test("extracts maxPower array entries", () => {
@@ -126,8 +127,8 @@ describe("extractUnitFields", () => {
     ]);
     const result = extractUnitFields(raw);
     expect(result.maxPower).toBeDefined();
-    expect(result.maxPower![0]).toBe(5000);
-    expect(result.maxPower![4]).toBe(200);
+    expect(must(result.maxPower)[0]).toBe(5000);
+    expect(must(result.maxPower)[4]).toBe(200);
   });
 
   test("extracts displayId and npcFlags", () => {
@@ -182,10 +183,10 @@ describe("extractUnitFields", () => {
     const raw = new Map([[UNIT_FIELDS.POWER3.offset, 500]]);
     const result = extractUnitFields(raw);
     expect(result.power).toBeDefined();
-    expect(result.power![2]).toBe(500);
-    expect(0 in result.power!).toBe(false);
-    expect(1 in result.power!).toBe(false);
-    expect(3 in result.power!).toBe(false);
+    expect(must(result.power)[2]).toBe(500);
+    expect(0 in must(result.power)).toBe(false);
+    expect(1 in must(result.power)).toBe(false);
+    expect(3 in must(result.power)).toBe(false);
   });
 
   test("empty map returns empty changed", () => {

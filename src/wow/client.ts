@@ -2,6 +2,7 @@ import type { Socket } from "bun";
 import type { CombatEvent, CombatRuntime, CombatState } from "wow/combat";
 import type {
   ControlEvent,
+  ControlPose,
   ControlRuntime,
   ControlState,
   MovementDirection,
@@ -36,7 +37,11 @@ import {
 } from "wow/ignore-store";
 import type { InventoryState } from "wow/inventory";
 import { registerMovementHandlers } from "wow/movement-handlers";
-import { classifyNavigationRefusal } from "wow/navigation";
+import {
+  classifyNavigationRefusal,
+  type Navigation,
+  type NavPoint,
+} from "wow/navigation";
 import {
   buildChatMessage,
   buildJoinChannel,
@@ -91,7 +96,7 @@ import type {
   RecoveryState,
 } from "wow/recovery";
 import type { RewardsEvent, RewardsRuntime, RewardsState } from "wow/rewards";
-import { createRuntimes } from "wow/runtime";
+import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { TacticsEvent, TacticsLoop, TacticsState } from "wow/tactics";
 import {
@@ -210,17 +215,11 @@ export type DuelEvent =
   | { type: "duel_out_of_bounds" }
   | { type: "duel_in_bounds" };
 
-export type {
-  Entity,
-  EntityEvent,
-  FriendEntry,
-  FriendEvent,
-  GuildEvent,
-  GuildRoster,
-  IgnoreEntry,
-  IgnoreEvent,
-  WhoResult,
-};
+export type { Entity, EntityEvent } from "wow/entity-store";
+export type { FriendEntry, FriendEvent } from "wow/friend-store";
+export type { GuildEvent, GuildRoster } from "wow/guild-store";
+export type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+export type { WhoResult } from "wow/protocol/chat";
 
 export type ChatMode =
   | { type: "say" }
@@ -357,7 +356,7 @@ export type WorldHandle = {
 };
 
 export type WorldConn = {
-  socket: Socket;
+  socket?: Socket;
   dispatch: OpcodeDispatch;
   buf: AccumulatorBuffer;
   arc4?: Arc4;
@@ -435,13 +434,14 @@ async function authenticateWorld(
   challenge.uint32LE();
   const serverSeed = challenge.bytes(4);
 
-  const body = await buildWorldAuthPacket(
-    config.account,
-    auth.sessionKey,
+  const body = await buildWorldAuthPacket({
+    account: config.account,
+    sessionKey: auth.sessionKey,
     serverSeed,
-    auth.realmId,
-    config.clientSeed,
-  );
+    realmId: auth.realmId,
+    clientSeed: config.clientSeed,
+  });
+  if (!conn.socket) throw new Error("World socket is not connected");
   conn.socket.write(buildOutgoingPacket(GameOpcode.CMSG_AUTH_SESSION, body));
   conn.arc4 = new Arc4(auth.sessionKey);
 
@@ -500,868 +500,899 @@ function startPingLoop(
   }, intervalMs);
 }
 
+function notify(conn: WorldConn, message: string): void {
+  conn.onMessage?.({ type: ChatType.SYSTEM, sender: "", message });
+}
+
+function createWorldConn(): WorldConn {
+  const conn: WorldConn = {
+    dispatch: new OpcodeDispatch(),
+    buf: new AccumulatorBuffer(),
+    startTime: Date.now(),
+    nameCache: new Map(),
+    pendingMessages: new Map(),
+    channels: [],
+    lastChatMode: { type: "say" },
+    selfName: "",
+    selfGuidLow: 0,
+    selfGuidHigh: 0,
+    partyMembers: new Map(),
+    entityStore: new EntityStore(),
+    creatureNameCache: new Map(),
+    gameObjectNameCache: new Map(),
+    pendingNameQueries: new Set(),
+    friendStore: new FriendStore(),
+    ignoreStore: new IgnoreStore(),
+    guildStore: new GuildStore(),
+    guildId: 0,
+    pendingRequest: null,
+    duelArbiter: 0n,
+  };
+  conn.entityStore.onEvent((event) => {
+    if (event.type === "disappear") conn.combat?.forget(event.guid);
+    conn.recovery?.observeEntity(event);
+    conn.rewards?.observeEntity(event);
+    conn.cycle?.observeEntity(event);
+    conn.onEntityEvent?.(event);
+  });
+  conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
+  conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
+  conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
+  return conn;
+}
+
+function cleanupSession(
+  conn: WorldConn,
+  rt: Runtimes,
+  sendStop: boolean,
+): void {
+  conn.onEntityEvent = undefined;
+  conn.onFriendEvent = undefined;
+  conn.onIgnoreEvent = undefined;
+  conn.onGuildEvent = undefined;
+  conn.onGroupEvent = undefined;
+  conn.onDuelEvent = undefined;
+  conn.onControlEvent = undefined;
+  conn.onRecoveryEvent = undefined;
+  conn.onRewardsEvent = undefined;
+  rt.dispose(sendStop);
+}
+
+function registerChatHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_TIME_SYNC_REQ, (r) => handleTimeSync(conn, r));
+  on(GameOpcode.SMSG_MESSAGE_CHAT, (r) => handleChatMessage(conn, r));
+  on(GameOpcode.SMSG_GM_MESSAGECHAT, (r) => handleGmChatMessage(conn, r));
+  on(GameOpcode.SMSG_NAME_QUERY_RESPONSE, (r) =>
+    handleNameQueryResponse(conn, r),
+  );
+  on(GameOpcode.SMSG_MOTD, (r) => handleMotd(conn, r));
+  on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
+    handlePlayerNotFound(conn, r),
+  );
+  on(GameOpcode.SMSG_CHAT_RESTRICTED, (r) => handleChatRestricted(conn, r));
+  on(GameOpcode.SMSG_CHAT_WRONG_FACTION, () => handleChatWrongFaction(conn));
+  on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) => handleChannelNotify(conn, r));
+  on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
+    handleServerBroadcast(conn, r),
+  );
+  on(GameOpcode.SMSG_NOTIFICATION, (r) => handleNotification(conn, r));
+  on(GameOpcode.SMSG_RECEIVED_MAIL, (r) => handleReceivedMail(conn, r));
+}
+
+function registerPartyHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_DUEL_REQUESTED, (r) => handleDuelRequested(conn, r));
+  on(GameOpcode.SMSG_DUEL_COUNTDOWN, (r) => handleDuelCountdown(conn, r));
+  on(GameOpcode.SMSG_DUEL_COMPLETE, (r) => handleDuelComplete(conn, r));
+  on(GameOpcode.SMSG_DUEL_WINNER, (r) => handleDuelWinner(conn, r));
+  on(GameOpcode.SMSG_DUEL_OUTOFBOUNDS, () => handleDuelOutOfBounds(conn));
+  on(GameOpcode.SMSG_DUEL_INBOUNDS, () => handleDuelInBounds(conn));
+  on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
+    handlePartyCommandResult(conn, r),
+  );
+  on(GameOpcode.SMSG_GROUP_INVITE, (r) => handleGroupInviteReceived(conn, r));
+  on(GameOpcode.SMSG_GROUP_SET_LEADER, (r) => handleGroupSetLeaderMsg(conn, r));
+  on(GameOpcode.SMSG_GROUP_LIST, (r) => handleGroupListMsg(conn, r));
+  on(GameOpcode.SMSG_GROUP_DESTROYED, () => handleGroupDestroyed(conn));
+  on(GameOpcode.SMSG_GROUP_UNINVITE, () => handleGroupUninvite(conn));
+  on(GameOpcode.SMSG_GROUP_DECLINE, (r) => handleGroupDeclineMsg(conn, r));
+  on(GameOpcode.SMSG_PARTY_MEMBER_STATS, (r) =>
+    handlePartyMemberStatsMsg(conn, r),
+  );
+  on(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, (r) =>
+    handlePartyMemberStatsMsg(conn, r, true),
+  );
+}
+
+function registerObjectHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_UPDATE_OBJECT, (r) => handleUpdateObject(conn, r));
+  on(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, (r) =>
+    handleCompressedUpdateObject(conn, r),
+  );
+  on(GameOpcode.SMSG_DESTROY_OBJECT, (r) => handleDestroyObject(conn, r));
+  on(GameOpcode.SMSG_CREATURE_QUERY_RESPONSE, (r) =>
+    handleCreatureQueryResponse(conn, r),
+  );
+  on(GameOpcode.SMSG_GAMEOBJECT_QUERY_RESPONSE, (r) =>
+    handleGameObjectQueryResponse(conn, r),
+  );
+  on(GameOpcode.MSG_RANDOM_ROLL, (r) => handleRandomRoll(conn, r));
+  on(GameOpcode.SMSG_CONTACT_LIST, (r) => handleContactList(conn, r));
+  on(GameOpcode.SMSG_FRIEND_STATUS, (r) => handleFriendStatus(conn, r));
+  on(GameOpcode.SMSG_GUILD_ROSTER, (r) => handleGuildRoster(conn, r));
+  on(GameOpcode.SMSG_GUILD_QUERY_RESPONSE, (r) =>
+    handleGuildQueryResponse(conn, r),
+  );
+  on(GameOpcode.SMSG_GUILD_EVENT, (r) => handleGuildEvent(conn, r));
+  on(GameOpcode.SMSG_GUILD_COMMAND_RESULT, (r) =>
+    handleGuildCommandResult(conn, r),
+  );
+  on(GameOpcode.SMSG_GUILD_INVITE, (r) => handleGuildInvitePacket(conn, r));
+}
+
+function registerWorldHandlers(conn: WorldConn): void {
+  registerChatHandlers(conn);
+  registerPartyHandlers(conn);
+  registerObjectHandlers(conn);
+  registerMovementHandlers(conn);
+  registerCombatHandlers(conn);
+  registerQuestHandlers(conn);
+  registerLootHandlers(conn);
+  registerRecoveryHandlers(conn);
+  registerStubs(conn.dispatch, (msg) => {
+    if (!conn.onMessage) return false;
+    conn.onMessage({
+      type: ChatType.SYSTEM,
+      sender: "",
+      message: msg,
+    });
+    return true;
+  });
+}
+
+function chatMethods(conn: WorldConn, lang: number) {
+  const chat = (type: number, message: string, target?: string): void =>
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_MESSAGE_CHAT,
+      buildChatMessage(type, lang, message, target),
+    );
+  return {
+    sendWhisper(target, message) {
+      if (target) conn.lastChatMode = { type: "whisper", target };
+      chat(ChatType.WHISPER, message, target);
+    },
+    sendSay(message) {
+      conn.lastChatMode = { type: "say" };
+      chat(ChatType.SAY, message);
+    },
+    sendYell(message) {
+      conn.lastChatMode = { type: "yell" };
+      chat(ChatType.YELL, message);
+    },
+    sendGuild(message) {
+      conn.lastChatMode = { type: "guild" };
+      chat(ChatType.GUILD, message);
+    },
+    sendParty(message) {
+      conn.lastChatMode = { type: "party" };
+      chat(ChatType.PARTY, message);
+    },
+    sendRaid(message) {
+      conn.lastChatMode = { type: "raid" };
+      chat(ChatType.RAID, message);
+    },
+    sendEmote(message) {
+      conn.lastChatMode = { type: "emote" };
+      chat(ChatType.EMOTE, message);
+    },
+    sendDnd(message) {
+      chat(ChatType.DND, message);
+    },
+    sendAfk(message) {
+      chat(ChatType.AFK, message);
+    },
+    sendChannel(channel, message) {
+      conn.lastChatMode = { type: "channel", channel };
+      chat(ChatType.CHANNEL, message, channel);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function sendInMode(
+  handle: WorldHandle,
+  mode: ChatMode,
+  message: string,
+): void {
+  switch (mode.type) {
+    case "say":
+      handle.sendSay(message);
+      break;
+    case "yell":
+      handle.sendYell(message);
+      break;
+    case "guild":
+      handle.sendGuild(message);
+      break;
+    case "party":
+      handle.sendParty(message);
+      break;
+    case "raid":
+      handle.sendRaid(message);
+      break;
+    case "emote":
+      handle.sendEmote(message);
+      break;
+    case "whisper":
+      handle.sendWhisper(mode.target, message);
+      break;
+    case "channel":
+      handle.sendChannel(mode.channel, message);
+      break;
+    default:
+      break;
+  }
+}
+
+function channelMethods(conn: WorldConn, handle: () => WorldHandle) {
+  return {
+    getChannel(index) {
+      return conn.channels[index - 1];
+    },
+    async who(opts = {}) {
+      sendPacket(conn, GameOpcode.CMSG_WHO, buildWhoRequest(opts));
+      const r = await conn.dispatch.expect(GameOpcode.SMSG_WHO);
+      return parseWhoResponse(r);
+    },
+    getLastChatMode() {
+      return conn.lastChatMode;
+    },
+    setLastChatMode(mode) {
+      conn.lastChatMode = mode;
+    },
+    sendInCurrentMode(message) {
+      sendInMode(handle(), conn.lastChatMode, message);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function acceptPending(conn: WorldConn): void {
+  if (conn.pendingRequest === "duel") {
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_DUEL_ACCEPTED,
+      buildDuelAccepted(conn.duelArbiter),
+    );
+  } else if (conn.pendingRequest === "group") {
+    sendPacket(conn, GameOpcode.CMSG_GROUP_ACCEPT, buildGroupAccept());
+  } else {
+    notify(conn, "Nothing to accept.");
+  }
+  conn.pendingRequest = null;
+}
+
+function declinePending(conn: WorldConn): void {
+  if (conn.pendingRequest === "duel") {
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_DUEL_CANCELLED,
+      buildDuelCancelled(conn.duelArbiter),
+    );
+  } else if (conn.pendingRequest === "group") {
+    sendPacket(conn, GameOpcode.CMSG_GROUP_DECLINE, buildGroupDecline());
+  } else {
+    notify(conn, "Nothing to decline.");
+  }
+  conn.pendingRequest = null;
+}
+
+function groupMethods(conn: WorldConn) {
+  return {
+    invite(name) {
+      sendPacket(conn, GameOpcode.CMSG_GROUP_INVITE, buildGroupInvite(name));
+    },
+    uninvite(name) {
+      sendPacket(
+        conn,
+        GameOpcode.CMSG_GROUP_UNINVITE,
+        buildGroupUninvite(name),
+      );
+    },
+    leaveGroup() {
+      sendPacket(conn, GameOpcode.CMSG_GROUP_DISBAND, buildGroupDisband());
+    },
+    joinChannel(name, password) {
+      sendPacket(
+        conn,
+        GameOpcode.CMSG_JOIN_CHANNEL,
+        buildJoinChannel(name, password),
+      );
+    },
+    leaveChannel(name) {
+      sendPacket(conn, GameOpcode.CMSG_LEAVE_CHANNEL, buildLeaveChannel(name));
+    },
+    setLeader(name) {
+      const member = conn.partyMembers.get(name);
+      if (!member) {
+        notify(conn, `"${name}" is not in your party.`);
+        return;
+      }
+      sendPacket(
+        conn,
+        GameOpcode.CMSG_GROUP_SET_LEADER,
+        buildGroupSetLeader(member.guidLow, member.guidHigh),
+      );
+    },
+    acceptInvite() {
+      acceptPending(conn);
+    },
+    declineInvite() {
+      declinePending(conn);
+    },
+    onGroupEvent(cb) {
+      conn.onGroupEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function socialMethods(conn: WorldConn) {
+  return {
+    onEntityEvent(cb) {
+      conn.onEntityEvent = cb;
+    },
+    onPacketError(cb) {
+      conn.onPacketError = cb;
+    },
+    getNearbyEntities() {
+      return conn.entityStore.all();
+    },
+    getFriends() {
+      return conn.friendStore.all();
+    },
+    addFriend(name) {
+      sendPacket(conn, GameOpcode.CMSG_ADD_FRIEND, buildAddFriend(name, ""));
+    },
+    removeFriend(name) {
+      const friend = conn.friendStore.findByName(name);
+      if (!friend) {
+        notify(conn, `"${name}" is not on your friends list.`);
+        return;
+      }
+      sendPacket(conn, GameOpcode.CMSG_DEL_FRIEND, buildDelFriend(friend.guid));
+    },
+    sendRoll(min, max) {
+      sendPacket(conn, GameOpcode.MSG_RANDOM_ROLL, buildRandomRoll(min, max));
+    },
+    onFriendEvent(cb) {
+      conn.onFriendEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function ignoreMethods(conn: WorldConn) {
+  return {
+    getIgnored() {
+      return conn.ignoreStore.all();
+    },
+    addIgnore(name) {
+      sendPacket(conn, GameOpcode.CMSG_ADD_IGNORE, buildAddIgnore(name));
+    },
+    removeIgnore(name) {
+      const entry = conn.ignoreStore.findByName(name);
+      if (!entry) {
+        notify(conn, `"${name}" is not on your ignore list.`);
+        return;
+      }
+      sendPacket(conn, GameOpcode.CMSG_DEL_IGNORE, buildDelIgnore(entry.guid));
+    },
+    onIgnoreEvent(cb) {
+      conn.onIgnoreEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+async function requestGuildRoster(
+  conn: WorldConn,
+): Promise<GuildRoster | undefined> {
+  sendPacket(conn, GameOpcode.CMSG_GUILD_ROSTER);
+  const rosterPromise = conn.dispatch.expect(GameOpcode.SMSG_GUILD_ROSTER);
+  let queryPromise: Promise<PacketReader> | undefined;
+  if (conn.guildId) {
+    sendPacket(
+      conn,
+      GameOpcode.CMSG_GUILD_QUERY,
+      buildGuildQuery(conn.guildId),
+    );
+    queryPromise = conn.dispatch.expect(GameOpcode.SMSG_GUILD_QUERY_RESPONSE);
+  }
+  const [rosterReader, queryReader] = await Promise.all([
+    rosterPromise,
+    queryPromise ?? Promise.resolve(undefined),
+  ]);
+  handleGuildRoster(conn, rosterReader);
+  if (queryReader) handleGuildQueryResponse(conn, queryReader);
+  return conn.guildStore.get();
+}
+
+function guildMethods(conn: WorldConn) {
+  return {
+    requestGuildRoster() {
+      return requestGuildRoster(conn);
+    },
+    onGuildEvent(cb) {
+      conn.onGuildEvent = cb;
+    },
+    guildInvite(name) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_INVITE, buildGuildInvite(name));
+    },
+    guildRemove(name) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_REMOVE, buildGuildRemove(name));
+    },
+    guildLeave() {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_LEAVE);
+    },
+    guildPromote(name) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_PROMOTE, buildGuildPromote(name));
+    },
+    guildDemote(name) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_DEMOTE, buildGuildDemote(name));
+    },
+    guildLeader(name) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_LEADER, buildGuildLeader(name));
+    },
+    guildMotd(motd) {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_MOTD, buildGuildMotd(motd));
+    },
+    acceptGuildInvite() {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_ACCEPT);
+    },
+    declineGuildInvite() {
+      sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE);
+    },
+    onDuelEvent(cb) {
+      conn.onDuelEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function manualMove(
+  rt: Runtimes,
+  direction: MovementDirection,
+  durationMs: number,
+): void {
+  const state = rt.control.snapshot();
+  if (
+    state.owner !== "manual" ||
+    !state.moving ||
+    state.direction !== direction ||
+    rt.control.walkActive() ||
+    rt.tactics.snapshot().status !== "idle" ||
+    rt.cycle.snapshot().active
+  )
+    rt.override();
+  rt.control.move(direction, durationMs);
+}
+
+function groundedPoint(
+  navigation: Navigation,
+  target: NavPoint,
+  pose: ControlPose,
+): NavPoint {
+  if (![target.x, target.y, target.z].every(Number.isFinite))
+    throw new Error("invalid_destination");
+  let z: number;
+  try {
+    z = navigation.height(pose.mapId, target.x, target.y);
+  } catch {
+    z = navigation.height(pose.mapId, target.x, target.y, pose);
+  }
+  if (Math.abs(z - target.z) > 0.25)
+    throw new Error("destination_not_grounded");
+  return { x: target.x, y: target.y, z };
+}
+
+function resolveWalkDestination(
+  rt: Runtimes,
+  target: WalkTarget,
+  pose: ControlPose,
+): NavPoint {
+  const navigation = rt.navigation();
+  const destination =
+    target.kind === "guid"
+      ? rt.observedTarget(target.guid)
+      : groundedPoint(navigation, target, pose);
+  const ground = navigation.height(pose.mapId, pose.x, pose.y, pose);
+  if (Math.abs(ground - pose.z) > 0.25) throw new Error("self_not_grounded");
+  return destination;
+}
+
+async function walkTowardTarget(
+  rt: Runtimes,
+  target: WalkTarget,
+  yards: number,
+  signal: AbortSignal | undefined,
+): Promise<WalkOutcome> {
+  if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
+    throw new Error("invalid_distance");
+  const pose = rt.control.snapshot().pose;
+  if (!pose) throw new Error("no_pose");
+  if (signal?.aborted)
+    return { status: "stopped", reason: "abort", traveled: 0, pose };
+  let destination: NavPoint;
+  try {
+    destination = resolveWalkDestination(rt, target, pose);
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "target_unavailable";
+    return { status: "stopped", reason, traveled: 0, pose };
+  }
+  rt.override();
+  try {
+    return await rt.control.walkToward(destination, yards, signal);
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "movement_unavailable";
+    return {
+      status: "stopped",
+      reason,
+      traveled: 0,
+      pose: rt.control.snapshot().pose ?? pose,
+    };
+  }
+}
+
+function navigateTo(rt: Runtimes, destination: NavPoint): void {
+  rt.override();
+  const { x, y, z } = destination;
+  if (![x, y, z].every(Number.isFinite))
+    throw new Error("stop: invalid_destination");
+  const pose = rt.control.snapshot().pose;
+  if (!pose) throw new Error("stop: no_pose");
+  const navigation = rt.navigation();
+  try {
+    rt.control.navigate(
+      navigation.plan(pose.mapId, pose, destination),
+      destination,
+    );
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : "navigation_failed";
+    const refusal = classifyNavigationRefusal(raw);
+    rt.control.navigationError(destination, raw, refusal);
+    throw new Error(`${refusal}: ${raw}`);
+  }
+}
+
+function controlMethods(conn: WorldConn, rt: Runtimes) {
+  const { control } = rt;
+  return {
+    getControlState() {
+      return control.snapshot();
+    },
+    move(direction, durationMs) {
+      manualMove(rt, direction, durationMs);
+    },
+    face(orientation) {
+      rt.override();
+      control.face(orientation);
+    },
+    faceGuid(guid) {
+      const target = rt.observedTarget(guid);
+      rt.override();
+      const pose = control.snapshot().pose;
+      if (!pose) throw new Error("no_pose");
+      if (pose.x === target.x && pose.y === target.y)
+        throw new Error("target_coincident");
+      control.face(bearing(pose, target));
+    },
+    walkToward(target, yards, signal) {
+      return walkTowardTarget(rt, target, yards, signal);
+    },
+    selectTarget(guid) {
+      rt.override();
+      control.selectTarget(guid);
+    },
+    halt() {
+      rt.tactics.stop("halt");
+      rt.cycle.stop("halt");
+      rt.halt();
+    },
+    goTo(x, y, z) {
+      navigateTo(rt, { x, y, z });
+    },
+    getNavigationState() {
+      return control.navigationState();
+    },
+    onControlEvent(cb) {
+      conn.onControlEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function combatMethods(rt: Runtimes) {
+  const { combat, tactics, recovery } = rt;
+  return {
+    getCombatState() {
+      return combat.snapshot();
+    },
+    async getSpellbook() {
+      await rt.prepareCatalog();
+      return combat.spellbook();
+    },
+    cast(spellId, targetGuid) {
+      rt.override();
+      combat.cast(spellId, targetGuid);
+    },
+    attack(targetGuid) {
+      rt.override();
+      combat.attack(targetGuid);
+    },
+    cancelCast() {
+      tactics.stop("manual_override");
+      combat.cancelCast();
+    },
+    stopAttack() {
+      tactics.stop("manual_override");
+      combat.stopAttack();
+    },
+    startTactics(targetGuid, instruction, signal, framing) {
+      const life = recovery.snapshot().life;
+      if (life === "dead" || life === "ghost")
+        throw new Error("self_not_alive");
+      return tactics.start({ targetGuid, instruction, framing }, signal);
+    },
+    getTacticsState() {
+      return tactics.snapshot();
+    },
+    onCombatEvent(cb) {
+      combat.onEvent(cb);
+    },
+    onTacticsEvent(cb) {
+      tactics.onEvent(cb);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function recoveryMethods(conn: WorldConn, rt: Runtimes) {
+  const { recovery } = rt;
+  return {
+    getRecoveryState() {
+      return recovery.snapshot();
+    },
+    queryCorpse() {
+      recovery.queryCorpse();
+    },
+    releaseSpirit() {
+      rt.override();
+      recovery.releaseSpirit();
+    },
+    reclaimCorpse() {
+      rt.override();
+      recovery.reclaimCorpse();
+    },
+    activateSpiritHealer(guid) {
+      rt.override();
+      recovery.activateSpiritHealer(guid);
+    },
+    respondResurrection(accept) {
+      rt.override();
+      recovery.respondResurrection(accept);
+    },
+    onRecoveryEvent(cb) {
+      conn.onRecoveryEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function questMethods(rt: Runtimes) {
+  const { quests } = rt;
+  return {
+    getQuestState() {
+      return quests.snapshot();
+    },
+    talk(guid) {
+      rt.override();
+      quests.talk(guid);
+    },
+    queryQuest(questId) {
+      quests.query(questId);
+    },
+    selectGossipOption(optionId, code) {
+      rt.override();
+      quests.selectOption(optionId, code);
+    },
+    selectQuest(questId) {
+      rt.override();
+      quests.selectQuest(questId);
+    },
+    acceptQuest() {
+      rt.override();
+      quests.accept();
+    },
+    onQuestEvent(cb) {
+      quests.onEvent(cb);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function questRewardMethods(rt: Runtimes) {
+  const { quests } = rt;
+  return {
+    completeQuest(questId) {
+      rt.override();
+      quests.complete(questId);
+    },
+    requestQuestReward() {
+      rt.override();
+      quests.requestReward();
+    },
+    chooseQuestReward(index) {
+      rt.override();
+      quests.chooseReward(index);
+    },
+    abandonQuest(slot) {
+      rt.override();
+      quests.abandon(slot);
+    },
+    cancelInteraction() {
+      rt.override();
+      quests.cancel();
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function rewardsMethods(conn: WorldConn, rt: Runtimes) {
+  const { rewards } = rt;
+  return {
+    getInventoryState() {
+      return rewards.snapshot().inventory;
+    },
+    getRewardsState() {
+      return rewards.snapshot();
+    },
+    openLoot(guid) {
+      rt.override();
+      rewards.open(guid);
+    },
+    takeLoot(slot) {
+      rt.override();
+      rewards.take(slot);
+    },
+    takeLootMoney() {
+      rt.override();
+      rewards.takeMoney();
+    },
+    releaseLoot() {
+      rt.override();
+      rewards.close();
+    },
+    onRewardsEvent(cb) {
+      conn.onRewardsEvent = cb;
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+function cycleMethods(rt: Runtimes) {
+  const { cycle } = rt;
+  return {
+    async startCycle(guids, instruction, maxStarts) {
+      rt.override();
+      await cycle.start({ guids, instruction, maxStarts });
+    },
+    stopCycle() {
+      cycle.stop("manual_override");
+    },
+    getCycleState() {
+      return cycle.snapshot();
+    },
+    onCycleEvent(cb) {
+      cycle.onEvent(cb);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
+type SessionHandle = {
+  conn: WorldConn;
+  rt: Runtimes;
+  lang: number;
+  lifecycle: Pick<WorldHandle, "closed" | "close">;
+};
+
+function createHandle(session: SessionHandle): WorldHandle {
+  const { conn, rt, lang, lifecycle } = session;
+  const handle: WorldHandle = {
+    ...lifecycle,
+    onMessage(cb) {
+      conn.onMessage = cb;
+    },
+    ...chatMethods(conn, lang),
+    ...channelMethods(conn, () => handle),
+    ...groupMethods(conn),
+    ...socialMethods(conn),
+    ...ignoreMethods(conn),
+    ...guildMethods(conn),
+    ...controlMethods(conn, rt),
+    ...combatMethods(rt),
+    ...recoveryMethods(conn, rt),
+    ...questMethods(rt),
+    ...questRewardMethods(rt),
+    ...rewardsMethods(conn, rt),
+    ...cycleMethods(rt),
+  };
+  return handle;
+}
+
+function connectWorld(
+  conn: WorldConn,
+  auth: AuthResult,
+  hooks: { close: () => void; reject: (error: unknown) => void },
+): void {
+  Bun.connect({
+    hostname: auth.realmHost,
+    port: auth.realmPort,
+    socket: {
+      open(s) {
+        conn.socket = s;
+      },
+      data(_s, data) {
+        conn.buf.append(new Uint8Array(data));
+        drainWorldPackets(conn);
+      },
+      close() {
+        hooks.close();
+      },
+    },
+  }).catch(hooks.reject);
+}
+
 export function worldSession(
   config: ClientConfig,
   auth: AuthResult,
 ): Promise<WorldHandle> {
   return new Promise((resolve, reject) => {
-    const conn: WorldConn = {
-      socket: undefined!,
-      dispatch: new OpcodeDispatch(),
-      buf: new AccumulatorBuffer(),
-      startTime: Date.now(),
-      nameCache: new Map(),
-      pendingMessages: new Map(),
-      channels: [],
-      lastChatMode: { type: "say" },
-      selfName: "",
-      selfGuidLow: 0,
-      selfGuidHigh: 0,
-      partyMembers: new Map(),
-      entityStore: new EntityStore(),
-      creatureNameCache: new Map(),
-      gameObjectNameCache: new Map(),
-      pendingNameQueries: new Set(),
-      friendStore: new FriendStore(),
-      ignoreStore: new IgnoreStore(),
-      guildStore: new GuildStore(),
-      guildId: 0,
-      pendingRequest: null,
-      duelArbiter: 0n,
-    };
-    conn.entityStore.onEvent((event) => {
-      if (event.type === "disappear") conn.combat?.forget(event.guid);
-      conn.recovery?.observeEntity(event);
-      conn.rewards?.observeEntity(event);
-      conn.cycle?.observeEntity(event);
-      conn.onEntityEvent?.(event);
-    });
-    conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
-    conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
-    conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
+    const conn = createWorldConn();
     const rt = createRuntimes(conn, config);
-    const { control, combat, tactics, recovery, quests, rewards, cycle } = rt;
-    const { prepareCatalog, observedTarget, override } = rt;
-    const getNavigation = rt.navigation;
-    const rawHalt = rt.halt;
-    function cleanup(sendStop: boolean): void {
-      conn.onEntityEvent = undefined;
-      conn.onFriendEvent = undefined;
-      conn.onIgnoreEvent = undefined;
-      conn.onGuildEvent = undefined;
-      conn.onGroupEvent = undefined;
-      conn.onDuelEvent = undefined;
-      conn.onControlEvent = undefined;
-      conn.onRecoveryEvent = undefined;
-      conn.onRewardsEvent = undefined;
-      rt.dispose(sendStop);
-    }
-
-    let pingInterval: ReturnType<typeof setInterval>;
+    let pingInterval: ReturnType<typeof setInterval> | undefined;
     let done = false;
-    let closedResolve: () => void;
-    const closed = new Promise<void>((r) => {
-      closedResolve = r;
-    });
+    const { promise: closed, resolve: closedResolve } =
+      Promise.withResolvers<void>();
+    registerWorldHandlers(conn);
 
-    conn.dispatch.on(GameOpcode.SMSG_TIME_SYNC_REQ, (r) =>
-      handleTimeSync(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_MESSAGE_CHAT, (r) =>
-      handleChatMessage(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GM_MESSAGECHAT, (r) =>
-      handleGmChatMessage(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_NAME_QUERY_RESPONSE, (r) =>
-      handleNameQueryResponse(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_MOTD, (r) => handleMotd(conn, r));
-    conn.dispatch.on(GameOpcode.SMSG_CHAT_PLAYER_NOT_FOUND, (r) =>
-      handlePlayerNotFound(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CHAT_RESTRICTED, (r) =>
-      handleChatRestricted(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CHAT_WRONG_FACTION, () =>
-      handleChatWrongFaction(conn),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CHANNEL_NOTIFY, (r) =>
-      handleChannelNotify(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CHAT_SERVER_MESSAGE, (r) =>
-      handleServerBroadcast(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_NOTIFICATION, (r) =>
-      handleNotification(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_RECEIVED_MAIL, (r) =>
-      handleReceivedMail(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_REQUESTED, (r) =>
-      handleDuelRequested(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_COUNTDOWN, (r) =>
-      handleDuelCountdown(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_COMPLETE, (r) =>
-      handleDuelComplete(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_WINNER, (r) =>
-      handleDuelWinner(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_OUTOFBOUNDS, () =>
-      handleDuelOutOfBounds(conn),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DUEL_INBOUNDS, () =>
-      handleDuelInBounds(conn),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_PARTY_COMMAND_RESULT, (r) =>
-      handlePartyCommandResult(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_INVITE, (r) =>
-      handleGroupInviteReceived(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_SET_LEADER, (r) =>
-      handleGroupSetLeaderMsg(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_LIST, (r) =>
-      handleGroupListMsg(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_DESTROYED, () =>
-      handleGroupDestroyed(conn),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_UNINVITE, () =>
-      handleGroupUninvite(conn),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GROUP_DECLINE, (r) =>
-      handleGroupDeclineMsg(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS, (r) =>
-      handlePartyMemberStatsMsg(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_PARTY_MEMBER_STATS_FULL, (r) =>
-      handlePartyMemberStatsMsg(conn, r, true),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_UPDATE_OBJECT, (r) =>
-      handleUpdateObject(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, (r) =>
-      handleCompressedUpdateObject(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_DESTROY_OBJECT, (r) =>
-      handleDestroyObject(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CREATURE_QUERY_RESPONSE, (r) =>
-      handleCreatureQueryResponse(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GAMEOBJECT_QUERY_RESPONSE, (r) =>
-      handleGameObjectQueryResponse(conn, r),
-    );
-
-    conn.dispatch.on(GameOpcode.MSG_RANDOM_ROLL, (r) =>
-      handleRandomRoll(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_CONTACT_LIST, (r) =>
-      handleContactList(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_FRIEND_STATUS, (r) =>
-      handleFriendStatus(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GUILD_ROSTER, (r) =>
-      handleGuildRoster(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GUILD_QUERY_RESPONSE, (r) =>
-      handleGuildQueryResponse(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GUILD_EVENT, (r) =>
-      handleGuildEvent(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GUILD_COMMAND_RESULT, (r) =>
-      handleGuildCommandResult(conn, r),
-    );
-    conn.dispatch.on(GameOpcode.SMSG_GUILD_INVITE, (r) =>
-      handleGuildInvitePacket(conn, r),
-    );
-
-    registerMovementHandlers(conn);
-    registerCombatHandlers(conn);
-    registerQuestHandlers(conn);
-    registerLootHandlers(conn);
-    registerRecoveryHandlers(conn);
-
-    registerStubs(conn.dispatch, (msg) => {
-      if (!conn.onMessage) return false;
-      conn.onMessage({
-        type: ChatType.SYSTEM,
-        sender: "",
-        message: msg,
-      });
-      return true;
-    });
-
-    async function login() {
+    async function login(): Promise<void> {
       await authenticateWorld(conn, config, auth);
       await selectCharacter(conn, config);
       pingInterval = startPingLoop(conn, config.pingIntervalMs ?? 30_000);
       const lang = config.language ?? Language.COMMON;
       done = true;
-      const handle: WorldHandle = {
-        closed,
-        close() {
-          clearInterval(pingInterval);
-          cleanup(true);
-          conn.socket.end();
-        },
-        onMessage(cb) {
-          conn.onMessage = cb;
-        },
-        sendWhisper(target, message) {
-          if (target) conn.lastChatMode = { type: "whisper", target };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.WHISPER, lang, message, target),
-          );
-        },
-        sendSay(message) {
-          conn.lastChatMode = { type: "say" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.SAY, lang, message),
-          );
-        },
-        sendYell(message) {
-          conn.lastChatMode = { type: "yell" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.YELL, lang, message),
-          );
-        },
-        sendGuild(message) {
-          conn.lastChatMode = { type: "guild" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.GUILD, lang, message),
-          );
-        },
-        sendParty(message) {
-          conn.lastChatMode = { type: "party" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.PARTY, lang, message),
-          );
-        },
-        sendRaid(message) {
-          conn.lastChatMode = { type: "raid" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.RAID, lang, message),
-          );
-        },
-        sendEmote(message) {
-          conn.lastChatMode = { type: "emote" };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.EMOTE, lang, message),
-          );
-        },
-        sendDnd(message) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.DND, lang, message),
-          );
-        },
-        sendAfk(message) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.AFK, lang, message),
-          );
-        },
-        sendChannel(channel, message) {
-          conn.lastChatMode = { type: "channel", channel };
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_MESSAGE_CHAT,
-            buildChatMessage(ChatType.CHANNEL, lang, message, channel),
-          );
-        },
-        getChannel(index) {
-          return conn.channels[index - 1];
-        },
-        async who(opts = {}) {
-          sendPacket(conn, GameOpcode.CMSG_WHO, buildWhoRequest(opts));
-          const r = await conn.dispatch.expect(GameOpcode.SMSG_WHO);
-          return parseWhoResponse(r);
-        },
-        getLastChatMode() {
-          return conn.lastChatMode;
-        },
-        setLastChatMode(mode) {
-          conn.lastChatMode = mode;
-        },
-        sendInCurrentMode(message) {
-          const mode = conn.lastChatMode;
-          switch (mode.type) {
-            case "say":
-              handle.sendSay(message);
-              break;
-            case "yell":
-              handle.sendYell(message);
-              break;
-            case "guild":
-              handle.sendGuild(message);
-              break;
-            case "party":
-              handle.sendParty(message);
-              break;
-            case "raid":
-              handle.sendRaid(message);
-              break;
-            case "emote":
-              handle.sendEmote(message);
-              break;
-            case "whisper":
-              handle.sendWhisper(mode.target, message);
-              break;
-            case "channel":
-              handle.sendChannel(mode.channel, message);
-              break;
-          }
-        },
-        invite(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GROUP_INVITE,
-            buildGroupInvite(name),
-          );
-        },
-        uninvite(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GROUP_UNINVITE,
-            buildGroupUninvite(name),
-          );
-        },
-        leaveGroup() {
-          sendPacket(conn, GameOpcode.CMSG_GROUP_DISBAND, buildGroupDisband());
-        },
-        joinChannel(name, password) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_JOIN_CHANNEL,
-            buildJoinChannel(name, password),
-          );
-        },
-        leaveChannel(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_LEAVE_CHANNEL,
-            buildLeaveChannel(name),
-          );
-        },
-        setLeader(name) {
-          const member = conn.partyMembers.get(name);
-          if (!member) {
-            conn.onMessage?.({
-              type: ChatType.SYSTEM,
-              sender: "",
-              message: `"${name}" is not in your party.`,
-            });
-            return;
-          }
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GROUP_SET_LEADER,
-            buildGroupSetLeader(member.guidLow, member.guidHigh),
-          );
-        },
-        acceptInvite() {
-          if (conn.pendingRequest === "duel") {
-            sendPacket(
-              conn,
-              GameOpcode.CMSG_DUEL_ACCEPTED,
-              buildDuelAccepted(conn.duelArbiter),
-            );
-          } else if (conn.pendingRequest === "group") {
-            sendPacket(conn, GameOpcode.CMSG_GROUP_ACCEPT, buildGroupAccept());
-          } else {
-            conn.onMessage?.({
-              type: ChatType.SYSTEM,
-              sender: "",
-              message: "Nothing to accept.",
-            });
-          }
-          conn.pendingRequest = null;
-        },
-        declineInvite() {
-          if (conn.pendingRequest === "duel") {
-            sendPacket(
-              conn,
-              GameOpcode.CMSG_DUEL_CANCELLED,
-              buildDuelCancelled(conn.duelArbiter),
-            );
-          } else if (conn.pendingRequest === "group") {
-            sendPacket(
-              conn,
-              GameOpcode.CMSG_GROUP_DECLINE,
-              buildGroupDecline(),
-            );
-          } else {
-            conn.onMessage?.({
-              type: ChatType.SYSTEM,
-              sender: "",
-              message: "Nothing to decline.",
-            });
-          }
-          conn.pendingRequest = null;
-        },
-        onGroupEvent(cb) {
-          conn.onGroupEvent = cb;
-        },
-        onEntityEvent(cb) {
-          conn.onEntityEvent = cb;
-        },
-        onPacketError(cb) {
-          conn.onPacketError = cb;
-        },
-        getNearbyEntities() {
-          return conn.entityStore.all();
-        },
-        getFriends() {
-          return conn.friendStore.all();
-        },
-        addFriend(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_ADD_FRIEND,
-            buildAddFriend(name, ""),
-          );
-        },
-        removeFriend(name) {
-          const friend = conn.friendStore.findByName(name);
-          if (!friend) {
-            conn.onMessage?.({
-              type: ChatType.SYSTEM,
-              sender: "",
-              message: `"${name}" is not on your friends list.`,
-            });
-            return;
-          }
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_DEL_FRIEND,
-            buildDelFriend(friend.guid),
-          );
-        },
-        sendRoll(min, max) {
-          sendPacket(
-            conn,
-            GameOpcode.MSG_RANDOM_ROLL,
-            buildRandomRoll(min, max),
-          );
-        },
-        onFriendEvent(cb) {
-          conn.onFriendEvent = cb;
-        },
-        getIgnored() {
-          return conn.ignoreStore.all();
-        },
-        addIgnore(name) {
-          sendPacket(conn, GameOpcode.CMSG_ADD_IGNORE, buildAddIgnore(name));
-        },
-        removeIgnore(name) {
-          const entry = conn.ignoreStore.findByName(name);
-          if (!entry) {
-            conn.onMessage?.({
-              type: ChatType.SYSTEM,
-              sender: "",
-              message: `"${name}" is not on your ignore list.`,
-            });
-            return;
-          }
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_DEL_IGNORE,
-            buildDelIgnore(entry.guid),
-          );
-        },
-        onIgnoreEvent(cb) {
-          conn.onIgnoreEvent = cb;
-        },
-        async requestGuildRoster() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_ROSTER);
-          const rosterPromise = conn.dispatch.expect(
-            GameOpcode.SMSG_GUILD_ROSTER,
-          );
-          let queryPromise: Promise<PacketReader> | undefined;
-          if (conn.guildId) {
-            sendPacket(
-              conn,
-              GameOpcode.CMSG_GUILD_QUERY,
-              buildGuildQuery(conn.guildId),
-            );
-            queryPromise = conn.dispatch.expect(
-              GameOpcode.SMSG_GUILD_QUERY_RESPONSE,
-            );
-          }
-          const [rosterReader, queryReader] = await Promise.all([
-            rosterPromise,
-            queryPromise ?? Promise.resolve(undefined),
-          ]);
-          handleGuildRoster(conn, rosterReader);
-          if (queryReader) handleGuildQueryResponse(conn, queryReader);
-          return conn.guildStore.get();
-        },
-        onGuildEvent(cb) {
-          conn.onGuildEvent = cb;
-        },
-        guildInvite(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GUILD_INVITE,
-            buildGuildInvite(name),
-          );
-        },
-        guildRemove(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GUILD_REMOVE,
-            buildGuildRemove(name),
-          );
-        },
-        guildLeave() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_LEAVE);
-        },
-        guildPromote(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GUILD_PROMOTE,
-            buildGuildPromote(name),
-          );
-        },
-        guildDemote(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GUILD_DEMOTE,
-            buildGuildDemote(name),
-          );
-        },
-        guildLeader(name) {
-          sendPacket(
-            conn,
-            GameOpcode.CMSG_GUILD_LEADER,
-            buildGuildLeader(name),
-          );
-        },
-        guildMotd(motd) {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_MOTD, buildGuildMotd(motd));
-        },
-        acceptGuildInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_ACCEPT);
-        },
-        declineGuildInvite() {
-          sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE);
-        },
-        onDuelEvent(cb) {
-          conn.onDuelEvent = cb;
-        },
-        getControlState() {
-          return control.snapshot();
-        },
-        move(direction, durationMs) {
-          const state = control.snapshot();
-          if (
-            state.owner !== "manual" ||
-            !state.moving ||
-            state.direction !== direction ||
-            control.walkActive() ||
-            tactics.snapshot().status !== "idle" ||
-            cycle.snapshot().active
-          )
-            override();
-          control.move(direction, durationMs);
-        },
-        face(orientation) {
-          override();
-          control.face(orientation);
-        },
-        faceGuid(guid) {
-          const target = observedTarget(guid);
-          override();
-          const pose = control.snapshot().pose!;
-          if (pose.x === target.x && pose.y === target.y)
-            throw new Error("target_coincident");
-          control.face(bearing(pose, target));
-        },
-        async walkToward(target, yards, signal) {
-          if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
-            throw new Error("invalid_distance");
-          const pose = control.snapshot().pose;
-          if (!pose) throw new Error("no_pose");
-          if (signal?.aborted)
-            return { status: "stopped", reason: "abort", traveled: 0, pose };
-          let destination: { x: number; y: number; z: number };
-          try {
-            const navigation = getNavigation();
-            if (target.kind === "guid") {
-              destination = observedTarget(target.guid);
-            } else {
-              if (![target.x, target.y, target.z].every(Number.isFinite))
-                throw new Error("invalid_destination");
-              let z: number;
-              try {
-                z = navigation.height(pose.mapId, target.x, target.y);
-              } catch {
-                z = navigation.height(pose.mapId, target.x, target.y, pose);
-              }
-              if (Math.abs(z - target.z) > 0.25)
-                throw new Error("destination_not_grounded");
-              destination = { x: target.x, y: target.y, z };
-            }
-            const ground = navigation.height(pose.mapId, pose.x, pose.y, pose);
-            if (Math.abs(ground - pose.z) > 0.25)
-              throw new Error("self_not_grounded");
-          } catch (error) {
-            const reason =
-              error instanceof Error ? error.message : "target_unavailable";
-            return { status: "stopped", reason, traveled: 0, pose };
-          }
-          override();
-          try {
-            return await control.walkToward(destination, yards, signal);
-          } catch (error) {
-            const reason =
-              error instanceof Error ? error.message : "movement_unavailable";
-            return {
-              status: "stopped",
-              reason,
-              traveled: 0,
-              pose: control.snapshot().pose ?? pose,
-            };
-          }
-        },
-        selectTarget(guid) {
-          override();
-          control.selectTarget(guid);
-        },
-        halt() {
-          tactics.stop("halt");
-          cycle.stop("halt");
-          rawHalt();
-        },
-        getCombatState() {
-          return combat.snapshot();
-        },
-        async getSpellbook() {
-          await prepareCatalog();
-          return combat.spellbook();
-        },
-        cast(spellId, targetGuid) {
-          override();
-          combat.cast(spellId, targetGuid);
-        },
-        attack(targetGuid) {
-          override();
-          combat.attack(targetGuid);
-        },
-        cancelCast() {
-          tactics.stop("manual_override");
-          combat.cancelCast();
-        },
-        stopAttack() {
-          tactics.stop("manual_override");
-          combat.stopAttack();
-        },
-        startTactics(targetGuid, instruction, signal, framing) {
-          const life = recovery.snapshot().life;
-          if (life === "dead" || life === "ghost")
-            throw new Error("self_not_alive");
-          return tactics.start({ targetGuid, instruction, framing }, signal);
-        },
-        getTacticsState() {
-          return tactics.snapshot();
-        },
-        goTo(x, y, z) {
-          override();
-          if (![x, y, z].every(Number.isFinite))
-            throw new Error("stop: invalid_destination");
-          const pose = control.snapshot().pose;
-          if (!pose) throw new Error("stop: no_pose");
-          const navigation = getNavigation();
-          const destination = { x, y, z };
-          try {
-            control.navigate(
-              navigation.plan(pose.mapId, pose, destination),
-              destination,
-            );
-          } catch (error) {
-            const raw =
-              error instanceof Error ? error.message : "navigation_failed";
-            const refusal = classifyNavigationRefusal(raw);
-            control.navigationError(destination, raw, refusal);
-            throw new Error(`${refusal}: ${raw}`);
-          }
-        },
-        getNavigationState() {
-          return control.navigationState();
-        },
-        onCombatEvent(cb) {
-          combat.onEvent(cb);
-        },
-        onTacticsEvent(cb) {
-          tactics.onEvent(cb);
-        },
-        onControlEvent(cb) {
-          conn.onControlEvent = cb;
-        },
-        getRecoveryState() {
-          return recovery.snapshot();
-        },
-        queryCorpse() {
-          recovery.queryCorpse();
-        },
-        releaseSpirit() {
-          override();
-          recovery.releaseSpirit();
-        },
-        reclaimCorpse() {
-          override();
-          recovery.reclaimCorpse();
-        },
-        activateSpiritHealer(guid) {
-          override();
-          recovery.activateSpiritHealer(guid);
-        },
-        respondResurrection(accept) {
-          override();
-          recovery.respondResurrection(accept);
-        },
-        onRecoveryEvent(cb) {
-          conn.onRecoveryEvent = cb;
-        },
-        getQuestState() {
-          return quests.snapshot();
-        },
-        talk(guid) {
-          override();
-          quests.talk(guid);
-        },
-        queryQuest(questId) {
-          quests.query(questId);
-        },
-        selectGossipOption(optionId, code) {
-          override();
-          quests.selectOption(optionId, code);
-        },
-        selectQuest(questId) {
-          override();
-          quests.selectQuest(questId);
-        },
-        acceptQuest() {
-          override();
-          quests.accept();
-        },
-        completeQuest(questId) {
-          override();
-          quests.complete(questId);
-        },
-        requestQuestReward() {
-          override();
-          quests.requestReward();
-        },
-        chooseQuestReward(index) {
-          override();
-          quests.chooseReward(index);
-        },
-        abandonQuest(slot) {
-          override();
-          quests.abandon(slot);
-        },
-        cancelInteraction() {
-          override();
-          quests.cancel();
-        },
-        onQuestEvent(cb) {
-          quests.onEvent(cb);
-        },
-        getInventoryState() {
-          return rewards.snapshot().inventory;
-        },
-        getRewardsState() {
-          return rewards.snapshot();
-        },
-        openLoot(guid) {
-          override();
-          rewards.open(guid);
-        },
-        takeLoot(slot) {
-          override();
-          rewards.take(slot);
-        },
-        takeLootMoney() {
-          override();
-          rewards.takeMoney();
-        },
-        releaseLoot() {
-          override();
-          rewards.close();
-        },
-        onRewardsEvent(cb) {
-          conn.onRewardsEvent = cb;
-        },
-        async startCycle(guids, instruction, maxStarts) {
-          override();
-          await cycle.start({ guids, instruction, maxStarts });
-        },
-        stopCycle() {
-          cycle.stop("manual_override");
-        },
-        getCycleState() {
-          return cycle.snapshot();
-        },
-        onCycleEvent(cb) {
-          cycle.onEvent(cb);
-        },
+      const close = (): void => {
+        clearInterval(pingInterval);
+        cleanupSession(conn, rt, true);
+        conn.socket?.end();
       };
-      resolve(handle);
+      resolve(createHandle({ conn, rt, lang, lifecycle: { closed, close } }));
     }
 
     login().catch((err) => {
       done = true;
       clearInterval(pingInterval);
       reject(err);
-      cleanup(false);
+      cleanupSession(conn, rt, false);
       conn.socket?.end();
     });
 
-    Bun.connect({
-      hostname: auth.realmHost,
-      port: auth.realmPort,
-      socket: {
-        open(s) {
-          conn.socket = s;
-        },
-        data(_s, data) {
-          conn.buf.append(new Uint8Array(data));
-          drainWorldPackets(conn);
-        },
-        close() {
-          clearInterval(pingInterval);
-          cleanup(false);
-          conn.entityStore.clear();
-          if (!done) reject(new Error("World connection closed"));
-          closedResolve();
-        },
+    connectWorld(conn, auth, {
+      close() {
+        clearInterval(pingInterval);
+        cleanupSession(conn, rt, false);
+        conn.entityStore.clear();
+        if (!done) reject(new Error("World connection closed"));
+        closedResolve();
       },
-    }).catch(reject);
+      reject,
+    });
   });
 }

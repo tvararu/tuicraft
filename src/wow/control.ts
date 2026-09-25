@@ -252,8 +252,9 @@ export class ControlRuntime {
   navigate(route: GroundRoute, destination: NavPoint): void {
     this.guardMove("forward");
     this.stopMoving("navigation_replaced", true);
-    const origin = route.points[0]!;
+    const origin = route.points[0];
     const pose = this.requirePose();
+    if (origin === undefined) throw new Error("navigation_route_empty");
     if (distance(origin, pose) > 1e-6)
       throw new Error("navigation_origin_changed");
     if (route.length === 0) {
@@ -280,7 +281,10 @@ export class ControlRuntime {
     };
     this.startMoving(
       "forward",
-      Math.min(MAX_DURATION_MS, (route.length / this.runSpeed!) * 1000),
+      Math.min(
+        MAX_DURATION_MS,
+        (route.length / (this.runSpeed ?? Number.NaN)) * 1000,
+      ),
     );
   }
 
@@ -293,20 +297,8 @@ export class ControlRuntime {
     yards: number,
     signal?: AbortSignal,
   ): Promise<WalkOutcome> {
-    const { x: targetX, y: targetY, z: targetZ } = target;
-    if (
-      !(
-        Number.isFinite(targetX) &&
-        Number.isFinite(targetY) &&
-        Number.isFinite(targetZ)
-      )
-    )
-      throw new Error("invalid_destination");
-    if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
-      throw new Error("invalid_distance");
-    const speed = this.speedFor("forward");
-    if (speed === undefined || !Number.isFinite(speed) || speed <= 0)
-      throw new Error("missing_speed");
+    const { x: targetX, y: targetY } = target;
+    this.assertWalkable(target, yards);
     this.guardMove("forward");
     if (signal?.aborted)
       return Promise.resolve({
@@ -348,6 +340,22 @@ export class ControlRuntime {
     signal?.addEventListener("abort", walk.abort, { once: true });
     this.startMoving("forward", MAX_DURATION_MS);
     return promise;
+  }
+
+  private assertWalkable(target: NavPoint, yards: number): void {
+    if (
+      !(
+        Number.isFinite(target.x) &&
+        Number.isFinite(target.y) &&
+        Number.isFinite(target.z)
+      )
+    )
+      throw new Error("invalid_destination");
+    if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
+      throw new Error("invalid_distance");
+    const speed = this.speedFor("forward");
+    if (speed === undefined || !Number.isFinite(speed) || speed <= 0)
+      throw new Error("missing_speed");
   }
 
   move(direction: MovementDirection, durationMs: number): void {
@@ -668,7 +676,8 @@ export class ControlRuntime {
   }
 
   private integrate(): void {
-    if (!(this.moving && this.predicted && this.direction)) return;
+    const predicted = this.predicted;
+    if (!(this.moving && predicted && this.direction)) return;
     const now = this.deps.now();
     const dt = (now - this.lastIntegrate) / 1000;
     this.lastIntegrate = now;
@@ -676,53 +685,73 @@ export class ControlRuntime {
     const speed = this.currentSpeed();
     if (speed === undefined) return;
     if (this.route) {
-      this.routeDistance = Math.min(
-        this.route.length,
-        this.routeDistance + speed * dt,
-      );
-      try {
-        this.predicted = {
-          ...this.predicted,
-          ...this.route.sample(this.routeDistance),
-          source: "predicted",
-          updatedAt: now,
-        };
-        this.navigation.remaining = this.route.length - this.routeDistance;
-      } catch (error) {
-        this.fail(
-          error instanceof Error ? error.message : "navigation_sample_failed",
-        );
-      }
+      this.integrateRoute(this.route, predicted, speed * dt, now);
       return;
     }
     const walk = this.walk;
     if (walk) {
-      const distance = Math.min(walk.distance, walk.traveled + speed * dt);
-      while (walk.traveled < distance) {
-        const next = Math.min(distance, walk.traveled + STEP_YARDS);
-        if (
-          !this.integrateGroundStep(
-            walk.x + walk.dx * next,
-            walk.y + walk.dy * next,
-            now,
-          )
-        )
-          return;
-        walk.traveled = next;
-        walk.lastProgressAt = now;
-      }
-      if (walk.traveled >= walk.distance) this.haltMovement("arrived", true);
+      this.integrateWalk(walk, predicted, speed * dt, now);
       return;
     }
-    const heading = this.predicted.orientation + DIR_HEADING[this.direction];
-    const newX = this.predicted.x + Math.cos(heading) * speed * dt;
-    const newY = this.predicted.y + Math.sin(heading) * speed * dt;
-    this.integrateGroundStep(newX, newY, now);
+    const heading = predicted.orientation + DIR_HEADING[this.direction];
+    const newX = predicted.x + Math.cos(heading) * speed * dt;
+    const newY = predicted.y + Math.sin(heading) * speed * dt;
+    this.integrateGroundStep(predicted, newX, newY, now);
   }
 
-  private integrateGroundStep(x: number, y: number, now: number): boolean {
-    const pose = this.predicted!;
-    const step = groundStep(this.deps, pose, x, y, !!this.walk);
+  private integrateRoute(
+    route: GroundRoute,
+    predicted: ControlPose,
+    advance: number,
+    now: number,
+  ): void {
+    this.routeDistance = Math.min(route.length, this.routeDistance + advance);
+    try {
+      this.predicted = {
+        ...predicted,
+        ...route.sample(this.routeDistance),
+        source: "predicted",
+        updatedAt: now,
+      };
+      this.navigation.remaining = route.length - this.routeDistance;
+    } catch (error) {
+      this.fail(
+        error instanceof Error ? error.message : "navigation_sample_failed",
+      );
+    }
+  }
+
+  private integrateWalk(
+    walk: DirectedWalk,
+    pose: ControlPose,
+    advance: number,
+    now: number,
+  ): void {
+    const distance = Math.min(walk.distance, walk.traveled + advance);
+    while (walk.traveled < distance) {
+      const next = Math.min(distance, walk.traveled + STEP_YARDS);
+      if (
+        !this.integrateGroundStep(
+          pose,
+          walk.x + walk.dx * next,
+          walk.y + walk.dy * next,
+          now,
+        )
+      )
+        return;
+      walk.traveled = next;
+      walk.lastProgressAt = now;
+    }
+    if (walk.traveled >= walk.distance) this.haltMovement("arrived", true);
+  }
+
+  private integrateGroundStep(
+    pose: ControlPose,
+    x: number,
+    y: number,
+    now: number,
+  ): boolean {
+    const step = groundStep(this.deps, pose, { x, y }, this.walk !== undefined);
     if (!step.ok) {
       if (step.reason === "ground_height_unavailable") this.fail(step.reason);
       else this.haltMovement(step.reason, true);
@@ -761,7 +790,9 @@ export class ControlRuntime {
   }
 
   private routeLeaseMs(route: GroundRoute): number {
-    const ms = ((route.length - this.routeDistance) / this.runSpeed!) * 1000;
+    const ms =
+      ((route.length - this.routeDistance) / (this.runSpeed ?? Number.NaN)) *
+      1000;
     return Math.max(1, Math.min(MAX_DURATION_MS, ms));
   }
 

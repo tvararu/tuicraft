@@ -83,8 +83,9 @@ function readEntry(r: PacketReader, mapId: number): UpdateEntry | undefined {
       return { type: "outOfRange", guids: readGuids(r) };
     case UpdateType.NEAR_OBJECTS:
       return { type: "nearObjects", guids: readGuids(r) };
+    default:
+      return undefined;
   }
-  return undefined;
 }
 
 export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {

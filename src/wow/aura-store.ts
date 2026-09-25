@@ -19,8 +19,11 @@ type TrackedAura = CombatAura & { unit: bigint; receivedAt: number };
 
 export class AuraStore {
   private readonly auras = new Map<string, TrackedAura>();
+  private readonly now: () => number;
 
-  constructor(private readonly now: () => number) {}
+  constructor(now: () => number) {
+    this.now = now;
+  }
 
   apply(update: AuraUpdate): void {
     const key = `${update.unit}:${update.slot}`;

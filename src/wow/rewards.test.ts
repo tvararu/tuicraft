@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bytes } from "test/hex";
+import { must } from "test/must";
 import type { Entity } from "wow/entity-store";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { parseInventoryChangeFailure } from "wow/protocol/inventory";
@@ -457,7 +458,7 @@ describe("authoritative loot runtime", () => {
       parseLootResponse(new PacketReader(bytes(loot))),
     );
     const state = f.runtime.snapshot();
-    if (state.loot.phase === "open") state.loot.items[0]!.slot = 99;
+    if (state.loot.phase === "open") must(state.loot.items[0]).slot = 99;
     expect(() => f.runtime.take(99)).toThrow();
     f.runtime.dispose();
     const count = f.events.length;

@@ -59,7 +59,10 @@ function lerp(a: Vec3, b: Vec3, u: number): Vec3 {
   };
 }
 
-function catmull(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number): Vec3 {
+function catmull(
+  [p0, p1, p2, p3]: readonly [Vec3, Vec3, Vec3, Vec3],
+  t: number,
+): Vec3 {
   const t2 = t * t;
   const t3 = t2 * t;
   const w0 = -0.5 * t3 + t2 - 0.5 * t;
@@ -92,7 +95,7 @@ function segmentAt(traj: SplineTrajectory, i: number, u: number): Vec3 {
   const a = pointAt(traj, i);
   const b = pointAt(traj, i + 1);
   if (traj.interpolation === "linear") return lerp(a, b, u);
-  return catmull(pointAt(traj, i - 1), a, b, pointAt(traj, i + 2), u);
+  return catmull([pointAt(traj, i - 1), a, b, pointAt(traj, i + 2)], u);
 }
 
 function segmentLength(traj: SplineTrajectory, i: number): number {

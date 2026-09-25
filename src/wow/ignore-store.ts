@@ -10,8 +10,8 @@ export type IgnoreEvent =
   | { type: "ignore-error"; result: number; name: string };
 
 export class IgnoreStore {
-  private ignored: Map<bigint, IgnoreEntry>;
-  private guidLows: Set<number>;
+  private readonly ignored: Map<bigint, IgnoreEntry>;
+  private readonly guidLows: Set<number>;
   private listener?: (event: IgnoreEvent) => void;
 
   constructor() {

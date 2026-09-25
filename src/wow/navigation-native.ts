@@ -1,4 +1,4 @@
-import { dlopen, FFIType, ptr } from "bun:ffi";
+import { dlopen, type FFIFunction, FFIType, ptr } from "bun:ffi";
 import { existsSync } from "node:fs";
 
 export type NativePoint = { x: number; y: number; z: number };
@@ -86,6 +86,72 @@ const ERRORS: Record<number, string> = {
   [UNKNOWN_EXCEPTION]: "UNKNOWN_EXCEPTION",
 };
 
+const TRAILING_SLASH = /\/$/;
+
+const NAMIGATOR_FFI = {
+  pathfind_new_map: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.ptr,
+  },
+  pathfind_free_map: { args: [FFIType.ptr], returns: FFIType.void },
+  pathfind_load_adt_at: {
+    args: [FFIType.ptr, FFIType.f32, FFIType.f32, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.u8,
+  },
+  pathfind_find_path: {
+    args: [
+      FFIType.ptr,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.ptr,
+      FFIType.u32,
+      FFIType.ptr,
+    ],
+    returns: FFIType.u8,
+  },
+  pathfind_find_height: {
+    args: [
+      FFIType.ptr,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.ptr,
+    ],
+    returns: FFIType.u8,
+  },
+  pathfind_line_of_sight: {
+    args: [
+      FFIType.ptr,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.ptr,
+      FFIType.u8,
+    ],
+    returns: FFIType.u8,
+  },
+  pathfind_find_heights: {
+    args: [
+      FFIType.ptr,
+      FFIType.f32,
+      FFIType.f32,
+      FFIType.ptr,
+      FFIType.u32,
+      FFIType.ptr,
+    ],
+    returns: FFIType.u8,
+  },
+} satisfies Record<string, FFIFunction>;
+
 export function openNativeMap(
   dataPath: string,
   libraryPath: string,
@@ -93,74 +159,12 @@ export function openNativeMap(
 ): NativeMap {
   if (!existsSync(libraryPath))
     throw new Error(`navigation library not found: ${libraryPath}`);
-  const mapFile = `${dataPath.replace(/\/$/, "")}/${mapName}.map`;
+  const mapFile = `${dataPath.replace(TRAILING_SLASH, "")}/${mapName}.map`;
   if (!existsSync(mapFile))
     throw new Error(`navigation data not found: ${mapFile}`);
   const data = cstr(dataPath);
   const name = cstr(mapName);
-  const library = dlopen(libraryPath, {
-    pathfind_new_map: {
-      args: [FFIType.ptr, FFIType.ptr, FFIType.ptr],
-      returns: FFIType.ptr,
-    },
-    pathfind_free_map: { args: [FFIType.ptr], returns: FFIType.void },
-    pathfind_load_adt_at: {
-      args: [FFIType.ptr, FFIType.f32, FFIType.f32, FFIType.ptr, FFIType.ptr],
-      returns: FFIType.u8,
-    },
-    pathfind_find_path: {
-      args: [
-        FFIType.ptr,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.ptr,
-        FFIType.u32,
-        FFIType.ptr,
-      ],
-      returns: FFIType.u8,
-    },
-    pathfind_find_height: {
-      args: [
-        FFIType.ptr,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.ptr,
-      ],
-      returns: FFIType.u8,
-    },
-    pathfind_line_of_sight: {
-      args: [
-        FFIType.ptr,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.ptr,
-        FFIType.u8,
-      ],
-      returns: FFIType.u8,
-    },
-    pathfind_find_heights: {
-      args: [
-        FFIType.ptr,
-        FFIType.f32,
-        FFIType.f32,
-        FFIType.ptr,
-        FFIType.u32,
-        FFIType.ptr,
-      ],
-      returns: FFIType.u8,
-    },
-  });
+  const library = dlopen(libraryPath, NAMIGATOR_FFI);
   const symbols = library.symbols as unknown as NamigatorSymbols;
   const status = new Uint8Array(1);
   const handle = symbols.pathfind_new_map(ptr(data), ptr(name), ptr(status));
@@ -219,9 +223,10 @@ class NamigatorMap implements NativeMap {
       if (code === BUFFER_TOO_SMALL) continue;
       if (code === UNKNOWN_HEIGHT) return [];
       if (code !== SUCCESS) throw nativeError("pathfind_find_heights", code);
-      if (count[0]! > capacity)
+      const found = firstValue(count);
+      if (found > capacity)
         throw new Error("native height count exceeds buffer");
-      return Array.from(heights.subarray(0, count[0]!));
+      return Array.from(heights.subarray(0, found));
     }
     throw new Error("native height column exceeds supported capacity");
   }
@@ -242,7 +247,7 @@ class NamigatorMap implements NativeMap {
     if (code === UNKNOWN_HEIGHT)
       throw groundError("pathfind_find_height failed (UNKNOWN_HEIGHT)");
     if (code !== SUCCESS) throw nativeError("pathfind_find_height", code);
-    return height[0]!;
+    return firstValue(height);
   }
 
   lineOfSight(from: NativePoint, to: NativePoint): boolean {
@@ -271,15 +276,17 @@ class NamigatorMap implements NativeMap {
     let verts = new Float32Array(64 * 3);
     let code = this.callFindPath(from, to, verts, count);
     if (code === BUFFER_TOO_SMALL) {
-      if (count[0]! > 4096)
+      const needed = firstValue(count);
+      if (needed > 4096)
         throw new Error("native path exceeds supported capacity");
-      verts = new Float32Array(Math.max(count[0]!, 64) * 3);
+      verts = new Float32Array(Math.max(needed, 64) * 3);
       code = this.callFindPath(from, to, verts, count);
     }
     if (code !== SUCCESS) throw nativeError("pathfind_find_path", code);
-    if (count[0]! > verts.length / 3)
+    const found = firstValue(count);
+    if (found > verts.length / 3)
       throw new Error("native path count exceeds buffer");
-    return readVertices(verts, count[0]!);
+    return readVertices(verts, found);
   }
 
   close(): void {
@@ -324,14 +331,19 @@ function cstr(value: string): Uint8Array {
   return new TextEncoder().encode(`${value}\0`);
 }
 
+function firstValue(buffer: Float32Array | Uint32Array): number {
+  const [value] = buffer;
+  if (value === undefined) throw new Error("native output buffer is empty");
+  return value;
+}
+
 function readVertices(verts: Float32Array, count: number): NativePoint[] {
   const points: NativePoint[] = [];
   for (let i = 0; i < count; i++) {
-    points.push({
-      x: verts[i * 3]!,
-      y: verts[i * 3 + 1]!,
-      z: verts[i * 3 + 2]!,
-    });
+    const [x, y, z] = verts.subarray(i * 3, i * 3 + 3);
+    if (x === undefined || y === undefined || z === undefined)
+      throw new Error("native path vertex exceeds buffer");
+    points.push({ x, y, z });
   }
   return points;
 }

@@ -56,7 +56,7 @@ export function readQuestLog(
     candidate?.guid === selfGuid && candidate.objectType === ObjectType.PLAYER
       ? candidate
       : undefined;
-  const idsVisible = !!entity?.createComplete && questIdsVisibleAtCreate;
+  const idsVisible = entity?.createComplete === true && questIdsVisibleAtCreate;
   const slots = Array.from({ length: 25 }, (_, slot) =>
     logSlot(entity, slot, idsVisible),
   );

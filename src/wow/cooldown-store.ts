@@ -15,11 +15,13 @@ export class CooldownStore {
   private readonly spells = new Map<number, Entry>();
   private readonly categories = new Map<number, Entry>();
   private globalUntil = 0;
+  private readonly now: () => number;
+  private readonly cooldownOf: CooldownOf;
 
-  constructor(
-    private readonly now: () => number,
-    private readonly cooldownOf: CooldownOf,
-  ) {}
+  constructor(now: () => number, cooldownOf: CooldownOf) {
+    this.now = now;
+    this.cooldownOf = cooldownOf;
+  }
 
   reset(cooldowns: InitialCooldown[]): void {
     this.clear();

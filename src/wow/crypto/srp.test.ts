@@ -39,7 +39,7 @@ test("SRP computes session key from known parameters", () => {
     "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
   );
 
-  const result = srp.calculate(g, N, salt, BigInt("0x2"), a);
+  const result = srp.calculate({ g, N, salt, B: BigInt("0x2") }, a);
   expect(result.A.byteLength).toBe(32);
   expect(result.M1.byteLength).toBe(20);
   expect(result.K.byteLength).toBe(40);
@@ -51,7 +51,7 @@ test("SRP rejects B = 0 mod N", () => {
     "0x894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7",
   );
   const salt = new Uint8Array(32);
-  expect(() => srp.calculate(7n, N, salt, 0n, 1n)).toThrow(
+  expect(() => srp.calculate({ g: 7n, N, salt, B: 0n }, 1n)).toThrow(
     "SRP: invalid server B value",
   );
 });
@@ -62,7 +62,7 @@ test("SRP rejects B = N (also 0 mod N)", () => {
     "0x894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7",
   );
   const salt = new Uint8Array(32);
-  expect(() => srp.calculate(7n, N, salt, N, 1n)).toThrow(
+  expect(() => srp.calculate({ g: 7n, N, salt, B: N }, 1n)).toThrow(
     "SRP: invalid server B value",
   );
 });
@@ -78,7 +78,7 @@ test("SRP session key K is 40 bytes with interleaved hashing", () => {
     "0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
   );
 
-  const result = srp.calculate(g, N, salt, BigInt("0x3"), a);
+  const result = srp.calculate({ g, N, salt, B: BigInt("0x3") }, a);
   expect(result.K.byteLength).toBe(40);
   const allZero = result.K.every((b) => b === 0);
   expect(allZero).toBe(false);
@@ -96,7 +96,7 @@ test("SRP preserves 32-byte width when values have leading zero bytes", () => {
   salt[31] = 0x05;
   const B = 0x0000000000000000000000000000000000000000000000000000000000000005n;
   const a = 1n;
-  const result = srp.calculate(g, N, salt, B, a);
+  const result = srp.calculate({ g, N, salt, B }, a);
   expect(result.A.byteLength).toBe(32);
   expect(result.M1.byteLength).toBe(20);
   expect(result.K.byteLength).toBe(40);
