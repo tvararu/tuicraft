@@ -1,21 +1,18 @@
-import { test, expect, describe, afterEach, mock } from "bun:test";
-import { parseConfig, serializeConfig, type Config } from "lib/config";
+import { test, expect, describe, afterEach } from "bun:test";
+import {
+  parseConfig,
+  readConfig,
+  serializeConfig,
+  writeConfig,
+  type Config,
+} from "lib/config";
+import { pathsUnder } from "test/temp-paths";
 import { rm, stat } from "node:fs/promises";
 
 const tmpBase = `./tmp/config-test-${Date.now()}`;
-const cfgDir = `${tmpBase}/config/tuicraft`;
-const cfgPath = `${cfgDir}/config.toml`;
-const uid = process.getuid?.() ?? 0;
-
-mock.module("lib/paths", () => ({
-  configDir: () => cfgDir,
-  runtimeDir: () => `${tmpBase}/tuicraft-${uid}`,
-  stateDir: () => `${tmpBase}/state/tuicraft`,
-  socketPath: () => `${tmpBase}/tuicraft-${uid}/sock`,
-  pidPath: () => `${tmpBase}/tuicraft-${uid}/pid`,
-  configPath: () => cfgPath,
-  logPath: () => `${tmpBase}/state/tuicraft/session.log`,
-}));
+const paths = pathsUnder(tmpBase);
+const cfgDir = paths.configDir;
+const cfgPath = paths.configPath;
 
 describe("parseConfig", () => {
   test("parses string and number values", () => {
@@ -139,16 +136,14 @@ describe("readConfig", () => {
   });
 
   test("throws when config file does not exist", async () => {
-    const { readConfig } = await import("lib/config");
-    await expect(readConfig()).rejects.toThrow("No config found");
+    await expect(readConfig(paths)).rejects.toThrow("No config found");
   });
 
   test("parses an existing config file", async () => {
-    const { readConfig } = await import("lib/config");
     const { mkdir } = await import("node:fs/promises");
     await mkdir(cfgDir, { recursive: true });
     await Bun.write(cfgPath, serializeConfig(sampleConfig) + "\n");
-    const cfg = await readConfig();
+    const cfg = await readConfig(paths);
     expect(cfg).toEqual(sampleConfig);
   });
 });
@@ -159,8 +154,7 @@ describe("writeConfig", () => {
   });
 
   test("creates directory and writes config", async () => {
-    const { writeConfig } = await import("lib/config");
-    await writeConfig(sampleConfig);
+    await writeConfig(sampleConfig, paths);
     const content = await Bun.file(cfgPath).text();
     expect(content).toContain('account = "testuser"');
     expect(content).toContain('password = "testpass"');
@@ -168,15 +162,13 @@ describe("writeConfig", () => {
   });
 
   test("round-trips through writeConfig and readConfig", async () => {
-    const { writeConfig, readConfig } = await import("lib/config");
-    await writeConfig(sampleConfig);
-    const cfg = await readConfig();
+    await writeConfig(sampleConfig, paths);
+    const cfg = await readConfig(paths);
     expect(cfg).toEqual(sampleConfig);
   });
 
   test("creates file with mode 0600", async () => {
-    const { writeConfig } = await import("lib/config");
-    await writeConfig(sampleConfig);
+    await writeConfig(sampleConfig, paths);
     const st = await stat(cfgPath);
     expect(st.mode & 0o777).toBe(0o600);
   });

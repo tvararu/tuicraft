@@ -3,7 +3,7 @@ import { authHandshake, authWithRetry } from "wow/auth";
 import { worldSession } from "wow/client";
 import type { WorldHandle } from "wow/client";
 import { RingBuffer } from "lib/ring-buffer";
-import { socketPath, pidPath, runtimeDir, logPath } from "lib/paths";
+import { type Paths, resolvePaths } from "lib/paths";
 import { SessionLog } from "lib/session-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import {
@@ -261,25 +261,30 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   return { server, events, cleanup };
 }
 
-async function prepareDaemonPaths(): Promise<{ sock: string; pid: string }> {
-  const sock = socketPath();
-  const pid = pidPath();
-  await mkdir(runtimeDir(), { recursive: true });
+async function prepareDaemonPaths(
+  paths: Paths,
+): Promise<{ sock: string; pid: string }> {
+  const sock = paths.socketPath;
+  const pid = paths.pidPath;
+  await mkdir(paths.runtimeDir, { recursive: true });
   await writeFile(pid, String(process.pid));
   await unlink(sock).catch(() => {});
   return { sock, pid };
 }
 
-export async function startDaemon(client?: DaemonClient): Promise<void> {
-  const cfg = await readConfig();
-  const { sock, pid } = await prepareDaemonPaths();
+export async function startDaemon(
+  client?: DaemonClient,
+  paths: Paths = resolvePaths(),
+): Promise<void> {
+  const cfg = await readConfig(paths);
+  const { sock, pid } = await prepareDaemonPaths(paths);
 
   const clientCfg = clientConfig(cfg);
   const auth = await (client
     ? client.authHandshake(clientCfg)
     : authWithRetry(clientCfg));
   const handle = await (client?.worldSession ?? worldSession)(clientCfg, auth);
-  const log = new SessionLog(logPath());
+  const log = new SessionLog(paths.logPath);
 
   let lastActivity = Date.now();
   const timeoutMs = cfg.timeout_minutes * 60_000;

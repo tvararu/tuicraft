@@ -1,26 +1,17 @@
 import { createMockHandle } from "test/mock-handle";
-import { mock, jest, test, expect, describe, afterEach } from "bun:test";
+import { jest, test, expect, describe, afterEach } from "bun:test";
 import { access, rm, mkdir, unlink } from "node:fs/promises";
 import { serializeConfig } from "lib/config";
 import type { AuthResult } from "wow/auth";
 import type { WorldHandle } from "wow/client";
 import { sendToSocket } from "cli/ipc";
+import { startDaemon } from "daemon/server";
+import { pathsUnder } from "test/temp-paths";
 
 const tmpDir = `./tmp/daemon-start-${Date.now()}`;
-const cfgDir = `${tmpDir}/config/tuicraft`;
-const uid = process.getuid?.() ?? 0;
-const rtDir = `${tmpDir}/tuicraft-${uid}`;
-const stDir = `${tmpDir}/state/tuicraft`;
-
-mock.module("lib/paths", () => ({
-  configDir: () => cfgDir,
-  runtimeDir: () => rtDir,
-  stateDir: () => stDir,
-  socketPath: () => `${rtDir}/sock`,
-  pidPath: () => `${rtDir}/pid`,
-  configPath: () => `${cfgDir}/config.toml`,
-  logPath: () => `${stDir}/session.log`,
-}));
+const paths = pathsUnder(tmpDir);
+const cfgDir = paths.configDir;
+const rtDir = paths.runtimeDir;
 
 let closedResolve: () => void;
 
@@ -52,8 +43,6 @@ function makeMockClient(): {
     mockHandleClose,
   };
 }
-
-const { startDaemon } = await import("daemon/server");
 
 const exitSpy = jest
   .spyOn(process, "exit")
@@ -112,7 +101,7 @@ describe("startDaemon", () => {
   test("creates pid file and socket, cleans up on closed", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     const pidContent = await Bun.file(`${rtDir}/pid`).text();
@@ -142,7 +131,7 @@ describe("startDaemon", () => {
       );
 
     try {
-      const promise = startDaemon(client);
+      const promise = startDaemon(client, paths);
       await waitForSetup();
 
       expect(capturedCallbacks).toHaveLength(1);
@@ -168,7 +157,7 @@ describe("startDaemon", () => {
   test("cleanup is idempotent", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     closedResolve();
@@ -180,7 +169,7 @@ describe("startDaemon", () => {
   test("registers SIGTERM and SIGINT handlers", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     const events = signalListeners.map((l) => l.event);
@@ -194,7 +183,7 @@ describe("startDaemon", () => {
   test("updates activity timestamp from IPC activity", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     const lines = await sendToSocket("STATUS", `${rtDir}/sock`);
@@ -207,7 +196,7 @@ describe("startDaemon", () => {
   test("cleanup tolerates missing pid file", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     await unlink(`${rtDir}/pid`);
@@ -219,7 +208,7 @@ describe("startDaemon", () => {
   test("STOP cleans up pid file before exit", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     const lines = await sendToSocket("STOP", `${rtDir}/sock`);
@@ -239,7 +228,7 @@ describe("startDaemon", () => {
   test("HALT does not disconnect the daemon", async () => {
     await writeTestConfig();
     const client = makeMockClient();
-    const promise = startDaemon(client);
+    const promise = startDaemon(client, paths);
     await waitForSetup();
 
     const haltLines = await sendToSocket("HALT", `${rtDir}/sock`);

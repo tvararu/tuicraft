@@ -8,6 +8,8 @@ import {
   afterEach,
 } from "bun:test";
 import { parseConfig } from "lib/config";
+import { runSetupWizard, runSetup } from "cli/setup";
+import { pathsUnder } from "test/temp-paths";
 import { rm } from "node:fs/promises";
 import type { Interface as ReadlineInterface } from "node:readline";
 
@@ -27,21 +29,8 @@ function fakeCreateInterface(): ReadlineInterface {
 }
 
 const tmpBase = `./tmp/setup-wizard-test-${Date.now()}`;
-const cfgDir = `${tmpBase}/config/tuicraft`;
-const cfgPath = `${cfgDir}/config.toml`;
-const uid = process.getuid?.() ?? 0;
-
-mock.module("lib/paths", () => ({
-  configDir: () => cfgDir,
-  runtimeDir: () => `${tmpBase}/tuicraft-${uid}`,
-  stateDir: () => `${tmpBase}/state/tuicraft`,
-  socketPath: () => `${tmpBase}/tuicraft-${uid}/sock`,
-  pidPath: () => `${tmpBase}/tuicraft-${uid}/pid`,
-  configPath: () => cfgPath,
-  logPath: () => `${tmpBase}/state/tuicraft/session.log`,
-}));
-
-const { runSetupWizard, runSetup } = await import("cli/setup");
+const paths = pathsUnder(tmpBase);
+const cfgPath = paths.configPath;
 
 beforeEach(() => {
   answers = [];
@@ -81,7 +70,11 @@ describe("runSetup", () => {
   test("writes config file when flags present", async () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     try {
-      await runSetup(["--account", "a", "--password", "b", "--character", "C"]);
+      await runSetup(
+        ["--account", "a", "--password", "b", "--character", "C"],
+        undefined,
+        paths,
+      );
       const content = await Bun.file(cfgPath).text();
       const cfg = parseConfig(content);
       expect(cfg.account).toBe("a");
@@ -96,7 +89,7 @@ describe("runSetup", () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     try {
       answers = ["wizacc", "wizpass", "WizChar", "wizhost", "9999", "7"];
-      await runSetup([], fakeCreateInterface as never);
+      await runSetup([], fakeCreateInterface as never, paths);
       const content = await Bun.file(cfgPath).text();
       const cfg = parseConfig(content);
       expect(cfg.account).toBe("wizacc");
@@ -111,7 +104,7 @@ describe("runSetup", () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => {});
     try {
       answers = ["a", "b", "C", "", "", ""];
-      await runSetup([], fakeCreateInterface as never);
+      await runSetup([], fakeCreateInterface as never, paths);
       expect(logSpy).toHaveBeenCalledTimes(1);
       expect(logSpy.mock.calls[0]![0]).toContain("config.toml");
     } finally {

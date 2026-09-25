@@ -1,4 +1,4 @@
-import { logPath } from "lib/paths";
+import { resolvePaths } from "lib/paths";
 import type { TacticsEvent } from "wow/tactics";
 
 type Stamped = { at: number; event: TacticsEvent };
@@ -214,7 +214,7 @@ function str(value: unknown): string | undefined {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const variant = args[1] ?? "unrecorded";
-  const text = await Bun.file(logPath()).text();
+  const text = await Bun.file(resolvePaths().logPath).text();
   const stamped = parseLog(text);
   const ids = runIds(stamped);
   const wanted =

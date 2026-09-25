@@ -1,3 +1,4 @@
+import { type Paths, resolvePaths } from "lib/paths";
 function parseResponseLines(buffer: string): string[] {
   const result: string[] = [];
   for (const line of buffer.split("\n")) {
@@ -9,9 +10,8 @@ function parseResponseLines(buffer: string): string[] {
 
 export async function sendToSocket(
   command: string,
-  path?: string,
+  sock: string = resolvePaths().socketPath,
 ): Promise<string[]> {
-  const sock = path ?? (await import("lib/paths")).socketPath();
   let buffer = "";
   let complete = false;
   return new Promise<string[]>((resolve, reject) => {
@@ -48,9 +48,10 @@ async function socketExists(path: string): Promise<boolean> {
     .catch(() => false);
 }
 
-export async function ensureDaemon(): Promise<void> {
-  const { socketPath } = await import("lib/paths");
-  const path = socketPath();
+export async function ensureDaemon(
+  paths: Paths = resolvePaths(),
+): Promise<void> {
+  const path = paths.socketPath;
   if (await socketExists(path)) {
     try {
       await sendToSocket("STATUS", path);

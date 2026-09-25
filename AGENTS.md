@@ -105,9 +105,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
-- `mock.module()` leaks across test files in Bun — only mock `"paths"` (safe via
-  dynamic imports), never mock `"config"` or `"session-log"` in shared test runs.
-  For stdlib modules like `node:readline`, use dependency injection instead
+- `mock.module()` leaks across test files in Bun, so `config/biome.grit` bans
+  it. Use dependency injection: file locations come from a `Paths` value
+  (`resolvePaths()` by default), and tests pass `pathsUnder(dir)` from
+  `src/test/temp-paths.ts`. Stdlib modules like `node:readline` are injected too
 - `Bun.sleep(0)` yields one microtask tick (enough for `.then()` chains);
   `Bun.sleep(1)` yields one full event loop turn (needed for filesystem I/O like
   `unlink` to complete) — prefer the minimum needed in tests
