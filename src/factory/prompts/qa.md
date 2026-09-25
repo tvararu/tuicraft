@@ -22,7 +22,8 @@ results are the issues you file, never your exit code or final reply.
 
 ## 1. Setup
 
-1. `mise trust -y && mise bundle`. `run=$(git branch --show-current)`.
+1. Orca ran the repo setup (`orca.yaml`) before starting you.
+   `run=$(git branch --show-current)`.
 2. `bun $F precheck qa`. Exit 1 means nothing to do: stop now. On exit 0 it
    prints `{"sha":"<sha>"}`: the `origin/main` commit to test.
 3. Record it before testing, so an overlapping run does not test the same

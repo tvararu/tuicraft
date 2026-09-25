@@ -27,7 +27,8 @@ final reply.
 
 ## 1. Setup
 
-1. `mise trust -y && mise bundle`. `run=$(git branch --show-current)`.
+1. Orca ran the repo setup (`orca.yaml`) before starting you.
+   `run=$(git branch --show-current)`.
 2. `bun $F precheck merger`. Exit 1 means nothing to do: stop now. On exit
    0 it prints `{"issue":N,"pr":M}`, the first candidate.
 3. If any issue already has `agent:landing`

@@ -22,7 +22,7 @@ you leave (labels, workpad, PR), never your exit code or final reply.
 
 ## 1. Setup and claim
 
-1. `mise trust -y && mise bundle`
+1. Orca ran the repo setup (`orca.yaml`) before starting you.
 2. `bun $F precheck worker`. Exit 1 means nothing to do: stop now. On exit
    0 it prints `{"issue":N}`. That is your issue.
 3. `gh issue view N -R tvararu/tuicraft --json labels,title,body,comments`.

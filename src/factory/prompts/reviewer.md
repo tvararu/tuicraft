@@ -22,8 +22,8 @@ which also authored the PR. `tvararu` (Theo) is the PM.
 
 ## 1. Setup and claim
 
-1. `mise trust -y && mise bundle`. Note the run branch:
-   `run=$(git branch --show-current)`.
+1. Orca ran the repo setup (`orca.yaml`) before starting you. Note the run
+   branch: `run=$(git branch --show-current)`.
 2. `bun $F precheck reviewer`. Exit 1 means nothing to do: stop now. On exit
    0 it prints `{"issue":N,"pr":M}`.
 3. `gh issue view N -R tvararu/tuicraft --json labels`: it must have
