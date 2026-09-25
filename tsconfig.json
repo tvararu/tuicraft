@@ -10,7 +10,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-    "baseUrl": "./src",
+    "paths": { "*": ["./src/*"] },
 
     "strict": true,
     "skipLibCheck": true,

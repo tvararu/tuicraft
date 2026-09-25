@@ -1,6 +1,5 @@
 [tools]
 "npm:@biomejs/biome" = "latest"
-"npm:typescript-language-server" = "latest"
 bun = "latest"
 gh = "latest"
 hk = "latest"
