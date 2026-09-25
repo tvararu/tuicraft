@@ -207,7 +207,9 @@ Theo must never find stale worktrees or idle agents in Orca.
   other worktrees only when they have landed on `main`, are clean, and have
   been idle for more than 12 hours. It never deletes a dirty tree: it
   archives a patch to `tmp/worktree-archive-<date>/` in the main checkout
-  and lists it in the "Factory: reaper report" issue.
+  and opens one `Reaper: <worktree> held (<reason>)` issue with `needs:pm`
+  that tells Theo what to do. It closes that issue itself once the
+  worktree is gone or no longer held, so an open one always needs action.
 
 ## Reference Codebases
 

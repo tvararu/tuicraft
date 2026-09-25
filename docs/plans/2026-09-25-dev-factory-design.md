@@ -367,14 +367,20 @@ checkout, never from a worktree it might delete. Each pass:
 
    A scratch repo in phase 0 restored the modified and untracked files
    exactly with `git apply --binary`.
-4. It reports everything it will not remove. One issue, "Factory: reaper
-   report", is edited in place like the workpad. It lists each held
-   worktree with its owner, age, reason (dirty, unlanded commits, not
-   idle, over its time cap) and archive path. It carries `needs:pm` while
-   anything is listed. It gets a new comment, which notifies Theo, only
-   when a new item appears, plus one daily summary while the list is not
-   empty. Theo never adds `ready` to it, so it cannot dispatch. The reaper
-   says nothing about "not idle yet", because that is normal.
+4. It reports everything it will not remove, one GitHub issue per held
+   worktree, and no standing dashboard issue. A newly held worktree opens
+   `Reaper: <worktree> held (<reason>)` as `OpenHubris` with `needs:pm`.
+   The body @-mentions Theo, which notifies him without his looking, and
+   gives the owner, the reason (dirty, unlanded commits, over its time cap
+   with uncommitted work), the archive path and what to do. Each pass lists
+   the bot's open issues with that title shape and dedupes by the worktree
+   name in the title, so a held worktree has at most one open issue. A
+   changed reason or archive edits it in place. When the worktree is
+   removed or no longer held, the next pass closes the issue with a
+   comment, so an open reaper issue always means something to do. Theo
+   never adds `ready` to them, so they cannot dispatch. The reaper says
+   nothing about "not idle yet", because that is normal. The old single
+   "Factory: reaper report" issue (#90) was closed when this replaced it.
 5. It sweeps leftover SOAP accounts by name prefix and age.
 
 **Agent sleep (Orca's `experimentalAgentHibernation`), evaluated.** The
@@ -934,8 +940,9 @@ Rules for the factory's SOAP helper, from the report:
 - ~~Leftover SOAP accounts from crashed runs?~~ The reaper sweeps them by name
   prefix and age.
 - ~~Reaper thresholds?~~ Theo left them to the factory: N = 12 idle hours,
-  and time caps of 3 h (worker), 2 h (QA) and 1 h (reviewer, merger). The
-  reaper report shows actual run times, so tune from those.
+  and time caps of 3 h (worker), 2 h (QA) and 1 h (reviewer, merger). Each
+  pass prints the held worktrees with their ages to the reaper's journal
+  (`journalctl --user -u tuicraft-factory-reaper`), so tune from those.
 - Does an idle omp TUI keep `lastOutputAt` still? If it repaints, the idle
   signal needs another source, such as the agent status. Check in phase 1
   before the reaper removes anything that is not `auto-*`.
