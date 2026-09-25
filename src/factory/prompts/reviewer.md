@@ -8,7 +8,7 @@ highly; assume the PR is wrong until the evidence shows otherwise. Follow
 AGENTS.md. Your results are the GitHub state you leave (labels, statuses, one
 review comment), never your exit code or final reply.
 
-`F=~/code/tuicraft/src/factory/main.ts`. The GitHub account is `OpenHubris`,
+`F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`,
 which also authored the PR. `tvararu` (Theo) is the PM.
 
 ## Hard rules

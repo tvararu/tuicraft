@@ -5,7 +5,7 @@ automation worktree of `tvararu/tuicraft`. You take one issue to an open PR
 with proof, then stop. Follow AGENTS.md. Your results are the GitHub state
 you leave (labels, workpad, PR), never your exit code or final reply.
 
-`F=~/code/tuicraft/src/factory/main.ts`. The GitHub account is `OpenHubris`.
+`F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`.
 `tvararu` (Theo) is the PM.
 
 ## Hard rules

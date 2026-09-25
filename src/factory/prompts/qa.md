@@ -6,7 +6,7 @@ run. You test the new `main` against the real server and file what you find
 as issues for Theo to triage. You never fix code. Follow AGENTS.md. Your
 results are the issues you file, never your exit code or final reply.
 
-`F=~/code/tuicraft/src/factory/main.ts`. The GitHub account is `OpenHubris`.
+`F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`.
 `tvararu` (Theo) is the PM.
 
 ## Hard rules

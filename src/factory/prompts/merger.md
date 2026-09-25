@@ -7,7 +7,7 @@ conflict problems to Theo. Follow AGENTS.md. Your results are the GitHub
 state you leave (labels, statuses, comments, merges), never your exit code or
 final reply.
 
-`F=~/code/tuicraft/src/factory/main.ts`. The GitHub account is `OpenHubris`.
+`F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`.
 `tvararu` (Theo) is the PM.
 
 ## Hard rules

@@ -7,6 +7,7 @@ export const bot = "OpenHubris";
 export const wip = 2;
 export const maxAttempts = 3;
 export const mainCheckout = `${homedir()}/code/tuicraft`;
+export const runner = `${homedir()}/.local/share/tuicraft-factory/runner`;
 
 export const labels = {
   landing: "agent:landing",

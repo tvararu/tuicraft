@@ -1,4 +1,10 @@
-import { labels, mainCheckout, type Role, repoSlug } from "factory/config";
+import {
+  labels,
+  mainCheckout,
+  type Role,
+  repoSlug,
+  runner,
+} from "factory/config";
 import { json, must } from "factory/exec";
 import merger from "factory/prompts/merger.md" with { type: "text" };
 import qa from "factory/prompts/qa.md" with { type: "text" };
@@ -91,7 +97,7 @@ export function desiredAutomations(enable: boolean): Spec[] {
   return roles.map(([role, rrule, prompt]) => ({
     enable,
     name: `factory-${role}`,
-    precheck: `bun ${mainCheckout}/src/factory/main.ts precheck ${role}`,
+    precheck: `bun ${runner}/src/factory/main.ts precheck ${role}`,
     prompt,
     rrule,
   }));
