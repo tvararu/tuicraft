@@ -1,0 +1,519 @@
+import { jest } from "bun:test";
+import type {
+  ControlEvent,
+  ControlPose,
+  ControlState,
+  MovementDirection,
+} from "wow/control";
+import { type CycleDeps, EncounterCycleRuntime } from "wow/encounter-cycle";
+import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import type { PlayerLife } from "wow/player-state";
+import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
+import type {
+  RecoveryEvent,
+  RecoveryReclaim,
+  RecoveryState,
+} from "wow/recovery";
+import {
+  NOT_DEAD,
+  NOT_LOOTABLE,
+  type RewardsEvent,
+  type RewardsState,
+} from "wow/rewards";
+
+export function fakeTactics(outcomes: (string | Error)[]) {
+  let calls = 0;
+  return {
+    calls: () => calls,
+    snapshot: () => ({
+      lastOutcome: { reason: "killed", status: "completed" as const },
+    }),
+    start: async (
+      _ctx: { targetGuid: bigint; instruction: string },
+      _s?: AbortSignal,
+    ) => {
+      const next = outcomes[calls++];
+      if (next instanceof Error) throw next;
+    },
+    stop: (_r: string) => {},
+  };
+}
+
+export type FakeCorpseLoot = { dead: boolean; lootable: boolean };
+
+export function body(guid: bigint, health: number): EntityEvent {
+  const entity: UnitEntity = {
+    class_: 0,
+    displayId: 0,
+    entry: 0,
+    factionTemplate: 0,
+    gender: 0,
+    guid,
+    health,
+    level: 1,
+    maxHealth: 10,
+    maxPower: [],
+    name: undefined,
+    npcFlags: 0,
+    objectType: ObjectType.UNIT,
+    position: undefined,
+    power: [],
+    race: 0,
+    rawFields: new Map([[UNIT_FIELDS.HEALTH.offset, health]]),
+    scale: 1,
+    target: 0n,
+    unitFlags: 0,
+  };
+  return { changed: ["health", "rawFields"], entity, type: "update" };
+}
+
+export function fakeLoot(config: {
+  items?: number[];
+  money?: number;
+  coinageBefore?: number;
+  coinageAfter?: number;
+  openError?: number;
+  takeError?: string;
+  inventoryFull?: boolean;
+  releaseOnly?: boolean;
+  deferClose?: boolean;
+  deferTake?: boolean;
+  corpse?: FakeCorpseLoot;
+}) {
+  const corpse = config.corpse ?? { dead: true, lootable: true };
+  const attempted = Promise.withResolvers<void>();
+  const offeredSlots = config.items ?? [];
+  const takenSlots: number[] = [];
+  let moneyRequested = false;
+  let coinage = config.coinageBefore;
+  let phase: "closed" | "opening" | "open" | "closing" = "closed";
+  let windowMoney = config.money ?? 0;
+  const remainingItems = new Set(offeredSlots);
+  let lastLootError: RewardsState["lastLootError"];
+  let lastInventoryError: RewardsState["lastInventoryError"];
+  let listener: ((event: RewardsEvent) => void) | undefined;
+  let lastRelease: RewardsState["lastRelease"];
+  const closeRequested = Promise.withResolvers<void>();
+
+  function lootWindow(): RewardsState["loot"] {
+    if (phase === "open" || phase === "closing")
+      return {
+        guid: 2n,
+        invalidatedReason: undefined,
+        items: [...remainingItems].map((slot) => ({
+          count: 1,
+          displayId: 0,
+          itemId: 1000 + slot,
+          randomPropertyId: 0,
+          randomSuffix: 0,
+          slot,
+          slotType: 0,
+        })),
+        lootType: 1,
+        money: windowMoney,
+        openedAt: 0,
+        phase,
+      };
+    if (phase === "opening")
+      return {
+        guid: 2n,
+        invalidatedReason: undefined,
+        phase: "opening",
+        requestedAt: 0,
+      };
+    return { phase: "closed" };
+  }
+
+  function state(): RewardsState {
+    const loot = lootWindow();
+    return {
+      disposed: false,
+      inventory: {
+        bags: [],
+        coinage,
+        freeSlots: undefined,
+        issues: [],
+        scope: "carried",
+        selfGuid: 1n,
+        slots: [],
+        status: "complete",
+      },
+      lastInventoryError,
+      lastItemPush: undefined,
+      lastLootError,
+      lastMoneyNotice: undefined,
+      lastRelease,
+      loot,
+      pending: undefined,
+    };
+  }
+
+  function emit(type: RewardsEvent["type"]): void {
+    listener?.({ at: 0, state: state(), type });
+  }
+  function acknowledgeClose(): void {
+    phase = "closed";
+    lastRelease = { guid: 2n, observedAt: 0, status: 1 };
+    emit("loot_release_observed");
+  }
+
+  return {
+    acknowledgeClose,
+    attempted: attempted.promise,
+    close(): RewardsState {
+      phase = "closing";
+      closeRequested.resolve();
+      if (!config.deferClose) queueMicrotask(acknowledgeClose);
+      return state();
+    },
+    closing: closeRequested.promise,
+    corpse,
+    moneyTaken: () => moneyRequested,
+    onEvent(callback: ((event: RewardsEvent) => void) | undefined) {
+      listener = callback;
+    },
+    open(_guid: bigint): RewardsState {
+      attempted.resolve();
+      if (!corpse.dead) throw new Error(NOT_DEAD);
+      if (!corpse.lootable) throw new Error(NOT_LOOTABLE);
+      phase = "opening";
+      queueMicrotask(() => {
+        if (config.releaseOnly) {
+          emit("loot_release_observed");
+          return;
+        }
+        if (config.openError !== undefined) {
+          lastLootError = { error: config.openError, guid: 2n, observedAt: 0 };
+          phase = "closed";
+          emit("loot_error");
+          return;
+        }
+        phase = "open";
+        emit("loot_opened");
+      });
+      return state();
+    },
+    snapshot(): RewardsState {
+      return state();
+    },
+    take(slot: number): RewardsState {
+      if (config.takeError) throw new Error(config.takeError);
+      takenSlots.push(slot);
+      if (config.deferTake) return state();
+      remainingItems.delete(slot);
+      queueMicrotask(() => {
+        if (config.inventoryFull) {
+          lastInventoryError = {
+            bagFull: false,
+            inventoryFull: true,
+            observedAt: 0,
+            packet: {
+              bagType: 0,
+              detail: { kind: "none" },
+              item1: 0n,
+              item2: 0n,
+              kind: "error",
+              result: 50,
+            },
+          };
+          emit("inventory_error");
+          return;
+        }
+        emit("loot_removed");
+      });
+      return state();
+    },
+    takeMoney(): RewardsState {
+      moneyRequested = true;
+      windowMoney = 0;
+      queueMicrotask(() => {
+        coinage = config.coinageAfter;
+        emit("loot_money_cleared");
+      });
+      return state();
+    },
+    taken: () => takenSlots,
+  };
+}
+
+export type FakeCorpse =
+  | { status: "unknown" }
+  | { status: "absent" }
+  | {
+      status: "found";
+      mapId: number;
+      corpseMapId: number;
+      position: { x: number; y: number; z: number };
+    };
+
+export function positionedReclaim(
+  corpse: Extract<FakeCorpse, { status: "found" }>,
+  pose: ControlPose,
+  remainingMs: number | undefined,
+): RecoveryReclaim {
+  if (pose.mapId !== corpse.corpseMapId)
+    return blockedReclaim("corpse_map_mismatch", remainingMs, pose);
+  const distance = Math.hypot(
+    pose.x - corpse.position.x,
+    pose.y - corpse.position.y,
+    pose.z - corpse.position.z,
+  );
+  if (distance > 39)
+    return blockedReclaim("corpse_out_of_range", remainingMs, pose, distance);
+  if (remainingMs !== undefined && remainingMs > 0)
+    return blockedReclaim("reclaim_delay", remainingMs, pose, distance);
+  return {
+    canRequest: true,
+    distance,
+    pose: { ...pose },
+    readiness: remainingMs === undefined ? "unverified" : "ready",
+    reason: undefined,
+    remainingMs,
+  };
+}
+
+export function fakeControl(
+  config: {
+    pose?: ControlPose;
+    speed?: number;
+    refuseMoves?: number;
+    moveError?: string;
+    stopReason?: string;
+  } = {},
+) {
+  let pose: ControlPose | undefined = config.pose;
+  const speed = config.speed ?? 7;
+  let refusalsRemaining = config.refuseMoves ?? 0;
+  const faced: number[] = [];
+  const moves: { direction: MovementDirection; durationMs: number }[] = [];
+  let listener: ((event: ControlEvent) => void) | undefined;
+  const snapshot = () => ({ pose: pose ? { ...pose } : undefined, speed });
+  const stopAfter = (ms: number, reason: string) =>
+    setTimeout(() => {
+      const state = snapshot() as ControlState;
+      listener?.({ reason, state, type: "movement_stopped" });
+    }, ms);
+  return {
+    face(orientation: number) {
+      faced.push(orientation);
+      if (pose) pose = { ...pose, orientation };
+    },
+    faced: () => faced,
+    move(direction: MovementDirection, durationMs: number) {
+      moves.push({ direction, durationMs });
+      if (config.moveError) throw new Error(config.moveError);
+      if (!pose) return;
+      if (refusalsRemaining > 0) {
+        refusalsRemaining--;
+        stopAfter(100, "height_unresolved");
+        return;
+      }
+      stopAfter(durationMs, config.stopReason ?? "lease");
+      if (direction !== "forward") return;
+      const traveled = (speed * durationMs) / 1000;
+      pose = {
+        ...pose,
+        x: pose.x + Math.cos(pose.orientation) * traveled,
+        y: pose.y + Math.sin(pose.orientation) * traveled,
+      };
+    },
+    moves: () => moves,
+    onEvent(cb: ((event: ControlEvent) => void) | undefined) {
+      listener = cb;
+    },
+    pose: (): ControlPose | undefined => (pose ? { ...pose } : undefined),
+    snapshot,
+  };
+}
+
+export function blockedReclaim(
+  reason: RecoveryReclaim["reason"],
+  remainingMs: number | undefined,
+  pose: ControlPose | undefined,
+  distance?: number,
+): RecoveryReclaim {
+  return {
+    canRequest: false,
+    distance,
+    pose: pose ? { ...pose } : undefined,
+    readiness: "blocked",
+    reason,
+    remainingMs,
+  };
+}
+
+export function fakeRecovery(config: {
+  offer?: boolean;
+  life: PlayerLife[];
+  corpse?: FakeCorpse;
+  pose?: () => ControlPose | undefined;
+  now?: () => number;
+  reclaimDelaySchedule?: Array<{ atMs: number; delayMs: number }>;
+}) {
+  let lifeIndex = 0;
+  let answered = false;
+  let responded: "unanswered" | "accept_requested" | "decline_requested" =
+    "unanswered";
+  const corpse: FakeCorpse = config.corpse ?? { status: "unknown" };
+  let delay:
+    | { delayMs: number; receivedAt: number; readyAt: number }
+    | undefined;
+  const now = config.now ?? (() => 0);
+  const posefn = config.pose ?? (() => undefined);
+  let listener: ((event: RecoveryEvent) => void) | undefined;
+
+  function life(): PlayerLife {
+    return config.life[Math.min(lifeIndex, config.life.length - 1)] ?? "dead";
+  }
+
+  function reclaimGate(): RecoveryReclaim {
+    const pose = posefn();
+    const remainingMs = delay ? Math.max(0, delay.readyAt - now()) : undefined;
+    if (life() !== "ghost")
+      return blockedReclaim(
+        life() === "unknown" ? "life_unknown" : "not_ghost",
+        remainingMs,
+        pose,
+      );
+    if (corpse.status !== "found")
+      return blockedReclaim(
+        corpse.status === "absent" ? "corpse_absent" : "corpse_unknown",
+        remainingMs,
+        pose,
+      );
+    if (!pose) return blockedReclaim("pose_unknown", remainingMs, pose);
+    return positionedReclaim(corpse, pose, remainingMs);
+  }
+
+  function corpseSnapshot(): RecoveryState["corpse"] {
+    if (corpse.status === "found")
+      return {
+        ...corpse,
+        observedAt: now(),
+        position: { ...corpse.position },
+        unknown: 0,
+      };
+    if (corpse.status === "absent")
+      return { observedAt: now(), status: "absent" };
+    return { status: "unknown" };
+  }
+
+  function snapshot(): RecoveryState {
+    return {
+      corpse: corpseSnapshot(),
+      disposed: false,
+      epoch: 1,
+      flags: undefined,
+      graveyard: undefined,
+      health: undefined,
+      life: life(),
+      query: undefined,
+      reclaim: reclaimGate(),
+      reclaimDelay: delay ? { ...delay } : undefined,
+      request: undefined,
+      resurrection: config.offer
+        ? {
+            delayMs: undefined,
+            guid: 99n,
+            name: "Healer",
+            readyAt: undefined,
+            receivedAt: 0,
+            reserved: 0,
+            response: responded,
+            sickness: 0,
+          }
+        : undefined,
+      selfGuid: 1n,
+    };
+  }
+
+  function emit(type: RecoveryEvent["type"]): void {
+    listener?.({ at: now(), state: snapshot(), type });
+  }
+
+  for (const entry of config.reclaimDelaySchedule ?? []) {
+    if (entry.atMs <= 0) {
+      delay = {
+        delayMs: entry.delayMs,
+        readyAt: now() + entry.delayMs,
+        receivedAt: now(),
+      };
+      continue;
+    }
+    setTimeout(() => {
+      delay = {
+        delayMs: entry.delayMs,
+        readyAt: now() + entry.delayMs,
+        receivedAt: now(),
+      };
+      emit("reclaim_delay_observed");
+    }, entry.atMs);
+  }
+
+  return {
+    answered: () => answered,
+    onEvent(cb: ((event: RecoveryEvent) => void) | undefined) {
+      listener = cb;
+    },
+    queryCorpse() {
+      emit("corpse_observed");
+      return snapshot();
+    },
+    reclaimCorpse() {
+      lifeIndex++;
+      emit("life_observed");
+      return snapshot();
+    },
+    releaseSpirit() {
+      lifeIndex++;
+      emit("life_observed");
+      return snapshot();
+    },
+    respondResurrection(accept: boolean) {
+      answered = true;
+      responded = accept ? "accept_requested" : "decline_requested";
+      if (accept) {
+        lifeIndex++;
+        emit("life_observed");
+      }
+      return snapshot();
+    },
+    snapshot,
+  };
+}
+
+export type Wired<E> = {
+  onEvent: (callback: ((event: E) => void) | undefined) => void;
+};
+
+export function makeCycle(
+  deps: Omit<CycleDeps, "rewards"> & {
+    loot: CycleDeps["rewards"] & Wired<RewardsEvent>;
+    recovery: CycleDeps["recovery"] & Wired<RecoveryEvent>;
+    control: CycleDeps["control"] & Wired<ControlEvent>;
+  },
+): EncounterCycleRuntime {
+  const runtime = new EncounterCycleRuntime({ ...deps, rewards: deps.loot });
+  deps.loot.onEvent((event) => runtime.observeRewards(event));
+  deps.recovery.onEvent((event) => runtime.observeRecovery(event));
+  deps.control.onEvent((event) => runtime.observeControl(event));
+  return runtime;
+}
+
+export async function advanceUntilSettled(
+  promise: Promise<unknown>,
+  totalMs: number,
+  options: { stepMs?: number; onTick?: (stepMs: number) => void } = {},
+): Promise<void> {
+  const stepMs = options.stepMs ?? 100;
+  let settled = false;
+  promise.finally(() => {
+    settled = true;
+  });
+  for (let elapsed = 0; !settled && elapsed < totalMs; elapsed += stepMs) {
+    await Promise.resolve();
+    options.onTick?.(stepMs);
+    jest.advanceTimersByTime(stepMs);
+  }
+  await promise;
+}
