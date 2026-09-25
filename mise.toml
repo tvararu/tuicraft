@@ -63,8 +63,8 @@ sed -n 's/.*<testcase name="\([^"]*\)".* time="\([^"]*\)".*/\2\t\1/p' \
 '''
 
 [tasks.ci]
-description = "Run local typecheck, coverage tests, and format checks"
-depends = ["typecheck", "test:coverage", "format"]
+description = "Run local typecheck, coverage tests, format, and lint checks"
+depends = ["typecheck", "test:coverage", "format", "lint"]
 
 [tasks.typecheck]
 description = "Type-check with tsc"
@@ -77,6 +77,14 @@ run = "biome format src/"
 [tasks."format:fix"]
 description = "Fix formatting"
 run = "biome format --write src/"
+
+[tasks.lint]
+description = "Check lint rules and assist actions"
+run = "biome check --formatter-enabled=false --error-on-warnings src/"
+
+[tasks."lint:fix"]
+description = "Apply safe lint fixes and assist actions"
+run = "biome check --write src/"
 
 [tasks.deploy]
 description = "Build and symlink to /usr/local/bin"

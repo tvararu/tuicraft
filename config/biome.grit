@@ -1,0 +1,7 @@
+`mock.module($args)` as $call where {
+    register_diagnostic(
+        span = $call,
+        message = "mock.module() is banned — use dependency injection",
+        severity = "error"
+    )
+}
