@@ -239,7 +239,7 @@ runs bounded recovery before resuming. `--max` caps tactics-loop starts for
 the whole run (positive integer, default 10). Inspect `cycling --json` for
 each target's status and an open-ended `stopCause` with `stopDetail`. The loop waits for the server release acknowledgement after close; `loot_denied:timeout` and `loot_release_unconfirmed` stop without recording a gain.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
-entry and the loop continues; `corpse_unconfirmed` stops it when the server
+entry and the loop continues; `target_death_unconfirmed` stops it when the server
 never shows the corpse dead.
 `lastLoot.slotsTaken` and `moneyTaken` report requests and offered money, not
 verified item gains. Confirm storage from `inventory --json` slot/count changes.

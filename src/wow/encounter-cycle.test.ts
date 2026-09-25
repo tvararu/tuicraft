@@ -892,7 +892,7 @@ test("a corpse never seen dying stops the cycle after the settle time", async ()
     const running = runtime.start({ guids: [2n], instruction: "fight" });
     await advanceUntilSettled(running, 7000);
     expect(loot.taken()).toEqual([]);
-    expect(runtime.snapshot().stopCause).toBe("corpse_unconfirmed");
+    expect(runtime.snapshot().stopCause).toBe("target_death_unconfirmed");
   } finally {
     jest.useRealTimers();
   }

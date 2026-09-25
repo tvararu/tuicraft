@@ -235,7 +235,7 @@ After a kill the loop waits for the server update that shows the corpse at
 zero health. A corpse without the lootable flag, or one that despawns first,
 is recorded as `loot: "none"` on its queue entry and the loop continues.
 If no death update arrives within the loot settle time, the loop stops with
-`corpse_unconfirmed`.
+`target_death_unconfirmed`.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
 (`loot_denied:*`, `loot_inventory_full`,

@@ -61,7 +61,7 @@ async function awaitCorpse(run: LootRun, guid: bigint): Promise<Corpse> {
     event.type === "disappear" ||
     fieldOf(event.entity, UNIT_FIELDS.HEALTH.offset) === 0;
   const event = await run.bodies.find(died, LOOT_SETTLE_MS, run.signal);
-  if (!event) return stop("corpse_unconfirmed");
+  if (!event) return stop("target_death_unconfirmed");
   if (event.type === "disappear") return "empty";
   const second = tryOpen(run, guid);
   return second === NOT_DEAD ? stop(`loot_denied:${NOT_DEAD}`) : second;
