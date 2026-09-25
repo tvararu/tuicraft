@@ -67,7 +67,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `noUnusedParameters`, all strict flags on (see tsconfig.json)
 - Never write comments, so never use `biome-ignore`; rule exceptions live as
   path overrides in `biome.json` (protocol bit flags, wire-order literals in
-  `src/wow/**`, opcode hex, test files and `src/test/**`)
+  `src/wow/**`, the opcode table, test files and `src/test/**`)
+- Files are capped at 500 non-blank lines (`noExcessiveLinesPerFile`, tests
+  included). Split by responsibility into sibling modules before a file grows
+  past it; shared test setup goes in `src/test/<name>-fixtures.ts`. Only the
+  central `opcodes.ts` table is exempt
+- Fire-and-forget promises end in `.catch(ignoreFailure)` from
+  `lib/ignore-failure`, not an empty callback
 - Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket`
   built-in, etc.)
 - `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
