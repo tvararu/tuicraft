@@ -71,7 +71,7 @@ manual casting by learned spell ID do not require these data paths or a Jev key.
 : Send a chat message. Say is the default. Auto-starts the daemon if needed.
 A message that starts with `/` runs as a slash command, for example
 `tuicraft send "/roll 50"`. The chat flags also work without `send`.
-`--wait` _N_ returns events received during the next _N_ seconds.
+`--wait` _N_ then returns unread events, as `read --wait` _N_ does.
 
 `tuicraft who` [_filter_] [`--json`]
 : Who query. Optional name/class/level filter.
@@ -91,8 +91,11 @@ and exits with status 1. With `--json`, `data` is
 `{"socket":"responsive","started":false}` for an existing daemon.
 
 `tuicraft read` [`--wait` *N*] [`--json`]
-:: Read buffered events. With `--json`, returns one envelope with event objects
-in `events`, including `events: []` when empty. `--wait` polls for _N_ seconds.
+:: Read buffered events since the last `read`, then mark them read. With
+`--json`, returns one envelope with event objects in `events`, including
+`events: []` when empty. With `--wait` _N_, returns at once if unread events
+exist, otherwise waits up to _N_ seconds and returns as soon as one arrives.
+`tail` does not consume events, so `read` still sees them.
 
 `tuicraft tail` [`--json`]
 :: Continuous event stream. Blocks and prints events as they arrive. With
@@ -469,7 +472,8 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `help`, `version`, interactive mode, and internal daemon mode.
 
 `--wait` _N_
-: Wait _N_ seconds for events before returning. For use with `read` and `send`.
+: With `read` and `send`: return unread events, waiting up to _N_ seconds for
+the first one. The events count as read.
 
 `--help`
 : Print usage summary.

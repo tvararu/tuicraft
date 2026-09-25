@@ -244,7 +244,7 @@ function emitTailEvents(lines: string[]): boolean {
 
 async function runTail(tailAction: ActionOf<"tail">): Promise<void> {
   await ensureDaemon();
-  const verb = tailAction.json ? "READ_WAIT_JSON" : "READ_WAIT";
+  const verb = tailAction.json ? "TAIL_WAIT_JSON" : "TAIL_WAIT";
   while (true) {
     const lines = await sendToSocket(`${verb} 1000`);
     if (!tailAction.json) for (const line of lines) console.log(line);

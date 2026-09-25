@@ -20,6 +20,8 @@ export type IpcCommand =
   | { type: "read_json" }
   | { type: "read_wait"; ms: number }
   | { type: "read_wait_json"; ms: number }
+  | { type: "tail_wait"; ms: number }
+  | { type: "tail_wait_json"; ms: number }
   | { type: "stop" }
   | { type: "status" }
   | { type: "who"; filter?: string }

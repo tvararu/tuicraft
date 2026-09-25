@@ -109,7 +109,7 @@ tuicraft send "Hello"      # send a say message (auto-starts daemon)
 tuicraft send -w Hemet "x" # whisper
 tuicraft send -g "lfm"     # guild chat
 tuicraft who               # who query
-tuicraft read --wait 5     # read events, wait up to 5s
+tuicraft read --wait 5     # read unread events, wait up to 5s for one
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
 tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin

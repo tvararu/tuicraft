@@ -129,6 +129,8 @@ const PREEMPTED_BY_HALT = new Set<IpcCommand["type"]>([
   "release_loot",
   "read_wait",
   "read_wait_json",
+  "tail_wait",
+  "tail_wait_json",
 ]);
 
 function isStale({ cmd }: Queued): boolean {
