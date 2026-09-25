@@ -643,10 +643,26 @@ relocates and recovers" fails in the full run but passes on its own, so it
 is order-dependent and not caused by the accounts. Look at it before
 relying on `mise test:live` as proof.
 
-Cutover steps still open (Theo's go needed): `setup labels --apply`,
-`setup automations --apply` (disabled), install the reaper timer, Theo's
-ruleset change and Orca settings (omp wrapper as `agentCmdOverrides.omp`,
-agent sleep at 120 minutes), the AGENTS.md cutover, then `--enable`.
+Cutover progress (Theo's go, 2026-09-25):
+
+- Done: the 9 factory labels exist on GitHub. The 4 automations exist in
+  Orca, disabled; a second `setup automations` run reports every one `ok`.
+  The reaper units are installed in `~/.config/systemd/user/`, and a dry run
+  under `systemd-run --user` with the unit's `PATH` succeeded. The wrapper
+  is installed as `~/.local/bin/omp-factory`.
+- Waiting for integration: the timer, the prechecks and the prompts all run
+  code from the main checkout, which has no `src/factory/` until the
+  coordinator lands this branch. Enable the timer after that
+  (`systemctl --user enable --now tuicraft-factory-reaper.timer`).
+- Theo in the Orca UI: the runtime (`orca serve`, `orca-server.service`)
+  keeps its settings in memory and rewrites `orca-data.json`, so editing the
+  file has no effect. Restarting the service would kill every agent terminal
+  it hosts. Set these in Settings instead: Agents → omp command
+  `~/.local/bin/omp-factory` (`agentCmdOverrides.omp`), and Experimental →
+  Agent sleep on, 120 minutes.
+- Theo on GitHub: the ruleset change in
+  [GitHub configuration](#github-configuration).
+- Then: the AGENTS.md cutover, and `setup automations --apply --enable`.
 
 **Phase 2: remove Theo's approval.** Required approvals go to 0. Candidate
 additions: holdout scenarios, a reviewer on a different model. Exit criteria
