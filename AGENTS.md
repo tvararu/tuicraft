@@ -285,7 +285,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
   end users. Tooling and infra are `chore:`, README changes are `docs:`, CI
   changes are `ci:`. When a commit spans types, split into separate commits.
 - Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
-- No bullet points, NEVER add "Co-Authored-By" or other footers
+- No bullet points
 - Check `git log -n 5` first to match existing style
 - Never use `--oneline` — commit bodies carry important context
 
@@ -322,4 +322,3 @@ Shipping:
   The exception is your own PR branch: force-push it with
   `--force-with-lease` after cleaning its history.
 - Releases are paused; do not run release-please or publish versions.
-- NEVER add a Claude Code attribution footer
