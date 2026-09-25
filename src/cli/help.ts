@@ -34,7 +34,7 @@ USAGE
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire
-  tuicraft cycling [--json]  Cycle phase, queue, loot requests and stop cause
+  tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
   tuicraft goto <x> <y> <z> [--json]  Walk a ground route
   tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft recovery [--json]  Observed life, corpse, delay and request state

@@ -231,6 +231,11 @@ recorded cause instead of stopping the loop. A mid-fight death runs bounded
 recovery (release, corpse query, reclaim-delay wait, one direct travel leg)
 before resuming the queue; the loop stops instead of retrying indefinitely
 if recovery does not clear.
+After a kill the loop waits for the server update that shows the corpse at
+zero health. A corpse without the lootable flag, or one that despawns first,
+is recorded as `loot: "none"` on its queue entry and the loop continues.
+If no death update arrives within the loot settle time, the loop stops with
+`corpse_unconfirmed`.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
 (`loot_denied:*`, `loot_inventory_full`,
@@ -246,7 +251,8 @@ recovery can report other causes. Inspect `stopDetail` instead of guessing.
 
 `tuicraft cycling` [`--json`]
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
-`status` (`queued`, `done`, or `skipped`) and skip `cause`, `startsUsed`,
+`status` (`queued`, `done`, or `skipped`), skip `cause`, and `loot`
+(`looted` or `none`, set after a kill), `startsUsed`,
 `stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
 snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
 `lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
@@ -254,7 +260,7 @@ amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
 record observed values when known. Confirm stored items through actual
 inventory slot or count changes.
 Without `--json`, `cycling` prints the cycle phase, each target outcome,
-server kill XP when observed, requested loot, observed coinage changes, and
+server kill XP when observed, `no loot` for a kill without loot, requested loot, observed coinage changes, and
 the stop reason. A request for money or an item slot does not prove a gain.
 
 `tuicraft goto` _x_ _y_ _z_
