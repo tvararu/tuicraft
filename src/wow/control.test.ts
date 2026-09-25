@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from "bun:test";
+import { must } from "test/must";
 import {
   type ControlDeps,
   type ControlEvent,
@@ -25,7 +26,7 @@ const LOGIN = {
   orientation: 0.5,
 };
 
-const RUN_SPEED = speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE)!;
+const RUN_SPEED = must(speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE));
 
 function info(over: Partial<MovementInfo> = {}): MovementInfo {
   return {
@@ -91,7 +92,7 @@ function lastMove(sent: Sent[]): {
   x: number;
   y: number;
 } {
-  const packet = sent[sent.length - 1]!;
+  const packet = must(sent.at(-1));
   const r = new PacketReader(packet.body);
   r.packedGuid();
   const info = parseMovementInfo(r);
@@ -108,7 +109,7 @@ describe("ControlRuntime", () => {
       expect(state.pose?.mapId).toBe(530);
       expect(state.serverPose?.x).toBeCloseTo(8709.46, 2);
       expect(state.moving).toBe(false);
-      expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_SET_ACTIVE_MOVER);
+      expect(must(sent[0]).opcode).toBe(GameOpcode.CMSG_SET_ACTIVE_MOVER);
     } finally {
       jest.useRealTimers();
     }
@@ -125,7 +126,7 @@ describe("ControlRuntime", () => {
       expect(runtime.snapshot().owner).toBe("manual");
       advance(1000);
       expect(runtime.snapshot().moving).toBe(false);
-      const pose = runtime.snapshot().pose!;
+      const pose = must(runtime.snapshot().pose);
       expect(pose.source).toBe("predicted");
       expect(pose.x).toBeCloseTo(8709.46 + Math.cos(0.5) * 7, 5);
       expect(pose.y).toBeCloseTo(-6671.76 + Math.sin(0.5) * 7, 5);
@@ -165,7 +166,7 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, sent, advance } = setup({ isPathClear: () => true });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 10, y: start.y, z: start.z },
         3,
@@ -189,7 +190,7 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, advance } = setup({ isPathClear: () => true });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 1, y: start.y, z: start.z },
         5,
@@ -208,7 +209,7 @@ describe("ControlRuntime", () => {
     jest.useFakeTimers();
     try {
       const { runtime, sent, advance } = setup({ isPathClear: () => true });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const abort = new AbortController();
       const walk = runtime.walkToward(
         { x: start.x + 12, y: start.y, z: start.z },
@@ -241,7 +242,7 @@ describe("ControlRuntime", () => {
           return from?.z ?? 70.34;
         },
       });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 4, y: start.y, z: start.z },
         4,
@@ -266,7 +267,7 @@ describe("ControlRuntime", () => {
         findHeight: () => 70.34,
         isPathClear: () => false,
       });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 4, y: start.y, z: start.z },
         4,
@@ -293,7 +294,7 @@ describe("ControlRuntime", () => {
           from && from.x > originX && x === originX ? 71.34 : 70.34,
         isPathClear: () => true,
       });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 4, y: start.y, z: start.z },
         4,
@@ -315,7 +316,7 @@ describe("ControlRuntime", () => {
     try {
       const { runtime, advance } = setup({ isPathClear: () => true });
       runtime.observeSelf({ runSpeed: 1 });
-      const start = runtime.snapshot().pose!;
+      const start = must(runtime.snapshot().pose);
       const walk = runtime.walkToward(
         { x: start.x + 15, y: start.y, z: start.z },
         15,
@@ -334,7 +335,7 @@ describe("ControlRuntime", () => {
     const { runtime, sent } = setup();
     try {
       runtime.observeSelf({ runSpeed: 0 });
-      const pose = runtime.snapshot().pose!;
+      const pose = must(runtime.snapshot().pose);
       sent.length = 0;
       let failure: unknown;
       try {
@@ -363,7 +364,7 @@ describe("ControlRuntime", () => {
       sent.length = 0;
       runtime.move("forward", 2000);
       advance(500);
-      const mid = runtime.snapshot().pose!;
+      const mid = must(runtime.snapshot().pose);
       expect(mid.x).toBeCloseTo(8709.46 + Math.cos(0.5) * 7 * 0.5, 5);
       sent.length = 0;
       runtime.move("left", 2000);
@@ -373,12 +374,12 @@ describe("ControlRuntime", () => {
       ]);
       expect(runtime.snapshot().moving).toBe(true);
       expect(runtime.snapshot().direction).toBe("left");
-      const switched = runtime.snapshot().pose!;
+      const switched = must(runtime.snapshot().pose);
       expect(switched.x).toBeCloseTo(mid.x, 5);
       expect(switched.y).toBeCloseTo(mid.y, 5);
       advance(500);
       const leftHeading = 0.5 + Math.PI / 2;
-      const after = runtime.snapshot().pose!;
+      const after = must(runtime.snapshot().pose);
       expect(after.x).toBeCloseTo(mid.x + Math.cos(leftHeading) * 7 * 0.5, 5);
       expect(after.y).toBeCloseTo(mid.y + Math.sin(leftHeading) * 7 * 0.5, 5);
     } finally {
@@ -452,8 +453,8 @@ describe("ControlRuntime", () => {
       runtime.selectTarget(0xabcn);
       expect(runtime.snapshot().requestedTarget).toBe(0xabcn);
       expect(runtime.snapshot().target).toBeUndefined();
-      expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_SET_SELECTION);
-      const guid = new PacketReader(sent[0]!.body).uint64LE();
+      expect(must(sent[0]).opcode).toBe(GameOpcode.CMSG_SET_SELECTION);
+      const guid = new PacketReader(must(sent[0]).body).uint64LE();
       expect(guid).toBe(0xabcn);
       runtime.observeTarget(0xabcn);
       expect(runtime.snapshot().target).toBe(0xabcn);
@@ -585,7 +586,9 @@ describe("ControlRuntime", () => {
       const { runtime, sent } = setup();
       sent.length = 0;
       runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 8, speed: 8.5 });
-      expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_FORCE_RUN_SPEED_CHANGE_ACK);
+      expect(must(sent[0]).opcode).toBe(
+        GameOpcode.CMSG_FORCE_RUN_SPEED_CHANGE_ACK,
+      );
       expect(runtime.snapshot().speed).toBeCloseTo(8.5, 4);
     } finally {
       jest.useRealTimers();
@@ -603,8 +606,8 @@ describe("ControlRuntime", () => {
         counter: 11,
         fall: { cosAngle: 0.5, sinAngle: 0.866, xySpeed: 12, zSpeed: -20 },
       });
-      expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_MOVE_KNOCK_BACK_ACK);
-      const ack = new PacketReader(sent[0]!.body);
+      expect(must(sent[0]).opcode).toBe(GameOpcode.CMSG_MOVE_KNOCK_BACK_ACK);
+      const ack = new PacketReader(must(sent[0]).body);
       ack.packedGuid();
       expect(ack.uint32LE()).toBe(11);
       const info = parseMovementInfo(ack);
@@ -724,8 +727,8 @@ describe("ControlRuntime", () => {
       runtime.move("forward", 2000);
       sent.length = 0;
       runtime.setCanFly(4, true);
-      expect(sent[0]!.opcode).toBe(GameOpcode.CMSG_MOVE_SET_CAN_FLY_ACK);
-      const ack = new PacketReader(sent[0]!.body);
+      expect(must(sent[0]).opcode).toBe(GameOpcode.CMSG_MOVE_SET_CAN_FLY_ACK);
+      const ack = new PacketReader(must(sent[0]).body);
       ack.packedGuid();
       expect(ack.uint32LE()).toBe(4);
       const flyInfo = parseMovementInfo(ack);
@@ -735,7 +738,7 @@ describe("ControlRuntime", () => {
       expect(() => runtime.move("forward", 500)).toThrow("flying");
       sent.length = 0;
       runtime.setCanFly(5, false);
-      const landAck = new PacketReader(sent[0]!.body);
+      const landAck = new PacketReader(must(sent[0]).body);
       landAck.packedGuid();
       landAck.uint32LE();
       const landInfo = parseMovementInfo(landAck);
@@ -756,7 +759,7 @@ describe("ControlRuntime", () => {
       advance(250);
       runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 1, speed: 3.5 });
       advance(250);
-      const pose = runtime.snapshot().pose!;
+      const pose = must(runtime.snapshot().pose);
       const expected = 8709.46 + Math.cos(0.5) * (7 * 0.25 + 3.5 * 0.25);
       expect(pose.x).toBeCloseTo(expected, 5);
     } finally {
@@ -786,7 +789,7 @@ describe("ControlRuntime", () => {
       });
       sent.length = 0;
       runtime.forceRoot(9);
-      const rootAck = new PacketReader(sent[0]!.body);
+      const rootAck = new PacketReader(must(sent[0]).body);
       rootAck.packedGuid();
       expect(rootAck.uint32LE()).toBe(9);
       const rooted = parseMovementInfo(rootAck);
@@ -798,7 +801,7 @@ describe("ControlRuntime", () => {
       expect(rootAck.remaining).toBe(0);
       sent.length = 0;
       runtime.forceSpeed(RUN_SPEED, { guid: 0x0764n, counter: 3, speed: 7 });
-      const speedAck = new PacketReader(sent[0]!.body);
+      const speedAck = new PacketReader(must(sent[0]).body);
       speedAck.packedGuid();
       expect(speedAck.uint32LE()).toBe(3);
       const moving = parseMovementInfo(speedAck);
@@ -815,7 +818,7 @@ test("ground-route movement samples mesh height and HALT prevents lease renewal"
   jest.useFakeTimers();
   try {
     const { runtime, advance, sent } = setup();
-    const start = runtime.snapshot().pose!;
+    const start = must(runtime.snapshot().pose);
     const destination = { x: start.x + 21, y: start.y, z: start.z + 3 };
     const height = (x: number): number =>
       start.z +
@@ -859,7 +862,7 @@ test("tactical authority survives stationary waits but root stops navigation", (
     const { runtime } = setup();
     runtime.setMode("jev");
     expect(runtime.snapshot().owner).toBe("jev");
-    const start = runtime.snapshot().pose!;
+    const start = must(runtime.snapshot().pose);
     const destination = { x: start.x + 20, y: start.y, z: start.z };
     const ground: NativeMap = {
       loadAdtAt() {},
@@ -887,7 +890,7 @@ test("an old-origin route cannot reset a moving predicted pose", () => {
   jest.useFakeTimers();
   try {
     const { runtime, advance } = setup();
-    const start = runtime.snapshot().pose!;
+    const start = must(runtime.snapshot().pose);
     const destination = { x: start.x + 20, y: start.y, z: start.z };
     const ground: NativeMap = {
       loadAdtAt() {},
@@ -900,9 +903,9 @@ test("an old-origin route cannot reset a moving predicted pose", () => {
     const route = new GroundRoute([start, destination], ground);
     runtime.navigate(route, destination);
     advance(300);
-    const moving = runtime.snapshot().pose!;
+    const moving = must(runtime.snapshot().pose);
     expect(() => runtime.navigate(route, destination)).toThrow(/origin/);
-    expect(runtime.snapshot().pose!.x).toBeCloseTo(moving.x);
+    expect(must(runtime.snapshot().pose).x).toBeCloseTo(moving.x);
     expect(runtime.snapshot().moving).toBe(false);
   } finally {
     jest.useRealTimers();
@@ -1126,7 +1129,7 @@ test("navigationError stores refusal and navigate clears refusal", () => {
   runtime.navigationError(dest, "pathfind_find_height failed (UNKNOWN_HEIGHT)");
   expect(runtime.navigationState().refusal).toBe("stop");
 
-  const start = runtime.snapshot().pose!;
+  const start = must(runtime.snapshot().pose);
   const destMatching = { ...dest, z: start.z };
   const ground: NativeMap = {
     loadAdtAt() {},

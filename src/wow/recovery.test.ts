@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bytes } from "test/hex";
+import { must } from "test/must";
 import type { ControlPose } from "wow/control";
 import type { Entity } from "wow/entity-store";
 import {
@@ -172,7 +173,7 @@ describe("ordinary-player recovery", () => {
     f.runtime.queryCorpse();
     expect(() => f.runtime.queryCorpse()).toThrow();
     f.runtime.receiveResurrectRequest(
-      parseResurrectRequest(new PacketReader(bytes(offer + " 00000000"))),
+      parseResurrectRequest(new PacketReader(bytes(`${offer} 00000000`))),
     );
     f.runtime.receiveReclaimDelay(
       parseCorpseReclaimDelay(new PacketReader(bytes("30750000"))),
@@ -212,7 +213,7 @@ describe("ordinary-player recovery", () => {
     );
     expect(() => f.runtime.respondResurrection(false)).toThrow();
     f.runtime.receiveResurrectRequest(
-      parseResurrectRequest(new PacketReader(bytes(offer + " 00000000"))),
+      parseResurrectRequest(new PacketReader(bytes(`${offer} 00000000`))),
     );
     f.runtime.respondResurrection(true);
     expect(f.sent.at(-1)).toEqual({
@@ -355,11 +356,11 @@ describe("ordinary-player recovery", () => {
     });
     ghost.runtime.activateSpiritHealer(healerGuid);
     expect(ghost.sent).toHaveLength(1);
-    expect(ghost.sent[0]!.opcode).toBe(0x2_1c);
+    expect(must(ghost.sent[0]).opcode).toBe(0x2_1c);
 
     ghost.runtime.queryCorpse();
     expect(ghost.sent).toHaveLength(2);
-    expect(ghost.sent[1]!.opcode).toBe(0x2_16);
+    expect(must(ghost.sent[1]).opcode).toBe(0x2_16);
 
     expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
       "Previous spirit-healer request remains unanswered",

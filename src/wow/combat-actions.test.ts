@@ -1,8 +1,10 @@
 import { expect, jest, test } from "bun:test";
+import { must } from "test/must";
 import { CombatRuntime } from "wow/combat";
 import { CombatActions } from "wow/combat-actions";
 import { ControlRuntime } from "wow/control";
 import { EntityStore } from "wow/entity-store";
+import type { FactionTemplateCatalog } from "wow/faction-template";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import type { SpellDefinition } from "wow/spell-catalog";
 
@@ -208,7 +210,7 @@ test("mana percentages use base mana and execution rechecks resources", () => {
 test("unsupported effects are blocked rather than silently dropped from a multi-effect spell", () => {
   const { actions, combat } = setup();
   const data = spell();
-  data.effects.push({ ...data.effects[0]!, effect: 64 });
+  data.effects.push({ ...must(data.effects[0]), effect: 64 });
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   try {
     expect(
@@ -225,7 +227,7 @@ test("unsupported effects are blocked rather than silently dropped from a multi-
 test("unsupported hostile range blocks the kit even during cooldown", () => {
   const { actions, combat } = setup();
   const data = spell();
-  data.range!.flags = 1;
+  must(data.range).flags = 1;
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   const cooldown = jest.spyOn(combat, "readyAt").mockReturnValue(2500);
   try {
@@ -353,7 +355,7 @@ test("root blocks movement but not a supported stationary spell", () => {
 
 test("dead target waits for real credit and offers no attack or spell", () => {
   const { actions, combat, store } = setup();
-  store.get(2n)!.rawFields.set(UNIT_FIELDS.HEALTH.offset, 0);
+  must(store.get(2n)).rawFields.set(UNIT_FIELDS.HEALTH.offset, 0);
   const definition = jest.spyOn(combat, "definition").mockReturnValue(spell());
   try {
     const frame = actions.observe(context);
@@ -516,12 +518,12 @@ test("an attacking creature whose faction relation is not verified as hostile ca
   combat.applyInitialSpells({ spells: [{ spellId: 17 }], cooldowns: [] });
   const factionsCatalog = {
     relation: () => "neutral" as const,
-  };
+  } as unknown as FactionTemplateCatalog;
   const actions = new CombatActions({
     combat,
     control,
     entity: (guid) => store.get(guid),
-    factions: () => factionsCatalog as any,
+    factions: () => factionsCatalog,
     now: () => 1000,
   });
 

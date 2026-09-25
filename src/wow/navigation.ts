@@ -65,7 +65,11 @@ export class GroundRoute {
     this.distances = [0];
     let length = 0;
     for (let i = 1; i < this.points.length; i++) {
-      length += distance2d(this.points[i - 1]!, this.points[i]!);
+      const previous = this.points[i - 1];
+      const current = this.points[i];
+      if (previous === undefined || current === undefined)
+        throw new Error("ground route point missing");
+      length += distance2d(previous, current);
       this.distances.push(length);
     }
     this.length = length;
@@ -75,13 +79,14 @@ export class GroundRoute {
     if (!Number.isFinite(distance)) throw new Error("invalid route distance");
     const travel = Math.min(this.length, Math.max(0, distance));
     const index = this.segment(travel);
-    const start = this.points[index]!;
+    const start = this.points[index];
+    if (start === undefined) throw new Error("ground route point missing");
     const end = this.points[index + 1] ?? start;
     const span = distance2d(start, end);
+    const base = this.distances[index];
+    if (base === undefined) throw new Error("ground route distance missing");
     const ratio =
-      span === 0
-        ? 0
-        : Math.min(1, Math.max(0, (travel - this.distances[index]!) / span));
+      span === 0 ? 0 : Math.min(1, Math.max(0, (travel - base) / span));
     const x = start.x + (end.x - start.x) * ratio;
     const y = start.y + (end.y - start.y) * ratio;
     const point = groundPoint(this.map, start, x, y);
@@ -97,7 +102,9 @@ export class GroundRoute {
     let high = this.points.length - 1;
     while (low + 1 < high) {
       const mid = (low + high) >>> 1;
-      if (this.distances[mid]! < distance) low = mid;
+      const mark = this.distances[mid];
+      if (mark === undefined) throw new Error("ground route distance missing");
+      if (mark < distance) low = mid;
       else high = mid;
     }
     return low;
@@ -164,8 +171,12 @@ function planRoute(map: NativeMap, from: NavPoint, to: NavPoint): GroundRoute {
   const points = map.findPath(from, to);
   if (points.length === 0) throw new Error("native path is empty");
   for (const point of points) validateNativePoint(point);
-  rejectSnap("start", from, points[0]!);
-  rejectSnap("end", to, points[points.length - 1]!);
+  const firstNative = points[0];
+  const lastNative = points.at(-1);
+  if (firstNative === undefined || lastNative === undefined)
+    throw new Error("native path is empty");
+  rejectSnap("start", from, firstNative);
+  rejectSnap("end", to, lastNative);
   if (points.length === 1 && distance2d(from, to) > 0)
     throw new Error("native path omits destination");
   try {
@@ -180,7 +191,8 @@ function planRoute(map: NativeMap, from: NavPoint, to: NavPoint): GroundRoute {
 }
 
 function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
-  const first = corners[0]!;
+  const first = corners[0];
+  if (first === undefined) throw new Error("ground route has no points");
   validateNativePoint(first);
   map.loadAdtAt(first.x, first.y);
   checkGround(map, first);
@@ -189,27 +201,43 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
     throw groundError("start is not on connected ground");
   const points = [{ ...first }];
   for (let i = 1; i < corners.length; i++) {
-    const from = corners[i - 1]!;
-    const to = corners[i]!;
-    validateNativePoint(to);
-    const span = distance2d(from, to);
-    if (span === 0 && Math.abs(to.z - from.z) > GROUND_ERROR)
-      throw groundError("unsupported vertical ground route");
-    const count = Math.ceil(span / GROUND_STEP);
-    for (let step = 1; step <= count; step++) {
-      const ratio = step / count;
-      const point = groundPoint(
-        map,
-        points[points.length - 1]!,
-        from.x + (to.x - from.x) * ratio,
-        from.y + (to.y - from.y) * ratio,
-      );
-      points.push(point);
-    }
-    if (Math.abs(points[points.length - 1]!.z - to.z) > GROUND_ERROR)
-      throw groundError("path corner disagrees with connected ground");
+    const from = corners[i - 1];
+    const to = corners[i];
+    if (from === undefined || to === undefined)
+      throw new Error("ground route corner missing");
+    stepCorner(map, points, from, to);
   }
   return points;
+}
+
+function stepCorner(
+  map: NativeMap,
+  points: NavPoint[],
+  from: NavPoint,
+  to: NavPoint,
+): void {
+  validateNativePoint(to);
+  const span = distance2d(from, to);
+  if (span === 0 && Math.abs(to.z - from.z) > GROUND_ERROR)
+    throw groundError("unsupported vertical ground route");
+  const count = Math.ceil(span / GROUND_STEP);
+  for (let step = 1; step <= count; step++) {
+    const ratio = step / count;
+    const tail = points.at(-1);
+    if (tail === undefined) throw new Error("ground route point missing");
+    points.push(
+      groundPoint(
+        map,
+        tail,
+        from.x + (to.x - from.x) * ratio,
+        from.y + (to.y - from.y) * ratio,
+      ),
+    );
+  }
+  const corner = points.at(-1);
+  if (corner === undefined) throw new Error("ground route point missing");
+  if (Math.abs(corner.z - to.z) > GROUND_ERROR)
+    throw groundError("path corner disagrees with connected ground");
 }
 
 function groundPoint(
@@ -249,7 +277,9 @@ function connectedHeight(
 }
 
 function uniqueHeight(map: NativeMap, x: number, y: number): number {
-  return groundHeights(map, x, y)[0]!;
+  const first = groundHeights(map, x, y)[0];
+  if (first === undefined) throw groundError("ground height unavailable");
+  return first;
 }
 
 function continuousHeight(
@@ -265,7 +295,10 @@ function continuousHeight(
         Number.isFinite(height) &&
         Math.abs(height - referenceZ) <= GROUND_ERROR,
     );
-  return matches.length === 1 ? matches[0]! : undefined;
+  if (matches.length !== 1) return undefined;
+  const match = matches[0];
+  if (match === undefined) return undefined;
+  return match;
 }
 
 function groundHeights(map: NativeMap, x: number, y: number): number[] {

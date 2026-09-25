@@ -119,35 +119,46 @@ const MAXPOWER_KEYS = [
   "MAXPOWER7",
 ] as const;
 
-export function extractUnitFields(
+function copyU32Fields(
   raw: Map<number, number>,
-  fallback?: Map<number, number>,
-): UnitFieldsResult {
-  const changed: string[] = [];
-  const result: UnitFieldsResult = { _changed: changed };
-
-  for (const [fieldKey, resultKey] of UNIT_U32_FIELDS) {
+  map: [keyof typeof UNIT_FIELDS, keyof UnitFieldsResult][],
+  result: UnitFieldsResult,
+  changed: string[],
+): void {
+  for (const [fieldKey, resultKey] of map) {
     const v = raw.get(UNIT_FIELDS[fieldKey].offset);
     if (v !== undefined) {
       (result as Record<string, unknown>)[resultKey] = v;
       changed.push(resultKey);
     }
   }
+}
 
-  for (const [fieldKey, resultKey] of UNIT_FLAGS_MAP) {
-    const v = raw.get(UNIT_FIELDS[fieldKey].offset);
+function readPowerArray(
+  raw: Map<number, number>,
+  keys: typeof POWER_KEYS | typeof MAXPOWER_KEYS,
+  changed: string[],
+  changeKey: "power" | "maxPower",
+): number[] | undefined {
+  let arr: number[] | undefined;
+  for (const [i, key] of keys.entries()) {
+    const v = raw.get(UNIT_FIELDS[key].offset);
     if (v !== undefined) {
-      (result as Record<string, unknown>)[resultKey] = v;
-      changed.push(resultKey);
+      if (!arr) {
+        arr = [];
+      }
+      arr[i] = v;
+      if (!changed.includes(changeKey)) changed.push(changeKey);
     }
   }
+  return arr;
+}
 
-  const target = readU64(raw, UNIT_FIELDS.TARGET.offset, fallback);
-  if (target !== undefined) {
-    result.target = target;
-    changed.push("target");
-  }
-
+function readBytes0(
+  raw: Map<number, number>,
+  result: UnitFieldsResult,
+  changed: string[],
+): void {
   const b = raw.get(UNIT_FIELDS.BYTES_0.offset);
   if (b !== undefined) {
     result.race = b & 0xff;
@@ -156,31 +167,30 @@ export function extractUnitFields(
     result.powerType = (b >> 24) & 0xff;
     changed.push("race", "class_", "gender", "powerType");
   }
+}
 
-  let powerArr: number[] | undefined;
-  for (let i = 0; i < POWER_KEYS.length; i++) {
-    const v = raw.get(UNIT_FIELDS[POWER_KEYS[i]!].offset);
-    if (v !== undefined) {
-      if (!powerArr) {
-        powerArr = [];
-      }
-      powerArr[i] = v;
-      if (!changed.includes("power")) changed.push("power");
-    }
+export function extractUnitFields(
+  raw: Map<number, number>,
+  fallback?: Map<number, number>,
+): UnitFieldsResult {
+  const changed: string[] = [];
+  const result: UnitFieldsResult = { _changed: changed };
+
+  copyU32Fields(raw, UNIT_U32_FIELDS, result, changed);
+  copyU32Fields(raw, UNIT_FLAGS_MAP, result, changed);
+
+  const target = readU64(raw, UNIT_FIELDS.TARGET.offset, fallback);
+  if (target !== undefined) {
+    result.target = target;
+    changed.push("target");
   }
+
+  readBytes0(raw, result, changed);
+
+  const powerArr = readPowerArray(raw, POWER_KEYS, changed, "power");
   if (powerArr) result.power = powerArr;
 
-  let maxPowerArr: number[] | undefined;
-  for (let i = 0; i < MAXPOWER_KEYS.length; i++) {
-    const v = raw.get(UNIT_FIELDS[MAXPOWER_KEYS[i]!].offset);
-    if (v !== undefined) {
-      if (!maxPowerArr) {
-        maxPowerArr = [];
-      }
-      maxPowerArr[i] = v;
-      if (!changed.includes("maxPower")) changed.push("maxPower");
-    }
-  }
+  const maxPowerArr = readPowerArray(raw, MAXPOWER_KEYS, changed, "maxPower");
   if (maxPowerArr) result.maxPower = maxPowerArr;
 
   const castSpeed = raw.get(UNIT_FIELDS.MOD_CAST_SPEED.offset);

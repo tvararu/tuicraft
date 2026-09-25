@@ -1,4 +1,10 @@
-import { createCipheriv, createDecipheriv, createHmac } from "node:crypto";
+import {
+  type Cipheriv,
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  type Decipheriv,
+} from "node:crypto";
 import type { Socket, TCPSocketListener } from "bun";
 import { FIXTURE_CHARACTER, serverSeed, sessionKey } from "test/fixtures";
 import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
@@ -17,8 +23,8 @@ type ConnState = {
 };
 
 class ServerArc4 {
-  private encCipher: ReturnType<typeof createCipheriv>;
-  private decCipher: ReturnType<typeof createDecipheriv>;
+  private readonly encCipher: Cipheriv;
+  private readonly decCipher: Decipheriv;
 
   constructor(key: Uint8Array) {
     const encKey = createHmac("sha1", Buffer.from(DECRYPT_KEY, "hex"))
@@ -267,16 +273,21 @@ function handleWho(socket: Socket<ConnState>): void {
 
 type CaptureListener = (packet: CapturedPacket) => void;
 
+type ServerContext = {
+  authStatus: number;
+  sendTimeSync: boolean;
+  captured: CapturedPacket[];
+  captureListeners: CaptureListener[];
+  guildId: number;
+};
+
 function handlePacket(
   socket: Socket<ConnState>,
   opcode: number,
   body: Uint8Array,
-  authStatus: number,
-  sendTimeSync: boolean,
-  captured: CapturedPacket[],
-  captureListeners: CaptureListener[],
-  guildId = 0,
+  ctx: ServerContext,
 ): void {
+  const { authStatus, sendTimeSync, captured, captureListeners, guildId } = ctx;
   const packet: CapturedPacket = { body: new Uint8Array(body), opcode };
   captured.push(packet);
   for (const listener of captureListeners) listener(packet);
@@ -293,14 +304,7 @@ function handlePacket(
   else if (opcode === GameOpcode.CMSG_WHO) handleWho(socket);
 }
 
-function drainPackets(
-  socket: Socket<ConnState>,
-  authStatus: number,
-  sendTimeSync: boolean,
-  captured: CapturedPacket[],
-  captureListeners: CaptureListener[],
-  guildId = 0,
-): void {
+function drainPackets(socket: Socket<ConnState>, ctx: ServerContext): void {
   while (true) {
     if (!socket.data.pendingHeader) {
       if (socket.data.buf.byteLength < 6) break;
@@ -321,16 +325,7 @@ function drainPackets(
     socket.data.buf = socket.data.buf.slice(bodySize);
     socket.data.pendingHeader = undefined;
 
-    handlePacket(
-      socket,
-      opcode,
-      body,
-      authStatus,
-      sendTimeSync,
-      captured,
-      captureListeners,
-      guildId,
-    );
+    handlePacket(socket, opcode, body, ctx);
   }
 }
 
@@ -375,6 +370,13 @@ export function startMockWorldServer(opts?: {
   let activeSocket: Socket<ConnState> | undefined;
   const captured: CapturedPacket[] = [];
   const captureListeners: CaptureListener[] = [];
+  const ctx: ServerContext = {
+    authStatus,
+    captured,
+    captureListeners,
+    guildId,
+    sendTimeSync,
+  };
 
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
@@ -391,14 +393,7 @@ export function startMockWorldServer(opts?: {
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
-          drainPackets(
-            socket,
-            authStatus,
-            sendTimeSync,
-            captured,
-            captureListeners,
-            guildId,
-          );
+          drainPackets(socket, ctx);
         },
         open(socket) {
           activeSocket = socket;

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { type IgnoreEvent, IgnoreStore } from "wow/ignore-store";
 
 describe("IgnoreStore", () => {
@@ -19,7 +20,7 @@ describe("IgnoreStore", () => {
 
     expect(store.all()).toHaveLength(2);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("ignore-list");
+    expect(must(events[0]).type).toBe("ignore-list");
   });
 
   test("set clears previous entries", () => {
@@ -28,7 +29,7 @@ describe("IgnoreStore", () => {
     store.set([{ guid: 2n, name: "New" }]);
 
     expect(store.all()).toHaveLength(1);
-    expect(store.all()[0]!.name).toBe("New");
+    expect(must(store.all()[0]).name).toBe("New");
   });
 
   test("add inserts entry and fires ignore-added event", () => {
@@ -40,7 +41,7 @@ describe("IgnoreStore", () => {
 
     expect(store.all()).toHaveLength(1);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("ignore-added");
+    expect(must(events[0]).type).toBe("ignore-added");
   });
 
   test("remove deletes entry and fires ignore-removed event", () => {
@@ -53,9 +54,10 @@ describe("IgnoreStore", () => {
 
     expect(store.all()).toHaveLength(0);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("ignore-removed");
-    if (events[0]!.type === "ignore-removed") {
-      expect(events[0]!.name).toBe("Spammer");
+    const event = must(events[0]);
+    expect(event.type).toBe("ignore-removed");
+    if (event.type === "ignore-removed") {
+      expect(event.name).toBe("Spammer");
     }
   });
 
@@ -75,7 +77,7 @@ describe("IgnoreStore", () => {
 
     store.setName(1n, "Resolved");
 
-    expect(store.all()[0]!.name).toBe("Resolved");
+    expect(must(store.all()[0]).name).toBe("Resolved");
   });
 
   test("setName does nothing for unknown guid", () => {
@@ -126,7 +128,7 @@ describe("IgnoreStore", () => {
     store.set([entry]);
     entry.name = "Mutated";
 
-    expect(store.all()[0]!.name).toBe("Original");
+    expect(must(store.all()[0]).name).toBe("Original");
   });
 
   test("add copies entry to prevent mutation", () => {
@@ -135,7 +137,7 @@ describe("IgnoreStore", () => {
     store.add(entry);
     entry.name = "Mutated";
 
-    expect(store.all()[0]!.name).toBe("Original");
+    expect(must(store.all()[0]).name).toBe("Original");
   });
 
   test("works without listener", () => {

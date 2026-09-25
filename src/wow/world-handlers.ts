@@ -58,8 +58,10 @@ import {
   splitGuid,
 } from "wow/protocol/packet";
 import {
+  type ContactEntry,
   FriendResult,
   FriendStatus,
+  type FriendStatusPacket,
   parseContactList,
   parseFriendStatus,
   SocialFlag,
@@ -82,6 +84,7 @@ export function sendPacket(
   opcode: number,
   body: Uint8Array = new Uint8Array(0),
 ): void {
+  if (!conn.socket) throw new Error("World socket is not connected");
   conn.socket.write(buildOutgoingPacket(opcode, body, conn.arc4));
 }
 
@@ -171,36 +174,36 @@ export function handleNameQueryResponse(
 
   const name = result.found && result.name ? result.name : "";
   conn.pendingNameQueries.delete(`player:${result.guidLow}`);
-  if (result.found && result.name) {
-    conn.nameCache.set(result.guidLow, result.name);
-    for (const entity of conn.entityStore.all()) {
-      if (
-        entity.objectType === ObjectType.PLAYER &&
-        Number(entity.guid & 0xffffffffn) === result.guidLow &&
-        !entity.name
-      ) {
-        conn.entityStore.setName(entity.guid, result.name);
-      }
-    }
-    for (const friend of conn.friendStore.all()) {
-      if (
-        Number(friend.guid & 0xffffffffn) === result.guidLow &&
-        !friend.name
-      ) {
-        conn.friendStore.setName(friend.guid, result.name);
-      }
-    }
-    for (const entry of conn.ignoreStore.all()) {
-      if (Number(entry.guid & 0xffffffffn) === result.guidLow && !entry.name) {
-        conn.ignoreStore.setName(entry.guid, result.name);
-      }
-    }
-  }
+  if (result.found && result.name)
+    backfillName(conn, result.guidLow, result.name);
 
   const pending = conn.pendingMessages.get(result.guidLow);
   if (!pending) return;
   for (const raw of pending) deliverMessage(conn, raw, name);
   conn.pendingMessages.delete(result.guidLow);
+}
+
+function backfillName(conn: WorldConn, guidLow: number, name: string): void {
+  conn.nameCache.set(guidLow, name);
+  for (const entity of conn.entityStore.all()) {
+    if (
+      entity.objectType === ObjectType.PLAYER &&
+      Number(entity.guid & 0xffffffffn) === guidLow &&
+      !entity.name
+    ) {
+      conn.entityStore.setName(entity.guid, name);
+    }
+  }
+  for (const friend of conn.friendStore.all()) {
+    if (Number(friend.guid & 0xffffffffn) === guidLow && !friend.name) {
+      conn.friendStore.setName(friend.guid, name);
+    }
+  }
+  for (const entry of conn.ignoreStore.all()) {
+    if (Number(entry.guid & 0xffffffffn) === guidLow && !entry.name) {
+      conn.ignoreStore.setName(entry.guid, name);
+    }
+  }
 }
 
 export function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
@@ -426,16 +429,23 @@ export function handleUpdateObject(conn: WorldConn, r: PacketReader): void {
 function applyEntry(conn: WorldConn, entry: UpdateEntry): void {
   switch (entry.type) {
     case "create":
-      return applyCreate(conn, entry);
+      applyCreate(conn, entry);
+      return;
     case "values":
-      return applyValues(conn, entry);
+      applyValues(conn, entry);
+      return;
     case "movement":
-      return applyMovement(conn, entry);
+      applyMovement(conn, entry);
+      return;
     case "outOfRange":
       for (const guid of entry.guids) conn.entityStore.destroy(guid);
       return;
     case "nearObjects":
       return;
+    default: {
+      const unhandled: never = entry;
+      throw new Error("unhandled update entry type", { cause: unhandled });
+    }
   }
 }
 
@@ -643,8 +653,16 @@ export function handlePartyMemberStatsMsg(
 
 export function handleContactList(conn: WorldConn, r: PacketReader): void {
   const list = parseContactList(r);
+  conn.friendStore.set(collectFriends(conn, list.contacts));
+  conn.ignoreStore.set(collectIgnored(conn, list.contacts));
+}
+
+function collectFriends(
+  conn: WorldConn,
+  contacts: readonly ContactEntry[],
+): FriendEntry[] {
   const friends: FriendEntry[] = [];
-  for (const contact of list.contacts) {
+  for (const contact of contacts) {
     if (!(contact.flags & SocialFlag.FRIEND)) continue;
     const guidLow = Number(contact.guid & 0xffffffffn);
     const name = conn.nameCache.get(guidLow) ?? "";
@@ -659,17 +677,22 @@ export function handleContactList(conn: WorldConn, r: PacketReader): void {
     });
     if (!name) ensureNameQuery(conn, contact.guid);
   }
-  conn.friendStore.set(friends);
+  return friends;
+}
 
+function collectIgnored(
+  conn: WorldConn,
+  contacts: readonly ContactEntry[],
+): IgnoreEntry[] {
   const ignored: IgnoreEntry[] = [];
-  for (const contact of list.contacts) {
+  for (const contact of contacts) {
     if (!(contact.flags & SocialFlag.IGNORED)) continue;
     const guidLow = Number(contact.guid & 0xffffffffn);
     const name = conn.nameCache.get(guidLow) ?? "";
     ignored.push({ guid: contact.guid, name });
     if (!name) ensureNameQuery(conn, contact.guid);
   }
-  conn.ignoreStore.set(ignored);
+  return ignored;
 }
 
 export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
@@ -678,20 +701,9 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
 
   switch (packet.result) {
     case FriendResult.ADDED_ONLINE:
-    case FriendResult.ADDED_OFFLINE: {
-      const name = conn.nameCache.get(guidLow) ?? "";
-      conn.friendStore.add({
-        guid: packet.guid,
-        name,
-        note: packet.note ?? "",
-        status: packet.status ?? 0,
-        area: packet.area ?? 0,
-        level: packet.level ?? 0,
-        playerClass: packet.playerClass ?? 0,
-      });
-      if (!name) ensureNameQuery(conn, packet.guid);
+    case FriendResult.ADDED_OFFLINE:
+      addFriend(conn, packet, guidLow);
       break;
-    }
     case FriendResult.ONLINE:
       conn.friendStore.update(packet.guid, {
         status: packet.status ?? FriendStatus.ONLINE,
@@ -719,25 +731,39 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
     case FriendResult.IGNORE_SELF:
     case FriendResult.IGNORE_NOT_FOUND:
     case FriendResult.IGNORE_ALREADY:
-    case FriendResult.IGNORE_AMBIGUOUS: {
-      const name = conn.nameCache.get(guidLow) ?? `guid:${guidLow}`;
+    case FriendResult.IGNORE_AMBIGUOUS:
       conn.onIgnoreEvent?.({
         type: "ignore-error",
         result: packet.result,
-        name,
+        name: conn.nameCache.get(guidLow) ?? `guid:${guidLow}`,
       });
       break;
-    }
-    default: {
-      const name = conn.nameCache.get(guidLow) ?? `guid:${guidLow}`;
+    default:
       conn.onFriendEvent?.({
         type: "friend-error",
         result: packet.result,
-        name,
+        name: conn.nameCache.get(guidLow) ?? `guid:${guidLow}`,
       });
       break;
-    }
   }
+}
+
+function addFriend(
+  conn: WorldConn,
+  packet: FriendStatusPacket,
+  guidLow: number,
+): void {
+  const name = conn.nameCache.get(guidLow) ?? "";
+  conn.friendStore.add({
+    guid: packet.guid,
+    name,
+    note: packet.note ?? "",
+    status: packet.status ?? 0,
+    area: packet.area ?? 0,
+    level: packet.level ?? 0,
+    playerClass: packet.playerClass ?? 0,
+  });
+  if (!name) ensureNameQuery(conn, packet.guid);
 }
 
 export function handleGuildRoster(conn: WorldConn, r: PacketReader): void {
@@ -756,58 +782,72 @@ export function handleGuildQueryResponse(
 
 export function handleGuildEvent(conn: WorldConn, r: PacketReader): void {
   const raw = parseGuildEvent(r);
-  const p = raw.params;
+  const param = (index: number): string => raw.params[index] ?? "";
   switch (raw.eventType) {
     case GuildEventCode.PROMOTION:
       conn.onGuildEvent?.({
         type: "promotion",
-        officer: p[0] ?? "",
-        member: p[1] ?? "",
-        rank: p[2] ?? "",
+        officer: param(0),
+        member: param(1),
+        rank: param(2),
       });
       break;
     case GuildEventCode.DEMOTION:
       conn.onGuildEvent?.({
         type: "demotion",
-        officer: p[0] ?? "",
-        member: p[1] ?? "",
-        rank: p[2] ?? "",
+        officer: param(0),
+        member: param(1),
+        rank: param(2),
       });
-      break;
-    case GuildEventCode.MOTD:
-      conn.onGuildEvent?.({ type: "motd", text: p[0] ?? "" });
-      break;
-    case GuildEventCode.JOINED:
-      conn.onGuildEvent?.({ type: "joined", name: p[0] ?? "" });
-      break;
-    case GuildEventCode.LEFT:
-      conn.onGuildEvent?.({ type: "left", name: p[0] ?? "" });
       break;
     case GuildEventCode.REMOVED:
       conn.onGuildEvent?.({
         type: "removed",
-        member: p[0] ?? "",
-        officer: p[1] ?? "",
+        member: param(0),
+        officer: param(1),
       });
-      break;
-    case GuildEventCode.LEADER_IS:
-      conn.onGuildEvent?.({ type: "leader_is", name: p[0] ?? "" });
       break;
     case GuildEventCode.LEADER_CHANGED:
       conn.onGuildEvent?.({
         type: "leader_changed",
-        oldLeader: p[0] ?? "",
-        newLeader: p[1] ?? "",
+        oldLeader: param(0),
+        newLeader: param(1),
       });
+      break;
+    default:
+      emitGuildNotice(conn, raw.eventType, param);
+      break;
+  }
+}
+
+function emitGuildNotice(
+  conn: WorldConn,
+  eventType: number,
+  param: (index: number) => string,
+): void {
+  switch (eventType) {
+    case GuildEventCode.MOTD:
+      conn.onGuildEvent?.({ type: "motd", text: param(0) });
+      break;
+    case GuildEventCode.JOINED:
+      conn.onGuildEvent?.({ type: "joined", name: param(0) });
+      break;
+    case GuildEventCode.LEFT:
+      conn.onGuildEvent?.({ type: "left", name: param(0) });
+      break;
+    case GuildEventCode.LEADER_IS:
+      conn.onGuildEvent?.({ type: "leader_is", name: param(0) });
       break;
     case GuildEventCode.DISBANDED:
       conn.onGuildEvent?.({ type: "disbanded" });
       break;
     case GuildEventCode.SIGNED_ON:
-      conn.onGuildEvent?.({ type: "signed_on", name: p[0] ?? "" });
+      conn.onGuildEvent?.({ type: "signed_on", name: param(0) });
       break;
     case GuildEventCode.SIGNED_OFF:
-      conn.onGuildEvent?.({ type: "signed_off", name: p[0] ?? "" });
+      conn.onGuildEvent?.({ type: "signed_off", name: param(0) });
+      break;
+    default:
       break;
   }
 }

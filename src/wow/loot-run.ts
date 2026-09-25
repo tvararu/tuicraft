@@ -99,21 +99,26 @@ async function take(
   for (;;) {
     const event = await run.events.next(LOOT_SETTLE_MS, run.signal);
     if (!event) return stop("loot_denied:timeout");
-    if (
-      event.type === "inventory_error" &&
-      event.state.lastInventoryError?.inventoryFull
-    )
-      return stop("loot_inventory_full");
-    if (event.type === "loot_error") return lootError(event);
-    if (slot === undefined) {
-      if (event.type === "loot_money_cleared") return { ok: true, taken: true };
-      continue;
-    }
-    if (event.type === "loot_removed" && removed(event.state, slot))
-      return { ok: true, taken: true };
-    if (event.type === "loot_release_observed")
-      return { ok: true, taken: false };
+    const outcome = takeOutcome(event, slot);
+    if (outcome) return outcome;
   }
+}
+
+function takeOutcome(event: RewardsEvent, slot?: number): Taken | undefined {
+  if (
+    event.type === "inventory_error" &&
+    event.state.lastInventoryError?.inventoryFull
+  )
+    return stop("loot_inventory_full");
+  if (event.type === "loot_error") return lootError(event);
+  if (slot === undefined) {
+    if (event.type === "loot_money_cleared") return { ok: true, taken: true };
+    return undefined;
+  }
+  if (event.type === "loot_removed" && removed(event.state, slot))
+    return { ok: true, taken: true };
+  if (event.type === "loot_release_observed") return { ok: true, taken: false };
+  return undefined;
 }
 
 async function closeLoot(run: LootRun): Promise<{ ok: true } | CycleStop> {

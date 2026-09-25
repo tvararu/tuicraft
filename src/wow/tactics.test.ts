@@ -1,4 +1,5 @@
 import { expect, jest, test } from "bun:test";
+import { must } from "test/must";
 import type { JevActionResult } from "wow/jev";
 import {
   type TacticsContext,
@@ -311,7 +312,7 @@ test("a pre-request block retains isolated terminal observations without fake in
   });
   await f.tactics.start(context);
   await f.stopped;
-  observation.unavailable[0]!.reason = "changed after completion";
+  must(observation.unavailable[0]).reason = "changed after completion";
   const expected = {
     unavailable: [{ id: "spell:17", reason: "unobserved_shapeshift_form" }],
   };

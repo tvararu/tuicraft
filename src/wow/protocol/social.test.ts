@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
   buildAddFriend,
@@ -167,7 +168,7 @@ describe("parseContactList", () => {
 
     const result = parseContactList(new PacketReader(w.finish()));
     expect(result.contacts).toHaveLength(1);
-    const c = result.contacts[0]!;
+    const c = must(result.contacts[0]);
     expect(c.guid).toBe(42n);
     expect(c.flags).toBe(SocialFlag.FRIEND);
     expect(c.note).toBe("best friend");
@@ -188,7 +189,7 @@ describe("parseContactList", () => {
 
     const result = parseContactList(new PacketReader(w.finish()));
     expect(result.contacts).toHaveLength(1);
-    const c = result.contacts[0]!;
+    const c = must(result.contacts[0]);
     expect(c.guid).toBe(100n);
     expect(c.flags).toBe(SocialFlag.FRIEND);
     expect(c.status).toBe(FriendStatus.OFFLINE);
@@ -210,7 +211,7 @@ describe("parseContactList", () => {
     w.uint32LE(1);
 
     const result = parseContactList(new PacketReader(w.finish()));
-    const c = result.contacts[0]!;
+    const c = must(result.contacts[0]);
     expect(c.status).toBe(FriendStatus.AFK);
     expect(c.area).toBe(44);
     expect(c.level).toBe(70);
@@ -227,7 +228,7 @@ describe("parseContactList", () => {
 
     const result = parseContactList(new PacketReader(w.finish()));
     expect(result.contacts).toHaveLength(1);
-    const c = result.contacts[0]!;
+    const c = must(result.contacts[0]);
     expect(c.guid).toBe(300n);
     expect(c.flags).toBe(SocialFlag.IGNORED);
     expect(c.note).toBe("");
@@ -263,21 +264,21 @@ describe("parseContactList", () => {
     expect(result.listMask).toBe(SocialFlag.FRIEND | SocialFlag.IGNORED);
     expect(result.contacts).toHaveLength(3);
 
-    expect(result.contacts[0]!.guid).toBe(10n);
-    expect(result.contacts[0]!.flags).toBe(SocialFlag.FRIEND);
-    expect(result.contacts[0]!.status).toBe(FriendStatus.ONLINE);
-    expect(result.contacts[0]!.area).toBe(1);
-    expect(result.contacts[0]!.level).toBe(80);
-    expect(result.contacts[0]!.playerClass).toBe(5);
+    expect(must(result.contacts[0]).guid).toBe(10n);
+    expect(must(result.contacts[0]).flags).toBe(SocialFlag.FRIEND);
+    expect(must(result.contacts[0]).status).toBe(FriendStatus.ONLINE);
+    expect(must(result.contacts[0]).area).toBe(1);
+    expect(must(result.contacts[0]).level).toBe(80);
+    expect(must(result.contacts[0]).playerClass).toBe(5);
 
-    expect(result.contacts[1]!.guid).toBe(20n);
-    expect(result.contacts[1]!.flags).toBe(SocialFlag.IGNORED);
-    expect(result.contacts[1]!.status).toBeUndefined();
+    expect(must(result.contacts[1]).guid).toBe(20n);
+    expect(must(result.contacts[1]).flags).toBe(SocialFlag.IGNORED);
+    expect(must(result.contacts[1]).status).toBeUndefined();
 
-    expect(result.contacts[2]!.guid).toBe(30n);
-    expect(result.contacts[2]!.flags).toBe(SocialFlag.FRIEND);
-    expect(result.contacts[2]!.status).toBe(FriendStatus.OFFLINE);
-    expect(result.contacts[2]!.area).toBeUndefined();
+    expect(must(result.contacts[2]).guid).toBe(30n);
+    expect(must(result.contacts[2]).flags).toBe(SocialFlag.FRIEND);
+    expect(must(result.contacts[2]).status).toBe(FriendStatus.OFFLINE);
+    expect(must(result.contacts[2]).area).toBeUndefined();
   });
 });
 

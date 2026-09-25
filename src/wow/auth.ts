@@ -51,13 +51,16 @@ function handleChallenge(
       `Auth challenge failed: status 0x${result.status.toString(16)}`,
     );
   }
-  return srp.calculate(
-    result.g!,
-    result.N!,
-    result.salt!,
-    result.B!,
-    config.srpPrivateKey,
-  );
+  const { g, N, salt, B } = result;
+  if (
+    g === undefined ||
+    N === undefined ||
+    salt === undefined ||
+    B === undefined
+  ) {
+    throw new Error("Auth challenge response missing SRP parameters");
+  }
+  return srp.calculate({ g, N, salt, B }, config.srpPrivateKey);
 }
 
 function handleProof(raw: Uint8Array, srpResult: SRPResult): void {
@@ -76,8 +79,8 @@ function handleRealms(
   raw: Uint8Array,
 ): Pick<AuthResult, "realmHost" | "realmPort" | "realmId"> {
   const realms = parseRealmList(new PacketReader(raw, 1));
-  if (realms.length === 0) throw new Error("No realms available");
-  const realm = realms[0]!;
+  const [realm] = realms;
+  if (realm === undefined) throw new Error("No realms available");
   return { realmHost: realm.host, realmPort: realm.port, realmId: realm.id };
 }
 
@@ -93,9 +96,12 @@ function handleReconnectChallenge(
       `Reconnect challenge failed: status 0x${result.status.toString(16)}`,
     );
   }
+  if (result.challengeData === undefined) {
+    throw new Error("Reconnect challenge response missing challenge data");
+  }
   return buildReconnectProof(
     config.account,
-    result.challengeData!,
+    result.challengeData,
     config.cachedSessionKey,
   );
 }
@@ -116,7 +122,7 @@ function advanceAuth(ctx: AuthContext, socket: Socket): AuthResult | undefined {
   if (ctx.phase === "challenge") {
     if (raw[0] === AuthOpcode.RECONNECT_CHALLENGE) {
       socket.write(handleReconnectChallenge(raw, ctx.config));
-      ctx.sessionKey = ctx.config.cachedSessionKey!;
+      ctx.sessionKey = ctx.config.cachedSessionKey;
       ctx.phase = "reconnect_proof";
     } else {
       ctx.srpResult = handleChallenge(raw, ctx.config, ctx.srp);
@@ -125,7 +131,10 @@ function advanceAuth(ctx: AuthContext, socket: Socket): AuthResult | undefined {
       ctx.phase = "proof";
     }
   } else if (ctx.phase === "proof") {
-    handleProof(raw, ctx.srpResult!);
+    if (ctx.srpResult === undefined) {
+      throw new Error("Auth proof received before SRP challenge");
+    }
+    handleProof(raw, ctx.srpResult);
     socket.write(buildRealmListRequest());
     ctx.phase = "realms";
   } else if (ctx.phase === "reconnect_proof") {
@@ -133,7 +142,10 @@ function advanceAuth(ctx: AuthContext, socket: Socket): AuthResult | undefined {
     socket.write(buildRealmListRequest());
     ctx.phase = "realms";
   } else {
-    result = { sessionKey: ctx.sessionKey!, ...handleRealms(raw) };
+    if (ctx.sessionKey === undefined) {
+      throw new Error("Realm list received without a session key");
+    }
+    result = { sessionKey: ctx.sessionKey, ...handleRealms(raw) };
   }
 
   ctx.buf.drain(ctx.buf.length);

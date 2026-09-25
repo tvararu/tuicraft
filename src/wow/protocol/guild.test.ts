@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   buildGuildDemote,
   buildGuildInvite,
@@ -120,7 +121,7 @@ describe("parseGuildRoster", () => {
     expect(result.rankCount).toBe(1);
     expect(result.members).toHaveLength(2);
 
-    const m0 = result.members[0]!;
+    const m0 = must(result.members[0]);
     expect(m0.guid).toBe(10n);
     expect(m0.status).toBe(GuildMemberStatus.ONLINE);
     expect(m0.name).toBe("Thrall");
@@ -133,7 +134,7 @@ describe("parseGuildRoster", () => {
     expect(m0.publicNote).toBe("GM");
     expect(m0.officerNote).toBe("leader");
 
-    const m1 = result.members[1]!;
+    const m1 = must(result.members[1]);
     expect(m1.guid).toBe(20n);
     expect(m1.status).toBe(GuildMemberStatus.OFFLINE);
     expect(m1.name).toBe("Jaina");
@@ -166,7 +167,7 @@ describe("parseGuildRoster", () => {
     w.cString("");
 
     const result = parseGuildRoster(new PacketReader(w.finish()));
-    const m = result.members[0]!;
+    const m = must(result.members[0]);
     expect(m.timeOffline).toBe(0);
   });
 
@@ -190,7 +191,7 @@ describe("parseGuildRoster", () => {
     w.cString("");
 
     const result = parseGuildRoster(new PacketReader(w.finish()));
-    const m = result.members[0]!;
+    const m = must(result.members[0]);
     expect(m.timeOffline).toBe(0);
     expect(m.publicNote).toBe("note");
   });

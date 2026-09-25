@@ -95,34 +95,37 @@ function fakeLoot(config: {
   let lastRelease: RewardsState["lastRelease"];
   const closeRequested = Promise.withResolvers<void>();
 
+  function lootWindow(): RewardsState["loot"] {
+    if (phase === "open" || phase === "closing")
+      return {
+        phase,
+        guid: 2n,
+        lootType: 1,
+        money: windowMoney,
+        items: [...remainingItems].map((slot) => ({
+          slot,
+          itemId: 1000 + slot,
+          count: 1,
+          displayId: 0,
+          randomSuffix: 0,
+          randomPropertyId: 0,
+          slotType: 0,
+        })),
+        openedAt: 0,
+        invalidatedReason: undefined,
+      };
+    if (phase === "opening")
+      return {
+        phase: "opening",
+        guid: 2n,
+        requestedAt: 0,
+        invalidatedReason: undefined,
+      };
+    return { phase: "closed" };
+  }
+
   function state(): RewardsState {
-    const loot: RewardsState["loot"] =
-      phase === "open" || phase === "closing"
-        ? {
-            phase,
-            guid: 2n,
-            lootType: 1,
-            money: windowMoney,
-            items: [...remainingItems].map((slot) => ({
-              slot,
-              itemId: 1000 + slot,
-              count: 1,
-              displayId: 0,
-              randomSuffix: 0,
-              randomPropertyId: 0,
-              slotType: 0,
-            })),
-            openedAt: 0,
-            invalidatedReason: undefined,
-          }
-        : phase === "opening"
-          ? {
-              phase: "opening",
-              guid: 2n,
-              requestedAt: 0,
-              invalidatedReason: undefined,
-            }
-          : { phase: "closed" };
+    const loot = lootWindow();
     return {
       loot,
       pending: undefined,
@@ -243,6 +246,32 @@ type FakeCorpse =
       position: { x: number; y: number; z: number };
     };
 
+function positionedReclaim(
+  corpse: Extract<FakeCorpse, { status: "found" }>,
+  pose: ControlPose,
+  remainingMs: number | undefined,
+): RecoveryReclaim {
+  if (pose.mapId !== corpse.corpseMapId)
+    return blockedReclaim("corpse_map_mismatch", remainingMs, pose);
+  const distance = Math.hypot(
+    pose.x - corpse.position.x,
+    pose.y - corpse.position.y,
+    pose.z - corpse.position.z,
+  );
+  if (distance > 39)
+    return blockedReclaim("corpse_out_of_range", remainingMs, pose, distance);
+  if (remainingMs !== undefined && remainingMs > 0)
+    return blockedReclaim("reclaim_delay", remainingMs, pose, distance);
+  return {
+    canRequest: true,
+    readiness: remainingMs === undefined ? "unverified" : "ready",
+    reason: undefined,
+    distance,
+    remainingMs,
+    pose: { ...pose },
+  };
+}
+
 function fakeControl(
   config: {
     pose?: ControlPose;
@@ -297,6 +326,22 @@ function fakeControl(
   };
 }
 
+function blockedReclaim(
+  reason: RecoveryReclaim["reason"],
+  remainingMs: number | undefined,
+  pose: ControlPose | undefined,
+  distance?: number,
+): RecoveryReclaim {
+  return {
+    canRequest: false,
+    readiness: "blocked",
+    reason,
+    distance,
+    remainingMs,
+    pose: pose ? { ...pose } : undefined,
+  };
+}
+
 function fakeRecovery(config: {
   offer?: boolean;
   life: PlayerLife[];
@@ -325,72 +370,32 @@ function fakeRecovery(config: {
     const pose = posefn();
     const remainingMs = delay ? Math.max(0, delay.readyAt - now()) : undefined;
     if (life() !== "ghost")
-      return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: life() === "unknown" ? "life_unknown" : "not_ghost",
-        distance: undefined,
+      return blockedReclaim(
+        life() === "unknown" ? "life_unknown" : "not_ghost",
         remainingMs,
-        pose: pose ? { ...pose } : undefined,
-      };
+        pose,
+      );
     if (corpse.status !== "found")
-      return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: corpse.status === "absent" ? "corpse_absent" : "corpse_unknown",
-        distance: undefined,
+      return blockedReclaim(
+        corpse.status === "absent" ? "corpse_absent" : "corpse_unknown",
         remainingMs,
-        pose: pose ? { ...pose } : undefined,
-      };
-    if (!pose)
+        pose,
+      );
+    if (!pose) return blockedReclaim("pose_unknown", remainingMs, pose);
+    return positionedReclaim(corpse, pose, remainingMs);
+  }
+
+  function corpseSnapshot(): RecoveryState["corpse"] {
+    if (corpse.status === "found")
       return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: "pose_unknown",
-        distance: undefined,
-        remainingMs,
-        pose: undefined,
+        ...corpse,
+        position: { ...corpse.position },
+        unknown: 0,
+        observedAt: now(),
       };
-    if (pose.mapId !== corpse.corpseMapId)
-      return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: "corpse_map_mismatch",
-        distance: undefined,
-        remainingMs,
-        pose: { ...pose },
-      };
-    const distance = Math.hypot(
-      pose.x - corpse.position.x,
-      pose.y - corpse.position.y,
-      pose.z - corpse.position.z,
-    );
-    if (distance > 39)
-      return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: "corpse_out_of_range",
-        distance,
-        remainingMs,
-        pose: { ...pose },
-      };
-    if (remainingMs !== undefined && remainingMs > 0)
-      return {
-        canRequest: false,
-        readiness: "blocked",
-        reason: "reclaim_delay",
-        distance,
-        remainingMs,
-        pose: { ...pose },
-      };
-    return {
-      canRequest: true,
-      readiness: remainingMs === undefined ? "unverified" : "ready",
-      reason: undefined,
-      distance,
-      remainingMs,
-      pose: { ...pose },
-    };
+    if (corpse.status === "absent")
+      return { status: "absent", observedAt: now() };
+    return { status: "unknown" };
   }
 
   function snapshot(): RecoveryState {
@@ -400,17 +405,7 @@ function fakeRecovery(config: {
       flags: undefined,
       selfGuid: 1n,
       epoch: 1,
-      corpse:
-        corpse.status === "found"
-          ? {
-              ...corpse,
-              position: { ...corpse.position },
-              unknown: 0,
-              observedAt: now(),
-            }
-          : corpse.status === "absent"
-            ? { status: "absent", observedAt: now() }
-            : { status: "unknown" },
+      corpse: corpseSnapshot(),
       query: undefined,
       reclaimDelay: delay ? { ...delay } : undefined,
       reclaim: reclaimGate(),

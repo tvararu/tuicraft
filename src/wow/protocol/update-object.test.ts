@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { UpdateFlag } from "./entity-fields";
 import { PacketReader, PacketWriter } from "./packet";
 import { parseUpdateObject } from "./update-object";
@@ -28,10 +29,7 @@ function writePackedGuid(w: PacketWriter, guid: bigint) {
 
 function writeLivingSelfMovementBlock(
   w: PacketWriter,
-  x: number,
-  y: number,
-  z: number,
-  orientation: number,
+  [x, y, z, orientation]: readonly [number, number, number, number],
 ) {
   w.uint16LE(UpdateFlag.LIVING | UpdateFlag.SELF);
   w.uint32LE(0);
@@ -47,10 +45,7 @@ function writeLivingSelfMovementBlock(
 
 function writeHasPositionMovementBlock(
   w: PacketWriter,
-  x: number,
-  y: number,
-  z: number,
-  orientation: number,
+  [x, y, z, orientation]: readonly [number, number, number, number],
 ) {
   w.uint16LE(UpdateFlag.HAS_POSITION);
   w.floatLE(x);
@@ -69,14 +64,15 @@ function writeUpdateMask(w: PacketWriter, fields: Map<number, number>) {
   w.uint8(blockCount);
   const masks = new Array<number>(blockCount).fill(0);
   for (const bit of fields.keys()) {
-    masks[Math.floor(bit / 32)]! |= 1 << (bit % 32);
+    const block = Math.floor(bit / 32);
+    masks[block] = must(masks[block]) | (1 << (bit % 32));
   }
   for (const m of masks) w.uint32LE(m);
   for (let block = 0; block < blockCount; block++) {
     for (let bit = 0; bit < 32; bit++) {
       const index = block * 32 + bit;
       if (fields.has(index)) {
-        w.uint32LE(fields.get(index)!);
+        w.uint32LE(must(fields.get(index)));
       }
     }
   }
@@ -89,7 +85,7 @@ describe("parseUpdateObject", () => {
     w.uint8(3);
     writePackedGuid(w, 8n);
     w.uint8(4);
-    writeLivingSelfMovementBlock(w, -8949.95, -132.49, 83.53, 0);
+    writeLivingSelfMovementBlock(w, [-8949.95, -132.49, 83.53, 0]);
     const fields = new Map<number, number>([
       [0, 8],
       [1, 0],
@@ -104,15 +100,15 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("create");
     if (e.type !== "create") throw new Error("wrong type");
     expect(e.guid).toBe(8n);
     expect(e.objectType).toBe(4);
     expect(e.position).toBeDefined();
-    expect(e.position!.x).toBeCloseTo(-8949.95, 1);
-    expect(e.position!.y).toBeCloseTo(-132.49, 1);
-    expect(e.position!.z).toBeCloseTo(83.53, 1);
+    expect(must(e.position).x).toBeCloseTo(-8949.95, 1);
+    expect(must(e.position).y).toBeCloseTo(-132.49, 1);
+    expect(must(e.position).z).toBeCloseTo(83.53, 1);
     expect(e.fields.size).toBe(6);
   });
 
@@ -122,10 +118,10 @@ describe("parseUpdateObject", () => {
     w.uint8(3);
     writePackedGuid(w, 8n);
     w.uint8(4);
-    writeLivingSelfMovementBlock(w, 8709.46, -6671.76, 70.34, 0.5);
+    writeLivingSelfMovementBlock(w, [8709.46, -6671.76, 70.34, 0.5]);
     writeUpdateMask(w, new Map([[0, 8]]));
     const entries = parseUpdateObject(new PacketReader(w.finish()), 530);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("create");
     if (e.type !== "create") throw new Error("wrong type");
     expect(e.position.mapId).toBe(530);
@@ -144,7 +140,7 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("values");
     if (e.type !== "values") throw new Error("wrong type");
     expect(e.guid).toBe(42n);
@@ -157,13 +153,13 @@ describe("parseUpdateObject", () => {
     w.uint32LE(1);
     w.uint8(1);
     writePackedGuid(w, 100n);
-    writeHasPositionMovementBlock(w, 10.5, 20.5, 30.5, 1.25);
+    writeHasPositionMovementBlock(w, [10.5, 20.5, 30.5, 1.25]);
 
     const r = new PacketReader(w.finish());
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("movement");
     if (e.type !== "movement") throw new Error("wrong type");
     expect(e.guid).toBe(100n);
@@ -185,7 +181,7 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("outOfRange");
     if (e.type !== "outOfRange") throw new Error("wrong type");
     expect(e.guids).toHaveLength(2);
@@ -205,7 +201,7 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("nearObjects");
     if (e.type !== "nearObjects") throw new Error("wrong type");
     expect(e.guids).toHaveLength(2);
@@ -220,7 +216,7 @@ describe("parseUpdateObject", () => {
     w.uint8(3);
     writePackedGuid(w, 5n);
     w.uint8(4);
-    writeLivingSelfMovementBlock(w, 1, 2, 3, 0);
+    writeLivingSelfMovementBlock(w, [1, 2, 3, 0]);
     const createFields = new Map<number, number>([[0, 5]]);
     writeUpdateMask(w, createFields);
 
@@ -233,8 +229,8 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(2);
-    expect(entries[0]!.type).toBe("create");
-    expect(entries[1]!.type).toBe("values");
+    expect(must(entries[0]).type).toBe("create");
+    expect(must(entries[1]).type).toBe("values");
   });
 
   test("CREATE_OBJECT for game object", () => {
@@ -243,7 +239,7 @@ describe("parseUpdateObject", () => {
     w.uint8(2);
     writePackedGuid(w, 500n);
     w.uint8(5);
-    writeHasPositionMovementBlock(w, 100, 200, 300, 0.5);
+    writeHasPositionMovementBlock(w, [100, 200, 300, 0.5]);
     const fields = new Map<number, number>([
       [0, 500],
       [1, 0],
@@ -254,13 +250,13 @@ describe("parseUpdateObject", () => {
     const entries = parseUpdateObject(r);
     expect(r.remaining).toBe(0);
     expect(entries).toHaveLength(1);
-    const e = entries[0]!;
+    const e = must(entries[0]);
     expect(e.type).toBe("create");
     if (e.type !== "create") throw new Error("wrong type");
     expect(e.objectType).toBe(5);
-    expect(e.position!.x).toBeCloseTo(100);
-    expect(e.position!.y).toBeCloseTo(200);
-    expect(e.position!.z).toBeCloseTo(300);
+    expect(must(e.position).x).toBeCloseTo(100);
+    expect(must(e.position).y).toBeCloseTo(200);
+    expect(must(e.position).z).toBeCloseTo(300);
   });
 
   test("an unknown object type ends the packet", () => {
@@ -302,7 +298,7 @@ describe("parseUpdateObject", () => {
     const r = new PacketReader(w.finish());
     const entries = parseUpdateObject(r);
     expect(entries).toHaveLength(2);
-    expect(entries[0]!.type).toBe("values");
-    expect(entries[1]!.type).toBe("values");
+    expect(must(entries[0]).type).toBe("values");
+    expect(must(entries[1]).type).toBe("values");
   });
 });

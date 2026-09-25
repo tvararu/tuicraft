@@ -8,6 +8,7 @@ import {
   sessionKey,
 } from "test/fixtures";
 import { startMockWorldServer } from "test/mock-world-server";
+import { must } from "test/must";
 import { type WorldHandle, worldSession } from "wow/client";
 import { type ControlMode, ControlRuntime } from "wow/control";
 import type { DbcFile } from "wow/dbc";
@@ -59,10 +60,12 @@ async function disposeFixture(f: Fixture | undefined): Promise<void> {
 
 function writeFields(writer: PacketWriter, fields: Map<number, number>): void {
   const sorted = [...fields.entries()].sort(([a], [b]) => a - b);
-  const blocks = Math.floor(sorted.at(-1)![0] / 32) + 1;
+  const blocks = Math.floor(must(sorted.at(-1))[0] / 32) + 1;
   const masks = new Array<number>(blocks).fill(0);
-  for (const [offset] of sorted)
-    masks[Math.floor(offset / 32)]! |= 1 << (offset % 32);
+  for (const [offset] of sorted) {
+    const slot = Math.floor(offset / 32);
+    masks[slot] = must(masks[slot]) | (1 << (offset % 32));
+  }
   writer.uint8(blocks);
   for (const mask of masks) writer.uint32LE(mask);
   for (const [, value] of sorted) writer.uint32LE(value);
@@ -186,15 +189,6 @@ function emptySpells(): spellData.SpellCatalog {
   });
 }
 
-function expectInactive(handle: WorldHandle): void {
-  expect(handle.getControlState()).toMatchObject({
-    moving: false,
-    owner: "none",
-  });
-  expect(handle.getNavigationState().active).toBe(false);
-  expect(handle.getTacticsState().status).toBe("idle");
-}
-
 describe("gameplay forced-close lifecycle", () => {
   test("server close silently retires an active route owner and its timers", async () => {
     const createNavigation = navigation.createNavigation;
@@ -223,11 +217,21 @@ describe("gameplay forced-close lifecycle", () => {
       send.mockImplementation(() => {});
       f.stop();
       await expect(bounded(f.handle.closed)).resolves.toBeUndefined();
-      expectInactive(f.handle);
+      expect(f.handle.getControlState()).toMatchObject({
+        moving: false,
+        owner: "none",
+      });
+      expect(f.handle.getNavigationState().active).toBe(false);
+      expect(f.handle.getTacticsState().status).toBe("idle");
       const duringClose = send.mock.calls.map(([, opcode]) => opcode);
       jest.advanceTimersByTime(60_000);
       await Promise.resolve();
-      expectInactive(f.handle);
+      expect(f.handle.getControlState()).toMatchObject({
+        moving: false,
+        owner: "none",
+      });
+      expect(f.handle.getNavigationState().active).toBe(false);
+      expect(f.handle.getTacticsState().status).toBe("idle");
       expect(duringClose).toEqual([]);
       expect(send.mock.calls.map(([, opcode]) => opcode)).toEqual([]);
     } finally {
@@ -306,11 +310,21 @@ describe("gameplay forced-close lifecycle", () => {
       f.stop();
       await expect(bounded(f.handle.closed)).resolves.toBeUndefined();
       await expect(bounded(running)).resolves.toBeUndefined();
-      expectInactive(f.handle);
+      expect(f.handle.getControlState()).toMatchObject({
+        moving: false,
+        owner: "none",
+      });
+      expect(f.handle.getNavigationState().active).toBe(false);
+      expect(f.handle.getTacticsState().status).toBe("idle");
       const duringClose = send.mock.calls.map(([, opcode]) => opcode);
       jest.advanceTimersByTime(60_000);
       await Promise.resolve();
-      expectInactive(f.handle);
+      expect(f.handle.getControlState()).toMatchObject({
+        moving: false,
+        owner: "none",
+      });
+      expect(f.handle.getNavigationState().active).toBe(false);
+      expect(f.handle.getTacticsState().status).toBe("idle");
       expect(duringClose).toEqual([]);
       expect(send.mock.calls.map(([, opcode]) => opcode)).toEqual([]);
     } finally {

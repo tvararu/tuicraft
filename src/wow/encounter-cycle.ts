@@ -187,7 +187,8 @@ export class EncounterCycleRuntime {
     while (this.state.currentIndex < queue.length) {
       if (this.state.startsUsed >= this.state.maxStarts)
         return this.stop("max_starts_reached");
-      const record = queue[this.state.currentIndex]!;
+      const record = queue[this.state.currentIndex];
+      if (record === undefined) return this.stop("queue_exhausted");
       const failed = await this.engage(record, signal);
       if (failed) return this.stop(failed.cause, failed.detail);
       signal.throwIfAborted();

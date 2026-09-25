@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   type FriendEntry,
   type FriendEvent,
@@ -32,9 +33,10 @@ describe("FriendStore", () => {
 
     expect(store.all()).toHaveLength(2);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("friend-list");
-    if (events[0]!.type === "friend-list") {
-      expect(events[0]!.friends).toHaveLength(2);
+    const event = must(events[0]);
+    expect(event.type).toBe("friend-list");
+    if (event.type === "friend-list") {
+      expect(event.friends).toHaveLength(2);
     }
   });
 
@@ -44,7 +46,7 @@ describe("FriendStore", () => {
     store.set([makeFriend({ guid: 2n, name: "Jaina" })]);
 
     expect(store.all()).toHaveLength(1);
-    expect(store.all()[0]!.name).toBe("Jaina");
+    expect(must(store.all()[0]).name).toBe("Jaina");
   });
 
   test("update() modifies existing entry and fires friend-online event", () => {
@@ -56,12 +58,13 @@ describe("FriendStore", () => {
     store.update(1n, { status: 1, area: 20 });
 
     const all = store.all();
-    expect(all[0]!.status).toBe(1);
-    expect(all[0]!.area).toBe(20);
+    expect(must(all[0]).status).toBe(1);
+    expect(must(all[0]).area).toBe(20);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("friend-online");
-    if (events[0]!.type === "friend-online") {
-      expect(events[0]!.friend.guid).toBe(1n);
+    const event = must(events[0]);
+    expect(event.type).toBe("friend-online");
+    if (event.type === "friend-online") {
+      expect(event.friend.guid).toBe(1n);
     }
   });
 
@@ -74,10 +77,11 @@ describe("FriendStore", () => {
     store.update(1n, { status: 0 });
 
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("friend-offline");
-    if (events[0]!.type === "friend-offline") {
-      expect(events[0]!.guid).toBe(1n);
-      expect(events[0]!.name).toBe("Thrall");
+    const event = must(events[0]);
+    expect(event.type).toBe("friend-offline");
+    if (event.type === "friend-offline") {
+      expect(event.guid).toBe(1n);
+      expect(event.name).toBe("Thrall");
     }
   });
 
@@ -101,9 +105,10 @@ describe("FriendStore", () => {
 
     expect(store.all()).toHaveLength(1);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("friend-added");
-    if (events[0]!.type === "friend-added") {
-      expect(events[0]!.friend.guid).toBe(1n);
+    const event = must(events[0]);
+    expect(event.type).toBe("friend-added");
+    if (event.type === "friend-added") {
+      expect(event.friend.guid).toBe(1n);
     }
   });
 
@@ -117,10 +122,11 @@ describe("FriendStore", () => {
 
     expect(store.all()).toHaveLength(0);
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("friend-removed");
-    if (events[0]!.type === "friend-removed") {
-      expect(events[0]!.guid).toBe(1n);
-      expect(events[0]!.name).toBe("Thrall");
+    const event = must(events[0]);
+    expect(event.type).toBe("friend-removed");
+    if (event.type === "friend-removed") {
+      expect(event.guid).toBe(1n);
+      expect(event.name).toBe("Thrall");
     }
   });
 
@@ -140,7 +146,7 @@ describe("FriendStore", () => {
 
     store.setName(1n, "Go'el");
 
-    expect(store.all()[0]!.name).toBe("Go'el");
+    expect(must(store.all()[0]).name).toBe("Go'el");
   });
 
   test("findByName() returns entry by case-insensitive name", () => {
@@ -150,7 +156,7 @@ describe("FriendStore", () => {
     expect(store.findByName("thrall")).toBeDefined();
     expect(store.findByName("THRALL")).toBeDefined();
     expect(store.findByName("Thrall")).toBeDefined();
-    expect(store.findByName("thrall")!.guid).toBe(1n);
+    expect(must(store.findByName("thrall")).guid).toBe(1n);
   });
 
   test("findByName() returns undefined for unknown name", () => {
@@ -169,9 +175,9 @@ describe("FriendStore", () => {
     ]);
 
     const all = store.all();
-    expect(all[0]!.name).toBe("Arthas");
-    expect(all[1]!.name).toBe("Jaina");
-    expect(all[2]!.name).toBe("Zul'jin");
+    expect(must(all[0]).name).toBe("Arthas");
+    expect(must(all[1]).name).toBe("Jaina");
+    expect(must(all[2]).name).toBe("Zul'jin");
   });
 
   test("entries are stored as copies", () => {
@@ -180,6 +186,6 @@ describe("FriendStore", () => {
     store.add(original);
 
     original.name = "Mutated";
-    expect(store.all()[0]!.name).toBe("Thrall");
+    expect(must(store.all()[0]).name).toBe("Thrall");
   });
 });

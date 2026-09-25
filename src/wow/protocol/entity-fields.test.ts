@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   CORPSE_END,
   CORPSE_FIELDS,
@@ -197,45 +198,45 @@ describe("fieldForBit", () => {
   test("finds UNIT_FIELD_HEALTH for correct bit index", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.HEALTH.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("health");
-    expect(result!.type).toBe("u32");
+    expect(must(result).name).toBe("health");
+    expect(must(result).type).toBe("u32");
   });
 
   test("finds OBJECT_FIELD_GUID for bit 0 on unit", () => {
     const result = fieldForBit(ObjectType.UNIT, 0);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("guid");
-    expect(result!.type).toBe("u64");
+    expect(must(result).name).toBe("guid");
+    expect(must(result).type).toBe("u64");
   });
 
   test("finds OBJECT_FIELD_ENTRY for bit 3 on unit", () => {
     const result = fieldForBit(ObjectType.UNIT, 3);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("entry");
+    expect(must(result).name).toBe("entry");
   });
 
   test("finds level for unit", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.LEVEL.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("level");
+    expect(must(result).name).toBe("level");
   });
 
   test("finds target for unit", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.TARGET.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("target");
+    expect(must(result).name).toBe("target");
   });
 
   test("finds displayId for unit", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.DISPLAYID.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("displayId");
+    expect(must(result).name).toBe("displayId");
   });
 
   test("finds npcFlags for unit", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.NPC_FLAGS.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("npcFlags");
+    expect(must(result).name).toBe("npcFlags");
   });
 
   test("finds gameobject displayId", () => {
@@ -244,7 +245,7 @@ describe("fieldForBit", () => {
       GAMEOBJECT_FIELDS.DISPLAYID.offset,
     );
     expect(result).toBeDefined();
-    expect(result!.name).toBe("displayId");
+    expect(must(result).name).toBe("displayId");
   });
 
   test("finds gameobject flags", () => {
@@ -253,7 +254,7 @@ describe("fieldForBit", () => {
       GAMEOBJECT_FIELDS.FLAGS.offset,
     );
     expect(result).toBeDefined();
-    expect(result!.name).toBe("flags");
+    expect(must(result).name).toBe("flags");
   });
 
   test("returns undefined for unknown offset", () => {
@@ -267,13 +268,13 @@ describe("fieldForBit", () => {
   test("finds maxHealth for unit", () => {
     const result = fieldForBit(ObjectType.UNIT, UNIT_FIELDS.MAXHEALTH.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("maxHealth");
+    expect(must(result).name).toBe("maxHealth");
   });
 
   test("finds corpse owner", () => {
     const result = fieldForBit(ObjectType.CORPSE, CORPSE_FIELDS.OWNER.offset);
     expect(result).toBeDefined();
-    expect(result!.name).toBe("owner");
+    expect(must(result).name).toBe("owner");
   });
 
   test("finds dynamicobject spellId", () => {
@@ -282,6 +283,6 @@ describe("fieldForBit", () => {
       DYNAMICOBJECT_FIELDS.SPELLID.offset,
     );
     expect(result).toBeDefined();
-    expect(result!.name).toBe("spellId");
+    expect(must(result).name).toBe("spellId");
   });
 });

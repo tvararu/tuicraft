@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { MovementFlag, MovementFlagExtra } from "wow/protocol/entity-fields";
 import {
   buildCanFlyAck,
@@ -296,7 +297,7 @@ describe("parseForceSpeed", () => {
     w.uint8(0);
     w.floatLE(7);
     const r = new PacketReader(w.finish());
-    const spec = speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE)!;
+    const spec = must(speedAckFor(GameOpcode.SMSG_FORCE_RUN_SPEED_CHANGE));
     expect(parseForceSpeed(r, spec)).toEqual({
       guid: 0x0764n,
       counter: 3,
@@ -309,7 +310,7 @@ describe("parseForceSpeed", () => {
     const w = moveCounter(0x0764n, 3);
     w.floatLE(4.5);
     const r = new PacketReader(w.finish());
-    const spec = speedAckFor(GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE)!;
+    const spec = must(speedAckFor(GameOpcode.SMSG_FORCE_SWIM_SPEED_CHANGE));
     expect(parseForceSpeed(r, spec).speed).toBe(4.5);
     expect(r.remaining).toBe(0);
   });

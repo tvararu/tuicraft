@@ -7,8 +7,7 @@ export function parseUpdateMask(r: PacketReader): Map<number, number> {
     masks.push(r.uint32LE());
   }
   const fields = new Map<number, number>();
-  for (let block = 0; block < blockCount; block++) {
-    const mask = masks[block]!;
+  for (const [block, mask] of masks.entries()) {
     if (mask === 0) continue;
     for (let bit = 0; bit < 32; bit++) {
       if (mask & (1 << bit)) {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { CombatRuntime } from "wow/combat";
 import { EntityStore } from "wow/entity-store";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -169,7 +170,7 @@ describe("combat observations", () => {
     });
     combat.applyMonsterMove(path({}), 530);
     advance(500);
-    const target = combat.snapshot().target!;
+    const target = must(combat.snapshot().target);
     expect(target.pose).toMatchObject({ source: "predicted", x: 5 });
     expect(target.serverPose).toMatchObject({
       source: "server",
@@ -282,7 +283,7 @@ test("a new open Catmull packet cannot promote old facing to authoritative launc
     }),
     530,
   );
-  const target = combat.snapshot().target!;
+  const target = must(combat.snapshot().target);
   expect(target.serverPose).toMatchObject({
     y: 2,
     source: "server",

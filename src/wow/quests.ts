@@ -154,8 +154,10 @@ export class QuestRuntime {
   private lastProgress: QuestProgress | undefined;
   private lastReward: QuestState["lastReward"];
   private lastStatus: QuestgiverStatus | undefined;
+  private readonly deps: QuestDeps;
 
-  constructor(private readonly deps: QuestDeps) {
+  constructor(deps: QuestDeps) {
+    this.deps = deps;
     this.log = readQuestLog(deps.selfGuid(), deps.getEntity);
     this.logEntity = deps.getEntity(deps.selfGuid());
   }
@@ -377,7 +379,12 @@ export class QuestRuntime {
     this.logEntity = entity;
     if (
       sameEntity &&
-      previous.slots.every((slot, i) => sameSlot(slot, next.slots[i]!))
+      previous.slots.every((slot, i) => {
+        const nextSlot = next.slots[i];
+        if (nextSlot === undefined)
+          throw new Error("quest slots length mismatch");
+        return sameSlot(slot, nextSlot);
+      })
     )
       return;
     if (sameEntity) this.transitions(previous, next);
@@ -411,7 +418,7 @@ export class QuestRuntime {
     return readQuestLog(
       this.deps.selfGuid(),
       this.deps.getEntity,
-      !!entity && this.visibleQuestIds.get(entity) === true,
+      entity !== undefined && this.visibleQuestIds.get(entity) === true,
     );
   }
 

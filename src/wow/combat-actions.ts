@@ -5,7 +5,7 @@ import type { FactionTemplateCatalog } from "wow/faction-template";
 import { bearing, distance } from "wow/geometry";
 import type { JevCandidate } from "wow/jev";
 import { ObjectType, UnitFlag } from "wow/protocol/entity-fields";
-import type { SpellDefinition } from "wow/spell-catalog";
+import type { SpellDefinition, SpellEffect } from "wow/spell-catalog";
 import type { TacticsContext, TacticsFrame } from "wow/tactics";
 
 type ActionDeps = {
@@ -193,10 +193,15 @@ export class CombatActions {
       this.deps.control.move(direction, MOVE_LEASE_MS);
       return;
     }
+    this.executeTargeted(id, context);
+  }
+
+  private executeTargeted(id: string, context: TacticsContext): void {
     const state = this.deps.combat.snapshot(context.targetGuid);
     if (id === "face_target") {
-      const from = state.self.pose!;
-      const to = state.target!.pose!;
+      const from = state.self.pose;
+      const to = state.target?.pose;
+      if (!(from && to)) throw new Error("face_target_pose_unobserved");
       this.deps.control.face(bearing(from, to));
       return;
     }
@@ -238,6 +243,13 @@ export class CombatActions {
             action.target === state.self.guid,
           ),
         });
+    this.addEngageCandidates(candidates, state);
+  }
+
+  private addEngageCandidates(
+    candidates: JevCandidate[],
+    state: CombatState,
+  ): void {
     if (state.attacking || state.pendingAttack)
       candidates.push({ id: "stop_attack", description: "Stop autoattack" });
     else if (this.inMelee(state) && facing(state))
@@ -280,9 +292,7 @@ export class CombatActions {
       };
     const unsupported =
       unsupportedSpell(spell, state.self.shapeshiftForm) ??
-      (hostile && (!spell.range || spell.range.flags !== 0)
-        ? "unsupported_range"
-        : undefined);
+      (hostile && spell.range?.flags !== 0 ? "unsupported_range" : undefined);
     const reason = unsupported ?? this.spellReason(spell, state, hostile);
     return { id: actionId, spell, target, reason, supported: !unsupported };
   }
@@ -293,43 +303,10 @@ export class CombatActions {
     hostile: boolean,
   ): string | undefined {
     if (this.deps.combat.readyAt(spell.id) > this.deps.now()) return "cooldown";
-    if (state.self.powerType !== 0 || state.self.power === undefined)
-      return "unobserved_mana";
-    const percentage = spell.power.costPercentageOfBaseMana;
-    if (percentage && state.self.baseMana === undefined)
-      return "unobserved_base_mana";
-    const cost =
-      spell.power.costRaw +
-      Math.floor(((state.self.baseMana ?? 0) * percentage) / 100);
-    if (state.self.power < cost) return "insufficient_mana";
+    const reason =
+      manaReason(spell, state) ?? auraReason(spell, state, hostile);
+    if (reason) return reason;
     const target = hostile ? state.target : state.self;
-    const auras = hostile ? state.targetAuras : state.auras;
-    const req = spell.auraRequirements;
-    if (
-      req.casterAuraSpell &&
-      !state.auras.some((aura) => aura.spellId === req.casterAuraSpell)
-    )
-      return "caster_aura_required";
-    if (
-      req.targetAuraSpell &&
-      !auras.some((aura) => aura.spellId === req.targetAuraSpell)
-    )
-      return "target_aura_required";
-    if (
-      req.excludeCasterAuraSpell &&
-      state.auras.some((aura) => aura.spellId === req.excludeCasterAuraSpell)
-    )
-      return "caster_aura_excluded";
-    if (
-      req.excludeTargetAuraSpell &&
-      auras.some((aura) => aura.spellId === req.excludeTargetAuraSpell)
-    )
-      return "target_aura_excluded";
-    if (
-      spell.effects.some((effect) => effect.effect === 6) &&
-      auras.some((aura) => aura.spellId === spell.id)
-    )
-      return "aura_already_present";
     if (
       !hostile &&
       spell.effects.some(
@@ -343,7 +320,9 @@ export class CombatActions {
     if (!hostile) return undefined;
     const distance = separation(state);
     if (distance === undefined) return "unobserved_range";
-    const range = spell.range!;
+    const range = spell.range;
+    if (range === undefined)
+      throw new Error("hostile spell is missing range metadata");
     if (distance < range.minHostile || distance > range.maxHostile)
       return "out_of_range";
     if (!facing(state)) return "not_facing";
@@ -354,6 +333,35 @@ export class CombatActions {
     context: TacticsContext,
     state: CombatState,
     spells: readonly SpellAction[],
+  ): TacticsFrame["outcome"] {
+    const observed = this.observedOutcome(context, state);
+    if (observed) return observed;
+    const now = this.deps.now();
+    const timedOut = timeoutOutcome(state, now);
+    if (timedOut) return timedOut;
+    if (state.target?.health === 0) {
+      this.deadAt ??= now;
+      if (now - this.deadAt > 5000)
+        return {
+          status: "blocked",
+          reason: "target_dead_without_server_credit",
+        };
+      return undefined;
+    }
+    const reason = this.targetReason(context.targetGuid, state);
+    if (reason) return { status: "blocked", reason };
+    const control = this.deps.control.snapshot();
+    if (
+      control.blockedReason &&
+      !["rooted", "disable_move"].includes(control.blockedReason)
+    )
+      return { status: "blocked", reason: control.blockedReason };
+    return this.reachOutcome(context, state, spells, now);
+  }
+
+  private observedOutcome(
+    context: TacticsContext,
+    state: CombatState,
   ): TacticsFrame["outcome"] {
     if (
       state.lastXp?.kind === "kill" &&
@@ -375,31 +383,15 @@ export class CombatActions {
         status: "blocked",
         reason: `server_action_rejected:${last.error ?? last.result ?? "interrupted"}`,
       };
-    const now = this.deps.now();
-    if (state.pendingCast && now - state.pendingCast.startedAt > 5000)
-      return { status: "failed", reason: "cast_response_timeout" };
-    if (
-      state.casting &&
-      now - state.casting.startedAt > state.casting.durationMs + 5000
-    )
-      return { status: "failed", reason: "cast_completion_timeout" };
-    if (state.target?.health === 0) {
-      this.deadAt ??= now;
-      if (now - this.deadAt > 5000)
-        return {
-          status: "blocked",
-          reason: "target_dead_without_server_credit",
-        };
-      return undefined;
-    }
-    const reason = this.targetReason(context.targetGuid, state);
-    if (reason) return { status: "blocked", reason };
-    const control = this.deps.control.snapshot();
-    if (
-      control.blockedReason &&
-      !["rooted", "disable_move"].includes(control.blockedReason)
-    )
-      return { status: "blocked", reason: control.blockedReason };
+    return undefined;
+  }
+
+  private reachOutcome(
+    context: TacticsContext,
+    state: CombatState,
+    spells: readonly SpellAction[],
+    now: number,
+  ): TacticsFrame["outcome"] {
     if (
       !(
         state.pendingCast ||
@@ -481,8 +473,7 @@ export class CombatActions {
       return undefined;
     const factions = this.deps.factions();
     if (
-      !factions ||
-      factions.relation(self.factionTemplate, target.factionTemplate) !==
+      factions?.relation(self.factionTemplate, target.factionTemplate) !==
         "hostile" ||
       factions.relation(target.factionTemplate, self.factionTemplate) ===
         "friendly"
@@ -521,7 +512,7 @@ function unsupportedSpell(
     return "unsupported_spell_attribute";
   if (spell.attributes.ex & (0x2 | 0x4 | 0x40))
     return "unsupported_channel_or_power";
-  if (spell.equippedItem.itemClass !== -1 || spell.reagents.length)
+  if (spell.equippedItem.itemClass !== -1 || spell.reagents.length > 0)
     return "unsupported_item_requirement";
   if (form === undefined) return "unobserved_shapeshift_form";
   if (form !== 0) return "unsupported_shapeshift_form";
@@ -534,6 +525,10 @@ function unsupportedSpell(
   )
     return "unsupported_target_requirement";
   if (!spell.castTime) return "unknown_cast_time";
+  return unsupportedMechanics(spell);
+}
+
+function unsupportedMechanics(spell: SpellDefinition): string | undefined {
   if (
     spell.power.type !== 0 ||
     spell.power.costPerSecond ||
@@ -550,24 +545,100 @@ function unsupportedSpell(
   )
     return "unsupported_aura_state";
   const effects = spell.effects.filter((effect) => effect.effect !== 0);
-  if (!effects.length) return "unsupported_empty_effects";
+  if (effects.length === 0) return "unsupported_empty_effects";
   for (const effect of effects) {
-    if (![2, 6, 10].includes(effect.effect))
-      return `unsupported_effect:${effect.effect}`;
-    if (effect.effect === 6 && !AURAS.has(effect.applyAura))
-      return `unsupported_aura:${effect.applyAura}`;
-    if (effect.implicitTargetA === 0 && effect.implicitTargetB === 0)
-      return "unspecified_effect_target";
-    if (
-      !(
-        [0, 1, 6, 21].includes(effect.implicitTargetA) &&
-        [0, 1, 6, 21].includes(effect.implicitTargetB)
-      )
-    )
-      return "unsupported_implicit_target";
-    if (effect.radius && effect.radius.max > 0)
-      return "unsupported_area_effect";
+    const reason = unsupportedEffect(effect);
+    if (reason) return reason;
   }
+  return undefined;
+}
+
+function unsupportedEffect(effect: SpellEffect): string | undefined {
+  if (![2, 6, 10].includes(effect.effect))
+    return `unsupported_effect:${effect.effect}`;
+  if (effect.effect === 6 && !AURAS.has(effect.applyAura))
+    return `unsupported_aura:${effect.applyAura}`;
+  if (effect.implicitTargetA === 0 && effect.implicitTargetB === 0)
+    return "unspecified_effect_target";
+  if (
+    !(
+      [0, 1, 6, 21].includes(effect.implicitTargetA) &&
+      [0, 1, 6, 21].includes(effect.implicitTargetB)
+    )
+  )
+    return "unsupported_implicit_target";
+  if (effect.radius && effect.radius.max > 0) return "unsupported_area_effect";
+  return undefined;
+}
+
+function effectKind(effect: number): string {
+  if (effect === 2) return "damage";
+  if (effect === 10) return "healing";
+  return "aura";
+}
+
+function manaReason(
+  spell: SpellDefinition,
+  state: CombatState,
+): string | undefined {
+  if (state.self.powerType !== 0 || state.self.power === undefined)
+    return "unobserved_mana";
+  const percentage = spell.power.costPercentageOfBaseMana;
+  if (percentage && state.self.baseMana === undefined)
+    return "unobserved_base_mana";
+  const cost =
+    spell.power.costRaw +
+    Math.floor(((state.self.baseMana ?? 0) * percentage) / 100);
+  if (state.self.power < cost) return "insufficient_mana";
+  return undefined;
+}
+
+function auraReason(
+  spell: SpellDefinition,
+  state: CombatState,
+  hostile: boolean,
+): string | undefined {
+  const auras = hostile ? state.targetAuras : state.auras;
+  const req = spell.auraRequirements;
+  if (
+    req.casterAuraSpell &&
+    !state.auras.some((aura) => aura.spellId === req.casterAuraSpell)
+  )
+    return "caster_aura_required";
+  if (
+    req.targetAuraSpell &&
+    !auras.some((aura) => aura.spellId === req.targetAuraSpell)
+  )
+    return "target_aura_required";
+  if (
+    req.excludeCasterAuraSpell &&
+    state.auras.some((aura) => aura.spellId === req.excludeCasterAuraSpell)
+  )
+    return "caster_aura_excluded";
+  if (
+    req.excludeTargetAuraSpell &&
+    auras.some((aura) => aura.spellId === req.excludeTargetAuraSpell)
+  )
+    return "target_aura_excluded";
+  if (
+    spell.effects.some((effect) => effect.effect === 6) &&
+    auras.some((aura) => aura.spellId === spell.id)
+  )
+    return "aura_already_present";
+  return undefined;
+}
+
+function timeoutOutcome(
+  state: CombatState,
+  now: number,
+): TacticsFrame["outcome"] {
+  if (state.pendingCast && now - state.pendingCast.startedAt > 5000)
+    return { status: "failed", reason: "cast_response_timeout" };
+  if (
+    state.casting &&
+    now - state.casting.startedAt > state.casting.durationMs + 5000
+  )
+    return { status: "failed", reason: "cast_completion_timeout" };
   return undefined;
 }
 
@@ -575,12 +646,7 @@ function describeSpell(spell: SpellDefinition, self: boolean): string {
   const effects = spell.effects
     .filter((effect) => effect.effect !== 0)
     .map((effect) => ({
-      kind:
-        effect.effect === 2
-          ? "damage"
-          : effect.effect === 10
-            ? "healing"
-            : "aura",
+      kind: effectKind(effect.effect),
       effect: effect.effect,
       aura: effect.applyAura,
       base: effect.basePoints + 1,

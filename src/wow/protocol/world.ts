@@ -6,7 +6,7 @@ import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 export const INCOMING_HEADER_SIZE = 4;
 export const OUTGOING_HEADER_SIZE = 6;
 
-export interface CharacterInfo {
+export type CharacterInfo = {
   classId: number;
   gender: number;
   guidHigh: number;
@@ -17,7 +17,7 @@ export interface CharacterInfo {
   name: string;
   race: number;
   zone: number;
-}
+};
 
 export const CLASS_NAMES: Record<number, string> = {
   1: "Warrior",
@@ -83,20 +83,25 @@ function buildAddonInfo(): Uint8Array {
   return w.finish();
 }
 
+export type WorldAuthOptions = {
+  account: string;
+  sessionKey: Uint8Array;
+  serverSeed: Uint8Array;
+  realmId: number;
+  clientSeed?: Uint8Array;
+};
+
 export async function buildWorldAuthPacket(
-  account: string,
-  sessionKey: Uint8Array,
-  serverSeed: Uint8Array,
-  realmId: number,
-  clientSeed?: Uint8Array,
+  options: WorldAuthOptions,
 ): Promise<Uint8Array> {
+  const { account, sessionKey, serverSeed, realmId, clientSeed } = options;
   const upperAccount = account.toUpperCase();
-  if (!clientSeed) clientSeed = crypto.getRandomValues(new Uint8Array(4));
+  const seed = clientSeed ?? crypto.getRandomValues(new Uint8Array(4));
 
   const digest = createHash("sha1")
     .update(upperAccount)
     .update(new Uint8Array(4))
-    .update(clientSeed)
+    .update(seed)
     .update(serverSeed)
     .update(sessionKey)
     .digest();
@@ -109,7 +114,7 @@ export async function buildWorldAuthPacket(
   w.uint32LE(0);
   w.cString(upperAccount);
   w.uint32LE(0);
-  w.rawBytes(clientSeed);
+  w.rawBytes(seed);
   w.uint32LE(0);
   w.uint32LE(0);
   w.uint32LE(realmId);
@@ -162,8 +167,8 @@ export function parseCharacterList(r: PacketReader): CharacterInfo[] {
 }
 
 export class OpcodeDispatch {
-  private handlers: Map<number, (reader: PacketReader) => void>;
-  private expects: Map<number, (reader: PacketReader) => void>;
+  private readonly handlers: Map<number, (reader: PacketReader) => void>;
+  private readonly expects: Map<number, (reader: PacketReader) => void>;
 
   constructor() {
     this.handlers = new Map();

@@ -12,13 +12,12 @@ export function splitGuid(guid: bigint): { low: number; high: number } {
 }
 
 export class PacketReader {
-  private view: DataView;
+  private readonly data: Uint8Array;
+  private readonly view: DataView;
   private pos = 0;
 
-  constructor(
-    private data: Uint8Array,
-    offset = 0,
-  ) {
+  constructor(data: Uint8Array, offset = 0) {
+    this.data = data;
     this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     this.pos = offset;
   }

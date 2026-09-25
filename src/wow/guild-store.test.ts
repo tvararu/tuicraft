@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { type GuildEvent, type GuildMember, GuildStore } from "wow/guild-store";
 
 function makeMember(overrides: Partial<GuildMember> = {}): GuildMember {
@@ -32,7 +33,7 @@ describe("GuildStore", () => {
 
     expect(store.all()).toHaveLength(2);
     expect(events).toHaveLength(1);
-    const e = events[0]!;
+    const e = must(events[0]);
     expect(e.type).toBe("guild-roster");
     if (e.type !== "guild-roster") throw new Error("expected guild-roster");
     expect(e.roster.motd).toBe("Welcome!");
@@ -51,7 +52,7 @@ describe("GuildStore", () => {
     ]);
 
     expect(store.all()).toHaveLength(1);
-    expect(store.all()[0]!.name).toBe("Sylvanas");
+    expect(must(store.all()[0]).name).toBe("Sylvanas");
   });
 
   test("setGuildMeta() stores name and rank names, fires event if members exist", () => {
@@ -65,7 +66,7 @@ describe("GuildStore", () => {
     store.setGuildMeta("Horde Elite", ["Guild Master", "Officer", "Member"]);
 
     expect(events).toHaveLength(1);
-    const e = events[0]!;
+    const e = must(events[0]);
     if (e.type !== "guild-roster") throw new Error("expected guild-roster");
     expect(e.roster.guildName).toBe("Horde Elite");
     expect(e.roster.rankNames).toEqual(["Guild Master", "Officer", "Member"]);
@@ -113,15 +114,15 @@ describe("GuildStore", () => {
       }),
     ]);
 
-    const roster = store.get();
+    const roster = must(store.get());
     expect(roster).toBeDefined();
-    expect(roster!.guildName).toBe("Horde Elite");
-    expect(roster!.motd).toBe("Welcome!");
-    expect(roster!.guildInfo).toBe("Guild info");
-    expect(roster!.rankNames).toEqual(["Guild Master", "Officer"]);
-    expect(roster!.members).toHaveLength(1);
+    expect(roster.guildName).toBe("Horde Elite");
+    expect(roster.motd).toBe("Welcome!");
+    expect(roster.guildInfo).toBe("Guild info");
+    expect(roster.rankNames).toEqual(["Guild Master", "Officer"]);
+    expect(roster.members).toHaveLength(1);
 
-    const m = roster!.members[0]!;
+    const m = must(roster.members[0]);
     expect(m.guid).toBe(1n);
     expect(m.name).toBe("Thrall");
     expect(m.rankIndex).toBe(0);
@@ -144,9 +145,9 @@ describe("GuildStore", () => {
     ]);
 
     const all = store.all();
-    expect(all[0]!.name).toBe("Arthas");
-    expect(all[1]!.name).toBe("Jaina");
-    expect(all[2]!.name).toBe("Zul'jin");
+    expect(must(all[0]).name).toBe("Arthas");
+    expect(must(all[1]).name).toBe("Jaina");
+    expect(must(all[2]).name).toBe("Zul'jin");
   });
 
   test("all() returns empty array when no members", () => {
@@ -167,7 +168,7 @@ describe("GuildStore", () => {
     ]);
 
     expect(events).toHaveLength(1);
-    const e = events[0]!;
+    const e = must(events[0]);
     if (e.type !== "guild-roster") throw new Error("expected guild-roster");
     const roster = e.roster;
     expect(roster.guildName).toBe("Horde Elite");
@@ -175,8 +176,8 @@ describe("GuildStore", () => {
     expect(roster.guildInfo).toBe("Info");
     expect(roster.rankNames).toEqual(["GM", "Officer"]);
     expect(roster.members).toHaveLength(2);
-    expect(roster.members[0]!.name).toBe("Garrosh");
-    expect(roster.members[1]!.name).toBe("Thrall");
+    expect(must(roster.members[0]).name).toBe("Garrosh");
+    expect(must(roster.members[1]).name).toBe("Thrall");
   });
 
   test("members are stored as copies", () => {
@@ -185,7 +186,7 @@ describe("GuildStore", () => {
     store.setRoster("motd", "info", [original]);
 
     original.name = "Mutated";
-    expect(store.all()[0]!.name).toBe("Thrall");
+    expect(must(store.all()[0]).name).toBe("Thrall");
   });
 
   test("no event fires without listener", () => {
@@ -202,10 +203,10 @@ describe("GuildStore", () => {
     store.setRoster("motd", "info", [makeMember({ guid: 1n, name: "Thrall" })]);
     store.setGuildMeta("Horde Elite", ["GM", "Officer", "Member"]);
 
-    const roster = store.get();
-    expect(roster!.guildName).toBe("Horde Elite");
-    expect(roster!.rankNames).toEqual(["GM", "Officer", "Member"]);
-    expect(roster!.motd).toBe("motd");
-    expect(roster!.members).toHaveLength(1);
+    const roster = must(store.get());
+    expect(roster.guildName).toBe("Horde Elite");
+    expect(roster.rankNames).toEqual(["GM", "Officer", "Member"]);
+    expect(roster.motd).toBe("motd");
+    expect(roster.members).toHaveLength(1);
   });
 });

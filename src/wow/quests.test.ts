@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import type { WorldConn } from "wow/client";
 import { EntityStore } from "wow/entity-store";
 import { registerQuestHandlers } from "wow/gameplay-handlers";
@@ -33,7 +34,7 @@ function setup() {
     },
   });
   runtime.onEvent((event) => events.push(event));
-  runtime.observeSelfCreate(entities.get(self)!);
+  runtime.observeSelfCreate(must(entities.get(self)));
   runtime.observeQuestLog();
   return {
     runtime,
@@ -134,12 +135,14 @@ function words(...values: number[]): Uint8Array {
 function setSlot(
   entities: EntityStore,
   slot: number,
-  id: number,
-  state = 0,
-  low = 0,
-  high = 0,
+  [id, state = 0, low = 0, high = 0]: readonly [
+    id: number,
+    state?: number,
+    low?: number,
+    high?: number,
+  ],
 ): void {
-  const fields = entities.get(self)!.rawFields;
+  const fields = must(entities.get(self)).rawFields;
   for (const [i, value] of [id, state, low, high, 0].entries())
     fields.set(PLAYER_FIELDS.QUEST_LOG.offset + slot * 5 + i, value);
 }
@@ -164,7 +167,7 @@ describe("quest interaction authority", () => {
     expect(() => runtime.selectOption(6)).toThrow("option_not_offered");
     runtime.selectOption(5);
     expect(sent.at(-1)?.opcode).toBe(GameOpcode.CMSG_GOSSIP_SELECT_OPTION);
-    const selection = new PacketReader(sent.at(-1)!.body!);
+    const selection = new PacketReader(must(must(sent.at(-1)).body));
     expect(selection.uint64LE()).toBe(giver);
     expect(selection.uint32LE()).toBe(17);
     expect(selection.uint32LE()).toBe(5);
@@ -198,7 +201,7 @@ describe("quest interaction authority", () => {
 
   test("completion request requires an offered quest rather than log membership", () => {
     const { runtime, entities, sent } = setup();
-    setSlot(entities, 0, questId, 1);
+    setSlot(entities, 0, [questId, 1]);
     runtime.observeQuestLog();
     expect(() => runtime.complete(questId)).toThrow("quest_not_offered");
     runtime.talk(giver);
@@ -255,7 +258,7 @@ describe("authoritative quest-log transitions", () => {
     show(runtime, "details");
     runtime.accept();
     expect(events.some((event) => event.type === "accepted")).toBe(false);
-    setSlot(entities, 0, questId);
+    setSlot(entities, 0, [questId]);
     runtime.observeQuestLog();
     expect(
       events.some(
@@ -263,17 +266,17 @@ describe("authoritative quest-log transitions", () => {
       ),
     ).toBe(true);
     events.length = 0;
-    setSlot(entities, 0, questId, 0, 2);
+    setSlot(entities, 0, [questId, 0, 2]);
     runtime.observeQuestLog();
     expect(events.map((event) => event.type)).toContain("progress");
     expect(events.map((event) => event.type)).not.toContain("completed");
-    setSlot(entities, 0, questId, 1, 2);
+    setSlot(entities, 0, [questId, 1, 2]);
     runtime.observeQuestLog();
     expect(events.map((event) => event.type)).toContain("completed");
     runtime.abandon(0);
     expect(runtime.snapshot().log.slots[0]?.questId).toBe(questId);
     expect(events.map((event) => event.type)).not.toContain("removed");
-    setSlot(entities, 0, 0);
+    setSlot(entities, 0, [0]);
     runtime.observeQuestLog();
     expect(events.map((event) => event.type)).toContain("removed");
     expect(runtime.snapshot().lastReward).toBeUndefined();
@@ -281,11 +284,11 @@ describe("authoritative quest-log transitions", () => {
 
   test("a slot swap is not acceptance or removal and failed flags remain distinct", () => {
     const { runtime, entities, events } = setup();
-    setSlot(entities, 0, questId);
+    setSlot(entities, 0, [questId]);
     runtime.observeQuestLog();
     events.length = 0;
-    setSlot(entities, 0, 0);
-    setSlot(entities, 1, questId, 2);
+    setSlot(entities, 0, [0]);
+    setSlot(entities, 1, [questId, 2]);
     runtime.observeQuestLog();
     expect(events.map((event) => event.type)).not.toContain("accepted");
     expect(events.map((event) => event.type)).not.toContain("removed");
@@ -299,7 +302,7 @@ describe("authoritative quest-log transitions", () => {
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.complete).toBe(false);
     expect(runtime.snapshot().log.slots[0]?.questId).toBeUndefined();
-    setSlot(entities, 0, questId, 0, 0x00_02_00_01, 0x00_04_00_03);
+    setSlot(entities, 0, [questId, 0, 0x00_02_00_01, 0x00_04_00_03]);
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.slots[0]?.counters).toEqual([1, 2, 3, 4]);
     expect(events.some((event) => event.type === "accepted")).toBe(false);
@@ -310,14 +313,14 @@ describe("authoritative quest-log transitions", () => {
 
   test("losing entity authority is not removal and recovering a log is not new acceptance", () => {
     const { runtime, entities, events } = setup();
-    setSlot(entities, 0, questId);
+    setSlot(entities, 0, [questId]);
     runtime.observeQuestLog();
     events.length = 0;
     entities.create(self, ObjectType.PLAYER, {});
     runtime.observeQuestLog();
     entities.create(self, ObjectType.PLAYER, { createComplete: true });
-    runtime.observeSelfCreate(entities.get(self)!);
-    setSlot(entities, 0, questId);
+    runtime.observeSelfCreate(must(entities.get(self)));
+    setSlot(entities, 0, [questId]);
     runtime.observeQuestLog();
     expect(
       events.some(
@@ -428,7 +431,7 @@ describe("quest packet and lifecycle failures", () => {
   test("charmed CREATE cannot gain omitted-ID authority from a later uncharm", () => {
     const { runtime, entities, events } = setup();
     entities.create(self, ObjectType.PLAYER, { createComplete: true });
-    const entity = entities.get(self)!;
+    const entity = must(entities.get(self));
     entity.rawFields.set(UNIT_FIELDS.CHARMEDBY.offset, 99);
     runtime.observeSelfCreate(entity);
     runtime.observeQuestLog();
@@ -437,7 +440,7 @@ describe("quest packet and lifecycle failures", () => {
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.slots[0]?.questId).toBeUndefined();
     expect(runtime.snapshot().log.slots[0]?.flags).toBe(0);
-    setSlot(entities, 0, questId);
+    setSlot(entities, 0, [questId]);
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.slots[0]?.questId).toBe(questId);
     expect(events.some((event) => event.type === "accepted")).toBe(false);
@@ -449,8 +452,8 @@ describe("quest packet and lifecycle failures", () => {
     packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
     const snapshot = runtime.snapshot();
     if (snapshot.dialog?.kind === "gossip")
-      snapshot.dialog.data.quests[0]!.questId = 999;
-    snapshot.log.slots[0]!.questId = 999;
+      must(snapshot.dialog.data.quests[0]).questId = 999;
+    must(snapshot.log.slots[0]).questId = 999;
     expect(() => runtime.selectQuest(999)).toThrow("quest_not_offered");
     expect(() => runtime.abandon(0)).toThrow("quest_slot_empty");
   });

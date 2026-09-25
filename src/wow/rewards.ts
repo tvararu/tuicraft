@@ -105,6 +105,12 @@ export type RewardsEvent = {
 export const NOT_DEAD = "Loot source is not authoritatively dead";
 export const NOT_LOOTABLE = "Creature has no observed lootable flag";
 
+function holdsItem(inventory: InventoryState, guid: bigint): boolean {
+  return inventory.slots.some(
+    (slot) => slot.status === "occupied" && slot.guid === guid,
+  );
+}
+
 function copyLoot(loot: RewardsLoot): RewardsLoot {
   if (loot.phase === "open" || loot.phase === "closing")
     return { ...loot, items: loot.items.map((item) => ({ ...item })) };
@@ -134,7 +140,11 @@ export class RewardsRuntime {
   private lastRelease: RewardsRelease | undefined;
   private lastInventory: InventoryState | undefined;
 
-  constructor(private deps: RewardsDeps) {}
+  private readonly deps: RewardsDeps;
+
+  constructor(deps: RewardsDeps) {
+    this.deps = deps;
+  }
 
   onEvent(callback: ((event: RewardsEvent) => void) | undefined): void {
     if (this.disposed) return;
@@ -325,15 +335,7 @@ export class RewardsRuntime {
   observeEntity(event: EntityEvent): void {
     if (this.disposed) return;
     const guid = event.type === "disappear" ? event.guid : event.entity.guid;
-    if (guid === this.deps.selfGuid()) {
-      if (event.type === "disappear") this.selfUnavailable = true;
-      else if (event.type === "appear") this.selfUnavailable = false;
-      if (
-        this.selfUnavailable ||
-        readLife(guid, this.deps.getEntity).life !== "alive"
-      )
-        this.invalidate("self_unavailable");
-    }
+    if (guid === this.deps.selfGuid()) this.observeSelf(event, guid);
     if (
       event.type === "disappear" &&
       this.loot.phase !== "closed" &&
@@ -341,24 +343,26 @@ export class RewardsRuntime {
     )
       this.invalidate("loot_source_unavailable");
     if (!this.listener) return;
-    const previous = this.lastInventory;
+    this.observeInventory(guid);
+  }
+
+  private observeSelf(event: EntityEvent, guid: bigint): void {
+    if (event.type === "disappear") this.selfUnavailable = true;
+    else if (event.type === "appear") this.selfUnavailable = false;
     if (
-      guid !== this.deps.selfGuid() &&
-      previous &&
-      !previous.slots.some(
-        (slot) => slot.status === "occupied" && slot.guid === guid,
-      )
+      this.selfUnavailable ||
+      readLife(guid, this.deps.getEntity).life !== "alive"
     )
+      this.invalidate("self_unavailable");
+  }
+
+  private observeInventory(guid: bigint): void {
+    const previous = this.lastInventory;
+    if (guid !== this.deps.selfGuid() && previous && !holdsItem(previous, guid))
       return;
     const inventory = this.inventory();
     this.lastInventory = inventory;
-    if (
-      guid !== this.deps.selfGuid() &&
-      !inventory.slots.some(
-        (slot) => slot.status === "occupied" && slot.guid === guid,
-      )
-    )
-      return;
+    if (guid !== this.deps.selfGuid() && !holdsItem(inventory, guid)) return;
     if (previous && Bun.deepEquals(inventory, previous, true)) return;
     this.emit("inventory_observed");
   }

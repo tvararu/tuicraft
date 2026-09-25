@@ -9,6 +9,7 @@ import {
   N,
   salt,
 } from "test/fixtures";
+import { must } from "test/must";
 import { bigIntToLeBytes } from "wow/crypto/srp";
 import { AuthOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
@@ -95,13 +96,15 @@ function handleReconnectChallenge(socket: Socket, challengeData: Uint8Array) {
   socket.write(w.finish());
 }
 
+type ReconnectConfig = { challengeData: Uint8Array; sessionKey: Uint8Array };
+
 function handleReconnectProof(
   socket: Socket,
   data: Uint8Array,
-  challengeData: Uint8Array,
-  expectedSessionKey: Uint8Array,
+  reconnect: ReconnectConfig,
   account: string,
 ) {
+  const { challengeData, sessionKey: expectedSessionKey } = reconnect;
   const clientData = data.slice(1, 17);
   const receivedProof = data.slice(17, 37);
 
@@ -121,7 +124,7 @@ function handleReconnectProof(
 
 export function startMockAuthServer(opts: {
   realmAddress: string;
-  reconnect?: { challengeData: Uint8Array; sessionKey: Uint8Array };
+  reconnect?: ReconnectConfig;
 }): Promise<{ port: number; stop(): void }> {
   return new Promise((resolve) => {
     let listener: TCPSocketListener<undefined>;
@@ -145,8 +148,7 @@ export function startMockAuthServer(opts: {
             handleReconnectProof(
               socket,
               data,
-              opts.reconnect!.challengeData,
-              opts.reconnect!.sessionKey,
+              must(opts.reconnect, "reconnect config"),
               "TEST",
             );
           } else if (opcode === AuthOpcode.REALM_LIST) {

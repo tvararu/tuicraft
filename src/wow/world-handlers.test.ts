@@ -9,6 +9,7 @@ import {
   sessionKey,
 } from "test/fixtures";
 import { startMockWorldServer } from "test/mock-world-server";
+import { must } from "test/must";
 import type { AuthResult } from "wow/auth";
 import {
   type ChatMessage,
@@ -101,6 +102,156 @@ function waitForDuelEvents(
   });
 }
 
+function writePackedGuid(w: PacketWriter, guid: bigint) {
+  const low = Number(guid & 0xffffffffn);
+  const high = Number((guid >> 32n) & 0xffffffffn);
+  let mask = 0;
+  const bytes: number[] = [];
+  for (let i = 0; i < 4; i++) {
+    const b = (low >> (i * 8)) & 0xff;
+    if (b !== 0) {
+      mask |= 1 << i;
+      bytes.push(b);
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    const b = (high >> (i * 8)) & 0xff;
+    if (b !== 0) {
+      mask |= 1 << (i + 4);
+      bytes.push(b);
+    }
+  }
+  w.uint8(mask);
+  for (const b of bytes) w.uint8(b);
+}
+
+function writeLivingMovementBlock(
+  w: PacketWriter,
+  [x, y, z, orientation]: readonly [number, number, number, number],
+) {
+  w.uint16LE(UpdateFlag.LIVING);
+  w.uint32LE(0);
+  w.uint16LE(0);
+  w.uint32LE(0);
+  w.floatLE(x);
+  w.floatLE(y);
+  w.floatLE(z);
+  w.floatLE(orientation);
+  w.floatLE(0);
+  for (let i = 0; i < 9; i++) w.floatLE(0);
+}
+
+function writeHasPositionMovementBlock(
+  w: PacketWriter,
+  [x, y, z, orientation]: readonly [number, number, number, number],
+) {
+  w.uint16LE(UpdateFlag.HAS_POSITION);
+  w.floatLE(x);
+  w.floatLE(y);
+  w.floatLE(z);
+  w.floatLE(orientation);
+}
+
+function writeUpdateMask(w: PacketWriter, fields: Map<number, number>) {
+  let maxBit = 0;
+  for (const bit of fields.keys()) {
+    if (bit > maxBit) maxBit = bit;
+  }
+  const blockCount =
+    maxBit === 0 && fields.size === 0 ? 0 : Math.floor(maxBit / 32) + 1;
+  w.uint8(blockCount);
+  const masks = new Array<number>(blockCount).fill(0);
+  for (const bit of fields.keys()) {
+    const block = Math.floor(bit / 32);
+    masks[block] = must(masks[block]) | (1 << (bit % 32));
+  }
+  for (const m of masks) w.uint32LE(m);
+  for (let block = 0; block < blockCount; block++) {
+    for (let bit = 0; bit < 32; bit++) {
+      const index = block * 32 + bit;
+      if (fields.has(index)) {
+        w.uint32LE(must(fields.get(index)));
+      }
+    }
+  }
+}
+
+function nameQueryGuidMask(guidLow: number): number {
+  if (guidLow === 0) return 0;
+  if (guidLow <= 0xff) return 0x01;
+  return 0x03;
+}
+
+function buildContactList(
+  entries: {
+    guid: bigint;
+    flags: number;
+    note: string;
+    status?: number;
+    area?: number;
+    level?: number;
+    playerClass?: number;
+  }[],
+): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(7);
+  w.uint32LE(entries.length);
+  for (const e of entries) {
+    w.uint64LE(e.guid);
+    w.uint32LE(e.flags);
+    w.cString(e.note);
+    if (e.flags & 0x01) {
+      const status = e.status ?? 0;
+      w.uint8(status);
+      if (status !== 0) {
+        w.uint32LE(e.area ?? 0);
+        w.uint32LE(e.level ?? 0);
+        w.uint32LE(e.playerClass ?? 0);
+      }
+    }
+  }
+  return w.finish();
+}
+
+function buildFriendStatus(opts: {
+  result: number;
+  guid: bigint;
+  note?: string;
+  status?: number;
+  area?: number;
+  level?: number;
+  playerClass?: number;
+}): Uint8Array {
+  const w = new PacketWriter();
+  w.uint8(opts.result);
+  w.uint64LE(opts.guid);
+  if (opts.result === 0x06 || opts.result === 0x07) {
+    w.cString(opts.note ?? "");
+  }
+  if (opts.result === 0x06 || opts.result === 0x02) {
+    w.uint8(opts.status ?? 1);
+    w.uint32LE(opts.area ?? 0);
+    w.uint32LE(opts.level ?? 0);
+    w.uint32LE(opts.playerClass ?? 0);
+  }
+  return w.finish();
+}
+
+function buildNameQueryResponse(guidLow: number, name: string): Uint8Array {
+  const w = new PacketWriter();
+  const mask = nameQueryGuidMask(guidLow);
+  w.uint8(mask);
+  if (mask & 0x01) w.uint8(guidLow & 0xff);
+  if (mask & 0x02) w.uint8((guidLow >> 8) & 0xff);
+  w.uint8(0);
+  w.cString(name);
+  w.cString("");
+  w.uint32LE(1);
+  w.uint32LE(0);
+  w.uint32LE(1);
+  return w.finish();
+}
+
 describe("world handler tests", () => {
   test("handles SMSG_TIME_SYNC_REQ", async () => {
     const ws = await startMockWorldServer({ sendTimeSyncAfterLogin: true });
@@ -189,7 +340,7 @@ describe("world handler tests", () => {
 
       const results = await handle.who({});
       expect(results.length).toBe(1);
-      expect(results[0]!.name).toBe(FIXTURE_CHARACTER);
+      expect(must(results[0]).name).toBe(FIXTURE_CHARACTER);
 
       handle.close();
       await handle.closed;
@@ -1324,7 +1475,7 @@ describe("world handler tests", () => {
       await waitForEchoProbe(handle);
 
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]!.opcode).toBe(GameOpcode.SMSG_TIME_SYNC_REQ);
+      expect(must(errors[0]).opcode).toBe(GameOpcode.SMSG_TIME_SYNC_REQ);
 
       handle.close();
       await handle.closed;
@@ -1587,7 +1738,7 @@ describe("world handler tests", () => {
         (p) => p.opcode === GameOpcode.MSG_RANDOM_ROLL,
       );
       expect(roll).toBeDefined();
-      const r = new PacketReader(roll!.body);
+      const r = new PacketReader(must(roll).body);
       expect(r.uint32LE()).toBe(1);
       expect(r.uint32LE()).toBe(100);
 
@@ -1662,85 +1813,6 @@ describe("world handler tests", () => {
   });
 
   describe("entity handling", () => {
-    function writePackedGuid(w: PacketWriter, guid: bigint) {
-      const low = Number(guid & 0xffffffffn);
-      const high = Number((guid >> 32n) & 0xffffffffn);
-      let mask = 0;
-      const bytes: number[] = [];
-      for (let i = 0; i < 4; i++) {
-        const b = (low >> (i * 8)) & 0xff;
-        if (b !== 0) {
-          mask |= 1 << i;
-          bytes.push(b);
-        }
-      }
-      for (let i = 0; i < 4; i++) {
-        const b = (high >> (i * 8)) & 0xff;
-        if (b !== 0) {
-          mask |= 1 << (i + 4);
-          bytes.push(b);
-        }
-      }
-      w.uint8(mask);
-      for (const b of bytes) w.uint8(b);
-    }
-
-    function writeLivingMovementBlock(
-      w: PacketWriter,
-      x: number,
-      y: number,
-      z: number,
-      orientation: number,
-    ) {
-      w.uint16LE(UpdateFlag.LIVING);
-      w.uint32LE(0);
-      w.uint16LE(0);
-      w.uint32LE(0);
-      w.floatLE(x);
-      w.floatLE(y);
-      w.floatLE(z);
-      w.floatLE(orientation);
-      w.floatLE(0);
-      for (let i = 0; i < 9; i++) w.floatLE(0);
-    }
-
-    function writeHasPositionMovementBlock(
-      w: PacketWriter,
-      x: number,
-      y: number,
-      z: number,
-      orientation: number,
-    ) {
-      w.uint16LE(UpdateFlag.HAS_POSITION);
-      w.floatLE(x);
-      w.floatLE(y);
-      w.floatLE(z);
-      w.floatLE(orientation);
-    }
-
-    function writeUpdateMask(w: PacketWriter, fields: Map<number, number>) {
-      let maxBit = 0;
-      for (const bit of fields.keys()) {
-        if (bit > maxBit) maxBit = bit;
-      }
-      const blockCount =
-        maxBit === 0 && fields.size === 0 ? 0 : Math.floor(maxBit / 32) + 1;
-      w.uint8(blockCount);
-      const masks = new Array<number>(blockCount).fill(0);
-      for (const bit of fields.keys()) {
-        masks[Math.floor(bit / 32)]! |= 1 << (bit % 32);
-      }
-      for (const m of masks) w.uint32LE(m);
-      for (let block = 0; block < blockCount; block++) {
-        for (let bit = 0; bit < 32; bit++) {
-          const index = block * 32 + bit;
-          if (fields.has(index)) {
-            w.uint32LE(fields.get(index)!);
-          }
-        }
-      }
-    }
-
     function buildCreateUnitPacket(
       guid: bigint,
       entry: number,
@@ -1752,7 +1824,7 @@ describe("world handler tests", () => {
       w.uint8(3);
       writePackedGuid(w, guid);
       w.uint8(3);
-      writeLivingMovementBlock(w, 100, 200, 300, 1.5);
+      writeLivingMovementBlock(w, [100, 200, 300, 1.5]);
       const fields = new Map<number, number>([
         [OBJECT_FIELDS.ENTRY.offset, entry],
         [UNIT_FIELDS.HEALTH.offset, health],
@@ -1887,15 +1959,17 @@ describe("world handler tests", () => {
         );
 
         const [appear, nameUpdate] = await events;
-        expect(appear!.type).toBe("appear");
-        if (appear!.type === "appear") {
-          expect(appear!.entity.guid).toBe(100n);
-          expect(appear!.entity.objectType).toBe(3);
+        const appearEvent = must(appear);
+        expect(appearEvent.type).toBe("appear");
+        if (appearEvent.type === "appear") {
+          expect(appearEvent.entity.guid).toBe(100n);
+          expect(appearEvent.entity.objectType).toBe(3);
         }
-        expect(nameUpdate!.type).toBe("update");
-        if (nameUpdate!.type === "update") {
-          expect(nameUpdate!.changed).toContain("name");
-          expect(nameUpdate!.entity.name).toBe("Young Wolf");
+        const nameUpdateEvent = must(nameUpdate);
+        expect(nameUpdateEvent.type).toBe("update");
+        if (nameUpdateEvent.type === "update") {
+          expect(nameUpdateEvent.changed).toContain("name");
+          expect(nameUpdateEvent.entity.name).toBe("Young Wolf");
         }
 
         handle.close();
@@ -1930,9 +2004,10 @@ describe("world handler tests", () => {
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
 
         const [update] = await updateReady;
-        expect(update!.type).toBe("update");
-        if (update!.type === "update") {
-          expect(update!.changed).toContain("health");
+        const updateEvent = must(update);
+        expect(updateEvent.type).toBe("update");
+        if (updateEvent.type === "update") {
+          expect(updateEvent.changed).toContain("health");
         }
 
         handle.close();
@@ -1963,16 +2038,17 @@ describe("world handler tests", () => {
         w.uint32LE(1);
         w.uint8(1);
         writePackedGuid(w, 300n);
-        writeHasPositionMovementBlock(w, 10.5, 20.5, 30.5, 1.25);
+        writeHasPositionMovementBlock(w, [10.5, 20.5, 30.5, 1.25]);
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
 
         const [move] = await moveReady;
-        expect(move!.type).toBe("update");
-        if (move!.type === "update") {
-          expect(move!.changed).toContain("position");
-          expect(move!.entity.position!.x).toBeCloseTo(10.5);
-          expect(move!.entity.position!.y).toBeCloseTo(20.5);
-          expect(move!.entity.position!.z).toBeCloseTo(30.5);
+        const moveEvent = must(move);
+        expect(moveEvent.type).toBe("update");
+        if (moveEvent.type === "update") {
+          expect(moveEvent.changed).toContain("position");
+          expect(must(moveEvent.entity.position).x).toBeCloseTo(10.5);
+          expect(must(moveEvent.entity.position).y).toBeCloseTo(20.5);
+          expect(must(moveEvent.entity.position).z).toBeCloseTo(30.5);
         }
 
         handle.close();
@@ -2017,8 +2093,8 @@ describe("world handler tests", () => {
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
 
         const events = await disappearReady;
-        expect(events[0]!.type).toBe("disappear");
-        expect(events[1]!.type).toBe("disappear");
+        expect(must(events[0]).type).toBe("disappear");
+        expect(must(events[1]).type).toBe("disappear");
         expect(handle.getNearbyEntities().length).toBe(0);
 
         handle.close();
@@ -2051,9 +2127,10 @@ describe("world handler tests", () => {
         ws.inject(GameOpcode.SMSG_DESTROY_OBJECT, w.finish());
 
         const [disappear] = await disappearReady;
-        expect(disappear!.type).toBe("disappear");
-        if (disappear!.type === "disappear") {
-          expect(disappear!.guid).toBe(500n);
+        const disappearEvent = must(disappear);
+        expect(disappearEvent.type).toBe("disappear");
+        if (disappearEvent.type === "disappear") {
+          expect(disappearEvent.guid).toBe(500n);
         }
         expect(handle.getNearbyEntities().length).toBe(0);
 
@@ -2079,7 +2156,7 @@ describe("world handler tests", () => {
         createW.uint8(2);
         writePackedGuid(createW, 600n);
         createW.uint8(5);
-        writeHasPositionMovementBlock(createW, 50, 60, 70, 0.5);
+        writeHasPositionMovementBlock(createW, [50, 60, 70, 0.5]);
         writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 9999]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
         await appearReady;
@@ -2128,15 +2205,16 @@ describe("world handler tests", () => {
         createW.uint8(3);
         writePackedGuid(createW, 0x42n);
         createW.uint8(4);
-        writeLivingMovementBlock(createW, 10, 20, 30, 0);
+        writeLivingMovementBlock(createW, [10, 20, 30, 0]);
         writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 0]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
 
         const [appear, nameUpdate] = await events;
-        expect(appear!.type).toBe("appear");
-        expect(nameUpdate!.type).toBe("update");
-        if (nameUpdate!.type === "update") {
-          expect(nameUpdate!.entity.name).toBe(FIXTURE_CHARACTER);
+        expect(must(appear).type).toBe("appear");
+        const nameUpdateEvent = must(nameUpdate);
+        expect(nameUpdateEvent.type).toBe("update");
+        if (nameUpdateEvent.type === "update") {
+          expect(nameUpdateEvent.entity.name).toBe(FIXTURE_CHARACTER);
         }
 
         handle.close();
@@ -2164,9 +2242,10 @@ describe("world handler tests", () => {
         ws.inject(GameOpcode.SMSG_COMPRESSED_UPDATE_OBJECT, envelope.finish());
 
         const [appear] = await appearReady;
-        expect(appear!.type).toBe("appear");
-        if (appear!.type === "appear") {
-          expect(appear!.entity.guid).toBe(700n);
+        const appearEvent = must(appear);
+        expect(appearEvent.type).toBe("appear");
+        if (appearEvent.type === "appear") {
+          expect(appearEvent.entity.guid).toBe(700n);
         }
 
         handle.close();
@@ -2208,9 +2287,10 @@ describe("world handler tests", () => {
         );
 
         const [appear] = await secondAppear;
-        expect(appear!.type).toBe("appear");
-        if (appear!.type === "appear") {
-          expect(appear!.entity.name).toBe("Stormwind Guard");
+        const appearEvent = must(appear);
+        expect(appearEvent.type).toBe("appear");
+        if (appearEvent.type === "appear") {
+          expect(appearEvent.entity.name).toBe("Stormwind Guard");
         }
 
         handle.close();
@@ -2234,7 +2314,7 @@ describe("world handler tests", () => {
         createW.uint8(2);
         writePackedGuid(createW, 500n);
         createW.uint8(5);
-        writeHasPositionMovementBlock(createW, 1, 2, 3, 0);
+        writeHasPositionMovementBlock(createW, [1, 2, 3, 0]);
         writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 100]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
         await appear;
@@ -2247,7 +2327,7 @@ describe("world handler tests", () => {
         writeUpdateMask(valW, new Map([[GAMEOBJECT_FIELDS.FLAGS.offset, 42]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, valW.finish());
         const [evt] = await update;
-        expect(evt!.type).toBe("update");
+        expect(must(evt).type).toBe("update");
 
         const nearW = new PacketWriter();
         nearW.uint32LE(1);
@@ -2307,14 +2387,15 @@ describe("world handler tests", () => {
         w.uint8(2);
         writePackedGuid(w, 999n);
         w.uint8(7);
-        writeHasPositionMovementBlock(w, 10, 20, 30, 0);
+        writeHasPositionMovementBlock(w, [10, 20, 30, 0]);
         writeUpdateMask(w, new Map([[OBJECT_FIELDS.ENTRY.offset, 42]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, w.finish());
 
         const [evt] = await appear;
-        expect(evt!.type).toBe("appear");
-        if (evt!.type === "appear") {
-          expect(evt!.entity.objectType).toBe(7);
+        const event = must(evt);
+        expect(event.type).toBe("appear");
+        if (event.type === "appear") {
+          expect(event.entity.objectType).toBe(7);
         }
 
         handle.close();
@@ -2338,7 +2419,7 @@ describe("world handler tests", () => {
         createW.uint8(2);
         writePackedGuid(createW, 900n);
         createW.uint8(5);
-        writeHasPositionMovementBlock(createW, 1, 2, 3, 0);
+        writeHasPositionMovementBlock(createW, [1, 2, 3, 0]);
         writeUpdateMask(createW, new Map([[OBJECT_FIELDS.ENTRY.offset, 7777]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, createW.finish());
         await firstAppear;
@@ -2358,14 +2439,15 @@ describe("world handler tests", () => {
         create2.uint8(2);
         writePackedGuid(create2, 901n);
         create2.uint8(5);
-        writeHasPositionMovementBlock(create2, 4, 5, 6, 0);
+        writeHasPositionMovementBlock(create2, [4, 5, 6, 0]);
         writeUpdateMask(create2, new Map([[OBJECT_FIELDS.ENTRY.offset, 7777]]));
         ws.inject(GameOpcode.SMSG_UPDATE_OBJECT, create2.finish());
 
         const [appear] = await secondAppear;
-        expect(appear!.type).toBe("appear");
-        if (appear!.type === "appear") {
-          expect(appear!.entity.name).toBe("Forge");
+        const appearEvent = must(appear);
+        expect(appearEvent.type).toBe("appear");
+        if (appearEvent.type === "appear") {
+          expect(appearEvent.entity.name).toBe("Forge");
         }
 
         handle.close();
@@ -2377,76 +2459,6 @@ describe("world handler tests", () => {
   });
 
   describe("friend list", () => {
-    function buildContactList(
-      entries: {
-        guid: bigint;
-        flags: number;
-        note: string;
-        status?: number;
-        area?: number;
-        level?: number;
-        playerClass?: number;
-      }[],
-    ): Uint8Array {
-      const w = new PacketWriter();
-      w.uint32LE(7);
-      w.uint32LE(entries.length);
-      for (const e of entries) {
-        w.uint64LE(e.guid);
-        w.uint32LE(e.flags);
-        w.cString(e.note);
-        if (e.flags & 0x01) {
-          const status = e.status ?? 0;
-          w.uint8(status);
-          if (status !== 0) {
-            w.uint32LE(e.area ?? 0);
-            w.uint32LE(e.level ?? 0);
-            w.uint32LE(e.playerClass ?? 0);
-          }
-        }
-      }
-      return w.finish();
-    }
-
-    function buildFriendStatus(opts: {
-      result: number;
-      guid: bigint;
-      note?: string;
-      status?: number;
-      area?: number;
-      level?: number;
-      playerClass?: number;
-    }): Uint8Array {
-      const w = new PacketWriter();
-      w.uint8(opts.result);
-      w.uint64LE(opts.guid);
-      if (opts.result === 0x06 || opts.result === 0x07) {
-        w.cString(opts.note ?? "");
-      }
-      if (opts.result === 0x06 || opts.result === 0x02) {
-        w.uint8(opts.status ?? 1);
-        w.uint32LE(opts.area ?? 0);
-        w.uint32LE(opts.level ?? 0);
-        w.uint32LE(opts.playerClass ?? 0);
-      }
-      return w.finish();
-    }
-
-    function buildNameQueryResponse(guidLow: number, name: string): Uint8Array {
-      const w = new PacketWriter();
-      const mask = guidLow === 0 ? 0 : guidLow <= 0xff ? 0x01 : 0x03;
-      w.uint8(mask);
-      if (mask & 0x01) w.uint8(guidLow & 0xff);
-      if (mask & 0x02) w.uint8((guidLow >> 8) & 0xff);
-      w.uint8(0);
-      w.cString(name);
-      w.cString("");
-      w.uint32LE(1);
-      w.uint32LE(0);
-      w.uint32LE(1);
-      return w.finish();
-    }
-
     test("SMSG_CONTACT_LIST with online friend", async () => {
       const ws = await startMockWorldServer();
       try {
@@ -2479,12 +2491,12 @@ describe("world handler tests", () => {
 
         const friends = handle.getFriends();
         expect(friends).toHaveLength(1);
-        expect(friends[0]!.guid).toBe(0x99n);
-        expect(friends[0]!.status).toBe(1);
-        expect(friends[0]!.area).toBe(1519);
-        expect(friends[0]!.level).toBe(80);
-        expect(friends[0]!.playerClass).toBe(1);
-        expect(friends[0]!.note).toBe("best buddy");
+        expect(must(friends[0]).guid).toBe(0x99n);
+        expect(must(friends[0]).status).toBe(1);
+        expect(must(friends[0]).area).toBe(1519);
+        expect(must(friends[0]).level).toBe(80);
+        expect(must(friends[0]).playerClass).toBe(1);
+        expect(must(friends[0]).note).toBe("best buddy");
 
         handle.close();
         await handle.closed;
@@ -2529,7 +2541,7 @@ describe("world handler tests", () => {
 
         const friends = handle.getFriends();
         expect(friends).toHaveLength(1);
-        expect(friends[0]!.guid).toBe(0x99n);
+        expect(must(friends[0]).guid).toBe(0x99n);
 
         handle.close();
         await handle.closed;
@@ -2584,7 +2596,7 @@ describe("world handler tests", () => {
         await Bun.sleep(1);
 
         const friends = handle.getFriends();
-        expect(friends[0]!.name).toBe("Arthas");
+        expect(must(friends[0]).name).toBe("Arthas");
 
         handle.close();
         await handle.closed;
@@ -2623,12 +2635,12 @@ describe("world handler tests", () => {
 
         const friends = handle.getFriends();
         expect(friends).toHaveLength(1);
-        expect(friends[0]!.guid).toBe(0xbbn);
-        expect(friends[0]!.note).toBe("new friend");
-        expect(friends[0]!.status).toBe(1);
-        expect(friends[0]!.area).toBe(1537);
-        expect(friends[0]!.level).toBe(55);
-        expect(friends[0]!.playerClass).toBe(4);
+        expect(must(friends[0]).guid).toBe(0xbbn);
+        expect(must(friends[0]).note).toBe("new friend");
+        expect(must(friends[0]).status).toBe(1);
+        expect(must(friends[0]).area).toBe(1537);
+        expect(must(friends[0]).level).toBe(55);
+        expect(must(friends[0]).playerClass).toBe(4);
 
         handle.close();
         await handle.closed;
@@ -2682,10 +2694,10 @@ describe("world handler tests", () => {
         expect(event.type).toBe("friend-online");
 
         const friends = handle.getFriends();
-        expect(friends[0]!.status).toBe(1);
-        expect(friends[0]!.area).toBe(400);
-        expect(friends[0]!.level).toBe(60);
-        expect(friends[0]!.playerClass).toBe(8);
+        expect(must(friends[0]).status).toBe(1);
+        expect(must(friends[0]).area).toBe(400);
+        expect(must(friends[0]).level).toBe(60);
+        expect(must(friends[0]).playerClass).toBe(8);
 
         handle.close();
         await handle.closed;
@@ -2738,7 +2750,7 @@ describe("world handler tests", () => {
         expect(event.type).toBe("friend-offline");
 
         const friends = handle.getFriends();
-        expect(friends[0]!.status).toBe(0);
+        expect(must(friends[0]).status).toBe(0);
 
         handle.close();
         await handle.closed;
@@ -2825,9 +2837,9 @@ describe("world handler tests", () => {
 
         const friends = handle.getFriends();
         expect(friends).toHaveLength(1);
-        expect(friends[0]!.guid).toBe(0xabn);
-        expect(friends[0]!.note).toBe("offline pal");
-        expect(friends[0]!.status).toBe(0);
+        expect(must(friends[0]).guid).toBe(0xabn);
+        expect(must(friends[0]).note).toBe("offline pal");
+        expect(must(friends[0]).status).toBe(0);
 
         handle.close();
         await handle.closed;
@@ -2884,7 +2896,7 @@ describe("world handler tests", () => {
           (p) => p.opcode === GameOpcode.CMSG_ADD_FRIEND,
         );
         expect(addPackets).toHaveLength(1);
-        const r = new PacketReader(addPackets[0]!.body);
+        const r = new PacketReader(must(addPackets[0]).body);
         expect(r.cString()).toBe("Arthas");
         expect(r.cString()).toBe("");
 
@@ -2936,7 +2948,7 @@ describe("world handler tests", () => {
           (p) => p.opcode === GameOpcode.CMSG_DEL_FRIEND,
         );
         expect(delPackets).toHaveLength(1);
-        const r = new PacketReader(delPackets[0]!.body);
+        const r = new PacketReader(must(delPackets[0]).body);
         expect(r.uint64LE()).toBe(0xffn);
 
         handle.close();
@@ -3000,7 +3012,7 @@ describe("world handler tests", () => {
 
         const ignored = handle.getIgnored();
         expect(ignored).toHaveLength(1);
-        expect(ignored[0]!.guid).toBe(0xaan);
+        expect(must(ignored[0]).guid).toBe(0xaan);
 
         handle.close();
         await handle.closed;
@@ -3051,7 +3063,7 @@ describe("world handler tests", () => {
         await Bun.sleep(1);
 
         const ignored = handle.getIgnored();
-        expect(ignored[0]!.name).toBe("Spammer");
+        expect(must(ignored[0]).name).toBe("Spammer");
 
         handle.close();
         await handle.closed;
@@ -3085,7 +3097,7 @@ describe("world handler tests", () => {
 
         const ignored = handle.getIgnored();
         expect(ignored).toHaveLength(1);
-        expect(ignored[0]!.guid).toBe(0xddn);
+        expect(must(ignored[0]).guid).toBe(0xddn);
 
         handle.close();
         await handle.closed;
@@ -3228,7 +3240,7 @@ describe("world handler tests", () => {
           (p) => p.opcode === GameOpcode.CMSG_ADD_IGNORE,
         );
         expect(addPackets).toHaveLength(1);
-        const r = new PacketReader(addPackets[0]!.body);
+        const r = new PacketReader(must(addPackets[0]).body);
         expect(r.cString()).toBe("Spammer");
 
         handle.close();
@@ -3275,7 +3287,7 @@ describe("world handler tests", () => {
           (p) => p.opcode === GameOpcode.CMSG_DEL_IGNORE,
         );
         expect(delPackets).toHaveLength(1);
-        const r = new PacketReader(delPackets[0]!.body);
+        const r = new PacketReader(must(delPackets[0]).body);
         expect(r.uint64LE()).toBe(0xffn);
 
         handle.close();
@@ -3422,7 +3434,7 @@ describe("world handler tests", () => {
         if (event.type !== "guild-roster") throw new Error("expected roster");
         expect(event.roster.motd).toBe("Welcome!");
         expect(event.roster.members).toHaveLength(1);
-        expect(event.roster.members[0]!.name).toBe("Thrall");
+        expect(must(event.roster.members[0]).name).toBe("Thrall");
 
         handle.close();
         await handle.closed;
@@ -3486,8 +3498,8 @@ describe("world handler tests", () => {
 
         const roster = await rosterPromise;
         expect(roster).toBeDefined();
-        expect(roster!.members).toHaveLength(1);
-        expect(roster!.members[0]!.name).toBe("Thrall");
+        expect(must(roster).members).toHaveLength(1);
+        expect(must(must(roster).members[0]).name).toBe("Thrall");
 
         handle.close();
         await handle.closed;
@@ -3526,8 +3538,8 @@ describe("world handler tests", () => {
 
         const roster = await rosterPromise;
         expect(roster).toBeDefined();
-        expect(roster!.guildName).toBe("Horde Elite");
-        expect(roster!.members).toHaveLength(1);
+        expect(must(roster).guildName).toBe("Horde Elite");
+        expect(must(roster).members).toHaveLength(1);
 
         handle.close();
         await handle.closed;
@@ -3659,19 +3671,19 @@ describe("world handler tests", () => {
         expect(opcodes).toContain(GameOpcode.CMSG_GUILD_ACCEPT);
         expect(opcodes).toContain(GameOpcode.CMSG_GUILD_DECLINE);
 
-        const invite = ws.captured.find(
-          (p) => p.opcode === GameOpcode.CMSG_GUILD_INVITE,
-        )!;
+        const invite = must(
+          ws.captured.find((p) => p.opcode === GameOpcode.CMSG_GUILD_INVITE),
+        );
         expect(new PacketReader(invite.body).cString()).toBe("Thrall");
 
-        const motd = ws.captured.find(
-          (p) => p.opcode === GameOpcode.CMSG_GUILD_MOTD,
-        )!;
+        const motd = must(
+          ws.captured.find((p) => p.opcode === GameOpcode.CMSG_GUILD_MOTD),
+        );
         expect(new PacketReader(motd.body).cString()).toBe("Raid tonight");
 
-        const leave = ws.captured.find(
-          (p) => p.opcode === GameOpcode.CMSG_GUILD_LEAVE,
-        )!;
+        const leave = must(
+          ws.captured.find((p) => p.opcode === GameOpcode.CMSG_GUILD_LEAVE),
+        );
         expect(leave.body.length).toBe(0);
 
         handle.close();
@@ -3769,7 +3781,10 @@ describe("embedded chat sender names", () => {
     return new PacketReader(w.finish());
   }
 
-  function deliver(ignored: boolean): ChatMessage {
+  function deliver(ignored: boolean): {
+    msg: ChatMessage;
+    nameQueries: number;
+  } {
     let result!: ChatMessage;
     let nameQueries = 0;
     const conn = {
@@ -3785,18 +3800,19 @@ describe("embedded chat sender names", () => {
       },
     } as unknown as WorldConn;
     handleChatMessage(conn, monsterYell());
-    expect(nameQueries).toBe(0);
-    return result;
+    return { msg: result, nameQueries };
   }
 
   test("a monster yell delivers its embedded sender name", () => {
-    const msg = deliver(false);
+    const { msg, nameQueries } = deliver(false);
+    expect(nameQueries).toBe(0);
     expect(msg.sender).toBe("Zapetta");
     expect(msg.message).toBe("The zeppelin has arrived!");
   });
 
   test("the embedded name outranks an ignore-store collision", () => {
-    const msg = deliver(true);
+    const { msg, nameQueries } = deliver(true);
+    expect(nameQueries).toBe(0);
     expect(msg.sender).toBe("Zapetta");
   });
 });

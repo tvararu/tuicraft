@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from "bun:test";
+import { must } from "test/must";
 import { Arc4 } from "wow/crypto/arc4";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
@@ -15,7 +16,12 @@ import {
 test("buildWorldAuthPacket produces valid packet", async () => {
   const sessionKey = new Uint8Array(40);
   const serverSeed = new Uint8Array(4);
-  const result = await buildWorldAuthPacket("Test", sessionKey, serverSeed, 1);
+  const result = await buildWorldAuthPacket({
+    account: "Test",
+    sessionKey,
+    serverSeed,
+    realmId: 1,
+  });
   expect(result.byteLength).toBeGreaterThan(6);
 });
 
@@ -53,15 +59,15 @@ test("parseCharacterList extracts character names and GUIDs", () => {
   const r = new PacketReader(w.finish());
   const chars = parseCharacterList(r);
   expect(chars).toHaveLength(1);
-  expect(chars[0]!.name).toBe("Arthas");
-  expect(chars[0]!.guidLow).toBe(0x01);
-  expect(chars[0]!.guidHigh).toBe(0x00);
-  expect(chars[0]!.race).toBe(1);
-  expect(chars[0]!.classId).toBe(2);
-  expect(chars[0]!.gender).toBe(0);
-  expect(chars[0]!.level).toBe(80);
-  expect(chars[0]!.zone).toBe(1);
-  expect(chars[0]!.map).toBe(0);
+  expect(must(chars[0]).name).toBe("Arthas");
+  expect(must(chars[0]).guidLow).toBe(0x01);
+  expect(must(chars[0]).guidHigh).toBe(0x00);
+  expect(must(chars[0]).race).toBe(1);
+  expect(must(chars[0]).classId).toBe(2);
+  expect(must(chars[0]).gender).toBe(0);
+  expect(must(chars[0]).level).toBe(80);
+  expect(must(chars[0]).zone).toBe(1);
+  expect(must(chars[0]).map).toBe(0);
 });
 
 test("OpcodeDispatch persistent handler fires on matching opcode", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   buildChatMessage,
   buildJoinChannel,
@@ -353,9 +354,9 @@ describe("buildWhoRequest / parseWhoResponse", () => {
 
     const results = parseWhoResponse(new PacketReader(w.finish()));
     expect(results).toHaveLength(1);
-    expect(results[0]!.name).toBe("Xiara");
-    expect(results[0]!.guild).toBe("TestGuild");
-    expect(results[0]!.level).toBe(80);
+    expect(must(results[0]).name).toBe("Xiara");
+    expect(must(results[0]).guild).toBe("TestGuild");
+    expect(must(results[0]).level).toBe(80);
   });
 
   test("parses an empty who response", () => {

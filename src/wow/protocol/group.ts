@@ -140,15 +140,11 @@ function skipAuras(r: PacketReader): void {
   }
 }
 
-export function parsePartyMemberStats(
+function readMemberFields(
   r: PacketReader,
-  isFull = false,
-): PartyMemberStats {
-  if (isFull) r.uint8();
-  const { low: guidLow, high: guidHigh } = r.packedGuid();
-  const mask = r.uint32LE();
-  const result: PartyMemberStats = { guidLow, guidHigh };
-
+  mask: number,
+  result: PartyMemberStats,
+): void {
   if (mask & GroupUpdateFlag.STATUS) {
     const status = r.uint16LE();
     result.online = (status & 0x01) !== 0;
@@ -165,6 +161,9 @@ export function parsePartyMemberStats(
     r.uint16LE();
   }
   if (mask & GroupUpdateFlag.AURAS) skipAuras(r);
+}
+
+function skipPetFields(r: PacketReader, mask: number): void {
   if (mask & GroupUpdateFlag.PET_GUID) {
     r.uint32LE();
     r.uint32LE();
@@ -178,6 +177,19 @@ export function parsePartyMemberStats(
   if (mask & GroupUpdateFlag.PET_MAX_POWER) r.uint16LE();
   if (mask & GroupUpdateFlag.PET_AURAS) skipAuras(r);
   if (mask & GroupUpdateFlag.VEHICLE_SEAT) r.uint32LE();
+}
+
+export function parsePartyMemberStats(
+  r: PacketReader,
+  isFull = false,
+): PartyMemberStats {
+  if (isFull) r.uint8();
+  const { low: guidLow, high: guidHigh } = r.packedGuid();
+  const mask = r.uint32LE();
+  const result: PartyMemberStats = { guidLow, guidHigh };
+
+  readMemberFields(r, mask, result);
+  skipPetFields(r, mask);
 
   return result;
 }

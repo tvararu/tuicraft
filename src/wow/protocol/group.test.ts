@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import {
   buildGroupAccept,
   buildGroupDecline,
@@ -162,10 +163,10 @@ describe("parseGroupList", () => {
 
     const result = parseGroupList(new PacketReader(w.finish()));
     expect(result.members).toHaveLength(2);
-    expect(result.members[0]!.name).toBe("Xia");
-    expect(result.members[0]!.guidLow).toBe(0x10);
-    expect(result.members[0]!.online).toBe(true);
-    expect(result.members[1]!.name).toBe("Voidtrix");
+    expect(must(result.members[0]).name).toBe("Xia");
+    expect(must(result.members[0]).guidLow).toBe(0x10);
+    expect(must(result.members[0]).online).toBe(true);
+    expect(must(result.members[1]).name).toBe("Voidtrix");
     expect(result.leaderGuidLow).toBe(0x10);
   });
 

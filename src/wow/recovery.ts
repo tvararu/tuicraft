@@ -135,6 +135,7 @@ function dead(life: PlayerLife): boolean {
 }
 
 export class RecoveryRuntime {
+  private readonly deps: RecoveryDeps;
   private listener: ((event: RecoveryEvent) => void) | undefined;
   private disposed = false;
   private unavailable = false;
@@ -162,7 +163,8 @@ export class RecoveryRuntime {
       }
     | undefined;
 
-  constructor(private deps: RecoveryDeps) {
+  constructor(deps: RecoveryDeps) {
+    this.deps = deps;
     this.lastLife = this.life().life;
   }
 

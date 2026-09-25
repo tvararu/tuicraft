@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { must } from "test/must";
 import { beBytesToBigInt, leBytesToBigInt } from "wow/crypto/srp";
 import {
   buildLogonChallenge,
@@ -59,11 +60,11 @@ test("parseLogonChallengeResponse extracts SRP params on success", () => {
 
   expect(result.status).toBe(0x00);
   expect(result.B).toBeDefined();
-  expect(result.B!).toBe(leBytesToBigInt(B));
+  expect(must(result.B)).toBe(leBytesToBigInt(B));
   expect(result.g).toBeDefined();
-  expect(result.g!).toBe(7n);
+  expect(must(result.g)).toBe(7n);
   expect(result.N).toBeDefined();
-  expect(result.N!).toBe(leBytesToBigInt(N));
+  expect(must(result.N)).toBe(leBytesToBigInt(N));
   expect(result.salt).toEqual(salt);
 });
 
@@ -149,12 +150,12 @@ test("parseRealmList extracts realm info", () => {
   const realms = parseRealmList(r);
 
   expect(realms).toHaveLength(1);
-  expect(realms[0]!.name).toBe("Lordaeron");
-  expect(realms[0]!.host).toBe("127.0.0.1");
-  expect(realms[0]!.port).toBe(8085);
-  expect(realms[0]!.characters).toBe(2);
-  expect(realms[0]!.timezone).toBe(1);
-  expect(realms[0]!.id).toBe(42);
+  expect(must(realms[0]).name).toBe("Lordaeron");
+  expect(must(realms[0]).host).toBe("127.0.0.1");
+  expect(must(realms[0]).port).toBe(8085);
+  expect(must(realms[0]).characters).toBe(2);
+  expect(must(realms[0]).timezone).toBe(1);
+  expect(must(realms[0]).id).toBe(42);
 });
 
 test("parseRealmList throws on address without port", () => {
@@ -262,14 +263,14 @@ test("parseRealmList skips version info when flags & 0x04", () => {
   const realms = parseRealmList(r);
 
   expect(realms).toHaveLength(2);
-  expect(realms[0]!.name).toBe("PTR");
-  expect(realms[0]!.host).toBe("10.0.0.1");
-  expect(realms[0]!.port).toBe(8085);
-  expect(realms[0]!.id).toBe(7);
-  expect(realms[1]!.name).toBe("Normal");
-  expect(realms[1]!.host).toBe("10.0.0.2");
-  expect(realms[1]!.port).toBe(8086);
-  expect(realms[1]!.id).toBe(42);
+  expect(must(realms[0]).name).toBe("PTR");
+  expect(must(realms[0]).host).toBe("10.0.0.1");
+  expect(must(realms[0]).port).toBe(8085);
+  expect(must(realms[0]).id).toBe(7);
+  expect(must(realms[1]).name).toBe("Normal");
+  expect(must(realms[1]).host).toBe("10.0.0.2");
+  expect(must(realms[1]).port).toBe(8086);
+  expect(must(realms[1]).id).toBe(42);
 });
 
 test("parseReconnectChallengeResponse extracts challenge data on success", () => {

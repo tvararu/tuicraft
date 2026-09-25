@@ -39,10 +39,10 @@ export function unsupportedReason(flags: number): string | undefined {
 export function groundStep(
   ground: Ground,
   pose: Position,
-  x: number,
-  y: number,
+  to: { x: number; y: number },
   directed: boolean,
 ): Step {
+  const { x, y } = to;
   const z = finite(ground.findHeight(pose.mapId, x, y, pose));
   if (z === undefined)
     return { ok: false, reason: blockedStep(ground, pose, x, y) };
