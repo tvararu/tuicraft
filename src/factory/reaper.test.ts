@@ -161,6 +161,12 @@ describe("clean", () => {
     expect(isClean([" M README.md"])).toBe(false);
     expect(isClean([])).toBe(true);
   });
+
+  test("factory runs may leave ignored scratch but not real changes", () => {
+    expect(isClean(["!! tmp/", "!! .env"], true)).toBe(true);
+    expect(isClean(["!! tmp/", "?? notes.txt"], true)).toBe(false);
+    expect(isClean([" M README.md"], true)).toBe(false);
+  });
 });
 
 describe("landed", () => {
