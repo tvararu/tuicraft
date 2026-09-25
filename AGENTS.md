@@ -115,10 +115,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, and
   delete both with `soap delete <ACCOUNT>` afterwards. Unit, type, format,
   and coverage checks are not live evidence. Do not claim the live suite is
-  passing without a successful run. "Forced teleport relocates and recovers"
-  fails in the full run and passes alone (`-t "forced teleport"`); rerun it
-  alone before calling it a regression. If the suite fails for
-  infrastructure reasons (server down, SOAP unreachable), defer to the user.
+  passing without a successful run. If the suite fails for infrastructure
+  reasons (server down, SOAP unreachable), defer to the user.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
