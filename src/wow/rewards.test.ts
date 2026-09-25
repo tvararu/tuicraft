@@ -169,8 +169,9 @@ describe("authoritative loot runtime", () => {
     f.self.rawFields.set(0x1_6a, 8);
     f.runtime.observeEntity({ type: "appear", entity: f.self });
     expect(
-      f.runtime.snapshot().inventory.bags.find((bag) => bag.slot === 19)
-        ?.status,
+      f.runtime
+        .snapshot()
+        .inventory.bags.find((candidate) => candidate.slot === 19)?.status,
     ).toBe("unknown");
     const bag = entity(8n, ObjectType.CONTAINER, [
       [3, 500],

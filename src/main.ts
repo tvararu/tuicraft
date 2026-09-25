@@ -59,7 +59,7 @@ function emit(reply: OutputEnvelope): void {
   if (reply.error) process.exitCode = 1;
 }
 
-async function sendToSocket(command: string): Promise<string[]> {
+function sendToSocket(command: string): Promise<string[]> {
   failureStage = "command";
   return sendRawToSocket(command);
 }
@@ -126,8 +126,8 @@ function printStatus(command: string, lines: string[], data: JsonValue): void {
   }
 }
 
-async function printInspection(action: Inspection): Promise<void> {
-  printReply(await sendToSocket(inspectionLine(action)), "json", true);
+async function printInspection(inspection: Inspection): Promise<void> {
+  printReply(await sendToSocket(inspectionLine(inspection)), "json", true);
 }
 async function printSendReply(
   lines: string[],
@@ -200,33 +200,35 @@ async function runVersion(): Promise<void> {
 }
 
 async function runSend(
-  action: ActionOf<"say" | "yell" | "guild" | "party" | "slash" | "whisper">,
+  sendAction: ActionOf<
+    "say" | "yell" | "guild" | "party" | "slash" | "whisper"
+  >,
 ): Promise<void> {
   await ensureDaemon();
-  if (action.mode === "slash") {
-    const lines = await sendToSocket(action.input);
-    await printSendReply(lines, true, action.wait);
+  if (sendAction.mode === "slash") {
+    const lines = await sendToSocket(sendAction.input);
+    await printSendReply(lines, true, sendAction.wait);
     return;
   }
-  if (action.mode === "whisper") {
+  if (sendAction.mode === "whisper") {
     const lines = await sendToSocket(
-      `WHISPER ${action.target} ${action.message}`,
+      `WHISPER ${sendAction.target} ${sendAction.message}`,
     );
-    await printSendReply(lines, false, action.wait);
+    await printSendReply(lines, false, sendAction.wait);
     return;
   }
-  const cmd = `${action.mode.toUpperCase()} ${action.message}`;
+  const cmd = `${sendAction.mode.toUpperCase()} ${sendAction.message}`;
   const lines = await sendToSocket(cmd);
-  await printSendReply(lines, false, action.wait);
+  await printSendReply(lines, false, sendAction.wait);
 }
 
-async function runRead(action: ActionOf<"read">): Promise<void> {
+async function runRead(readAction: ActionOf<"read">): Promise<void> {
   await ensureDaemon();
-  const base = action.json ? "READ_JSON" : "READ";
+  const base = readAction.json ? "READ_JSON" : "READ";
   const cmd =
-    action.wait === undefined
+    readAction.wait === undefined
       ? base
-      : `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`;
+      : `${readAction.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${readAction.wait * 1000}`;
   const lines = await sendToSocket(cmd);
   printReply(lines, "events");
 }
@@ -240,19 +242,19 @@ function emitTailEvents(lines: string[]): boolean {
   return true;
 }
 
-async function runTail(action: ActionOf<"tail">): Promise<void> {
+async function runTail(tailAction: ActionOf<"tail">): Promise<void> {
   await ensureDaemon();
-  const verb = action.json ? "READ_WAIT_JSON" : "READ_WAIT";
+  const verb = tailAction.json ? "READ_WAIT_JSON" : "READ_WAIT";
   while (true) {
     const lines = await sendToSocket(`${verb} 1000`);
-    if (!action.json) for (const line of lines) console.log(line);
+    if (!tailAction.json) for (const line of lines) console.log(line);
     else if (!emitTailEvents(lines)) return;
   }
 }
 
 async function runStart(): Promise<void> {
   const running = await sendToSocket("STATUS").then(
-    (lines) => lines.includes("CONNECTED"),
+    (statusLines) => statusLines.includes("CONNECTED"),
     () => false,
   );
   if (running) {
@@ -302,18 +304,18 @@ async function runStop(): Promise<void> {
   }
 }
 
-async function runWho(action: ActionOf<"who">): Promise<void> {
+async function runWho(whoAction: ActionOf<"who">): Promise<void> {
   await ensureDaemon();
-  const verb = action.json ? "WHO_JSON" : "WHO";
-  const cmd = action.filter ? `${verb} ${action.filter}` : verb;
+  const verb = whoAction.json ? "WHO_JSON" : "WHO";
+  const cmd = whoAction.filter ? `${verb} ${whoAction.filter}` : verb;
   const lines = await sendToSocket(cmd);
   printReply(lines, "json");
 }
 
-async function runNearby(action: ActionOf<"nearby">): Promise<void> {
+async function runNearby(nearbyAction: ActionOf<"nearby">): Promise<void> {
   await ensureDaemon();
-  const base = action.json ? "NEARBY_JSON" : "NEARBY";
-  const cmd = action.all ? `${base} all` : base;
+  const base = nearbyAction.json ? "NEARBY_JSON" : "NEARBY";
+  const cmd = nearbyAction.all ? `${base} all` : base;
   const lines = await sendToSocket(cmd);
   printReply(lines, "nearby");
 }
@@ -327,14 +329,14 @@ async function runLogs(): Promise<void> {
   }
 }
 
-async function runAction(action: CliAction): Promise<void> {
-  switch (action.mode) {
+async function runAction(cliAction: CliAction): Promise<void> {
+  switch (cliAction.mode) {
     case "interactive":
       return runInteractive();
     case "daemon":
       return runDaemon();
     case "setup":
-      return runSetupCommand(action.args);
+      return runSetupCommand(cliAction.args);
     case "help":
       return runHelp();
     case "version":
@@ -345,11 +347,11 @@ async function runAction(action: CliAction): Promise<void> {
     case "party":
     case "slash":
     case "whisper":
-      return runSend(action);
+      return runSend(cliAction);
     case "read":
-      return runRead(action);
+      return runRead(cliAction);
     case "tail":
-      return runTail(action);
+      return runTail(cliAction);
     case "start":
       return runStart();
     case "status":
@@ -357,12 +359,12 @@ async function runAction(action: CliAction): Promise<void> {
     case "stop":
       return runStop();
     case "who":
-      return runWho(action);
+      return runWho(cliAction);
     case "nearby":
-      return runNearby(action);
+      return runNearby(cliAction);
     case "walk_toward":
       await ensureDaemon();
-      return printWalkReply(await sendToSocket(requestLine(action)));
+      return printWalkReply(await sendToSocket(requestLine(cliAction)));
     case "skill":
       process.stdout.write(skillContent);
       return;
@@ -370,8 +372,8 @@ async function runAction(action: CliAction): Promise<void> {
       return runLogs();
     default:
       await ensureDaemon();
-      if (isInspection(action)) await printInspection(action);
-      else printControlReply(await sendToSocket(requestLine(action)));
+      if (isInspection(cliAction)) await printInspection(cliAction);
+      else printControlReply(await sendToSocket(requestLine(cliAction)));
   }
 }
 

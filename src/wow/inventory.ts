@@ -123,10 +123,15 @@ function itemGuid(entity: Entity, offset: number): bigint | undefined {
 function issue(
   context: ReadContext,
   address: InventoryAddress,
-  guid: bigint,
+  itemId: bigint,
   code: InventoryIssue["code"],
 ): void {
-  context.issues.push({ code, bag: address.bag, slot: address.slot, guid });
+  context.issues.push({
+    code,
+    bag: address.bag,
+    slot: address.slot,
+    guid: itemId,
+  });
 }
 
 function readItem(
@@ -175,19 +180,19 @@ function readItem(
 function slot(
   context: ReadContext,
   address: InventoryAddress,
-  itemGuid: bigint | undefined,
+  itemId: bigint | undefined,
   parent: bigint,
 ): InventorySlot {
-  if (itemGuid === undefined) return { ...address, status: "unknown" };
-  if (itemGuid === 0n) return { ...address, status: "empty" };
-  if (context.seen.has(itemGuid))
-    issue(context, address, itemGuid, "duplicate_guid");
-  context.seen.add(itemGuid);
+  if (itemId === undefined) return { ...address, status: "unknown" };
+  if (itemId === 0n) return { ...address, status: "empty" };
+  if (context.seen.has(itemId))
+    issue(context, address, itemId, "duplicate_guid");
+  context.seen.add(itemId);
   return {
     ...address,
     status: "occupied",
-    guid: itemGuid,
-    item: readItem(context, address, itemGuid, parent),
+    guid: itemId,
+    item: readItem(context, address, itemId, parent),
   };
 }
 
@@ -196,7 +201,7 @@ function roots(context: ReadContext, self: Entity): InventorySlot[] {
   for (const range of ROOTS) {
     for (let i = 0; i < range.count; i++) {
       const offset = range.offset + i * 2;
-      const itemGuid = guid(
+      const rootGuid = guid(
         readSelfField(context.selfGuid, self, offset),
         readSelfField(context.selfGuid, self, offset + 1),
       );
@@ -204,7 +209,7 @@ function roots(context: ReadContext, self: Entity): InventorySlot[] {
         slot(
           context,
           { bag: 255, slot: range.first + i, region: range.region },
-          itemGuid,
+          rootGuid,
           context.selfGuid,
         ),
       );
@@ -229,7 +234,8 @@ function bag(
   if (root.status !== "occupied") return result;
   if (
     context.issues.some(
-      (issue) => issue.code === "duplicate_guid" && issue.guid === root.guid,
+      (recorded) =>
+        recorded.code === "duplicate_guid" && recorded.guid === root.guid,
     )
   )
     return result;
@@ -266,10 +272,10 @@ function bag(
   return result;
 }
 
-function complete(slot: InventorySlot): boolean {
-  if (slot.status === "unknown") return false;
-  if (slot.status === "empty") return true;
-  const item = slot.item;
+function complete(candidate: InventorySlot): boolean {
+  if (candidate.status === "unknown") return false;
+  if (candidate.status === "empty") return true;
+  const item = candidate.item;
   return (
     item.entry !== undefined &&
     item.owner !== undefined &&
@@ -287,13 +293,15 @@ function freeSlots(
   bags: InventoryBag[],
   issues: InventoryIssue[],
 ): number | undefined {
-  if (issues.some((issue) => issue.code === "duplicate_guid")) return undefined;
-  if (bags.some((bag) => bag.size === undefined)) return undefined;
+  if (issues.some((recorded) => recorded.code === "duplicate_guid"))
+    return undefined;
+  if (bags.some((bagState) => bagState.size === undefined)) return undefined;
   let count = 0;
-  for (const slot of slots) {
-    if (slot.region !== "backpack" && slot.region !== "bag_item") continue;
-    if (slot.status === "unknown") return undefined;
-    if (slot.status === "empty") count++;
+  for (const candidate of slots) {
+    if (candidate.region !== "backpack" && candidate.region !== "bag_item")
+      continue;
+    if (candidate.status === "unknown") return undefined;
+    if (candidate.status === "empty") count++;
   }
   return count;
 }
@@ -326,14 +334,14 @@ export function readInventory(
   };
   const slots = roots(context, self);
   const bags: InventoryBag[] = [];
-  for (const root of slots.filter((slot) => slot.region === "bag"))
+  for (const root of slots.filter((candidate) => candidate.region === "bag"))
     bags.push(bag(context, root, slots));
   const coinage = readSelfField(selfGuid, self, PLAYER_FIELDS.COINAGE.offset);
   const known =
     coinage !== undefined &&
     context.issues.length === 0 &&
     slots.every(complete) &&
-    bags.every((bag) => bag.size !== undefined);
+    bags.every((bagState) => bagState.size !== undefined);
   return {
     selfGuid,
     scope: "carried",

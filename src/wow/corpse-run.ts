@@ -49,7 +49,7 @@ async function becomeGhost(run: CorpseRun): Promise<Done> {
   if (life === "ghost") return DONE;
   if (life !== "dead") return stop("life_unknown");
   run.recovery.releaseSpirit();
-  return confirmLife(run, "ghost", "ghost_not_confirmed");
+  return await confirmLife(run, "ghost", "ghost_not_confirmed");
 }
 
 async function confirmLife(

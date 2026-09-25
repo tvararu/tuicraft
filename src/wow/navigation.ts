@@ -119,7 +119,7 @@ export function createNavigation(
   if (dataPath.length === 0) throw new Error("navigation dataPath is required");
   if (libraryPath.length === 0)
     throw new Error("navigation libraryPath is required");
-  let map: NativeMap | undefined;
+  let openedMap: NativeMap | undefined;
   let closed = false;
   function open(mapId: number, ...points: NavPoint[]): NativeMap {
     if (closed) throw new Error("navigation is closed");
@@ -128,8 +128,8 @@ export function createNavigation(
         `unsupported map ${mapId} (only Expansion01/${EXPANSION01})`,
       );
     for (const point of points) validateNativePoint(point);
-    map ??= openMap(dataPath, libraryPath, "Expansion01");
-    return map;
+    openedMap ??= openMap(dataPath, libraryPath, "Expansion01");
+    return openedMap;
   }
   return {
     plan(mapId, from, to) {
@@ -158,8 +158,8 @@ export function createNavigation(
     },
     close() {
       closed = true;
-      map?.close();
-      map = undefined;
+      openedMap?.close();
+      openedMap = undefined;
     },
   };
 }
@@ -269,11 +269,22 @@ function connectedHeight(
   y: number,
   from: NavPoint,
 ): number {
-  try {
-    const h = map.findHeight(from, x, y);
-    if (Number.isFinite(h)) return h;
-  } catch {}
+  const h = probeHeight(map, x, y, from);
+  if (Number.isFinite(h)) return h;
   return continuousHeight(map, x, y, from.z) ?? uniqueHeight(map, x, y);
+}
+
+function probeHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  from: NavPoint,
+): number {
+  try {
+    return map.findHeight(from, x, y);
+  } catch {
+    return Number.NaN;
+  }
 }
 
 function uniqueHeight(map: NativeMap, x: number, y: number): number {

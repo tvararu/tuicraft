@@ -194,7 +194,7 @@ export class RewardsRuntime {
 
   take(slot: number): RewardsState {
     const window = this.actionWindow();
-    const item = window.items.find((item) => item.slot === slot);
+    const item = window.items.find((offered) => offered.slot === slot);
     if (!item) throw new Error("Loot slot was not offered");
     if (item.slotType !== 0 && item.slotType !== 4)
       throw new Error("Loot slot is not available for direct pickup");

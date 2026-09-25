@@ -1,3 +1,4 @@
+import { ignoreFailure } from "lib/ignore-failure";
 import { type Paths, resolvePaths } from "lib/paths";
 
 function parseResponseLines(buffer: string): string[] {
@@ -9,9 +10,9 @@ function parseResponseLines(buffer: string): string[] {
   return result;
 }
 
-export async function sendToSocket(
+export function sendToSocket(
   command: string,
-  sock: string = resolvePaths().socketPath,
+  sock?: string,
 ): Promise<string[]> {
   let buffer = "";
   let complete = false;
@@ -37,7 +38,7 @@ export async function sendToSocket(
           socket.flush();
         },
       },
-      unix: sock,
+      unix: sock ?? resolvePaths().socketPath,
     }).catch(reject);
   });
 }
@@ -59,7 +60,7 @@ export async function ensureDaemon(
       return;
     } catch {
       const { unlink } = await import("node:fs/promises");
-      await unlink(path).catch(() => {});
+      await unlink(path).catch(ignoreFailure);
     }
   }
 
@@ -74,14 +75,12 @@ export async function ensureDaemon(
   const stderrChunks: string[] = [];
   const stderrReader = proc.stderr.getReader();
   const stderrDone = (async () => {
-    try {
-      while (true) {
-        const { value, done } = await stderrReader.read();
-        if (done) return;
-        stderrChunks.push(Buffer.from(value).toString());
-      }
-    } catch {}
-  })();
+    while (true) {
+      const { value, done } = await stderrReader.read();
+      if (done) return;
+      stderrChunks.push(Buffer.from(value).toString());
+    }
+  })().catch(ignoreFailure);
   void stderrDone;
 
   for (let i = 0; i < 300; i++) {

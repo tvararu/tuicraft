@@ -14,7 +14,9 @@ export class SessionLog {
 
   constructor(path: string) {
     this.path = path;
-    this.ready = mkdir(dirname(path), { recursive: true }).then(() => {});
+    this.ready = mkdir(dirname(path), { recursive: true }).then(
+      () => undefined,
+    );
   }
 
   async append(entry: LogEntry): Promise<void> {

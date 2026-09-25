@@ -188,15 +188,15 @@ export function parseQuestgiverQuestList(r: PacketReader): QuestgiverQuestList {
 
 function displayItems(r: PacketReader): QuestDisplayItem[] {
   const count = r.uint32LE();
-  const items: QuestDisplayItem[] = [];
+  const displayed: QuestDisplayItem[] = [];
   for (let i = 0; i < count; i++) {
-    items.push({
+    displayed.push({
       itemId: r.uint32LE(),
       count: r.uint32LE(),
       displayId: r.uint32LE(),
     });
   }
-  return items;
+  return displayed;
 }
 
 export function items(r: PacketReader, count: number): QuestItem[] {

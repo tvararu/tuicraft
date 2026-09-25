@@ -209,7 +209,9 @@ describe("carried inventory authority", () => {
     expect(state.status).toBe("partial");
     expect(state.freeSlots).toBeUndefined();
     expect(
-      state.bags.filter((bag) => bag.guid === 2n).map((bag) => bag.status),
+      state.bags
+        .filter((candidate) => candidate.guid === 2n)
+        .map((entry) => entry.status),
     ).toEqual(["unknown", "unknown"]);
     expect(state.slots.some((slot) => slot.region === "bag_item")).toBe(false);
   });
