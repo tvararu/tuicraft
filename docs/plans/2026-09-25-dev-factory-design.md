@@ -313,7 +313,10 @@ checkout, never from a worktree it might delete. Each pass:
    the choice to the factory, 2026-09-25, tune from phase 1 run times):
    - If the tree is clean and every commit is on a remote branch
      (`git rev-list <branch> --not --remotes` is empty), run
-     `orca-ide worktree rm`.
+     `orca-ide worktree rm`. For runs, "clean" ignores gitignored scratch
+     such as `tmp/`. The first overnight reviewer runs were held only for
+     the `tmp/cli-*` directories that `mise ci`'s tests leave behind.
+     Tracked or untracked changes still count.
    - Otherwise archive it, stop its agent with
      `orca-ide terminal close --worktree …` to free RAM and stop spending,
      keep the tree, and report it.
@@ -496,9 +499,9 @@ Required checks on `main`:
 
 With rebase-merge, GitHub checks the required statuses on the PR head and
 then writes new commits to `main`. The new commits carry no statuses of
-their own ([INFERENCE] from GitHub's rebase-merge behaviour; confirm on the
-first factory PR). Before merging, the merger therefore checks that the head
-it lands has all three statuses, `signoff/ci` included.
+their own: confirmed on PR #89, where `main`'s new head `b98c9b4` had an
+empty status list. Before merging, the merger therefore checks that the
+head it lands has all three statuses, `signoff/ci` included.
 
 `gh signoff` is an option for posting. `mise ci` already posts `signoff/ci`
 through it when HEAD is clean and pushed, and the pre-push hook posts it for
