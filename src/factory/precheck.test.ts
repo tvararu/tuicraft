@@ -98,17 +98,32 @@ describe("worker", () => {
     expect(decideWorker([blocked]).ok).toBe(false);
   });
 
-  test("skips issues already claimed or waiting on pm", () => {
+  test("skips issues already claimed", () => {
     const claimed = [
       "agent:working",
       "agent:review",
       "agent:reviewing",
       "agent:merging",
       "agent:landing",
-      "needs:pm",
     ];
     for (const label of claimed)
       expect(decideWorker([issue(1, ["ready", label])]).ok).toBe(false);
+  });
+
+  test("pm ready overrides needs:pm", () => {
+    expect(decideWorker([issue(1, ["ready", "needs:pm"])])).toEqual({
+      ok: true,
+      out: { issue: 1 },
+    });
+  });
+
+  test("needs:pm waits without a pm ready", () => {
+    const bots = issue(1, ["ready", "needs:pm"], { events: [theo, bot] });
+    expect(decideWorker([bots]).ok).toBe(false);
+    expect(decideWorker([issue(2, ["needs:pm"])]).ok).toBe(false);
+    expect(decideWorker([issue(3, ["agent:rework", "needs:pm"])]).ok).toBe(
+      false,
+    );
   });
 
   test("respects the wip cap", () => {

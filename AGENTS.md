@@ -301,7 +301,9 @@ Shipping:
 - The dev factory works issues that Theo has labelled `ready`: workers open
   PRs as `OpenHubris` from `factory/<issue>-<slug>` branches, reviewers post
   `factory/ci` and `factory/review`, and only the merger lands them, by
-  rebase-merge. Do not land or relabel factory PRs by hand.
+  rebase-merge. Do not land or relabel factory PRs by hand. Adding `ready`
+  is the whole release step: it overrides `needs:pm`, which the worker
+  removes on claim.
 - Work that doesn't come from the factory goes through the same review and
   merger, so give it what their prompts need. File an issue with a
   `## Acceptance criteria` section. Push the work to a branch named
