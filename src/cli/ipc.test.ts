@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, jest, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, jest, test } from "bun:test";
 import { mkdir, rm, unlink, writeFile } from "node:fs/promises";
 import { ensureDaemon, sendToSocket } from "cli/ipc";
 import { pathsUnder } from "test/temp-paths";
 
-const paths = pathsUnder(`./tmp/cli-ipc-${Date.now()}`);
+const base = `./tmp/cli-ipc-${Date.now()}`;
+const paths = pathsUnder(base);
 const rtDir = paths.runtimeDir;
 const sockPath = paths.socketPath;
 
@@ -70,6 +71,10 @@ afterEach(async () => {
   for (const s of servers) s.stop(true);
   servers = [];
   await rm(sockPath, { force: true, recursive: true });
+});
+
+afterAll(async () => {
+  await rm(base, { force: true, recursive: true });
 });
 
 type ClosingSocket = { end: () => void };

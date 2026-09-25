@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import type { EventEntry } from "daemon/commands";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
@@ -13,19 +13,30 @@ describe("main CLI against a daemon socket", () => {
   let handle = createMockHandle();
   let result: ReturnType<typeof startDaemonServer>;
   let exitSpy: ReturnType<typeof jest.fn>;
+  let scratch: string[] = [];
 
   afterEach(async () => {
     exitSpy?.mockRestore();
     result?.cleanup();
+    await Promise.all(
+      scratch.map((dir) => rm(dir, { force: true, recursive: true })),
+    );
+    scratch = [];
   });
+
+  async function scratchDir(prefix: string): Promise<string> {
+    const xdg = `${process.cwd()}/tmp/${prefix}-${++sockCounter}-${Date.now()}`;
+    scratch.push(xdg);
+    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    return xdg;
+  }
 
   async function runMain(
     args: string[],
     buffered: EventEntry[] = [],
     onActivity?: () => void,
   ) {
-    const xdg = `${process.cwd()}/tmp/cli-main-${++sockCounter}-${Date.now()}`;
-    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    const xdg = await scratchDir("cli-main");
     sockPath = `${xdg}/tuicraft/sock`;
     const log = new SessionLog(`${xdg}/session.jsonl`);
     exitSpy = jest
@@ -200,8 +211,7 @@ describe("main CLI against a daemon socket", () => {
   });
 
   test("JSON send wait preserves intent when event read fails", async () => {
-    const xdg = `${process.cwd()}/tmp/cli-wait-${++sockCounter}-${Date.now()}`;
-    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    const xdg = await scratchDir("cli-wait");
     const server = Bun.listen({
       socket: {
         data(socket, bytes) {
@@ -253,8 +263,7 @@ describe("main CLI against a daemon socket", () => {
   });
 
   test("tail JSON skips empty polls and envelopes each event", async () => {
-    const xdg = `${process.cwd()}/tmp/cli-tail-${++sockCounter}-${Date.now()}`;
-    await mkdir(`${xdg}/tuicraft`, { recursive: true });
+    const xdg = await scratchDir("cli-tail");
     const path = `${xdg}/tuicraft/sock`;
     let polls = 0;
     const server = Bun.listen({
@@ -336,33 +345,27 @@ describe("main CLI against a daemon socket", () => {
   });
 
   test("JSON stop reports a broken existing socket as an error", async () => {
-    const xdg = `${process.cwd()}/tmp/cli-stop-${++sockCounter}-${Date.now()}`;
-    const path = `${xdg}/tuicraft/sock`;
-    await mkdir(`${xdg}/tuicraft`, { recursive: true });
-    await Bun.write(path, "not a socket");
-    try {
-      const proc = Bun.spawn({
-        cmd: [process.execPath, `${import.meta.dir}/main.ts`, "stop", "--json"],
-        cwd: `${import.meta.dir}/..`,
-        env: { ...process.env, XDG_RUNTIME_DIR: xdg },
-        stderr: "pipe",
-        stdout: "pipe",
-      });
-      const [code, out] = await Promise.all([
-        proc.exited,
-        new Response(proc.stdout).text(),
-      ]);
-      expect(code).toBe(1);
-      expect(JSON.parse(out)).toMatchObject({
-        command: "stop",
-        data: null,
-        error: { stage: "command" },
-        events: [],
-        kind: "error",
-      });
-    } finally {
-      await unlink(path);
-    }
+    const xdg = await scratchDir("cli-stop");
+    await Bun.write(`${xdg}/tuicraft/sock`, "not a socket");
+    const proc = Bun.spawn({
+      cmd: [process.execPath, `${import.meta.dir}/main.ts`, "stop", "--json"],
+      cwd: `${import.meta.dir}/..`,
+      env: { ...process.env, XDG_RUNTIME_DIR: xdg },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [code, out] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+    ]);
+    expect(code).toBe(1);
+    expect(JSON.parse(out)).toMatchObject({
+      command: "stop",
+      data: null,
+      error: { stage: "command" },
+      events: [],
+      kind: "error",
+    });
   });
 
   test("JSON send does not fabricate success on daemon error", async () => {
