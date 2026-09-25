@@ -25,7 +25,8 @@ function formatCycleTarget(target: CycleTargetRecord): string {
   const reason = target.outcome?.reason ?? target.cause;
   const xp = reason === "server_kill_credit" ? killXp(target) : undefined;
   const credit = xp === undefined ? "" : `, ${xp} XP`;
-  return `Target ${formatGuid(target.guid)}: ${target.status} (${show(reason)})${credit}`;
+  const loot = target.loot === "none" ? ", no loot" : "";
+  return `Target ${formatGuid(target.guid)}: ${target.status} (${show(reason)})${credit}${loot}`;
 }
 
 function formatCycleLoot(loot: CycleLootRecord): string[] {

@@ -164,6 +164,7 @@ export function createRuntimes(
     control,
     now: runtimeDeps.now,
   });
+  conn.cycle = cycle;
   control.onEvent((event) => {
     conn.onControlEvent?.(event);
   });

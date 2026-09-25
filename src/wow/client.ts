@@ -84,7 +84,11 @@ import {
   type RewardsState,
   type RewardsEvent,
 } from "wow/rewards";
-import { type CycleState, type CycleEvent } from "wow/encounter-cycle";
+import type {
+  CycleEvent,
+  CycleState,
+  EncounterCycleRuntime,
+} from "wow/encounter-cycle";
 import type { InventoryState } from "wow/inventory";
 import { createRuntimes } from "wow/runtime";
 import {
@@ -389,6 +393,7 @@ export type WorldConn = {
   recovery?: RecoveryRuntime;
   quests?: QuestRuntime;
   rewards?: RewardsRuntime;
+  cycle?: EncounterCycleRuntime;
   tactics?: TacticsLoop;
   onControlEvent?: (event: ControlEvent) => void;
   onRecoveryEvent?: (event: RecoveryEvent) => void;
@@ -526,6 +531,7 @@ export function worldSession(
       if (event.type === "disappear") conn.combat?.forget(event.guid);
       conn.recovery?.observeEntity(event);
       conn.rewards?.observeEntity(event);
+      conn.cycle?.observeEntity(event);
       conn.onEntityEvent?.(event);
     });
     conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));

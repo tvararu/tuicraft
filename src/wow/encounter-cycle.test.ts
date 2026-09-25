@@ -1,6 +1,13 @@
 import { test, expect, jest } from "bun:test";
 import { EncounterCycleRuntime, type CycleDeps } from "wow/encounter-cycle";
-import type { RewardsEvent, RewardsState } from "wow/rewards";
+import {
+  NOT_DEAD,
+  NOT_LOOTABLE,
+  type RewardsEvent,
+  type RewardsState,
+} from "wow/rewards";
+import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import type {
   RecoveryEvent,
   RecoveryReclaim,
@@ -27,6 +34,34 @@ function fakeTactics(outcomes: (string | Error)[]) {
   };
 }
 
+type FakeCorpseLoot = { dead: boolean; lootable: boolean };
+
+function body(guid: bigint, health: number): EntityEvent {
+  const entity: UnitEntity = {
+    guid,
+    objectType: ObjectType.UNIT,
+    entry: 0,
+    scale: 1,
+    position: undefined,
+    rawFields: new Map([[UNIT_FIELDS.HEALTH.offset, health]]),
+    name: undefined,
+    health,
+    maxHealth: 10,
+    level: 1,
+    factionTemplate: 0,
+    displayId: 0,
+    npcFlags: 0,
+    unitFlags: 0,
+    target: 0n,
+    race: 0,
+    class_: 0,
+    gender: 0,
+    power: [],
+    maxPower: [],
+  };
+  return { type: "update", entity, changed: ["health", "rawFields"] };
+}
+
 function fakeLoot(config: {
   items?: number[];
   money?: number;
@@ -38,9 +73,10 @@ function fakeLoot(config: {
   releaseOnly?: boolean;
   deferClose?: boolean;
   deferTake?: boolean;
-  aliveOpens?: number;
+  corpse?: FakeCorpseLoot;
 }) {
-  let aliveOpens = config.aliveOpens ?? 0;
+  const corpse = config.corpse ?? { dead: true, lootable: true };
+  const attempted = Promise.withResolvers<void>();
   const offeredSlots = config.items ?? [];
   const takenSlots: number[] = [];
   let moneyRequested = false;
@@ -115,6 +151,8 @@ function fakeLoot(config: {
 
   return {
     taken: () => takenSlots,
+    corpse,
+    attempted: attempted.promise,
     closing: closeRequested.promise,
     acknowledgeClose,
     moneyTaken: () => moneyRequested,
@@ -125,8 +163,9 @@ function fakeLoot(config: {
       return state();
     },
     open(_guid: bigint): RewardsState {
-      if (aliveOpens-- > 0)
-        throw new Error("Loot source is not authoritatively dead");
+      attempted.resolve();
+      if (!corpse.dead) throw new Error(NOT_DEAD);
+      if (!corpse.lootable) throw new Error(NOT_LOOTABLE);
       phase = "opening";
       queueMicrotask(() => {
         if (config.releaseOnly) {
@@ -767,29 +806,82 @@ test("unanswered loot take stops rather than reporting success", async () => {
   }
 });
 test("loot waits for the corpse health update after kill credit", async () => {
-  jest.useFakeTimers();
-  try {
-    const loot = fakeLoot({ items: [4], aliveOpens: 2 });
-    const runtime = makeCycle({
-      tactics: fakeTactics([]),
-      loot,
-      recovery: fakeRecovery({ life: ["alive"] }),
-      control: fakeControl(),
-      now: () => 0,
-    });
-    const running = runtime.start({ guids: [2n], instruction: "fight" });
-    await advanceUntilSettled(running, 2000);
-    expect(loot.taken()).toEqual([4]);
-    expect(runtime.snapshot().stopCause).toBe("queue_exhausted");
-  } finally {
-    jest.useRealTimers();
-  }
+  const loot = fakeLoot({
+    items: [4],
+    corpse: { dead: false, lootable: true },
+  });
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
+    loot,
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const running = runtime.start({ guids: [2n], instruction: "fight" });
+  await loot.attempted;
+  runtime.observeEntity(body(9n, 0));
+  runtime.observeEntity(body(2n, 3));
+  expect(loot.taken()).toEqual([]);
+  loot.corpse.dead = true;
+  runtime.observeEntity(body(2n, 0));
+  await running;
+  expect(loot.taken()).toEqual([4]);
+  expect(runtime.snapshot().stopCause).toBe("queue_exhausted");
+  expect(runtime.snapshot().queue[0]?.loot).toBe("looted");
 });
 
-test("a corpse that never dies stops the cycle after the settle time", async () => {
+test("a dead creature with no loot is recorded and the cycle continues", async () => {
+  const tactics = fakeTactics([]);
+  const loot = fakeLoot({ corpse: { dead: true, lootable: false } });
+  const runtime = makeCycle({
+    tactics,
+    loot,
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  await runtime.start({ guids: [2n, 3n], instruction: "fight" });
+  expect(tactics.calls()).toBe(2);
+  expect(runtime.snapshot()).toMatchObject({
+    stopCause: "queue_exhausted",
+    lastLoot: undefined,
+    queue: [
+      { guid: 2n, status: "done", loot: "none" },
+      { guid: 3n, status: "done", loot: "none" },
+    ],
+  });
+});
+
+test("a corpse that despawns before its death update counts as no loot", async () => {
+  const loot = fakeLoot({
+    items: [4],
+    corpse: { dead: false, lootable: true },
+  });
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
+    loot,
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  const running = runtime.start({ guids: [2n], instruction: "fight" });
+  await loot.attempted;
+  runtime.observeEntity({ type: "disappear", guid: 2n });
+  await running;
+  expect(loot.taken()).toEqual([]);
+  expect(runtime.snapshot()).toMatchObject({
+    stopCause: "queue_exhausted",
+    queue: [{ status: "done", loot: "none" }],
+  });
+});
+
+test("a corpse never seen dying stops the cycle after the settle time", async () => {
   jest.useFakeTimers();
   try {
-    const loot = fakeLoot({ items: [4], aliveOpens: 1000 });
+    const loot = fakeLoot({
+      items: [4],
+      corpse: { dead: false, lootable: true },
+    });
     const runtime = makeCycle({
       tactics: fakeTactics([]),
       loot,
@@ -800,9 +892,7 @@ test("a corpse that never dies stops the cycle after the settle time", async () 
     const running = runtime.start({ guids: [2n], instruction: "fight" });
     await advanceUntilSettled(running, 7000);
     expect(loot.taken()).toEqual([]);
-    expect(runtime.snapshot().stopCause).toBe(
-      "loot_denied:Loot source is not authoritatively dead",
-    );
+    expect(runtime.snapshot().stopCause).toBe("corpse_unconfirmed");
   } finally {
     jest.useRealTimers();
   }

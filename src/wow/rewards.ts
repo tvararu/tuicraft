@@ -102,6 +102,9 @@ export type RewardsEvent = {
   state: RewardsState;
 };
 
+export const NOT_DEAD = "Loot source is not authoritatively dead";
+export const NOT_LOOTABLE = "Creature has no observed lootable flag";
+
 function copyLoot(loot: RewardsLoot): RewardsLoot {
   if (loot.phase === "open" || loot.phase === "closing")
     return { ...loot, items: loot.items.map((item) => ({ ...item })) };
@@ -165,10 +168,8 @@ export class RewardsRuntime {
       throw new Error("Loot source is not an observed creature");
     const health = fieldOf(source, UNIT_FIELDS.HEALTH.offset);
     const flags = source.rawFields.get(UNIT_FIELDS.DYNAMIC_FLAGS.offset);
-    if (health !== 0)
-      throw new Error("Loot source is not authoritatively dead");
-    if (flags === undefined || !(flags & 1))
-      throw new Error("Creature has no observed lootable flag");
+    if (health !== 0) throw new Error(NOT_DEAD);
+    if (flags === undefined || !(flags & 1)) throw new Error(NOT_LOOTABLE);
     const requestedAt = this.deps.now();
     this.deps.send(GameOpcode.CMSG_LOOT, buildLoot(guid));
     this.loot = {

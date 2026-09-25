@@ -1,29 +1,33 @@
-import { pause } from "lib/abort";
 import { messageOf } from "lib/errors";
 import { cycleStop as stop, type CycleStop } from "wow/cycle-stop";
 import type { CycleDeps, CycleLootRecord } from "wow/encounter-cycle";
+import { fieldOf, type EntityEvent } from "wow/entity-store";
 import type { EventWaiter } from "wow/event-waiter";
-import type { RewardsEvent, RewardsState } from "wow/rewards";
+import { UNIT_FIELDS } from "wow/protocol/entity-fields";
+import {
+  NOT_DEAD,
+  NOT_LOOTABLE,
+  type RewardsEvent,
+  type RewardsState,
+} from "wow/rewards";
 
 const LOOT_SETTLE_MS = 5000;
-const CORPSE_POLL_MS = 200;
-const CORPSE_PENDING = new Set([
-  "loot_denied:Loot source is not authoritatively dead",
-  "loot_denied:Creature has no observed lootable flag",
-]);
 
 export type LootRun = Pick<CycleDeps, "rewards"> & {
   events: EventWaiter<RewardsEvent>;
+  bodies: EventWaiter<EntityEvent>;
   signal: AbortSignal;
 };
 
-type Looted = { ok: true; record: CycleLootRecord } | CycleStop;
-type Opened = { ok: true; state: RewardsState } | CycleStop;
+type Looted = { ok: true; record: CycleLootRecord | undefined } | CycleStop;
+type Opened = { ok: true; state: RewardsState | undefined } | CycleStop;
+type Corpse = "lootable" | "empty" | CycleStop;
 type Taken = { ok: true; taken: boolean } | CycleStop;
 
 export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   const opened = await openLoot(run, guid);
   if (!opened.ok) return opened;
+  if (!opened.state) return { ok: true, record: undefined };
   const offer = opened.state.loot;
   if (offer.phase !== "open") return stop("loot_denied:unexpected_phase");
   const slotsTaken: number[] = [];
@@ -50,21 +54,31 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   return { ok: true, record };
 }
 
-async function awaitCorpse(
-  run: LootRun,
-  guid: bigint,
-): Promise<CycleStop | undefined> {
-  for (let waited = 0; ; waited += CORPSE_POLL_MS) {
-    const refused = request(() => run.rewards.open(guid));
-    if (!refused || !CORPSE_PENDING.has(refused.cause)) return refused;
-    if (waited >= LOOT_SETTLE_MS) return refused;
-    await pause(CORPSE_POLL_MS, run.signal);
-  }
+async function awaitCorpse(run: LootRun, guid: bigint): Promise<Corpse> {
+  const first = tryOpen(run, guid);
+  if (first !== NOT_DEAD) return first;
+  const died = (event: EntityEvent) =>
+    event.type === "disappear" ||
+    fieldOf(event.entity, UNIT_FIELDS.HEALTH.offset) === 0;
+  const event = await run.bodies.find(died, LOOT_SETTLE_MS, run.signal);
+  if (!event) return stop("corpse_unconfirmed");
+  if (event.type === "disappear") return "empty";
+  const second = tryOpen(run, guid);
+  return second === NOT_DEAD ? stop(`loot_denied:${NOT_DEAD}`) : second;
+}
+
+function tryOpen(run: LootRun, guid: bigint): Corpse | typeof NOT_DEAD {
+  const refused = request(() => run.rewards.open(guid));
+  if (!refused) return "lootable";
+  if (refused.cause === `loot_denied:${NOT_LOOTABLE}`) return "empty";
+  if (refused.cause === `loot_denied:${NOT_DEAD}`) return NOT_DEAD;
+  return refused;
 }
 
 async function openLoot(run: LootRun, guid: bigint): Promise<Opened> {
-  const refused = await awaitCorpse(run, guid);
-  if (refused) return refused;
+  const corpse = await awaitCorpse(run, guid);
+  if (corpse === "empty") return { ok: true, state: undefined };
+  if (corpse !== "lootable") return corpse;
   for (;;) {
     const event = await run.events.next(LOOT_SETTLE_MS, run.signal);
     if (!event) return stop("loot_denied:timeout");

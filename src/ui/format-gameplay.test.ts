@@ -80,6 +80,13 @@ describe("formatCycleState", () => {
     expect(output).not.toContain("item gained");
   });
 
+  test("marks a kill that left no loot", () => {
+    const output = cycle({ queue: [{ ...killed(TARGET), loot: "none" }] });
+    expect(output).toContain(
+      "Target 0xf130003f220576e9: done (server_kill_credit), 84 XP, no loot",
+    );
+  });
+
   test("does not attribute stale XP to another target", () => {
     const output = cycle({ queue: [killed(0xf130003f22000001n)] });
     expect(output).toContain("server_kill_credit");

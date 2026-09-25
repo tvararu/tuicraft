@@ -2,6 +2,7 @@ import { messageOf } from "lib/errors";
 import type { ControlRuntime, ControlState } from "wow/control";
 import { recoverCorpse } from "wow/corpse-run";
 import type { CycleStop } from "wow/cycle-stop";
+import type { EntityEvent } from "wow/entity-store";
 import { EventWaiter } from "wow/event-waiter";
 import { lootCorpse } from "wow/loot-run";
 import type { RecoveryEvent, RecoveryRuntime } from "wow/recovery";
@@ -19,6 +20,7 @@ export type CycleTargetRecord = {
   status: "queued" | "done" | "skipped";
   cause?: string;
   outcome?: TacticsOutcome;
+  loot?: "looted" | "none";
 };
 export type CycleLootRecord = {
   guid: string;
@@ -76,6 +78,9 @@ export class EncounterCycleRuntime {
   private disposed = false;
   private recoveryEvents: EventWaiter<RecoveryEvent> | undefined;
   private rewardsEvents: EventWaiter<RewardsEvent> | undefined;
+  private bodyEvents:
+    | { guid: bigint; waiter: EventWaiter<EntityEvent> }
+    | undefined;
   private state: CycleState = {
     active: false,
     phase: "idle",
@@ -111,6 +116,11 @@ export class EncounterCycleRuntime {
 
   observeRewards(event: RewardsEvent): void {
     this.rewardsEvents?.push(event);
+  }
+
+  observeEntity(event: EntityEvent): void {
+    const guid = event.type === "disappear" ? event.guid : event.entity.guid;
+    if (guid === this.bodyEvents?.guid) this.bodyEvents.waiter.push(event);
   }
 
   async start(args: {
@@ -207,7 +217,7 @@ export class EncounterCycleRuntime {
       return skip(record, outcome?.reason ?? "fight_failed", outcome);
     record.status = "done";
     record.outcome = outcome;
-    return this.loot(record.guid, signal);
+    return this.loot(record, signal);
   }
 
   private async recover(
@@ -230,21 +240,30 @@ export class EncounterCycleRuntime {
   }
 
   private async loot(
-    guid: bigint,
+    target: CycleTargetRecord,
     signal: AbortSignal,
   ): Promise<CycleStop | undefined> {
     this.state.phase = "looting";
     const events = new EventWaiter<RewardsEvent>();
+    const bodies = {
+      guid: target.guid,
+      waiter: new EventWaiter<EntityEvent>(),
+    };
     this.rewardsEvents = events;
+    this.bodyEvents = bodies;
     try {
       const { rewards } = this.deps;
-      const result = await lootCorpse({ rewards, events, signal }, guid);
+      const run = { rewards, events, bodies: bodies.waiter, signal };
+      const result = await lootCorpse(run, target.guid);
       if (!result.ok) return result;
+      target.loot = result.record ? "looted" : "none";
+      if (!result.record) return undefined;
       this.state.lastLoot = result.record;
       this.emit("loot_done");
       return undefined;
     } finally {
       if (this.rewardsEvents === events) this.rewardsEvents = undefined;
+      if (this.bodyEvents === bodies) this.bodyEvents = undefined;
     }
   }
 
