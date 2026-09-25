@@ -249,6 +249,7 @@ function fakeControl(
     speed?: number;
     refuseMoves?: number;
     moveError?: string;
+    stopReason?: string;
   } = {},
 ) {
   let pose: ControlPose | undefined = config.pose;
@@ -284,7 +285,7 @@ function fakeControl(
         stopAfter(100, "height_unresolved");
         return;
       }
-      stopAfter(durationMs, "lease");
+      stopAfter(durationMs, config.stopReason ?? "lease");
       if (direction !== "forward") return;
       const traveled = (speed * durationMs) / 1000;
       pose = {
@@ -1152,7 +1153,11 @@ test("a refused corpse-run move stops with its reason", async () => {
   }
 });
 
-function ghostRun(config: { corpseX: number; refuseMoves?: number }) {
+function ghostRun(config: {
+  corpseX: number;
+  refuseMoves?: number;
+  stopReason?: string;
+}) {
   let now = 0;
   const control = fakeControl({
     pose: {
@@ -1166,6 +1171,7 @@ function ghostRun(config: { corpseX: number; refuseMoves?: number }) {
     },
     speed: 7,
     refuseMoves: config.refuseMoves,
+    stopReason: config.stopReason,
   });
   const recovery = fakeRecovery({
     life: ["dead", "ghost", "alive"],
@@ -1227,8 +1233,23 @@ test("a leg that does not move retries with a heading offset", async () => {
     expect(runtime.snapshot().stopCause).toBe("reclaimed");
     const [first, second, third] = control.faced();
     expect(first).toBe(0);
-    expect(second).toBeCloseTo(0.4);
+    expect(second).toBeCloseTo(0.3);
     expect(third).toBeGreaterThan(Math.PI);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("a blocked stop after progress keeps the direct heading", async () => {
+  jest.useFakeTimers();
+  try {
+    const { control, runtime, run } = ghostRun({
+      corpseX: 200,
+      stopReason: "height_unresolved",
+    });
+    await run(60000);
+    expect(runtime.snapshot().stopCause).toBe("reclaimed");
+    expect(control.faced().every((heading) => heading === 0)).toBe(true);
   } finally {
     jest.useRealTimers();
   }
@@ -1244,9 +1265,9 @@ test("stalled legs exhaust the offsets and stop unreachable", async () => {
     await run(60000);
     expect(runtime.snapshot()).toMatchObject({
       stopCause: "corpse_unreachable",
-      stopDetail: { legs: 7, range: 100 },
+      stopDetail: { legs: 11, range: 100 },
     });
-    expect(control.faced().length).toBe(7);
+    expect(control.faced().length).toBe(11);
   } finally {
     jest.useRealTimers();
   }

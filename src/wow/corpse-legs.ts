@@ -11,9 +11,8 @@ const LEG_MS = 3000;
 const MIN_LEG_MS = 500;
 const STOP_MARGIN_MS = 1000;
 const STANDOFF_YD = 30;
-const MOVED_EPS = 0.05;
-const OFFSETS = [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2];
-const BLOCKERS = new Set(["height_unresolved", "obstructed"]);
+const PROGRESS_YD = 1;
+const OFFSETS = [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9, 1.2, -1.2, 1.5, -1.5];
 
 export type Walked = { ok: true; legs: number } | CycleStop;
 type Leg = { ok: true; stalled: boolean } | CycleStop;
@@ -58,10 +57,12 @@ async function travelLeg(run: CorpseRun, heading: Heading): Promise<Leg> {
     });
   }
   const stopped = (event: ControlEvent) => event.type === "movement_stopped";
-  const event = await run.motion.find(stopped, ms + STOP_MARGIN_MS, run.signal);
+  await run.motion.find(stopped, ms + STOP_MARGIN_MS, run.signal);
   const after = run.control.snapshot().pose;
-  const moved = after !== undefined && distance(before, after) > MOVED_EPS;
-  return { ok: true, stalled: !moved || BLOCKERS.has(event?.reason ?? "") };
+  const gained = after
+    ? distance(before, heading.corpse) - distance(after, heading.corpse)
+    : 0;
+  return { ok: true, stalled: gained < PROGRESS_YD };
 }
 
 function legMs(run: CorpseRun, range: number | undefined): number {

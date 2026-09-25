@@ -231,9 +231,10 @@ recorded cause instead of stopping the loop. A mid-fight death runs bounded
 recovery: release, one corpse query, then up to 40 `face` + `move forward`
 legs toward the corpse. Each leg takes its heading from the current pose and
 shortens so the ghost stops about 30 yd from the corpse, inside the 39 yd
-reclaim radius and away from a killer standing on it. A leg that does not
-move, or stops on `height_unresolved` or `obstructed`, retries at heading
-offsets of +/-0.4, 0.8 and 1.2 rad. After the reclaim delay the loop sends
+reclaim radius and away from a killer standing on it. A leg that gains less
+than 1 yd toward the corpse, for example one stopped at once by
+`height_unresolved`, retries at heading offsets of +/-0.3, 0.6, 0.9, 1.2 and
+1.5 rad; a leg that gains ground returns to the direct heading. After the reclaim delay the loop sends
 `reclaim-corpse`, waits for `alive`, and stops with `reclaimed`
 (`stopDetail` holds `pose`, `range` and `legs`). An accepted resurrection
 offer stops with `resurrected`. The remaining queue stays `queued`, because
