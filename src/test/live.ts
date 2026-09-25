@@ -7,6 +7,7 @@ import {
   type EntityEvent,
 } from "wow/client";
 import type { ControlEvent } from "wow/control";
+import type { RecoveryEvent } from "wow/recovery";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
@@ -562,4 +563,67 @@ describe("entity tracking", () => {
       await handle1.closed;
     }
   }, 15_000);
+});
+
+function waitUntil(check: () => boolean, timeoutMs = 10000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      clearInterval(poll);
+      reject(new Error("timeout waiting for condition"));
+    }, timeoutMs);
+    const poll = setInterval(() => {
+      if (!check()) return;
+      clearInterval(poll);
+      clearTimeout(deadline);
+      resolve();
+    }, 50);
+  });
+}
+
+describe("gameplay guards while alive", () => {
+  test("initial spells populate the learned list", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+
+    try {
+      await waitUntil(() => handle1.getCombatState().learned.length > 0);
+      expect(handle1.getCombatState().learned.length).toBeGreaterThan(0);
+    } finally {
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 20_000);
+
+  test("recovery and loot refuse while alive", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+    const events: RecoveryEvent[] = [];
+    handle1.onRecoveryEvent((e) => events.push(e));
+
+    try {
+      await waitUntil(() => handle1.getRecoveryState().life === "alive");
+      const state = handle1.getRecoveryState();
+      expect(state.health).toBeGreaterThan(0);
+      expect((state.flags ?? 0) & 0x10).toBe(0);
+
+      expect(() => handle1.releaseSpirit()).toThrow(
+        "Release requires authoritative dead state",
+      );
+      expect(() => handle1.reclaimCorpse()).toThrow(
+        "Cannot request reclaim: not_ghost",
+      );
+      expect(() => handle1.openLoot(0xf130000000000001n)).toThrow(
+        "Loot source is not an observed creature",
+      );
+
+      handle1.queryCorpse();
+      await waitUntil(() => events.some((e) => e.type === "corpse_observed"));
+      expect(handle1.getRecoveryState().corpse.status).toBe("absent");
+      expect(handle1.getRecoveryState().life).toBe("alive");
+    } finally {
+      handle1.onRecoveryEvent(undefined);
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 20_000);
 });
