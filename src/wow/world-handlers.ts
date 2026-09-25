@@ -596,7 +596,6 @@ export function queryEntityName(
       GameOpcode.CMSG_GAMEOBJECT_QUERY,
       buildGameObjectQuery(entry, guid),
     );
-    return;
   }
 }
 

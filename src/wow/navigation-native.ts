@@ -4,12 +4,12 @@ import { existsSync } from "node:fs";
 export type NativePoint = { x: number; y: number; z: number };
 
 export type NativeMap = {
-  loadAdtAt(x: number, y: number): void;
-  findHeights(x: number, y: number): number[];
-  findHeight(from: NativePoint, x: number, y: number): number;
-  lineOfSight(from: NativePoint, to: NativePoint): boolean;
-  findPath(from: NativePoint, to: NativePoint): NativePoint[];
-  close(): void;
+  loadAdtAt: (x: number, y: number) => void;
+  findHeights: (x: number, y: number) => number[];
+  findHeight: (from: NativePoint, x: number, y: number) => number;
+  lineOfSight: (from: NativePoint, to: NativePoint) => boolean;
+  findPath: (from: NativePoint, to: NativePoint) => NativePoint[];
+  close: () => void;
 };
 
 const GEOMETRY_REJECTION = Symbol("navigation_geometry");

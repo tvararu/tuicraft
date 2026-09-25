@@ -12,15 +12,15 @@ export type NavPoint = { x: number; y: number; z: number };
 export type GroundSample = NavPoint & { orientation: number };
 export type NavigationOptions = { dataPath: string; libraryPath: string };
 export type Navigation = {
-  plan(mapId: number, from: NavPoint, to: NavPoint): GroundRoute;
-  planGround(
+  plan: (mapId: number, from: NavPoint, to: NavPoint) => GroundRoute;
+  planGround: (
     mapId: number,
     from: NavPoint,
     to: { x: number; y: number },
-  ): GroundRoute;
-  height(mapId: number, x: number, y: number, from?: NavPoint): number;
-  clear(mapId: number, from: NavPoint, to: NavPoint): boolean;
-  close(): void;
+  ) => GroundRoute;
+  height: (mapId: number, x: number, y: number, from?: NavPoint) => number;
+  clear: (mapId: number, from: NavPoint, to: NavPoint) => boolean;
+  close: () => void;
 };
 
 const EXPANSION01 = 530;

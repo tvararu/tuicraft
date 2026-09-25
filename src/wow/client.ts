@@ -236,123 +236,123 @@ export type WalkTarget =
 
 export type WorldHandle = {
   closed: Promise<void>;
-  close(): void;
-  onMessage(cb: (msg: ChatMessage) => void): void;
-  sendWhisper(target: string, message: string): void;
-  sendSay(message: string): void;
-  sendYell(message: string): void;
-  sendGuild(message: string): void;
-  sendParty(message: string): void;
-  sendRaid(message: string): void;
-  sendEmote(message: string): void;
-  sendDnd(message: string): void;
-  sendAfk(message: string): void;
-  sendChannel(channel: string, message: string): void;
-  getChannel(index: number): string | undefined;
-  who(opts?: {
+  close: () => void;
+  onMessage: (cb: (msg: ChatMessage) => void) => void;
+  sendWhisper: (target: string, message: string) => void;
+  sendSay: (message: string) => void;
+  sendYell: (message: string) => void;
+  sendGuild: (message: string) => void;
+  sendParty: (message: string) => void;
+  sendRaid: (message: string) => void;
+  sendEmote: (message: string) => void;
+  sendDnd: (message: string) => void;
+  sendAfk: (message: string) => void;
+  sendChannel: (channel: string, message: string) => void;
+  getChannel: (index: number) => string | undefined;
+  who: (opts?: {
     name?: string;
     minLevel?: number;
     maxLevel?: number;
-  }): Promise<WhoResult[]>;
-  getLastChatMode(): ChatMode;
-  setLastChatMode(mode: ChatMode): void;
-  sendInCurrentMode(message: string): void;
-  invite(name: string): void;
-  uninvite(name: string): void;
-  leaveGroup(): void;
-  joinChannel(name: string, password?: string): void;
-  leaveChannel(name: string): void;
-  setLeader(name: string): void;
-  acceptInvite(): void;
-  declineInvite(): void;
-  onGroupEvent(cb: (event: GroupEvent) => void): void;
-  onEntityEvent(cb: (event: EntityEvent) => void): void;
-  onPacketError(cb: (opcode: number, err: Error) => void): void;
-  getNearbyEntities(): Entity[];
-  getFriends(): FriendEntry[];
-  addFriend(name: string): void;
-  removeFriend(name: string): void;
-  sendRoll(min: number, max: number): void;
-  onFriendEvent(cb: (event: FriendEvent) => void): void;
-  getIgnored(): IgnoreEntry[];
-  addIgnore(name: string): void;
-  removeIgnore(name: string): void;
-  onIgnoreEvent(cb: (event: IgnoreEvent) => void): void;
-  requestGuildRoster(): Promise<GuildRoster | undefined>;
-  onGuildEvent(cb: (event: GuildEvent) => void): void;
-  onDuelEvent(cb: (event: DuelEvent) => void): void;
-  guildInvite(name: string): void;
-  guildRemove(name: string): void;
-  guildLeave(): void;
-  guildPromote(name: string): void;
-  guildDemote(name: string): void;
-  guildLeader(name: string): void;
-  guildMotd(motd: string): void;
-  acceptGuildInvite(): void;
-  declineGuildInvite(): void;
-  getControlState(): ControlState;
-  move(direction: MovementDirection, durationMs: number): void;
-  face(orientation: number): void;
-  faceGuid(guid: bigint): void;
-  walkToward(
+  }) => Promise<WhoResult[]>;
+  getLastChatMode: () => ChatMode;
+  setLastChatMode: (mode: ChatMode) => void;
+  sendInCurrentMode: (message: string) => void;
+  invite: (name: string) => void;
+  uninvite: (name: string) => void;
+  leaveGroup: () => void;
+  joinChannel: (name: string, password?: string) => void;
+  leaveChannel: (name: string) => void;
+  setLeader: (name: string) => void;
+  acceptInvite: () => void;
+  declineInvite: () => void;
+  onGroupEvent: (cb: (event: GroupEvent) => void) => void;
+  onEntityEvent: (cb: (event: EntityEvent) => void) => void;
+  onPacketError: (cb: (opcode: number, err: Error) => void) => void;
+  getNearbyEntities: () => Entity[];
+  getFriends: () => FriendEntry[];
+  addFriend: (name: string) => void;
+  removeFriend: (name: string) => void;
+  sendRoll: (min: number, max: number) => void;
+  onFriendEvent: (cb: (event: FriendEvent) => void) => void;
+  getIgnored: () => IgnoreEntry[];
+  addIgnore: (name: string) => void;
+  removeIgnore: (name: string) => void;
+  onIgnoreEvent: (cb: (event: IgnoreEvent) => void) => void;
+  requestGuildRoster: () => Promise<GuildRoster | undefined>;
+  onGuildEvent: (cb: (event: GuildEvent) => void) => void;
+  onDuelEvent: (cb: (event: DuelEvent) => void) => void;
+  guildInvite: (name: string) => void;
+  guildRemove: (name: string) => void;
+  guildLeave: () => void;
+  guildPromote: (name: string) => void;
+  guildDemote: (name: string) => void;
+  guildLeader: (name: string) => void;
+  guildMotd: (motd: string) => void;
+  acceptGuildInvite: () => void;
+  declineGuildInvite: () => void;
+  getControlState: () => ControlState;
+  move: (direction: MovementDirection, durationMs: number) => void;
+  face: (orientation: number) => void;
+  faceGuid: (guid: bigint) => void;
+  walkToward: (
     target: WalkTarget,
     yards: number,
     signal?: AbortSignal,
-  ): Promise<WalkOutcome>;
-  selectTarget(guid: bigint): void;
-  halt(): void;
-  onControlEvent(cb: ((event: ControlEvent) => void) | undefined): void;
-  getCombatState(): CombatState;
-  getSpellbook(): Promise<SpellDefinition[]>;
-  cast(spellId: number, targetGuid: bigint): void;
-  attack(targetGuid: bigint): void;
-  cancelCast(): void;
-  stopAttack(): void;
-  startTactics(
+  ) => Promise<WalkOutcome>;
+  selectTarget: (guid: bigint) => void;
+  halt: () => void;
+  onControlEvent: (cb: ((event: ControlEvent) => void) | undefined) => void;
+  getCombatState: () => CombatState;
+  getSpellbook: () => Promise<SpellDefinition[]>;
+  cast: (spellId: number, targetGuid: bigint) => void;
+  attack: (targetGuid: bigint) => void;
+  cancelCast: () => void;
+  stopAttack: () => void;
+  startTactics: (
     targetGuid: bigint,
     instruction: string,
     signal?: AbortSignal,
     framing?: FramingVariant,
-  ): Promise<void>;
-  getTacticsState(): TacticsState;
-  goTo(x: number, y: number, z: number): void;
-  getNavigationState(): NavigationState;
-  onCombatEvent(cb: ((event: CombatEvent) => void) | undefined): void;
-  onTacticsEvent(cb: ((event: TacticsEvent) => void) | undefined): void;
-  getRecoveryState(): RecoveryState;
-  queryCorpse(): void;
-  releaseSpirit(): void;
-  reclaimCorpse(): void;
-  activateSpiritHealer(guid: bigint): void;
-  respondResurrection(accept: boolean): void;
-  onRecoveryEvent(cb: ((event: RecoveryEvent) => void) | undefined): void;
-  getQuestState(): QuestState;
-  talk(guid: bigint): void;
-  queryQuest(questId: number): void;
-  selectGossipOption(optionId: number, code?: string): void;
-  selectQuest(questId: number): void;
-  acceptQuest(): void;
-  completeQuest(questId: number): void;
-  requestQuestReward(): void;
-  chooseQuestReward(index: number): void;
-  abandonQuest(slot: number): void;
-  cancelInteraction(): void;
-  onQuestEvent(cb: ((event: QuestEvent) => void) | undefined): void;
-  getInventoryState(): InventoryState;
-  getRewardsState(): RewardsState;
-  openLoot(guid: bigint): void;
-  takeLoot(slot: number): void;
-  takeLootMoney(): void;
-  releaseLoot(): void;
-  onRewardsEvent(cb: ((event: RewardsEvent) => void) | undefined): void;
-  startCycle(
+  ) => Promise<void>;
+  getTacticsState: () => TacticsState;
+  goTo: (x: number, y: number, z: number) => void;
+  getNavigationState: () => NavigationState;
+  onCombatEvent: (cb: ((event: CombatEvent) => void) | undefined) => void;
+  onTacticsEvent: (cb: ((event: TacticsEvent) => void) | undefined) => void;
+  getRecoveryState: () => RecoveryState;
+  queryCorpse: () => void;
+  releaseSpirit: () => void;
+  reclaimCorpse: () => void;
+  activateSpiritHealer: (guid: bigint) => void;
+  respondResurrection: (accept: boolean) => void;
+  onRecoveryEvent: (cb: ((event: RecoveryEvent) => void) | undefined) => void;
+  getQuestState: () => QuestState;
+  talk: (guid: bigint) => void;
+  queryQuest: (questId: number) => void;
+  selectGossipOption: (optionId: number, code?: string) => void;
+  selectQuest: (questId: number) => void;
+  acceptQuest: () => void;
+  completeQuest: (questId: number) => void;
+  requestQuestReward: () => void;
+  chooseQuestReward: (index: number) => void;
+  abandonQuest: (slot: number) => void;
+  cancelInteraction: () => void;
+  onQuestEvent: (cb: ((event: QuestEvent) => void) | undefined) => void;
+  getInventoryState: () => InventoryState;
+  getRewardsState: () => RewardsState;
+  openLoot: (guid: bigint) => void;
+  takeLoot: (slot: number) => void;
+  takeLootMoney: () => void;
+  releaseLoot: () => void;
+  onRewardsEvent: (cb: ((event: RewardsEvent) => void) | undefined) => void;
+  startCycle: (
     guids: bigint[],
     instruction: string,
     maxStarts?: number,
-  ): Promise<void>;
-  stopCycle(): void;
-  getCycleState(): CycleState;
-  onCycleEvent(cb: ((event: CycleEvent) => void) | undefined): void;
+  ) => Promise<void>;
+  stopCycle: () => void;
+  getCycleState: () => CycleState;
+  onCycleEvent: (cb: ((event: CycleEvent) => void) | undefined) => void;
 };
 
 export type WorldConn = {
@@ -1063,7 +1063,7 @@ function navigateTo(rt: Runtimes, destination: NavPoint): void {
     const raw = error instanceof Error ? error.message : "navigation_failed";
     const refusal = classifyNavigationRefusal(raw);
     rt.control.navigationError(destination, raw, refusal);
-    throw new Error(`${refusal}: ${raw}`);
+    throw new Error(`${refusal}: ${raw}`, { cause: error });
   }
 }
 

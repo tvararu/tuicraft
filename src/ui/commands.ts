@@ -205,7 +205,6 @@ function parseTabled(
       : { message: input, type: "say" };
   const bareType = BARE_COMMANDS[cmd];
   if (bareType !== undefined) return { type: bareType };
-  return;
 }
 
 export function parseCommand(input: string): Command {

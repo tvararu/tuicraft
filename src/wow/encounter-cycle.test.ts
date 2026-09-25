@@ -483,7 +483,7 @@ function fakeRecovery(config: {
 }
 
 type Wired<E> = {
-  onEvent(callback: ((event: E) => void) | undefined): void;
+  onEvent: (callback: ((event: E) => void) | undefined) => void;
 };
 
 function makeCycle(

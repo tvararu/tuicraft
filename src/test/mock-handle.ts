@@ -19,20 +19,20 @@ import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 
 export function createMockHandle(): WorldHandle & {
-  triggerMessage(msg: ChatMessage): void;
-  triggerGroupEvent(event: GroupEvent): void;
-  triggerDuelEvent(event: DuelEvent): void;
-  triggerEntityEvent(event: EntityEvent): void;
-  triggerFriendEvent(event: FriendEvent): void;
-  triggerIgnoreEvent(event: IgnoreEvent): void;
-  triggerGuildEvent(event: GuildEvent): void;
-  triggerControlEvent(event: ControlEvent): void;
-  triggerCombatEvent(event: CombatEvent): void;
-  triggerTacticsEvent(event: TacticsEvent): void;
-  triggerRecoveryEvent(event: RecoveryEvent): void;
-  triggerQuestEvent(event: QuestEvent): void;
-  triggerRewardsEvent(event: RewardsEvent): void;
-  resolveClosed(): void;
+  triggerMessage: (msg: ChatMessage) => void;
+  triggerGroupEvent: (event: GroupEvent) => void;
+  triggerDuelEvent: (event: DuelEvent) => void;
+  triggerEntityEvent: (event: EntityEvent) => void;
+  triggerFriendEvent: (event: FriendEvent) => void;
+  triggerIgnoreEvent: (event: IgnoreEvent) => void;
+  triggerGuildEvent: (event: GuildEvent) => void;
+  triggerControlEvent: (event: ControlEvent) => void;
+  triggerCombatEvent: (event: CombatEvent) => void;
+  triggerTacticsEvent: (event: TacticsEvent) => void;
+  triggerRecoveryEvent: (event: RecoveryEvent) => void;
+  triggerQuestEvent: (event: QuestEvent) => void;
+  triggerRewardsEvent: (event: RewardsEvent) => void;
+  resolveClosed: () => void;
 } {
   let messageCb: ((msg: ChatMessage) => void) | undefined;
   let groupEventCb: ((event: GroupEvent) => void) | undefined;

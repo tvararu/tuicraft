@@ -34,8 +34,8 @@ import type { ControlState } from "wow/control";
 export type EventEntry = { text: string | undefined; json: string };
 
 export type IpcSocket = {
-  write(data: string | Uint8Array): number;
-  end(): void;
+  write: (data: string | Uint8Array) => number;
+  end: () => void;
 };
 
 export function writeLines(socket: IpcSocket, lines: string[]): void {
