@@ -134,9 +134,6 @@ Collect for the PR's Proof section:
   `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
   `WOW_PASSWORD_2` and `WOW_CHARACTER_2`; the JSON from `soap create` has
   `.account`, `.password` and `.character`. Delete both afterwards.
-  "Forced teleport relocates and recovers" is known to fail in the full
-  suite and pass alone: rerun it alone with `-t "forced teleport"` before
-  calling it a regression.
 
 ## 7. Clean history
 
