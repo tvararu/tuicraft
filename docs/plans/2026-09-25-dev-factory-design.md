@@ -168,8 +168,9 @@ only concurrency guards.
    `blockedBy` list has an open issue (Symphony's "not blocked" rule) or
    whose latest `ready` was not added by `tvararu`. Swap `ready` for
    `agent:working`, then re-read the issue to detect a race with another run.
-2. Start with `mise trust -y && mise bundle`: automation worktrees do not run
-   the repo setup script (phase 0).
+2. Setup: until the factory automations run the committed `orca.yaml` setup
+   (see phase 0 finding 1), the prompt starts with
+   `mise trust -y && mise bundle`. Drop that line once they do.
 3. Work in the run's fresh worktree (`--workspace-mode new-per-run`). Check
    out `factory/<issue>-<slug>` as the worktree's branch: a new branch from
    `origin/main`, or for rework the existing remote branch. Then run
@@ -721,10 +722,20 @@ Gaps found, and how the design closes them:
   `~/.config/orca/profiles/local-default/orca-data.json`), which would also
   change Theo's interactive sessions. omp has no settings key for a session
   time limit, only the `--max-time` flag. Fix: the reaper enforces the cap.
-- **The setup script does not run.** The run 1 worktree had no
+- **The setup script does not run by default.** The run 1 worktree had no
   `node_modules` five minutes after creation, although the repo's Orca setup
   (`mise trust -y && mise bundle`) is `run-by-default` for
-  `worktree create`. Fix: every role prompt starts with that command.
+  `worktree create`. The coordinator later found why: automation worktrees
+  use their own `setupDecision`, which defaults to `skip`. With
+  `setupDecision: run` (the Automations page toggle "Run setup for each new
+  workspace"), a run executes the repo's `orca.yaml` setup, and with
+  `setupAgentStartupPolicy: wait-for-setup` the agent waits for it (PR
+  #86). `orca-ide automations create`/`edit` have no flag for it, and
+  `automations list --json` does not show it, so it is set in the Orca UI.
+  Fix: once #86 is on `main`, turn the toggle on for the four `factory-*`
+  automations, check that one run's worktree has `node_modules` before its
+  prompt starts, then drop the `mise trust -y && mise bundle` line from the
+  role prompts.
 - **No usage data.** Every run recorded `usage.status: unavailable`,
   `provider_unsupported`. The token budget needs another data source (see
   finding 2).
