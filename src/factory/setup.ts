@@ -39,7 +39,7 @@ export type Step =
   | { kind: "ok"; id: string; spec: Spec };
 
 const provider = "omp";
-const baseBranch = "main";
+const baseBranch = "origin/main";
 const precheckTimeout = 60;
 
 export const desiredLabels: Label[] = [

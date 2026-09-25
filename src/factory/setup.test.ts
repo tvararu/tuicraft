@@ -12,7 +12,7 @@ import {
 function recorded(spec: Spec, over: Partial<Automation> = {}): Automation {
   return {
     agentId: "omp",
-    baseBranch: "main",
+    baseBranch: "origin/main",
     enabled: false,
     id: `id-${spec.name}`,
     name: spec.name,
