@@ -38,7 +38,9 @@ function fakeLoot(config: {
   releaseOnly?: boolean;
   deferClose?: boolean;
   deferTake?: boolean;
+  aliveOpens?: number;
 }) {
+  let aliveOpens = config.aliveOpens ?? 0;
   const offeredSlots = config.items ?? [];
   const takenSlots: number[] = [];
   let moneyRequested = false;
@@ -123,6 +125,8 @@ function fakeLoot(config: {
       return state();
     },
     open(_guid: bigint): RewardsState {
+      if (aliveOpens-- > 0)
+        throw new Error("Loot source is not authoritatively dead");
       phase = "opening";
       queueMicrotask(() => {
         if (config.releaseOnly) {
@@ -762,6 +766,48 @@ test("unanswered loot take stops rather than reporting success", async () => {
     jest.useRealTimers();
   }
 });
+test("loot waits for the corpse health update after kill credit", async () => {
+  jest.useFakeTimers();
+  try {
+    const loot = fakeLoot({ items: [4], aliveOpens: 2 });
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
+      loot,
+      recovery: fakeRecovery({ life: ["alive"] }),
+      control: fakeControl(),
+      now: () => 0,
+    });
+    const running = runtime.start({ guids: [2n], instruction: "fight" });
+    await advanceUntilSettled(running, 2000);
+    expect(loot.taken()).toEqual([4]);
+    expect(runtime.snapshot().stopCause).toBe("queue_exhausted");
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("a corpse that never dies stops the cycle after the settle time", async () => {
+  jest.useFakeTimers();
+  try {
+    const loot = fakeLoot({ items: [4], aliveOpens: 1000 });
+    const runtime = makeCycle({
+      tactics: fakeTactics([]),
+      loot,
+      recovery: fakeRecovery({ life: ["alive"] }),
+      control: fakeControl(),
+      now: () => 0,
+    });
+    const running = runtime.start({ guids: [2n], instruction: "fight" });
+    await advanceUntilSettled(running, 7000);
+    expect(loot.taken()).toEqual([]);
+    expect(runtime.snapshot().stopCause).toBe(
+      "loot_denied:Loot source is not authoritatively dead",
+    );
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("second take waits for first confirmation instead of racing", async () => {
   const order: string[] = [];
   const loot = fakeLoot({ items: [4, 7] });

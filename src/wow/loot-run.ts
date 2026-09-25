@@ -1,3 +1,4 @@
+import { pause } from "lib/abort";
 import { messageOf } from "lib/errors";
 import { cycleStop as stop, type CycleStop } from "wow/cycle-stop";
 import type { CycleDeps, CycleLootRecord } from "wow/encounter-cycle";
@@ -5,6 +6,11 @@ import type { EventWaiter } from "wow/event-waiter";
 import type { RewardsEvent, RewardsState } from "wow/rewards";
 
 const LOOT_SETTLE_MS = 5000;
+const CORPSE_POLL_MS = 200;
+const CORPSE_PENDING = new Set([
+  "loot_denied:Loot source is not authoritatively dead",
+  "loot_denied:Creature has no observed lootable flag",
+]);
 
 export type LootRun = Pick<CycleDeps, "rewards"> & {
   events: EventWaiter<RewardsEvent>;
@@ -44,8 +50,20 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   return { ok: true, record };
 }
 
+async function awaitCorpse(
+  run: LootRun,
+  guid: bigint,
+): Promise<CycleStop | undefined> {
+  for (let waited = 0; ; waited += CORPSE_POLL_MS) {
+    const refused = request(() => run.rewards.open(guid));
+    if (!refused || !CORPSE_PENDING.has(refused.cause)) return refused;
+    if (waited >= LOOT_SETTLE_MS) return refused;
+    await pause(CORPSE_POLL_MS, run.signal);
+  }
+}
+
 async function openLoot(run: LootRun, guid: bigint): Promise<Opened> {
-  const refused = request(() => run.rewards.open(guid));
+  const refused = await awaitCorpse(run, guid);
   if (refused) return refused;
   for (;;) {
     const event = await run.events.next(LOOT_SETTLE_MS, run.signal);
