@@ -624,8 +624,14 @@ code to keep.
 ruleset change and the AGENTS.md cutover. Exit: several real issues land
 through the loop with no human code work. Theo only adds `ready` and approves.
 
-Phase 1 build (2026-09-25), in `src/factory/`, run as
-`bun ~/code/tuicraft/src/factory/main.ts <command>` from the main checkout:
+Phase 1 build (2026-09-25), in `src/factory/`. Automations and the reaper
+run it from a dedicated clone, the runner,
+`bun ~/.local/share/tuicraft-factory/runner/src/factory/main.ts <command>`.
+It is not run from the main checkout, because that is Theo's and the
+coordinator's working tree and may lag `main`. Every reaper pass first
+fetches the runner and resets it hard to `origin/main` (`ExecStartPre` in
+the unit), so landed factory changes take effect within 10 minutes. The
+runner is a plain clone, not an Orca worktree, so the reaper never sees it.
 
 | Piece | Files | Verified |
 |---|---|---|
@@ -651,10 +657,8 @@ Cutover progress (Theo's go, 2026-09-25):
   The reaper units are installed in `~/.config/systemd/user/`, and a dry run
   under `systemd-run --user` with the unit's `PATH` succeeded. The wrapper
   is installed as `~/.local/bin/omp-factory`.
-- Waiting for integration: the timer, the prechecks and the prompts all run
-  code from the main checkout, which has no `src/factory/` until the
-  coordinator lands this branch. Enable the timer after that
-  (`systemctl --user enable --now tuicraft-factory-reaper.timer`).
+- Landed on `main` 2026-09-25 (`d6f34cc`, pushed by this worktree with
+  Theo's go). The runner clone and the timer followed; see below.
 - Done (2026-09-25): the Orca host settings. Theo's Mac app edits only its
   own local settings, not the VM runtime's, and the runtime's
   `settings.update` RPC does not accept `agentCmdOverrides` or the sleep
