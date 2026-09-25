@@ -2,6 +2,7 @@ import {
   factoryStateDir,
   labels,
   pm,
+  pmApproval,
   type Role,
   repoSlug,
   wip,
@@ -81,7 +82,7 @@ export function decideReviewer(issues: Issue[]): Decision {
   return { ok: true, out: { issue: pick.issue.number, pr: pick.pr.number } };
 }
 
-export function decideMerger(issues: Issue[]): Decision {
+export function decideMerger(issues: Issue[], approval = pmApproval): Decision {
   const landing = issues.find((issue) => issue.labels.includes(labels.landing));
   if (landing) return { ok: false, why: `#${landing.number} is landing` };
   const merging = byPriority(
@@ -89,12 +90,16 @@ export function decideMerger(issues: Issue[]): Decision {
   );
   const pairs = merging.map((issue) => ({
     issue,
-    pr: issue.prs.find(landable),
+    pr: issue.prs.find((pr) => landable(pr, approval)),
   }));
   const pick = pairs.find((pair) => pair.pr);
   if (!pick?.pr)
-    return { ok: false, why: "no approved PR with passing statuses" };
-  return { ok: true, out: { issue: pick.issue.number, pr: pick.pr.number } };
+    return { ok: false, why: "no landable PR with passing statuses" };
+  const out = { approval: approval ? "required" : "not-required" };
+  return {
+    ok: true,
+    out: { ...out, issue: pick.issue.number, pr: pick.pr.number },
+  };
 }
 
 export function decideQa(remote: string, stored: string | null): Decision {
@@ -107,12 +112,12 @@ function reviewable(pr: Pr): boolean {
   return pr.state === "OPEN" && !pr.draft;
 }
 
-function landable(pr: Pr): boolean {
+function landable(pr: Pr, approval: boolean): boolean {
   const passed = (name: string) =>
     pr.statuses.some((s) => s.name === name && s.state === "SUCCESS");
   return (
     reviewable(pr) &&
-    pr.decision === "APPROVED" &&
+    (!approval || pr.decision === "APPROVED") &&
     passed("factory/ci") &&
     passed("factory/review")
   );

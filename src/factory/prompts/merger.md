@@ -17,8 +17,11 @@ final reply.
   `--force-with-lease` pinned to the SHA you read.
 - Land only with `gh pr merge <M> --rebase --match-head-commit <sha>`. Never
   squash, never merge commits, never `--admin`.
-- Approval means an `APPROVED` review by `tvararu` on github.com. Never
-  approve, never sign or comment as Theo.
+- The precheck prints `"approval"`. With `"required"`, approval means an
+  `APPROVED` review by `tvararu` on github.com. With `"not-required"`,
+  Theo's approval gate is off and a PR lands on its green `factory/*` and
+  `signoff/ci` statuses alone. Either way, never approve, and never sign or
+  comment as Theo.
 - Never land an issue that has `needs:pm`, an open blocked-by issue, or a
   failing or missing `factory/ci` or `factory/review` status.
 - Never create Orca worktrees. Never remove this worktree: the reaper does.
@@ -40,12 +43,13 @@ final reply.
 List issues with `agent:merging` and without `needs:pm`. For each, find its
 open PR (head branch `factory/<issue>-…`) and keep it only if:
 
-- `gh pr view M --json reviewDecision,reviews,headRefOid,headRefName` shows
+- approval `"required"` only:
+  `gh pr view M --json reviewDecision,reviews,headRefOid,headRefName` shows
   `reviewDecision == "APPROVED"` with an approving review by `tvararu`;
 - `gh api repos/tvararu/tuicraft/commits/<headRefOid>/status` has
-  `factory/ci` and `factory/review` both `success`. Exception: after a
-  content-changing rebase (step 3.6) the head has only `factory/ci`. If
-  Theo's latest `APPROVED` review
+  `factory/ci` and `factory/review` both `success`. Exception (approval
+  `"required"` only): after a content-changing rebase (step 3.6) the head
+  has only `factory/ci`. If Theo's latest `APPROVED` review
   (`gh api repos/tvararu/tuicraft/pulls/M/reviews`) has `commit_id` equal
   to the head, he re-approved it: post `factory/review` success with
   description "re-approved by tvararu after rebase" and keep it;
@@ -77,7 +81,7 @@ the one-hour cap:
    conflict with what on `main`, swap `agent:merging` for `agent:rework`,
    remove `agent:landing`, and move on to the next candidate.
 4. Content check: `git range-diff $oldbase..$old origin/main..HEAD`. Every
-   pair must be `=`. Any `!`, `<` or `>` line means the code Theo approved
+   pair must be `=`. Any `!`, `<` or `>` line means the reviewed code
    changed.
 5. `new=$(git rev-parse HEAD)`. Run `mise ci`. If it fails, do not push:
    comment the failure on the PR, swap `agent:merging` for `agent:rework`,
@@ -85,10 +89,13 @@ the one-hour cap:
    push:
    `git push --force-with-lease=<branch>:$old origin HEAD:<branch>` (the
    pre-push hook runs `mise ci` again; never bypass it).
-6. If the content check found a change: post `factory/ci` success on `$new`,
-   comment the range-diff on the PR and ask Theo to re-approve, add
-   `needs:pm`, remove `agent:landing`, keep `agent:merging`, and move on.
-   Do not merge it. Theo removes `needs:pm` once he has re-approved.
+6. If the content check found a change: post `factory/ci` success on `$new`
+   and comment the range-diff on the PR. Remove `agent:landing`, and do not
+   merge it. With approval `"required"`: ask Theo to re-approve, add
+   `needs:pm`, and keep `agent:merging`; Theo removes `needs:pm` once he has
+   re-approved. With approval `"not-required"`: swap `agent:merging` for
+   `agent:review`, so a reviewer checks the rebased code afresh. Then move
+   on.
 7. Statuses on the new head:
    `gh api repos/tvararu/tuicraft/statuses/$new -f state=success -f context=factory/ci -f description="mise ci passed after rebase"`
    and
