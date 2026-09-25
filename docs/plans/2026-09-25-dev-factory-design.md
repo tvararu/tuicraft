@@ -299,7 +299,8 @@ checkout.** A systemd user timer runs it every 10 minutes, from the main
 checkout, never from a worktree it might delete. Each pass:
 
 1. `auto-*` worktrees. When the run is `completed`, or is older than its
-   role's time cap (proposed: worker 3 h, QA 2 h, reviewer and merger 1 h):
+   role's time cap (worker 3 h, QA 2 h, reviewer and merger 1 h; Theo left
+   the choice to the factory, 2026-09-25, tune from phase 1 run times):
    - If the tree is clean and every commit is on a remote branch
      (`git rev-list <branch> --not --remotes` is empty), run
      `orca-ide worktree rm`.
@@ -327,7 +328,7 @@ checkout, never from a worktree it might delete. Each pass:
      rebuildable allowlist (`node_modules`, `dist`, `coverage`) also count
      as dirty. `git worktree remove` deletes ignored files silently, and
      worktree `tmp/` directories hold real notes.
-   - **Idle for more than N hours** (proposed N = 12). The newest
+   - **Idle for more than N hours** (N = 12, factory default). The newest
      `lastOutputAt` of the worktree's terminals (`orca-ide terminal list`)
      and the worktree's `lastActivityAt` (`orca-ide worktree list`) are
      both older than N hours.
@@ -774,8 +775,9 @@ Rules for the factory's SOAP helper, from the report:
   [Orca integration](#orca-integration) item 5.
 - ~~Where do SOAP credentials live?~~ `~/.config/tuicraft-factory/soap.env`,
   mode 600, outside every worktree (provisioned by t1).
-- Which extra presets should t1 build (the report suggests `warrior10`/`80`,
-  `shaman10`, `dk55`)? Only once an issue needs one.
+- ~~Which extra presets should t1 build?~~ None for now (Theo, 2026-09-25).
+  If an issue needs another class or zone, the worker raises it with
+  `needs:pm` and Theo relays the request to t1.
 - Does a force-push rebase dismiss Theo's approval even with "dismiss stale
   approvals" off, and does "require up to date" plus rebase-merge land
   cleanly? Check on the first factory PR.
@@ -790,8 +792,9 @@ Rules for the factory's SOAP helper, from the report:
   Where would it live so worktrees don't include it?
 - ~~Leftover SOAP accounts from crashed runs?~~ The reaper sweeps them by name
   prefix and age.
-- Reaper thresholds: is N = 12 idle hours right for non-factory worktrees,
-  and are the proposed per-role time caps right? Theo sets both at cutover.
+- ~~Reaper thresholds?~~ Theo left them to the factory: N = 12 idle hours,
+  and time caps of 3 h (worker), 2 h (QA) and 1 h (reviewer, merger). The
+  reaper report shows actual run times, so tune from those.
 - Does an idle omp TUI keep `lastOutputAt` still? If it repaints, the idle
   signal needs another source, such as the agent status. Check in phase 1
   before the reaper removes anything that is not `auto-*`.
