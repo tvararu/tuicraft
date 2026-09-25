@@ -1,45 +1,35 @@
 import { test, expect, describe } from "bun:test";
-import {
-  configDir,
-  runtimeDir,
-  stateDir,
-  socketPath,
-  pidPath,
-  configPath,
-  logPath,
-} from "lib/paths";
+import { resolvePaths } from "lib/paths";
 
-describe("paths", () => {
-  test("configDir defaults to ~/.config/tuicraft", () => {
-    const dir = configDir();
-    expect(dir).toMatch(/\/tuicraft$/);
-    expect(dir).toContain("config");
+describe("resolvePaths", () => {
+  test("honours XDG directories", () => {
+    const paths = resolvePaths({
+      XDG_CONFIG_HOME: "/cfg",
+      XDG_RUNTIME_DIR: "/run/user/7",
+      XDG_STATE_HOME: "/state",
+    });
+    expect(paths).toEqual({
+      configDir: "/cfg/tuicraft",
+      configPath: "/cfg/tuicraft/config.toml",
+      logPath: "/state/tuicraft/session.log",
+      pidPath: "/run/user/7/tuicraft/pid",
+      runtimeDir: "/run/user/7/tuicraft",
+      socketPath: "/run/user/7/tuicraft/sock",
+      stateDir: "/state/tuicraft",
+    });
   });
 
-  test("runtimeDir includes uid", () => {
-    const dir = runtimeDir();
-    expect(dir).toMatch(/tuicraft-\d+$/);
+  test("falls back to home and a uid-scoped temp directory", () => {
+    const paths = resolvePaths({});
+    expect(paths.configDir).toMatch(/\/\.config\/tuicraft$/);
+    expect(paths.stateDir).toMatch(/\/\.local\/state\/tuicraft$/);
+    expect(paths.runtimeDir).toMatch(/\/tuicraft-\d+$/);
+    expect(paths.socketPath).toBe(`${paths.runtimeDir}/sock`);
   });
 
-  test("stateDir defaults to ~/.local/state/tuicraft", () => {
-    const dir = stateDir();
-    expect(dir).toMatch(/\/tuicraft$/);
-    expect(dir).toContain("state");
-  });
-
-  test("socketPath returns runtimeDir/sock", () => {
-    expect(socketPath()).toBe(`${runtimeDir()}/sock`);
-  });
-
-  test("pidPath returns runtimeDir/pid", () => {
-    expect(pidPath()).toBe(`${runtimeDir()}/pid`);
-  });
-
-  test("configPath returns configDir/config.toml", () => {
-    expect(configPath()).toBe(`${configDir()}/config.toml`);
-  });
-
-  test("logPath returns stateDir/session.log", () => {
-    expect(logPath()).toBe(`${stateDir()}/session.log`);
+  test("treats empty XDG values as unset", () => {
+    const paths = resolvePaths({ XDG_CONFIG_HOME: "", XDG_STATE_HOME: "" });
+    expect(paths.configDir).toMatch(/\/\.config\/tuicraft$/);
+    expect(paths.stateDir).toMatch(/\/\.local\/state\/tuicraft$/);
   });
 });

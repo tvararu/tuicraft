@@ -1,24 +1,13 @@
-import { mock, jest, test, expect, describe, afterEach } from "bun:test";
+import { sendToSocket, ensureDaemon } from "cli/ipc";
+import { pathsUnder } from "test/temp-paths";
+import { jest, test, expect, describe, afterEach } from "bun:test";
 import { writeFile, mkdir, rm, unlink } from "node:fs/promises";
 
-const tmpDir = `./tmp/cli-ipc-${Date.now()}`;
-const uid = process.getuid?.() ?? 0;
-const rtDir = `${tmpDir}/tuicraft-${uid}`;
-const sockPath = `${rtDir}/sock`;
-
-mock.module("lib/paths", () => ({
-  configDir: () => `${tmpDir}/config/tuicraft`,
-  runtimeDir: () => rtDir,
-  stateDir: () => `${tmpDir}/state/tuicraft`,
-  socketPath: () => sockPath,
-  pidPath: () => `${rtDir}/pid`,
-  configPath: () => `${tmpDir}/config/tuicraft/config.toml`,
-  logPath: () => `${tmpDir}/state/tuicraft/session.log`,
-}));
+const paths = pathsUnder(`./tmp/cli-ipc-${Date.now()}`);
+const rtDir = paths.runtimeDir;
+const sockPath = paths.socketPath;
 
 await mkdir(rtDir, { recursive: true });
-
-const { sendToSocket, ensureDaemon } = await import("cli/ipc");
 
 const origSpawn = Bun.spawn;
 const origSleep = Bun.sleep;
@@ -183,7 +172,7 @@ describe("sendToSocket", () => {
 describe("ensureDaemon", () => {
   test("returns immediately when daemon is already running", async () => {
     listenStatus(sockPath);
-    await ensureDaemon();
+    await ensureDaemon(paths);
   });
 
   test("cleans up stale socket and polls until new socket appears", async () => {
@@ -200,7 +189,7 @@ describe("ensureDaemon", () => {
       }
     }) as unknown as typeof Bun.sleep;
 
-    await ensureDaemon();
+    await ensureDaemon(paths);
     expect(Bun.spawn).toHaveBeenCalled();
   });
 
@@ -218,7 +207,7 @@ describe("ensureDaemon", () => {
       }
     }) as unknown as typeof Bun.sleep;
 
-    await ensureDaemon();
+    await ensureDaemon(paths);
     expect(Bun.spawn).toHaveBeenCalled();
   });
 
@@ -226,7 +215,7 @@ describe("ensureDaemon", () => {
     Bun.spawn = jest.fn(() => fakeProc()) as unknown as typeof Bun.spawn;
     Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
 
-    await expect(ensureDaemon()).rejects.toThrow(
+    await expect(ensureDaemon(paths)).rejects.toThrow(
       "Daemon failed to start within 30 seconds",
     );
   });
@@ -237,7 +226,7 @@ describe("ensureDaemon", () => {
     ) as unknown as typeof Bun.spawn;
     Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
 
-    await expect(ensureDaemon()).rejects.toThrow(
+    await expect(ensureDaemon(paths)).rejects.toThrow(
       "Daemon failed to start within 30 seconds:\nbind EADDRINUSE",
     );
   });
@@ -248,7 +237,7 @@ describe("ensureDaemon", () => {
     ) as unknown as typeof Bun.spawn;
     Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
 
-    await expect(ensureDaemon()).rejects.toThrow(
+    await expect(ensureDaemon(paths)).rejects.toThrow(
       "Daemon failed to start within 30 seconds:\nbind EADDRINUSE",
     );
   });
@@ -259,7 +248,7 @@ describe("ensureDaemon", () => {
     ) as unknown as typeof Bun.spawn;
     Bun.sleep = jest.fn(async () => {}) as unknown as typeof Bun.sleep;
 
-    await expect(ensureDaemon()).rejects.toThrow(
+    await expect(ensureDaemon(paths)).rejects.toThrow(
       "Daemon failed to start within 30 seconds",
     );
   });

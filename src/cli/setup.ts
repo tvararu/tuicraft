@@ -3,6 +3,7 @@ import {
   type Interface as ReadlineInterface,
 } from "node:readline";
 import { type Config, writeConfig } from "lib/config";
+import { type Paths, resolvePaths } from "lib/paths";
 
 type CreateInterfaceFn = typeof createInterface;
 type WriteFn = NodeJS.WritableStream["write"];
@@ -98,10 +99,10 @@ export async function runSetupWizard(
 export async function runSetup(
   args: string[],
   factory?: CreateInterfaceFn,
+  paths: Paths = resolvePaths(),
 ): Promise<void> {
   const hasFlags = args.some((a) => a.startsWith("--"));
   const cfg = hasFlags ? parseSetupFlags(args) : await runSetupWizard(factory);
-  await writeConfig(cfg);
-  const { configPath } = await import("lib/paths");
-  console.log(`Config saved to ${configPath()}`);
+  await writeConfig(cfg, paths);
+  console.log(`Config saved to ${paths.configPath}`);
 }

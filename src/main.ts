@@ -25,7 +25,7 @@ import {
   type Inspection,
 } from "cli/request";
 import { messageOf } from "lib/errors";
-import { socketPath } from "lib/paths";
+import { resolvePaths } from "lib/paths";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
 };
@@ -166,9 +166,7 @@ async function main() {
       const { authWithRetry } = await import("wow/auth");
       const { worldSession } = await import("wow/client");
       const { readConfig, clientConfig } = await import("lib/config");
-      const { configPath } = await import("lib/paths");
-
-      if (!(await Bun.file(configPath()).exists())) {
+      if (!(await Bun.file(resolvePaths().configPath).exists())) {
         if (!process.stdin.isTTY) {
           throw new Error(
             "No config found. Run 'tuicraft setup' to create one.",
@@ -289,7 +287,7 @@ async function main() {
       } catch (error) {
         if (!jsonRequested()) console.log("Daemon is not running.");
         else {
-          const absent = await access(socketPath())
+          const absent = await access(resolvePaths().socketPath)
             .then(() => false)
             .catch(
               (probeError: unknown) =>
@@ -329,8 +327,7 @@ async function main() {
       break;
     }
     case "logs": {
-      const { logPath } = await import("lib/paths");
-      const file = Bun.file(logPath());
+      const file = Bun.file(resolvePaths().logPath);
       if (await file.exists()) {
         console.log(await file.text());
       } else {

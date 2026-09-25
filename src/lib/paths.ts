@@ -1,35 +1,31 @@
-import { tmpdir, homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 
-export function configDir(): string {
-  const xdg = process.env["XDG_CONFIG_HOME"];
-  const base = xdg || `${homedir()}/.config`;
-  return `${base}/tuicraft`;
-}
+export type Paths = {
+  configDir: string;
+  configPath: string;
+  logPath: string;
+  pidPath: string;
+  runtimeDir: string;
+  socketPath: string;
+  stateDir: string;
+};
 
-export function runtimeDir(): string {
-  const xdg = process.env["XDG_RUNTIME_DIR"];
-  if (xdg) return `${xdg}/tuicraft`;
-  return `${tmpdir()}/tuicraft-${process.getuid!()}`;
-}
+export type PathEnv = Record<string, string | undefined>;
 
-export function stateDir(): string {
-  const xdg = process.env["XDG_STATE_HOME"];
-  const base = xdg || `${homedir()}/.local/state`;
-  return `${base}/tuicraft`;
-}
-
-export function socketPath(): string {
-  return `${runtimeDir()}/sock`;
-}
-
-export function pidPath(): string {
-  return `${runtimeDir()}/pid`;
-}
-
-export function configPath(): string {
-  return `${configDir()}/config.toml`;
-}
-
-export function logPath(): string {
-  return `${stateDir()}/session.log`;
+export function resolvePaths(env: PathEnv = Bun.env): Paths {
+  const configDir = `${env["XDG_CONFIG_HOME"] || `${homedir()}/.config`}/tuicraft`;
+  const runtimeBase = env["XDG_RUNTIME_DIR"];
+  const runtimeDir = runtimeBase
+    ? `${runtimeBase}/tuicraft`
+    : `${tmpdir()}/tuicraft-${process.getuid?.() ?? 0}`;
+  const stateDir = `${env["XDG_STATE_HOME"] || `${homedir()}/.local/state`}/tuicraft`;
+  return {
+    configDir,
+    configPath: `${configDir}/config.toml`,
+    logPath: `${stateDir}/session.log`,
+    pidPath: `${runtimeDir}/pid`,
+    runtimeDir,
+    socketPath: `${runtimeDir}/sock`,
+    stateDir,
+  };
 }

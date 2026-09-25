@@ -1,3 +1,4 @@
+import { type Paths, resolvePaths } from "lib/paths";
 export type Config = {
   account: string;
   password: string;
@@ -73,9 +74,10 @@ export function serializeConfig(cfg: Config): string {
     .join("\n");
 }
 
-export async function readConfig(): Promise<Config> {
-  const { configPath } = await import("lib/paths");
-  const file = Bun.file(configPath());
+export async function readConfig(
+  paths: Paths = resolvePaths(),
+): Promise<Config> {
+  const file = Bun.file(paths.configPath);
   if (!(await file.exists())) {
     throw new Error(
       "No config found. Run 'tuicraft setup' or 'tuicraft' interactively.",
@@ -84,11 +86,15 @@ export async function readConfig(): Promise<Config> {
   return parseConfig(await file.text());
 }
 
-export async function writeConfig(cfg: Config): Promise<void> {
-  const { configPath, configDir } = await import("lib/paths");
+export async function writeConfig(
+  cfg: Config,
+  paths: Paths = resolvePaths(),
+): Promise<void> {
   const { mkdir, writeFile } = await import("node:fs/promises");
-  await mkdir(configDir(), { recursive: true });
-  await writeFile(configPath(), serializeConfig(cfg) + "\n", { mode: 0o600 });
+  await mkdir(paths.configDir, { recursive: true });
+  await writeFile(paths.configPath, serializeConfig(cfg) + "\n", {
+    mode: 0o600,
+  });
 }
 
 export function clientConfig(cfg: Config) {
