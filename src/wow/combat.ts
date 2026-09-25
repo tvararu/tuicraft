@@ -1,12 +1,9 @@
 import { AuraStore, type CombatAura } from "wow/aura-store";
+import { CombatCasts } from "wow/combat-casts";
+import { combatUnitOf } from "wow/combat-unit";
 import type { ControlPose } from "wow/control";
 import { type CombatCooldown, CooldownStore } from "wow/cooldown-store";
-import {
-  type EntityLookup,
-  fieldOf,
-  isUnit,
-  type Position,
-} from "wow/entity-store";
+import { type EntityLookup, isUnit, type Position } from "wow/entity-store";
 import {
   type CombatPose,
   MotionStore,
@@ -20,24 +17,20 @@ import {
   buildAttackSwing,
   type XpGain,
 } from "wow/protocol/combat";
-import { UNIT_FIELDS } from "wow/protocol/entity-fields";
 import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import { GameOpcode } from "wow/protocol/opcodes";
-import {
-  buildCancelCast,
-  buildCastSpell,
-  type CastFailed,
-  type CooldownNotice,
-  type InitialSpells,
-  type LearnedSpell,
-  type RemovedSpell,
-  SpellCastResult,
-  type SpellCooldown,
-  type SpellDelayed,
-  type SpellFailure,
-  type SpellGo,
-  type SpellStart,
-  type SupersededSpell,
+import type {
+  CastFailed,
+  CooldownNotice,
+  InitialSpells,
+  LearnedSpell,
+  RemovedSpell,
+  SpellCooldown,
+  SpellDelayed,
+  SpellFailure,
+  SpellGo,
+  SpellStart,
+  SupersededSpell,
 } from "wow/protocol/spell";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
 
@@ -143,11 +136,8 @@ export class CombatRuntime {
   private readonly cooldowns: CooldownStore;
   private readonly auras: AuraStore;
   private readonly motions: MotionStore;
+  private readonly casts: CombatCasts;
   private pendingAttack: bigint | undefined;
-  private castCount = 1;
-  private pending: CombatCast | undefined;
-  private casting: CombatCast | undefined;
-  private lastCast: CombatCast | undefined;
   private attacking = false;
   private attackTarget: bigint | undefined;
   private lastOutcome: CombatOutcome | undefined;
@@ -161,6 +151,12 @@ export class CombatRuntime {
     );
     this.auras = new AuraStore(deps.now);
     this.motions = new MotionStore(deps.now);
+    this.casts = new CombatCasts({
+      send: deps.send,
+      now: deps.now,
+      learned: this.learned,
+      cooldowns: this.cooldowns,
+    });
   }
 
   onEvent(cb: ((event: CombatEvent) => void) | undefined): void {
@@ -184,8 +180,8 @@ export class CombatRuntime {
       attacking: this.attacking,
       pendingAttack: this.pendingAttack,
       attackTarget: this.attackTarget,
-      casting: this.casting ? { ...this.casting } : undefined,
-      pendingCast: this.pending ? { ...this.pending } : undefined,
+      casting: this.casts.casting ? { ...this.casts.casting } : undefined,
+      pendingCast: this.casts.pending ? { ...this.casts.pending } : undefined,
       learned: [...this.learned],
       unknownLearned: [...this.learned].filter(
         (id) => !this.deps.catalog?.get(id),
@@ -232,34 +228,7 @@ export class CombatRuntime {
   }
 
   cast(spellId: number, targetGuid: bigint): void {
-    if (!Number.isInteger(spellId) || spellId <= 0 || spellId > 0xff_ff_ff_ff)
-      throw new Error("invalid_spell");
-    if (targetGuid < 0n || targetGuid > 0xffffffffffffffffn)
-      throw new Error("invalid_guid");
-    if (this.pending || this.casting) throw new Error("cast_in_progress");
-    if (!this.learned.has(spellId)) throw new Error("unknown_spell");
-    const count = this.castCount;
-    this.castCount = (this.castCount + 1) & 0xff || 1;
-    this.deps.send(
-      GameOpcode.CMSG_CAST_SPELL,
-      buildCastSpell(count, spellId, targetGuid),
-    );
-    this.pending = {
-      spellId,
-      target: targetGuid === 0n ? undefined : targetGuid,
-      startedAt: this.deps.now(),
-      durationMs: 0,
-      source: "pending",
-      count,
-    };
-    this.lastCast = this.pending;
-    this.lastOutcome = {
-      kind: "cast",
-      status: "sent",
-      spellId,
-      target: this.pending.target,
-      at: this.deps.now(),
-    };
+    this.lastOutcome = this.casts.send(spellId, targetGuid);
     this.emit("cast_sent");
   }
 
@@ -278,17 +247,7 @@ export class CombatRuntime {
   }
 
   cancelCast(): void {
-    const spellId = this.casting?.spellId ?? this.pending?.spellId;
-    if (spellId === undefined) throw new Error("not_casting");
-    this.deps.send(GameOpcode.CMSG_CANCEL_CAST, buildCancelCast(spellId));
-    if (this.casting) this.casting.cancelRequested = true;
-    if (this.pending) this.pending.cancelRequested = true;
-    this.lastOutcome = {
-      kind: "cancel",
-      status: "sent",
-      spellId,
-      at: this.deps.now(),
-    };
+    this.lastOutcome = this.casts.cancel();
     this.emit("outcome");
   }
 
@@ -300,11 +259,7 @@ export class CombatRuntime {
   }
 
   halt(): void {
-    if (
-      (this.casting && !this.casting.cancelRequested) ||
-      (this.pending && !this.pending.cancelRequested)
-    )
-      this.cancelCast();
+    if (this.casts.hasUncancelled()) this.cancelCast();
     if (this.attacking || this.pendingAttack !== undefined) this.stopAttack();
   }
 
@@ -315,9 +270,7 @@ export class CombatRuntime {
     this.auras.clear();
     this.learned.clear();
     this.cooldowns.clear();
-    this.pending = undefined;
-    this.casting = undefined;
-    this.lastCast = undefined;
+    this.casts.clear();
     this.pendingAttack = undefined;
     this.attacking = false;
     this.attackTarget = undefined;
@@ -362,102 +315,41 @@ export class CombatRuntime {
 
   applySpellStart(packet: SpellStart): void {
     if (packet.caster !== this.deps.selfGuid()) return;
-    const matching =
-      this.pending?.spellId === packet.spellId &&
-      this.pending.count === packet.castCount;
-    const cancelRequested = matching
-      ? this.pending?.cancelRequested
-      : undefined;
-    if (this.pending && !matching) return;
-    this.pending = undefined;
-    this.casting = {
-      cancelRequested,
-      spellId: packet.spellId,
-      target: packet.targets.objectGuid,
-      startedAt: this.deps.now(),
-      durationMs: packet.timer,
-      source: "server",
-      count: packet.castCount,
-    };
-    this.lastCast = this.casting;
-    this.cooldowns.beginGlobal(packet.spellId);
-    this.lastOutcome = {
-      kind: "cast",
-      status: "started",
-      spellId: packet.spellId,
-      target: packet.targets.objectGuid,
-      at: this.deps.now(),
-    };
+    const outcome = this.casts.start(packet);
+    if (!outcome) return;
+    this.lastOutcome = outcome;
     this.emit("cast_started");
   }
 
   applySpellGo(packet: SpellGo): void {
     if (packet.caster !== this.deps.selfGuid()) return;
-    const hadStart =
-      this.casting?.spellId === packet.spellId &&
-      this.casting.count === packet.extraCasts;
-    if (
-      this.pending?.spellId === packet.spellId &&
-      this.pending.count === packet.extraCasts
-    )
-      this.pending = undefined;
-    if (hadStart) this.casting = undefined;
-    if (!hadStart) this.cooldowns.beginGlobal(packet.spellId);
-    this.cooldowns.predict(packet.spellId);
-    this.lastOutcome = {
-      kind: "cast",
-      hits: packet.hits,
-      misses: packet.misses,
-      status: "succeeded",
-      spellId: packet.spellId,
-      target: packet.targets.objectGuid,
-      at: this.deps.now(),
-    };
+    this.lastOutcome = this.casts.succeed(packet);
     this.emit("cast_succeeded");
   }
 
   applyCastFailed(packet: CastFailed): void {
-    this.recordCastFailure(
+    const outcome = this.casts.fail(
       packet.spellId,
       packet.castCount,
       packet.result,
       "failed",
     );
+    if (!outcome) return;
+    this.lastOutcome = outcome;
+    this.emit("cast_failed", `cast_failed:${packet.result}`);
   }
 
   applySpellFailure(packet: SpellFailure): void {
     if (packet.caster !== this.deps.selfGuid()) return;
-    this.recordCastFailure(
+    const outcome = this.casts.fail(
       packet.spellId,
       packet.extraCasts,
       packet.result,
       "interrupted",
     );
-  }
-
-  private recordCastFailure(
-    spellId: number,
-    count: number,
-    result: number,
-    status: "failed" | "interrupted",
-  ): void {
-    const cast = this.lastCast;
-    if (cast?.spellId !== spellId || cast.count !== count) return;
-    if (this.pending === cast) this.pending = undefined;
-    if (this.casting === cast) this.casting = undefined;
-    this.lastOutcome = {
-      kind:
-        cast.cancelRequested && result === SpellCastResult.INTERRUPTED
-          ? "cancel"
-          : "cast",
-      status,
-      spellId,
-      result,
-      at: this.deps.now(),
-    };
-    if (status === "interrupted")
-      this.emit("cast_interrupted", `spell_failure:${result}`);
-    else this.emit("cast_failed", `cast_failed:${result}`);
+    if (!outcome) return;
+    this.lastOutcome = outcome;
+    this.emit("cast_interrupted", `spell_failure:${packet.result}`);
   }
 
   applyCooldown(packet: SpellCooldown): void {
@@ -479,8 +371,7 @@ export class CombatRuntime {
   }
 
   applySpellDelayed({ caster, delayMs }: SpellDelayed): void {
-    if (caster !== this.deps.selfGuid() || !this.casting) return;
-    this.casting.durationMs += delayMs;
+    if (caster !== this.deps.selfGuid() || !this.casts.delay(delayMs)) return;
     this.emit("cast_started", "cast_delayed");
   }
 
@@ -571,43 +462,12 @@ export class CombatRuntime {
     pose: CombatPose | undefined,
     entity = this.deps.getEntity(guid),
   ): CombatUnit {
-    const unit = isUnit(entity) ? entity : undefined;
-    const bytes = fieldOf(unit, UNIT_FIELDS.BYTES_0.offset);
-    const powerType = bytes === undefined ? undefined : bytes >>> 24;
-    const formBytes = fieldOf(unit, UNIT_FIELDS.BYTES_2.offset);
-    return {
+    return combatUnitOf(
+      { deps: this.deps, motions: this.motions },
       guid,
-      name: entity?.name,
-      health: fieldOf(unit, UNIT_FIELDS.HEALTH.offset),
-      maxHealth: fieldOf(unit, UNIT_FIELDS.MAXHEALTH.offset),
-      power:
-        powerType === undefined || powerType > 6
-          ? undefined
-          : fieldOf(unit, UNIT_FIELDS.POWER1.offset + powerType),
-      maxPower:
-        powerType === undefined || powerType > 6
-          ? undefined
-          : fieldOf(unit, UNIT_FIELDS.MAXPOWER1.offset + powerType),
-      powerType,
-      baseMana: fieldOf(unit, UNIT_FIELDS.BASE_MANA.offset),
-      shapeshiftForm: formBytes === undefined ? undefined : formBytes >>> 24,
-      level: fieldOf(unit, UNIT_FIELDS.LEVEL.offset),
       pose,
-      motion: this.motions.motion(guid),
-      serverPose: this.serverPoseOf(guid, pose),
-    };
-  }
-
-  private serverPoseOf(
-    guid: bigint,
-    pose: CombatPose | undefined,
-  ): CombatPose | undefined {
-    if (guid === this.deps.selfGuid()) {
-      const self = this.deps.selfServerPose?.();
-      if (self) return { ...self };
-      return pose?.source === "server" ? { ...pose } : undefined;
-    }
-    return this.motions.serverPose(guid);
+      entity,
+    );
   }
 
   private emit(type: CombatEventType, reason?: string): void {

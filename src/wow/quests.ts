@@ -1,32 +1,22 @@
-import { type Entity, type EntityLookup, fieldOf } from "wow/entity-store";
-import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
-import {
-  buildGossipHello,
-  buildGossipSelectOption,
-  type GossipMessage,
-} from "wow/protocol/gossip";
+import type { Entity, EntityLookup } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
+import type { GossipMessage } from "wow/protocol/gossip";
 import { GameOpcode } from "wow/protocol/opcodes";
-import {
-  buildQuestLogRemoveQuest,
-  type QuestUpdateAddItem,
-  type QuestUpdateAddKill,
+import type {
+  QuestUpdateAddItem,
+  QuestUpdateAddKill,
 } from "wow/protocol/quest-log";
 import {
   buildQuestQuery,
   type QuestQueryResponse,
 } from "wow/protocol/quest-query";
-import {
-  buildQuestgiverAcceptQuest,
-  buildQuestgiverChooseReward,
-  buildQuestgiverCompleteQuest,
-  buildQuestgiverQueryQuest,
-  buildQuestgiverRequestReward,
-  type QuestgiverOfferReward,
-  type QuestgiverQuestComplete,
-  type QuestgiverQuestDetails,
-  type QuestgiverQuestList,
-  type QuestgiverRequestItems,
-  type QuestgiverStatus,
+import type {
+  QuestgiverOfferReward,
+  QuestgiverQuestComplete,
+  QuestgiverQuestDetails,
+  QuestgiverQuestList,
+  QuestgiverRequestItems,
+  QuestgiverStatus,
 } from "wow/protocol/questgiver";
 import {
   type QuestLog,
@@ -34,6 +24,20 @@ import {
   readQuestLog,
   sameSlot,
 } from "wow/quest-slots";
+import {
+  abandonRequest,
+  acceptRequest,
+  chooseRewardRequest,
+  completeRequest,
+  expectedDialog,
+  positiveId,
+  type QuestRequest,
+  questIdsVisible,
+  requestRewardRequest,
+  selectOptionRequest,
+  selectQuestRequest,
+  talkRequest,
+} from "wow/quests-requests";
 
 export type QuestDialog =
   | { kind: "gossip"; data: GossipMessage }
@@ -133,11 +137,6 @@ export type QuestDeps = {
   getEntity: EntityLookup;
 };
 
-function positiveId(id: number): void {
-  if (!Number.isInteger(id) || id <= 0 || id > 0xff_ff_ff_ff)
-    throw new Error("invalid_quest_id");
-}
-
 export class QuestRuntime {
   private listener: ((event: QuestEvent) => void) | undefined;
   private disposed = false;
@@ -184,12 +183,7 @@ export class QuestRuntime {
 
   talk(guid: bigint): void {
     this.active();
-    if (guid <= 0n || guid > 0xffffffffffffffffn)
-      throw new Error("invalid_guid");
-    this.send(GameOpcode.CMSG_GOSSIP_HELLO, buildGossipHello(guid), {
-      action: "talk",
-      guid,
-    });
+    this.send(talkRequest(guid));
   }
 
   query(questId: number): void {
@@ -207,129 +201,42 @@ export class QuestRuntime {
 
   selectOption(optionId: number, code?: string): void {
     this.active();
-    const dialog = this.dialog;
-    if (dialog?.kind !== "gossip") throw new Error("gossip_not_open");
-    const option = dialog.data.options.find(
-      (entry) => entry.optionIndex === optionId,
-    );
-    if (!option) throw new Error("option_not_offered");
-    if (option.coded && code === undefined)
-      throw new Error("gossip_code_required");
-    if (!option.coded && code !== undefined)
-      throw new Error("gossip_code_not_offered");
-    const { guid, menuId } = dialog.data;
-    const body = buildGossipSelectOption({
-      guid,
-      menuId,
-      optionIndex: optionId,
-      code,
-    });
-    this.send(GameOpcode.CMSG_GOSSIP_SELECT_OPTION, body, {
-      action: "selectOption",
-      guid,
-      optionId,
-    });
+    this.send(selectOptionRequest(this.dialog, optionId, code));
   }
 
   selectQuest(questId: number): void {
     this.active();
-    positiveId(questId);
-    const dialog = this.dialog;
-    if (dialog?.kind !== "gossip" && dialog?.kind !== "list")
-      throw new Error("quest_not_offered");
-    const entry = dialog.data.quests.find((quest) => quest.questId === questId);
-    if (!entry) throw new Error("quest_not_offered");
-    if (entry.icon === 4) {
+    const request = selectQuestRequest(this.dialog, questId);
+    if (request === "turnIn") {
       this.complete(questId);
       return;
     }
-    const guid = dialog.data.guid;
-    const body = buildQuestgiverQueryQuest(guid, questId, 0);
-    this.send(GameOpcode.CMSG_QUESTGIVER_QUERY_QUEST, body, {
-      action: "selectQuest",
-      guid,
-      questId,
-    });
+    this.send(request);
   }
 
   accept(): void {
     this.active();
-    const dialog = this.dialog;
-    if (dialog?.kind !== "details") throw new Error("quest_details_not_open");
-    if (!dialog.data.activateAccept)
-      throw new Error("quest_accept_not_offered");
-    const { guid, questId } = dialog.data;
-    const body = buildQuestgiverAcceptQuest(guid, questId, 0);
-    this.send(GameOpcode.CMSG_QUESTGIVER_ACCEPT_QUEST, body, {
-      action: "accept",
-      guid,
-      questId,
-    });
+    this.send(acceptRequest(this.dialog));
   }
 
   complete(questId: number): void {
     this.active();
-    positiveId(questId);
-    const guid = this.offeredGiver(questId);
-    const body = buildQuestgiverCompleteQuest(guid, questId);
-    this.send(GameOpcode.CMSG_QUESTGIVER_COMPLETE_QUEST, body, {
-      action: "complete",
-      guid,
-      questId,
-    });
+    this.send(completeRequest(this.dialog, questId));
   }
 
   requestReward(): void {
     this.active();
-    const dialog = this.dialog;
-    if (dialog?.kind !== "requestItems")
-      throw new Error("quest_request_items_not_open");
-    if ((dialog.data.completionFlags[0] & 3) !== 3)
-      throw new Error("quest_requirements_unmet");
-    const { guid, questId } = dialog.data;
-    const body = buildQuestgiverRequestReward(guid, questId);
-    this.send(GameOpcode.CMSG_QUESTGIVER_REQUEST_REWARD, body, {
-      action: "requestReward",
-      guid,
-      questId,
-    });
+    this.send(requestRewardRequest(this.dialog));
   }
 
   chooseReward(index: number): void {
     this.active();
-    const dialog = this.dialog;
-    if (dialog?.kind !== "offer") throw new Error("reward_offer_not_open");
-    const count = dialog.data.rewards.choices.length;
-    if (
-      !Number.isInteger(index) ||
-      index < 0 ||
-      index >= Math.max(1, count) ||
-      index >= 6
-    )
-      throw new Error("reward_not_offered");
-    const { guid, questId } = dialog.data;
-    const body = buildQuestgiverChooseReward(guid, questId, index);
-    this.send(GameOpcode.CMSG_QUESTGIVER_CHOOSE_REWARD, body, {
-      action: "chooseReward",
-      guid,
-      questId,
-      rewardIndex: index,
-    });
+    this.send(chooseRewardRequest(this.dialog, index));
   }
 
   abandon(slot: number): void {
     this.active();
-    if (!Number.isInteger(slot) || slot < 0 || slot >= 25)
-      throw new Error("invalid_quest_slot");
-    const entry = this.readLog().slots[slot];
-    if (entry?.questId === undefined) throw new Error("quest_slot_unknown");
-    if (entry.questId === 0) throw new Error("quest_slot_empty");
-    const body = buildQuestLogRemoveQuest(slot);
-    this.send(GameOpcode.CMSG_QUESTLOG_REMOVE_QUEST, body, {
-      action: "abandon",
-      slot,
-      questId: entry.questId,
-    });
+    this.send(abandonRequest(slot, () => this.readLog()));
   }
 
   cancel(): void {
@@ -358,15 +265,7 @@ export class QuestRuntime {
       return;
     if (this.visibleQuestIds.has(entity)) return;
     this.resetInteraction();
-    const offsets = [
-      UNIT_FIELDS.CHARMEDBY.offset,
-      UNIT_FIELDS.SUMMONEDBY.offset,
-    ];
-    const visible = offsets.every(
-      (offset) =>
-        fieldOf(entity, offset) === 0 && fieldOf(entity, offset + 1) === 0,
-    );
-    this.visibleQuestIds.set(entity, visible);
+    this.visibleQuestIds.set(entity, questIdsVisible(entity));
   }
 
   observeQuestLog(): void {
@@ -435,11 +334,7 @@ export class QuestRuntime {
       this.listener({ type, source, questId, state: this.snapshot() });
   }
 
-  private send(
-    opcode: number,
-    body: Uint8Array,
-    intent: Omit<QuestIntent, "at">,
-  ): void {
+  private send({ opcode, body, intent }: QuestRequest): void {
     if (this.pending) throw new Error("quest_reply_unanswered");
     this.deps.send(opcode, body);
     this.lastIntent = { ...intent, at: this.deps.now() };
@@ -452,16 +347,6 @@ export class QuestRuntime {
     this.emit("intent", "request", intent.questId);
   }
 
-  private offeredGiver(questId: number): bigint {
-    const dialog = this.dialog;
-    if (!dialog) throw new Error("quest_not_offered");
-    if (dialog.kind === "gossip" || dialog.kind === "list") {
-      if (dialog.data.quests.some((entry) => entry.questId === questId))
-        return dialog.data.guid;
-    } else if (dialog.data.questId === questId) return dialog.data.guid;
-    throw new Error("quest_not_offered");
-  }
-
   openDialog(dialog: QuestDialog): void {
     if (this.disposed) return;
     const expected = this.pending;
@@ -472,7 +357,7 @@ export class QuestRuntime {
     if (
       dialog.data.guid !== this.giver ||
       wrongQuest ||
-      !this.expectedDialog(dialog)
+      !expectedDialog(this.pending?.action, dialog)
     ) {
       this.lastError = { kind: "stale_dialog", at: this.deps.now() };
       this.emit("error", "packet");
@@ -497,28 +382,6 @@ export class QuestRuntime {
       this.pending = undefined;
     }
     this.emit("closed", "packet");
-  }
-
-  private expectedDialog(dialog: QuestDialog): boolean {
-    switch (this.pending?.action) {
-      case "accept":
-      case "abandon":
-      case "cancel":
-        return false;
-      case "selectQuest":
-        return (
-          dialog.kind === "details" ||
-          dialog.kind === "requestItems" ||
-          dialog.kind === "offer"
-        );
-      case "complete":
-        return dialog.kind === "requestItems" || dialog.kind === "offer";
-      case "requestReward":
-      case "chooseReward":
-        return dialog.kind === "offer";
-      default:
-        return true;
-    }
   }
 
   receiveQuery(data: QuestQueryResponse): void {

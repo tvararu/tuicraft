@@ -1,23 +1,16 @@
 import {
-  type Parsed,
-  parseBare,
-  parseBoundedArg,
-  parseCast,
-  parseCycle,
-  parseFace,
-  parseFight,
-  parseGoto,
-  parseGuidArg,
-  parseMove,
-  parseOptionId,
-  parseQuestId,
-  parseResurrect,
-  parseWalkToward,
-} from "cli/tokens";
+  hasFlag,
+  parseFlagCommands,
+  parseRead,
+  parseSend,
+  parseTail,
+  parseWho,
+} from "cli/args-chat";
+import { parseGameplay, take } from "cli/args-gameplay";
+import { parseBare } from "cli/tokens";
 import type { WalkTarget } from "wow/client";
 import type { MovementDirection } from "wow/control";
 import type { FramingVariant } from "wow/framing";
-import { parseFramingVariant } from "wow/framing";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -168,94 +161,6 @@ const SUBCOMMANDS = new Set([
   "release-loot",
 ]);
 
-function hasFlag(args: string[], flag: string): boolean {
-  return args.includes(flag);
-}
-
-function parseWaitFlag(args: string[]): number | undefined {
-  const idx = args.indexOf("--wait");
-  if (idx === -1) return undefined;
-  const raw = args[idx + 1];
-  if (raw === undefined) throw new Error("Invalid --wait value: missing");
-  const n = Number.parseFloat(raw);
-  if (!Number.isFinite(n) || n < 0)
-    throw new Error(`Invalid --wait value: ${raw}`);
-  return n;
-}
-
-function parseRead(args: string[]): CliAction {
-  const rest = args.slice(1);
-  return {
-    json: hasFlag(rest, "--json"),
-    mode: "read",
-    wait: parseWaitFlag(rest),
-  };
-}
-
-function parseTail(args: string[]): CliAction {
-  return { json: hasFlag(args.slice(1), "--json"), mode: "tail" };
-}
-
-function parseWho(args: string[]): CliAction {
-  const rest = args.slice(1);
-  const next = rest[0];
-  return {
-    filter: next && !next.startsWith("-") ? next : undefined,
-    json: hasFlag(rest, "--json"),
-    mode: "who",
-  };
-}
-
-function parseSend(args: string[]): CliAction {
-  const rest = args.slice(1);
-  const json = hasFlag(rest, "--json");
-  const wait = parseWaitFlag(rest);
-  const filtered = filterFlags(rest);
-
-  if (hasFlag(filtered, "-w")) {
-    const idx = filtered.indexOf("-w");
-    return {
-      json,
-      message: filtered.slice(idx + 2).join(" "),
-      mode: "whisper",
-      target: filtered[idx + 1] ?? "",
-      wait,
-    };
-  }
-  if (hasFlag(filtered, "-y")) {
-    const idx = filtered.indexOf("-y");
-    return {
-      json,
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "yell",
-      wait,
-    };
-  }
-  if (hasFlag(filtered, "-g")) {
-    const idx = filtered.indexOf("-g");
-    return {
-      json,
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "guild",
-      wait,
-    };
-  }
-  if (hasFlag(filtered, "-p")) {
-    const idx = filtered.indexOf("-p");
-    return {
-      json,
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "party",
-      wait,
-    };
-  }
-
-  const message = filtered.filter((a) => a !== "-s").join(" ");
-  if (message.startsWith("/"))
-    return { input: message, json, mode: "slash", wait };
-  return { json, message, mode: "say", wait };
-}
-
 const FIXED = new Map<string, CliAction>([
   ["start", { mode: "start" }],
   ["stop", { mode: "stop" }],
@@ -333,74 +238,6 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     default:
       return parseGameplay(cmd, rest);
   }
-}
-
-function filterFlags(args: string[]): string[] {
-  const result: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === "--json") continue;
-    if (arg === "--wait") {
-      i++;
-      continue;
-    }
-    if (arg !== undefined) result.push(arg);
-  }
-  return result;
-}
-
-function parseFlagCommands(args: string[]): CliAction | undefined {
-  if (hasFlag(args, "--help") || hasFlag(args, "-h")) return { mode: "help" };
-  if (hasFlag(args, "--version") || hasFlag(args, "-v"))
-    return { mode: "version" };
-  if (hasFlag(args, "--daemon")) return { mode: "daemon" };
-
-  if (hasFlag(args, "-w")) {
-    const filtered = filterFlags(args);
-    const idx = filtered.indexOf("-w");
-    return {
-      json: hasFlag(args, "--json"),
-      message: filtered.slice(idx + 2).join(" "),
-      mode: "whisper",
-      target: filtered[idx + 1] ?? "",
-      wait: parseWaitFlag(args),
-    };
-  }
-
-  if (hasFlag(args, "-y")) {
-    const filtered = filterFlags(args);
-    const idx = filtered.indexOf("-y");
-    return {
-      json: hasFlag(args, "--json"),
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "yell",
-      wait: parseWaitFlag(args),
-    };
-  }
-
-  if (hasFlag(args, "-g")) {
-    const filtered = filterFlags(args);
-    const idx = filtered.indexOf("-g");
-    return {
-      json: hasFlag(args, "--json"),
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "guild",
-      wait: parseWaitFlag(args),
-    };
-  }
-
-  if (hasFlag(args, "-p")) {
-    const filtered = filterFlags(args);
-    const idx = filtered.indexOf("-p");
-    return {
-      json: hasFlag(args, "--json"),
-      message: filtered.slice(idx + 1).join(" "),
-      mode: "party",
-      wait: parseWaitFlag(args),
-    };
-  }
-
-  return undefined;
 }
 
 const SETUP_VALUE_FLAGS: Record<string, true> = {
@@ -488,79 +325,4 @@ export function parseArgs(args: string[]): CliAction {
   throw new Error(
     `Unknown command: ${args.join(" ")}\nRun tuicraft --help for usage.`,
   );
-}
-
-function take<T>(parsed: Parsed<T>): T {
-  if (!parsed.ok) throw new Error(parsed.reason);
-  return parsed.value;
-}
-
-function parseFightArgs(rest: string[]): CliAction {
-  const fight = take(parseFight(rest));
-  const framing =
-    fight.framing ?? parseFramingVariant(Bun.env["WOW_JEV_FRAMING"]);
-  return { mode: "fight", ...fight, framing };
-}
-
-function parseSelectOption(rest: string[]): CliAction {
-  const optionId = rest.length <= 2 ? parseOptionId(rest[0]) : undefined;
-  if (optionId === undefined) throw new Error("invalid gossip option id");
-  const code = rest[1];
-  if (code?.includes("\0")) throw new Error("invalid gossip code");
-  return { code, mode: "select_option", optionId };
-}
-
-function parseGameplay(cmd: string, rest: string[]): CliAction | undefined {
-  switch (cmd) {
-    case "move":
-      return { mode: "move", ...take(parseMove(rest)) };
-    case "face":
-      return { mode: "face", ...take(parseFace(rest)) };
-    case "face-guid":
-      return { mode: "face_guid", ...take(parseGuidArg(rest, true)) };
-    case "walk-toward":
-      return { mode: "walk_toward", ...take(parseWalkToward(rest)) };
-    case "target":
-      return { mode: "target", ...take(parseGuidArg(rest)) };
-    case "cast":
-      return { mode: "cast", ...take(parseCast(rest)) };
-    case "attack":
-      return { mode: "attack", ...take(parseGuidArg(rest)) };
-    case "fight":
-      return parseFightArgs(rest);
-    case "cycle":
-      return { mode: "cycle", ...take(parseCycle(rest)) };
-    case "goto":
-      return { mode: "goto", ...take(parseGoto(rest)) };
-    case "spirit-healer":
-      return { mode: "spirit_healer", ...take(parseGuidArg(rest, true)) };
-    case "resurrect":
-      return { mode: "resurrect", ...take(parseResurrect(rest)) };
-    case "talk":
-      return { mode: "talk", ...take(parseGuidArg(rest, true)) };
-    case "query-quest":
-      return { mode: "query_quest", ...take(parseQuestId(rest)) };
-    case "select-quest":
-      return { mode: "select_quest", ...take(parseQuestId(rest)) };
-    case "complete-quest":
-      return { mode: "complete_quest", ...take(parseQuestId(rest)) };
-    case "choose-reward": {
-      const index = take(parseBoundedArg(rest, 0, 5, "invalid reward index"));
-      return { index, mode: "choose_reward" };
-    }
-    case "abandon-quest": {
-      const slot = take(parseBoundedArg(rest, 0, 24, "invalid quest slot"));
-      return { mode: "abandon_quest", slot };
-    }
-    case "select-option":
-      return parseSelectOption(rest);
-    case "open-loot":
-      return { mode: "open_loot", ...take(parseGuidArg(rest, true)) };
-    case "take-loot": {
-      const slot = take(parseBoundedArg(rest, 0, 255, "invalid loot slot"));
-      return { mode: "take_loot", slot };
-    }
-    default:
-      return undefined;
-  }
 }
