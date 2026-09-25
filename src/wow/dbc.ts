@@ -52,7 +52,7 @@ function readHeader(spec: DbcSpec, bytes: Uint8Array): DbcHeader {
   };
 }
 
-export function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
+function parseDbc(spec: DbcSpec, bytes: Uint8Array): DbcFile {
   const { file: name, fields } = spec;
   const { recordCount, recordSize, stringBlockSize } = readHeader(spec, bytes);
   const recordBytes = recordCount * recordSize;
@@ -95,7 +95,7 @@ export function f32(file: DbcFile, row: number, col: number): number {
   return file.records.getFloat32((row * file.fields + col) * 4, true);
 }
 
-export function readString(file: DbcFile, row: number, col: number): string {
+function readString(file: DbcFile, row: number, col: number): string {
   const offset = u32(file, row, col);
   if (offset >= file.strings.byteLength) return "";
   let end = offset;

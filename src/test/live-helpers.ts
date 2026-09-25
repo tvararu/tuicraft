@@ -14,7 +14,7 @@ export type GpsFix = { map: number; x: number; y: number; z: number };
 
 type GpsPos = { x: number; y: number; z: number };
 
-export function parseGpsPos(msg: string): GpsPos | undefined {
+function parseGpsPos(msg: string): GpsPos | undefined {
   const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
   if (!posMatch) return undefined;
   return {
@@ -24,7 +24,7 @@ export function parseGpsPos(msg: string): GpsPos | undefined {
   };
 }
 
-export function parseGpsMap(msg: string): number | undefined {
+function parseGpsMap(msg: string): number | undefined {
   const mapMatch = msg.match(/^Map: (\d+)/);
   if (!mapMatch) return undefined;
   return Number.parseInt(must(mapMatch[1]), 10);

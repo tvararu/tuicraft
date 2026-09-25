@@ -1,7 +1,7 @@
 import { formatGuid } from "ui/format";
 import type { ControlEvent, ControlPose, ControlState } from "wow/control";
 
-export function formatPoseObj(pose: ControlPose): Record<string, unknown> {
+function formatPoseObj(pose: ControlPose): Record<string, unknown> {
   return {
     mapId: pose.mapId,
     orientation: pose.orientation,
@@ -45,10 +45,7 @@ export function formatControlStateObj(
   };
 }
 
-export function formatPoseLine(
-  label: string,
-  pose: ControlPose | undefined,
-): string {
+function formatPoseLine(label: string, pose: ControlPose | undefined): string {
   if (!pose) return `${label} unknown`;
   const pos = `${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
   return `${label} ${pose.source} ${pos} map=${pose.mapId} facing=${pose.orientation} updatedAt=${pose.updatedAt}`;

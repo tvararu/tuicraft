@@ -24,7 +24,7 @@ const busy: string[] = [
 const priorities = ["p1", "p2", "p3"];
 const sha = /^[0-9a-f]{40}$/;
 
-export function qaShaFile(): string {
+function qaShaFile(): string {
   return `${factoryStateDir()}/qa-main-sha`;
 }
 
@@ -39,11 +39,11 @@ export function inScope(issue: Issue): boolean {
   return readies.at(-1)?.actor === pm;
 }
 
-export function unblocked(issue: Issue): boolean {
+function unblocked(issue: Issue): boolean {
   return issue.blockers.every((state) => state !== "OPEN");
 }
 
-export function byPriority(issues: Issue[]): Issue[] {
+function byPriority(issues: Issue[]): Issue[] {
   const rank = (issue: Issue) => {
     const index = priorities.findIndex((p) => issue.labels.includes(p));
     return index === -1 ? priorities.length : index;

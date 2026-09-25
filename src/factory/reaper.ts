@@ -105,11 +105,11 @@ export function ownerOf(wt: Worktree, all: Worktree[]): Owner {
   return { kind: "owner", name: parent?.displayName ?? "unknown" };
 }
 
-export function ownerName(owner: Owner): string {
+function ownerName(owner: Owner): string {
   return owner.kind === "reaper" ? `reaper:${owner.role}` : owner.name;
 }
 
-export function toMs(stamp: Stamp): number | undefined {
+function toMs(stamp: Stamp): number | undefined {
   if (stamp === null || stamp === undefined) return undefined;
   return typeof stamp === "number" ? stamp : Date.parse(stamp);
 }
@@ -125,7 +125,7 @@ export function idleFor(
   return (now - Math.max(wt.lastActivityAt, ...outputs)) / hour;
 }
 
-export function runOf(wt: Worktree, runs: AutoRun[]): AutoRun | undefined {
+function runOf(wt: Worktree, runs: AutoRun[]): AutoRun | undefined {
   return runs.find((r) => r.workspaceId === wt.id || r.workspaceId === wt.path);
 }
 
@@ -472,7 +472,7 @@ async function handle(ctx: Ctx): Promise<Held | null> {
   return d.action.kind === "hold" ? holdTree(ctx, d, d.action) : null;
 }
 
-export async function reap(opts: ReapOptions): Promise<Held[]> {
+async function reap(opts: ReapOptions): Promise<Held[]> {
   const inv = await inventory();
   const now = opts.now ?? Date.now();
   await git(["fetch", "--quiet", "origin", "main"]);

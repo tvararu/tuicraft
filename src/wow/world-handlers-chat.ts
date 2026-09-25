@@ -14,7 +14,7 @@ import { ChatType, GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
 import { sendPacket } from "wow/world-handlers";
 
-export function deliverMessage(
+function deliverMessage(
   conn: WorldConn,
   raw: RawChatMessage,
   name: string,
@@ -27,7 +27,7 @@ export function deliverMessage(
   });
 }
 
-export function resolveAndDeliver(conn: WorldConn, raw: RawChatMessage): void {
+function resolveAndDeliver(conn: WorldConn, raw: RawChatMessage): void {
   if (raw.senderGuidLow === 0) {
     deliverMessage(conn, raw, "");
     return;

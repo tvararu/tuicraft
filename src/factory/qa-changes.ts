@@ -191,7 +191,7 @@ function unique(list: number[]): number[] {
   return [...new Set(list)];
 }
 
-export const githubSources: Sources = {
+const githubSources: Sources = {
   async issue(number) {
     const node = await json<Node>([
       "gh",

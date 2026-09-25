@@ -14,7 +14,7 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
 import { selfGuid } from "wow/world-handlers";
 
-export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
+function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
   const guid = r.packedGuidBig();
   const info = parseMovementInfo(r);
   if (guid === selfGuid(conn)) {
@@ -32,44 +32,38 @@ export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
   conn.combat?.observePosition(guid, position);
 }
 
-export function handleTeleportAckRequest(
-  conn: WorldConn,
-  r: PacketReader,
-): void {
+function handleTeleportAckRequest(conn: WorldConn, r: PacketReader): void {
   conn.control?.teleportAck(parseTeleportAck(r));
 }
 
-export function handleTransferPending(conn: WorldConn): void {
+function handleTransferPending(conn: WorldConn): void {
   conn.control?.handleTransferPending();
 }
 
-export function handleNewWorld(conn: WorldConn, r: PacketReader): void {
+function handleNewWorld(conn: WorldConn, r: PacketReader): void {
   conn.control?.newWorld(parseWorldPosition(r));
   conn.quests?.resetInteraction();
   conn.entityStore.clear();
   conn.quests?.observeQuestLog();
 }
 
-export function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
+function handleForceMoveRoot(conn: WorldConn, r: PacketReader): void {
   conn.control?.forceRoot(parseMoveCounter(r).counter);
 }
 
-export function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
+function handleForceMoveUnroot(conn: WorldConn, r: PacketReader): void {
   conn.control?.forceUnroot(parseMoveCounter(r).counter);
 }
 
-export function handleMoveKnockBack(conn: WorldConn, r: PacketReader): void {
+function handleMoveKnockBack(conn: WorldConn, r: PacketReader): void {
   conn.control?.knockBack(parseKnockBack(r));
 }
 
-export function handleClientControlUpdate(
-  conn: WorldConn,
-  r: PacketReader,
-): void {
+function handleClientControlUpdate(conn: WorldConn, r: PacketReader): void {
   conn.control?.clientControl(parseClientControl(r));
 }
 
-export function handleForceSpeedChange(
+function handleForceSpeedChange(
   conn: WorldConn,
   r: PacketReader,
   spec: SpeedAck,
@@ -77,11 +71,7 @@ export function handleForceSpeedChange(
   conn.control?.forceSpeed(spec, parseForceSpeed(r, spec));
 }
 
-export function handleCanFly(
-  conn: WorldConn,
-  r: PacketReader,
-  enable: boolean,
-): void {
+function handleCanFly(conn: WorldConn, r: PacketReader, enable: boolean): void {
   conn.control?.setCanFly(parseMoveCounter(r).counter, enable);
 }
 
