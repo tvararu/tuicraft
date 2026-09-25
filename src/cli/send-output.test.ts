@@ -8,18 +8,18 @@ import {
 } from "cli/send-output";
 
 describe("decodeReply", () => {
-  test.each([
-    "OK",
-    "OK WHISPER Aria",
-  ])("treats %s as an intent acknowledgment", (line) => {
-    expect(decodeReply("send", "intent", [line])).toEqual({
-      command: "send",
-      kind: "intent",
-      data: null,
-      events: [],
-      error: null,
-    });
-  });
+  test.each(["OK", "OK WHISPER Aria"])(
+    "treats %s as an intent acknowledgment",
+    (line) => {
+      expect(decodeReply("send", "intent", [line])).toEqual({
+        command: "send",
+        kind: "intent",
+        data: null,
+        events: [],
+        error: null,
+      });
+    },
+  );
 
   test("treats a slash OK reply as an intent", () => {
     expect(decodeReply("send", "slash", ["OK"])).toEqual({
@@ -209,19 +209,18 @@ describe("decodeReply", () => {
     });
   });
 
-  test.each([
-    "null",
-    "42",
-    "[]",
-  ] as const)("rejects a non-object event %s", (line) => {
-    expect(decodeReply("read", "events", [line])).toMatchObject({
-      command: "read",
-      kind: "error",
-      data: null,
-      events: [],
-      error: { stage: "command" },
-    });
-  });
+  test.each(["null", "42", "[]"] as const)(
+    "rejects a non-object event %s",
+    (line) => {
+      expect(decodeReply("read", "events", [line])).toMatchObject({
+        command: "read",
+        kind: "error",
+        data: null,
+        events: [],
+        error: { stage: "command" },
+      });
+    },
+  );
 });
 
 describe("envelope constructors", () => {
