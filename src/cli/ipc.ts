@@ -33,7 +33,7 @@ export async function sendToSocket(
           reject(err);
         },
         open(socket) {
-          socket.write(command + "\n");
+          socket.write(`${command}\n`);
           socket.flush();
         },
       },

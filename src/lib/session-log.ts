@@ -9,15 +9,17 @@ export type LogEntry = {
 };
 
 export class SessionLog {
-  private ready: Promise<void>;
+  private readonly path: string;
+  private readonly ready: Promise<void>;
 
-  constructor(private readonly path: string) {
+  constructor(path: string) {
+    this.path = path;
     this.ready = mkdir(dirname(path), { recursive: true }).then(() => {});
   }
 
   async append(entry: LogEntry): Promise<void> {
     await this.ready;
-    const line = JSON.stringify({ ...entry, timestamp: Date.now() }) + "\n";
+    const line = `${JSON.stringify({ ...entry, timestamp: Date.now() })}\n`;
     await appendFile(this.path, line);
   }
 }

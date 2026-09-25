@@ -6,7 +6,7 @@ import { ObjectType } from "wow/protocol/entity-fields";
 import { ChatType } from "wow/protocol/opcodes";
 
 function writeLine(stream: PassThrough, line: string): void {
-  stream.write(line + "\n");
+  stream.write(`${line}\n`);
 }
 
 const flush = async (turns = 1): Promise<void> => {

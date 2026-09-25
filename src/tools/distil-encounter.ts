@@ -60,7 +60,7 @@ export function distil(
 ): EncounterRecord {
   const mine = stamped.filter((s) => s.event.runId === runId);
   const first = mine[0];
-  const last = mine[mine.length - 1];
+  const last = mine.at(-1);
   if (!(first && last)) throw new Error(`No tactics events for run ${runId}`);
   const draft: Draft = {
     character: {},
@@ -110,9 +110,11 @@ function reduce(draft: Draft, event: TacticsEvent): void {
       draft.fault = event.fault ?? draft.fault;
       return;
     case "request":
-      return onRequest(draft, event);
+      onRequest(draft, event);
+      return;
     case "result":
-      return onResult(draft, event);
+      onResult(draft, event);
+      return;
     case "applied":
       if (!draft.pending) return;
       draft.pending.applied = true;
@@ -132,6 +134,8 @@ function reduce(draft: Draft, event: TacticsEvent): void {
     case "outcome":
       draft.outcome = { reason: event.reason, status: event.status };
       return;
+    default:
+      break;
   }
 }
 
@@ -217,14 +221,13 @@ async function main(): Promise<void> {
   const text = await Bun.file(resolvePaths().logPath).text();
   const stamped = parseLog(text);
   const ids = runIds(stamped);
-  const wanted =
-    args[0] && args[0] !== "latest" ? args[0] : ids[ids.length - 1];
+  const wanted = args[0] && args[0] !== "latest" ? args[0] : ids.at(-1);
   if (!wanted) {
     process.stderr.write("No tactics runs found in the session log\n");
     process.exit(1);
   }
   process.stdout.write(
-    JSON.stringify(distil(stamped, wanted, variant), null, 2) + "\n",
+    `${JSON.stringify(distil(stamped, wanted, variant), null, 2)}\n`,
   );
 }
 

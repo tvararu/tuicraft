@@ -22,6 +22,10 @@ import type { GuildEvent } from "wow/guild-store";
 import type { IgnoreEvent } from "wow/ignore-store";
 import { formatGuildCommandError } from "wow/protocol/guild";
 
+function unhandled(event: never): never {
+  throw new Error(`Unhandled event type: ${(event as { type: string }).type}`);
+}
+
 function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
   switch (event.type) {
     case "invite_received":
@@ -59,6 +63,8 @@ function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
         online: event.online,
         type: "PARTY_MEMBER_STATS",
       };
+    default:
+      return unhandled(event);
   }
 }
 
@@ -122,7 +128,7 @@ export function onIgnoreEvent(
   }
 }
 
-function formatGuildEvent(event: GuildEvent): string {
+function formatGuildEvent(event: GuildEvent): string | undefined {
   switch (event.type) {
     case "guild-roster":
       return `[guild] Roster updated: ${event.roster.members.length} members`;
@@ -149,20 +155,23 @@ function formatGuildEvent(event: GuildEvent): string {
     case "signed_off":
       return `[guild] ${event.name} has gone offline`;
     case "command_result":
-      return formatGuildCommandError(event.command, event.name, event.result)!;
+      return formatGuildCommandError(event.command, event.name, event.result);
     case "guild_invite":
       return `[guild] ${event.inviter} has invited you to join ${event.guildName}. Use /gaccept or /gdecline`;
+    default:
+      return unhandled(event);
   }
 }
 
-function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
+type GuildStaffEvent = Extract<
+  GuildEvent,
+  { type: "promotion" | "demotion" | "removed" | "leader_changed" }
+>;
+
+function formatGuildStaffEventObj(
+  event: GuildStaffEvent,
+): Record<string, unknown> {
   switch (event.type) {
-    case "guild-roster":
-      return {
-        message: `${event.roster.members.length} members`,
-        sender: "",
-        type: "GUILD_ROSTER_UPDATED",
-      };
     case "promotion":
       return {
         member: event.member,
@@ -177,26 +186,44 @@ function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
         rank: event.rank,
         type: "GUILD_DEMOTION",
       };
-    case "motd":
-      return { text: event.text, type: "GUILD_MOTD" };
-    case "joined":
-      return { name: event.name, type: "GUILD_JOINED" };
-    case "left":
-      return { name: event.name, type: "GUILD_LEFT" };
     case "removed":
       return {
         member: event.member,
         officer: event.officer,
         type: "GUILD_REMOVED",
       };
-    case "leader_is":
-      return { name: event.name, type: "GUILD_LEADER_IS" };
     case "leader_changed":
       return {
         newLeader: event.newLeader,
         oldLeader: event.oldLeader,
         type: "GUILD_LEADER_CHANGED",
       };
+    default:
+      return unhandled(event);
+  }
+}
+
+function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "guild-roster":
+      return {
+        message: `${event.roster.members.length} members`,
+        sender: "",
+        type: "GUILD_ROSTER_UPDATED",
+      };
+    case "promotion":
+    case "demotion":
+    case "removed":
+    case "leader_changed":
+      return formatGuildStaffEventObj(event);
+    case "motd":
+      return { text: event.text, type: "GUILD_MOTD" };
+    case "joined":
+      return { name: event.name, type: "GUILD_JOINED" };
+    case "left":
+      return { name: event.name, type: "GUILD_LEFT" };
+    case "leader_is":
+      return { name: event.name, type: "GUILD_LEADER_IS" };
     case "disbanded":
       return { type: "GUILD_DISBANDED" };
     case "signed_on":
@@ -216,6 +243,8 @@ function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
         inviter: event.inviter,
         type: "GUILD_INVITE_RECEIVED",
       };
+    default:
+      return unhandled(event);
   }
 }
 
@@ -246,6 +275,8 @@ function formatDuelEvent(event: DuelEvent): string | undefined {
       return "[duel] Out of bounds \u2014 return to the duel area";
     case "duel_in_bounds":
       return "[duel] Back in bounds";
+    default:
+      return unhandled(event);
   }
 }
 
@@ -270,6 +301,8 @@ function formatDuelEventObj(
       return { type: "DUEL_OUT_OF_BOUNDS" };
     case "duel_in_bounds":
       return { type: "DUEL_IN_BOUNDS" };
+    default:
+      return unhandled(event);
   }
 }
 

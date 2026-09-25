@@ -79,6 +79,9 @@ type ClosingResponse = {
     close(): void;
   };
 };
+type ErroringResponse = {
+  socket: { error(socket: unknown, error: Error): void };
+};
 
 async function replyThenClose(reply: string): Promise<string[]> {
   const originalConnect = Bun.connect;
@@ -155,9 +158,9 @@ describe("sendToSocket", () => {
 
   test("rejects when socket error callback fires", async () => {
     const originalConnect = Bun.connect;
-    Bun.connect = jest.fn(async (options: any) => {
+    Bun.connect = jest.fn(async (options: ErroringResponse) => {
       options.socket.error({}, new Error("connect boom"));
-      return {} as any;
+      return {};
     }) as unknown as typeof Bun.connect;
     try {
       await expect(

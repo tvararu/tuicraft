@@ -12,6 +12,7 @@ import {
 } from "daemon/events";
 import { RingBuffer } from "lib/ring-buffer";
 import type { SessionLog } from "lib/session-log";
+import { must } from "test/must";
 import type { ControlState } from "wow/control";
 import type { UnitEntity } from "wow/entity-store";
 import { ObjectType } from "wow/protocol/entity-fields";
@@ -65,8 +66,8 @@ describe("onChatMessage", () => {
     );
 
     const drained = events.drain();
-    expect(drained[0]!.text).toBe("[say] Alice: hi");
-    expect(JSON.parse(drained[0]!.json)).toEqual({
+    expect(must(drained[0]).text).toBe("[say] Alice: hi");
+    expect(JSON.parse(must(drained[0]).json)).toEqual({
       message: "hi",
       sender: "Alice",
       type: "SAY",
@@ -126,8 +127,10 @@ describe("onGroupEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toBeUndefined();
-    expect(JSON.parse(drained[0]!.json)).toMatchObject({ type: "GROUP_LIST" });
+    expect(must(drained[0]).text).toBeUndefined();
+    expect(JSON.parse(must(drained[0]).json)).toMatchObject({
+      type: "GROUP_LIST",
+    });
   });
 
   test("pushes member_stats to session log", () => {
@@ -166,7 +169,7 @@ describe("onGroupEvent", () => {
     onGroupEvent({ from: "Bob", type: "invite_received" }, events, log);
 
     const drained = events.drain();
-    expect(drained[0]!.text).toBe("[group] Bob invites you to a group");
+    expect(must(drained[0]).text).toBe("[group] Bob invites you to a group");
   });
 
   test("serializes command_result event details", () => {
@@ -187,7 +190,7 @@ describe("onGroupEvent", () => {
     );
 
     const drained = events.drain();
-    expect(JSON.parse(drained[0]!.json)).toEqual({
+    expect(JSON.parse(must(drained[0]).json)).toEqual({
       operation: 1,
       result: 0,
       target: "Voidtrix",
@@ -248,9 +251,9 @@ describe("onEntityEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Test NPC");
-    expect(drained[0]!.text).toContain("appeared");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Test NPC");
+    expect(must(drained[0]).text).toContain("appeared");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("ENTITY_APPEAR");
     expect(json.name).toBe("Test NPC");
     expect(append).toHaveBeenCalledTimes(1);
@@ -268,9 +271,9 @@ describe("onEntityEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Gone NPC");
-    expect(drained[0]!.text).toContain("left range");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Gone NPC");
+    expect(must(drained[0]).text).toContain("left range");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("ENTITY_DISAPPEAR");
   });
 
@@ -348,9 +351,9 @@ describe("onFriendEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Arthas");
-    expect(drained[0]!.text).toContain("online");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Arthas");
+    expect(must(drained[0]).text).toContain("online");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("FRIEND_ONLINE");
     expect(json.name).toBe("Arthas");
     expect(append).toHaveBeenCalledTimes(1);
@@ -369,9 +372,9 @@ describe("onFriendEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Arthas");
-    expect(drained[0]!.text).toContain("offline");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Arthas");
+    expect(must(drained[0]).text).toContain("offline");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("FRIEND_OFFLINE");
   });
 
@@ -399,8 +402,8 @@ describe("onFriendEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("player not found");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("player not found");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("FRIEND_ERROR");
     expect(json.result).toBe(0x04);
   });
@@ -435,9 +438,9 @@ describe("onIgnoreEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Spammer");
-    expect(drained[0]!.text).toContain("added to ignore list");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Spammer");
+    expect(must(drained[0]).text).toContain("added to ignore list");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("IGNORE_ADDED");
     expect(json.name).toBe("Spammer");
     expect(append).toHaveBeenCalledTimes(1);
@@ -456,9 +459,9 @@ describe("onIgnoreEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Spammer");
-    expect(drained[0]!.text).toContain("removed from ignore list");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Spammer");
+    expect(must(drained[0]).text).toContain("removed from ignore list");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("IGNORE_REMOVED");
   });
 
@@ -486,8 +489,8 @@ describe("onIgnoreEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("player not found");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("player not found");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("IGNORE_ERROR");
     expect(json.result).toBe(0x0d);
   });
@@ -545,9 +548,9 @@ describe("onGuildEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("Roster updated");
-    expect(drained[0]!.text).toContain("1 members");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("Roster updated");
+    expect(must(drained[0]).text).toContain("1 members");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("GUILD_ROSTER_UPDATED");
     expect(append).toHaveBeenCalledTimes(1);
   });
@@ -590,8 +593,8 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Thrall promoted Garrosh to Officer");
-    expect(JSON.parse(d[0]!.json)).toEqual({
+    expect(must(d[0]).text).toBe("[guild] Thrall promoted Garrosh to Officer");
+    expect(JSON.parse(must(d[0]).json)).toEqual({
       member: "Garrosh",
       officer: "Thrall",
       rank: "Officer",
@@ -613,8 +616,8 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Thrall demoted Garrosh to Member");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_DEMOTION");
+    expect(must(d[0]).text).toBe("[guild] Thrall demoted Garrosh to Member");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_DEMOTION");
   });
 
   test("motd formats text and JSON", () => {
@@ -622,8 +625,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ text: "Raid tonight!", type: "motd" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] MOTD: Raid tonight!");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_MOTD");
+    expect(must(d[0]).text).toBe("[guild] MOTD: Raid tonight!");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_MOTD");
   });
 
   test("joined formats text and JSON", () => {
@@ -631,8 +634,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ name: "Arthas", type: "joined" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Arthas has joined the guild");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_JOINED");
+    expect(must(d[0]).text).toBe("[guild] Arthas has joined the guild");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_JOINED");
   });
 
   test("left formats text and JSON", () => {
@@ -640,8 +643,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ name: "Sylvanas", type: "left" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Sylvanas has left the guild");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEFT");
+    expect(must(d[0]).text).toBe("[guild] Sylvanas has left the guild");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_LEFT");
   });
 
   test("removed formats text and JSON", () => {
@@ -653,8 +656,10 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Thrall removed Garrosh from the guild");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_REMOVED");
+    expect(must(d[0]).text).toBe(
+      "[guild] Thrall removed Garrosh from the guild",
+    );
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_REMOVED");
   });
 
   test("leader_is formats text and JSON", () => {
@@ -662,8 +667,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ name: "Thrall", type: "leader_is" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Thrall is the guild leader");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEADER_IS");
+    expect(must(d[0]).text).toBe("[guild] Thrall is the guild leader");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_LEADER_IS");
   });
 
   test("leader_changed formats text and JSON", () => {
@@ -675,10 +680,10 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe(
+    expect(must(d[0]).text).toBe(
       "[guild] Thrall has made Garrosh the new guild leader",
     );
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEADER_CHANGED");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_LEADER_CHANGED");
   });
 
   test("disbanded formats text and JSON", () => {
@@ -686,8 +691,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ type: "disbanded" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Guild has been disbanded");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_DISBANDED");
+    expect(must(d[0]).text).toBe("[guild] Guild has been disbanded");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_DISBANDED");
   });
 
   test("signed_on formats text and JSON", () => {
@@ -695,8 +700,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ name: "Jaina", type: "signed_on" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Jaina has come online");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_ON");
+    expect(must(d[0]).text).toBe("[guild] Jaina has come online");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_SIGNED_ON");
   });
 
   test("signed_off formats text and JSON", () => {
@@ -704,8 +709,8 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent({ name: "Varian", type: "signed_off" }, events, log);
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Varian has gone offline");
-    expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_OFF");
+    expect(must(d[0]).text).toBe("[guild] Varian has gone offline");
+    expect(JSON.parse(must(d[0]).json).type).toBe("GUILD_SIGNED_OFF");
   });
 
   test("command_result formats error text and JSON", () => {
@@ -717,8 +722,8 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe("[guild] Thrall is already in a guild");
-    const json = JSON.parse(d[0]!.json);
+    expect(must(d[0]).text).toBe("[guild] Thrall is already in a guild");
+    const json = JSON.parse(must(d[0]).json);
     expect(json.type).toBe("GUILD_COMMAND_RESULT");
     expect(json.command).toBe(1);
     expect(json.name).toBe("Thrall");
@@ -734,10 +739,10 @@ describe("onGuildEvent", () => {
       log,
     );
     const d = events.drain();
-    expect(d[0]!.text).toBe(
+    expect(must(d[0]).text).toBe(
       "[guild] Thrall has invited you to join Horde Heroes. Use /gaccept or /gdecline",
     );
-    const json = JSON.parse(d[0]!.json);
+    const json = JSON.parse(must(d[0]).json);
     expect(json.type).toBe("GUILD_INVITE_RECEIVED");
     expect(json.inviter).toBe("Thrall");
     expect(json.guildName).toBe("Horde Heroes");
@@ -753,8 +758,10 @@ describe("onDuelEvent", () => {
     onDuelEvent({ challenger: "Arthas", type: "duel_requested" }, events, log);
     const entries = events.drain();
     expect(entries).toHaveLength(1);
-    expect(entries[0]!.text).toBe("[duel] Arthas challenges you to a duel");
-    expect(JSON.parse(entries[0]!.json)).toEqual({
+    expect(must(entries[0]).text).toBe(
+      "[duel] Arthas challenges you to a duel",
+    );
+    expect(JSON.parse(must(entries[0]).json)).toEqual({
       challenger: "Arthas",
       type: "DUEL_REQUESTED",
     });
@@ -767,7 +774,7 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent({ timeMs: 3000, type: "duel_countdown" }, events, log);
     const entries = events.drain();
-    expect(entries[0]!.text).toBe("[duel] Duel starting in 3 seconds");
+    expect(must(entries[0]).text).toBe("[duel] Duel starting in 3 seconds");
   });
 
   test("duel_winner won formats correctly", () => {
@@ -786,7 +793,7 @@ describe("onDuelEvent", () => {
       log,
     );
     const entries = events.drain();
-    expect(entries[0]!.text).toBe(
+    expect(must(entries[0]).text).toBe(
       "[duel] Thrall has defeated Garrosh in a duel",
     );
   });
@@ -807,7 +814,7 @@ describe("onDuelEvent", () => {
       log,
     );
     const entries = events.drain();
-    expect(entries[0]!.text).toBe(
+    expect(must(entries[0]).text).toBe(
       "[duel] Garrosh has fled from Thrall in a duel",
     );
   });
@@ -819,7 +826,7 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent({ type: "duel_out_of_bounds" }, events, log);
     const entries = events.drain();
-    expect(entries[0]!.text).toBe(
+    expect(must(entries[0]).text).toBe(
       "[duel] Out of bounds \u2014 return to the duel area",
     );
   });
@@ -831,7 +838,7 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent({ type: "duel_in_bounds" }, events, log);
     const entries = events.drain();
-    expect(entries[0]!.text).toBe("[duel] Back in bounds");
+    expect(must(entries[0]).text).toBe("[duel] Back in bounds");
   });
 
   test("duel_complete completed=true is silent text", () => {
@@ -841,8 +848,8 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent({ completed: true, type: "duel_complete" }, events, log);
     const entries = events.drain();
-    expect(entries[0]!.text).toBeUndefined();
-    expect(JSON.parse(entries[0]!.json)).toEqual({
+    expect(must(entries[0]).text).toBeUndefined();
+    expect(JSON.parse(must(entries[0]).json)).toEqual({
       completed: true,
       type: "DUEL_COMPLETE",
     });
@@ -855,7 +862,7 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent({ completed: false, type: "duel_complete" }, events, log);
     const entries = events.drain();
-    expect(entries[0]!.text).toBe("[duel] Duel interrupted");
+    expect(must(entries[0]).text).toBe("[duel] Duel interrupted");
   });
 
   test("swallows duel event log append errors", async () => {
@@ -882,7 +889,7 @@ describe("onDuelEvent", () => {
       events,
       log,
     );
-    const json = JSON.parse(events.drain()[0]!.json);
+    const json = JSON.parse(must(events.drain()[0]).json);
     expect(json).toEqual({
       loser: "B",
       reason: "won",
@@ -904,9 +911,9 @@ describe("onControlEvent", () => {
     );
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(drained[0]!.text).toContain("[control]");
-    expect(drained[0]!.text).toContain("predicted");
-    const json = JSON.parse(drained[0]!.json);
+    expect(must(drained[0]).text).toContain("[control]");
+    expect(must(drained[0]).text).toContain("predicted");
+    const json = JSON.parse(must(drained[0]).json);
     expect(json.type).toBe("CONTROL");
     expect(json.event).toBe("target_requested");
     expect(json.selfGuid).toBe("0xabcde");
@@ -933,7 +940,7 @@ describe("onControlEvent", () => {
       },
     });
     onControlEvent({ state, type: "server_correction" }, events, log);
-    const entry = events.drain()[0]!;
+    const entry = must(events.drain()[0]);
     expect(JSON.parse(entry.json).pose.source).toBe("server");
     expect(entry.text).toContain("server");
   });

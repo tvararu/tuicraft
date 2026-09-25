@@ -4,6 +4,7 @@ import { sendToSocket } from "cli/ipc";
 import { startDaemon } from "daemon/server";
 import { serializeConfig } from "lib/config";
 import { createMockHandle } from "test/mock-handle";
+import { must } from "test/must";
 import { pathsUnder } from "test/temp-paths";
 import type { AuthResult } from "wow/auth";
 import type { WorldHandle } from "wow/client";
@@ -64,7 +65,7 @@ async function writeTestConfig(): Promise<void> {
   await mkdir(cfgDir, { recursive: true });
   await Bun.write(
     `${cfgDir}/config.toml`,
-    serializeConfig({
+    `${serializeConfig({
       account: "TEST",
       character: "Testchar",
       host: "localhost",
@@ -72,7 +73,7 @@ async function writeTestConfig(): Promise<void> {
       password: "TEST",
       port: 3724,
       timeout_minutes: 1,
-    }) + "\n",
+    })}\n`,
   );
 }
 
@@ -140,7 +141,7 @@ describe("startDaemon", () => {
       const frozenTime = origDateNow() + 120_000;
       Date.now = () => frozenTime;
       try {
-        capturedCallbacks[0]!();
+        must(capturedCallbacks[0])();
       } finally {
         Date.now = origDateNow;
       }

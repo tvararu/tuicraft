@@ -28,7 +28,7 @@ import {
   formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
-import type { WorldHandle } from "wow/client";
+import type { ChatMode, WorldHandle } from "wow/client";
 import type { ControlState } from "wow/control";
 
 export type EventEntry = { text: string | undefined; json: string };
@@ -39,7 +39,7 @@ export type IpcSocket = {
 };
 
 export function writeLines(socket: IpcSocket, lines: string[]): void {
-  for (const line of lines) socket.write(line + "\n");
+  for (const line of lines) socket.write(`${line}\n`);
   socket.write("\n");
 }
 
@@ -76,377 +76,364 @@ function waitUnlessAborted(ms: number, abort?: AbortSignal): Promise<boolean> {
   return promise;
 }
 
+export type DispatchContext = {
+  handle: WorldHandle;
+  events: RingBuffer<EventEntry>;
+  socket: IpcSocket;
+  cleanup: () => void;
+  abort?: AbortSignal;
+};
+
+type Handler<K extends IpcCommand["type"]> = (
+  cmd: Extract<IpcCommand, { type: K }>,
+  ctx: DispatchContext,
+) => boolean | Promise<boolean>;
+
+type Handlers = { [K in IpcCommand["type"]]: Handler<K> };
+
+function chatModeLabel(mode: ChatMode): string {
+  if (mode.type === "whisper") return `WHISPER ${mode.target}`;
+  if (mode.type === "channel") return `CHANNEL ${mode.channel}`;
+  return mode.type.toUpperCase();
+}
+
+function acknowledge(socket: IpcSocket): false {
+  writeLines(socket, ["OK"]);
+  return false;
+}
+
+function send(socket: IpcSocket, lines: string[]): false {
+  writeLines(socket, lines);
+  return false;
+}
+
+async function readWait(
+  ctx: DispatchContext,
+  ms: number,
+  slice: (events: RingBuffer<EventEntry>, from: number) => string[],
+): Promise<false> {
+  const start = ctx.events.writePos;
+  const aborted = await waitUnlessAborted(ms, ctx.abort);
+  if (aborted) return false;
+  writeLines(ctx.socket, slice(ctx.events, start));
+  return false;
+}
+
+function whoQuery(filter: string | undefined) {
+  return filter ? { name: filter } : {};
+}
+
+async function guildRosterText({ handle, socket }: DispatchContext) {
+  const roster = await handle.requestGuildRoster();
+  if (roster) {
+    writeLines(socket, formatGuildRoster(roster).split("\n"));
+  } else {
+    writeLines(socket, ["[guild] No guild roster available"]);
+  }
+  return false;
+}
+
+async function guildRosterJson({ handle, socket }: DispatchContext) {
+  const roster = await handle.requestGuildRoster();
+  if (roster) {
+    writeLines(socket, [formatGuildRosterJson(roster)]);
+  } else {
+    writeLines(socket, [JSON.stringify({ members: [], type: "GUILD_ROSTER" })]);
+  }
+  return false;
+}
+
+const HANDLERS: Handlers = {
+  abandon_quest: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.abandonQuest(cmd.slot), ok),
+  accept: (_cmd, { handle, socket }) => {
+    handle.acceptInvite();
+    return acknowledge(socket);
+  },
+  accept_quest: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.acceptQuest(), ok),
+  add_friend: (cmd, { handle, socket }) => {
+    handle.addFriend(cmd.target);
+    return acknowledge(socket);
+  },
+  add_ignore: (cmd, { handle, socket }) => {
+    handle.addIgnore(cmd.target);
+    return acknowledge(socket);
+  },
+  afk: (cmd, { handle, socket }) => {
+    handle.sendAfk(cmd.message);
+    return acknowledge(socket);
+  },
+  attack: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.attack(cmd.guid), ok),
+  cancel_cast: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.cancelCast(), ok),
+  cancel_interaction: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.cancelInteraction(), ok),
+  cast: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.cast(cmd.spellId, cmd.guid), ok),
+  chat: (cmd, { handle, socket }) => {
+    handle.sendInCurrentMode(cmd.message);
+    return send(socket, [`OK ${chatModeLabel(handle.getLastChatMode())}`]);
+  },
+  choose_reward: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.chooseQuestReward(cmd.index), ok),
+  combat: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getCombatState(), pretty),
+  combat_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getCombatState(), json),
+  complete_quest: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.completeQuest(cmd.questId), ok),
+  control: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getControlState(), controlText),
+  control_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getControlState(), controlJson),
+  cycle: (cmd, { handle, socket }) =>
+    reply(
+      socket,
+      () => handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts),
+      ok,
+    ),
+  cycling: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getCycleState(), formatCycleState),
+  cycling_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getCycleState(), json),
+  decline: (_cmd, { handle, socket }) => {
+    handle.declineInvite();
+    return acknowledge(socket);
+  },
+  del_friend: (cmd, { handle, socket }) => {
+    handle.removeFriend(cmd.target);
+    return acknowledge(socket);
+  },
+  del_ignore: (cmd, { handle, socket }) => {
+    handle.removeIgnore(cmd.target);
+    return acknowledge(socket);
+  },
+  dnd: (cmd, { handle, socket }) => {
+    handle.sendDnd(cmd.message);
+    return acknowledge(socket);
+  },
+  emote: (cmd, { handle, socket }) => {
+    handle.sendEmote(cmd.message);
+    return acknowledge(socket);
+  },
+  face: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.face(cmd.orientation), ok),
+  face_guid: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.faceGuid(cmd.guid), ok),
+  fight: (cmd, { handle, socket, abort }) =>
+    reply(
+      socket,
+      () => handle.startTactics(cmd.guid, cmd.instruction, abort, cmd.framing),
+      ok,
+    ),
+  friends: (_cmd, { handle, socket }) =>
+    send(socket, formatFriendList(handle.getFriends()).split("\n")),
+  friends_json: (_cmd, { handle, socket }) =>
+    send(socket, [formatFriendListJson(handle.getFriends())]),
+  goto: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.goTo(cmd.x, cmd.y, cmd.z), ok),
+  guild: (cmd, { handle, socket }) => {
+    handle.sendGuild(cmd.message);
+    return acknowledge(socket);
+  },
+  guild_accept: (_cmd, { handle, socket }) => {
+    handle.acceptGuildInvite();
+    return acknowledge(socket);
+  },
+  guild_decline: (_cmd, { handle, socket }) => {
+    handle.declineGuildInvite();
+    return acknowledge(socket);
+  },
+  guild_demote: (cmd, { handle, socket }) => {
+    handle.guildDemote(cmd.target);
+    return acknowledge(socket);
+  },
+  guild_invite: (cmd, { handle, socket }) => {
+    handle.guildInvite(cmd.target);
+    return acknowledge(socket);
+  },
+  guild_kick: (cmd, { handle, socket }) => {
+    handle.guildRemove(cmd.target);
+    return acknowledge(socket);
+  },
+  guild_leader: (cmd, { handle, socket }) => {
+    handle.guildLeader(cmd.target);
+    return acknowledge(socket);
+  },
+  guild_leave: (_cmd, { handle, socket }) => {
+    handle.guildLeave();
+    return acknowledge(socket);
+  },
+  guild_motd: (cmd, { handle, socket }) => {
+    handle.guildMotd(cmd.message);
+    return acknowledge(socket);
+  },
+  guild_promote: (cmd, { handle, socket }) => {
+    handle.guildPromote(cmd.target);
+    return acknowledge(socket);
+  },
+  guild_roster: (_cmd, ctx) => guildRosterText(ctx),
+  guild_roster_json: (_cmd, ctx) => guildRosterJson(ctx),
+  halt: (_cmd, { handle, socket }) => reply(socket, () => handle.halt(), ok),
+  ignored: (_cmd, { handle, socket }) =>
+    send(socket, formatIgnoreList(handle.getIgnored()).split("\n")),
+  ignored_json: (_cmd, { handle, socket }) =>
+    send(socket, [formatIgnoreListJson(handle.getIgnored())]),
+  invalid: (cmd, { socket }) => send(socket, [`ERR ${cmd.reason}`]),
+  inventory: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getInventoryState(), formatInventoryState),
+  inventory_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getInventoryState(), json),
+  invite: (cmd, { handle, socket }) => {
+    handle.invite(cmd.target);
+    return acknowledge(socket);
+  },
+  join_channel: (cmd, { handle, socket }) => {
+    handle.joinChannel(cmd.channel, cmd.password);
+    return acknowledge(socket);
+  },
+  kick: (cmd, { handle, socket }) => {
+    handle.uninvite(cmd.target);
+    return acknowledge(socket);
+  },
+  leader: (cmd, { handle, socket }) => {
+    handle.setLeader(cmd.target);
+    return acknowledge(socket);
+  },
+  leave: (_cmd, { handle, socket }) => {
+    handle.leaveGroup();
+    return acknowledge(socket);
+  },
+  leave_channel: (cmd, { handle, socket }) => {
+    handle.leaveChannel(cmd.channel);
+    return acknowledge(socket);
+  },
+  loot: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getRewardsState(), formatRewardsState),
+  loot_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getRewardsState(), json),
+  move: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.move(cmd.direction, cmd.durationMs), ok),
+  navigation: (_cmd, { handle, socket }) =>
+    reply(socket, () => navigationObservation(handle), pretty),
+  navigation_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => navigationObservation(handle), json),
+  nearby: (cmd, { handle, socket }) =>
+    send(socket, prepareNearbyEntities(handle, cmd.all).map(formatNearbyLine)),
+  nearby_json: (cmd, { handle, socket }) =>
+    send(
+      socket,
+      prepareNearbyEntities(handle, cmd.all).map((p) =>
+        JSON.stringify(formatNearbyObj(p)),
+      ),
+    ),
+  open_loot: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.openLoot(cmd.guid), ok),
+  party: (cmd, { handle, socket }) => {
+    handle.sendParty(cmd.message);
+    return acknowledge(socket);
+  },
+  query_corpse: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.queryCorpse(), ok),
+  query_quest: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.queryQuest(cmd.questId), ok),
+  quests: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getQuestState(), pretty),
+  quests_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getQuestState(), json),
+  read: (_cmd, { events, socket }) => send(socket, drainText(events)),
+  read_json: (_cmd, { events, socket }) => send(socket, drainJson(events)),
+  read_wait: (cmd, ctx) => readWait(ctx, cmd.ms, sliceText),
+  read_wait_json: (cmd, ctx) => readWait(ctx, cmd.ms, sliceJson),
+  reclaim_corpse: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.reclaimCorpse(), ok),
+  recovery: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getRecoveryState(), formatRecoveryState),
+  recovery_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getRecoveryState(), json),
+  release_loot: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.releaseLoot(), ok),
+  release_spirit: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.releaseSpirit(), ok),
+  request_reward: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.requestQuestReward(), ok),
+  resurrect: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.respondResurrection(cmd.accept), ok),
+  roll: (cmd, { handle, socket }) => {
+    handle.sendRoll(cmd.min, cmd.max);
+    return acknowledge(socket);
+  },
+  say: (cmd, { handle, socket }) => {
+    handle.sendSay(cmd.message);
+    return acknowledge(socket);
+  },
+  select_option: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.selectGossipOption(cmd.optionId, cmd.code), ok),
+  select_quest: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.selectQuest(cmd.questId), ok),
+  spells: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getSpellbook(), pretty),
+  spells_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getSpellbook(), json),
+  spirit_healer: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.activateSpiritHealer(cmd.guid), ok),
+  status: (_cmd, { socket }) => send(socket, ["CONNECTED"]),
+  stop: (_cmd, { socket, cleanup }) => {
+    writeLines(socket, ["OK"]);
+    cleanup();
+    return true;
+  },
+  stop_attack: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.stopAttack(), ok),
+  tactics: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getTacticsState(), pretty),
+  tactics_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getTacticsState(), json),
+  take_loot: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.takeLoot(cmd.slot), ok),
+  take_money: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.takeLootMoney(), ok),
+  talk: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.talk(cmd.guid), ok),
+  target: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.selectTarget(cmd.guid), ok),
+  unimplemented: (cmd, { socket }) =>
+    send(socket, [`UNIMPLEMENTED ${cmd.feature}`]),
+  walk_toward: (cmd, { handle, socket, abort }) =>
+    reply(socket, () => handle.walkToward(cmd.target, cmd.yards, abort), json),
+  whisper: (cmd, { handle, socket }) => {
+    handle.sendWhisper(cmd.target, cmd.message);
+    return acknowledge(socket);
+  },
+  who: async (cmd, { handle, socket }) => {
+    const results = await handle.who(whoQuery(cmd.filter));
+    return send(socket, formatWhoResults(results).split("\n"));
+  },
+  who_json: async (cmd, { handle, socket }) => {
+    const results = await handle.who(whoQuery(cmd.filter));
+    return send(socket, [formatWhoResultsJson(results)]);
+  },
+  yell: (cmd, { handle, socket }) => {
+    handle.sendYell(cmd.message);
+    return acknowledge(socket);
+  },
+};
+
+function runHandler<K extends IpcCommand["type"]>(
+  cmd: Extract<IpcCommand, { type: K }>,
+  ctx: DispatchContext,
+): boolean | Promise<boolean> {
+  const handler: Handler<K> = HANDLERS[cmd.type];
+  return handler(cmd, ctx);
+}
+
 export async function dispatchCommand(
   cmd: IpcCommand,
-  handle: WorldHandle,
-  events: RingBuffer<EventEntry>,
-  socket: IpcSocket,
-  cleanup: () => void,
-  abort?: AbortSignal,
+  ctx: DispatchContext,
 ): Promise<boolean> {
-  switch (cmd.type) {
-    case "chat": {
-      handle.sendInCurrentMode(cmd.message);
-      const mode = handle.getLastChatMode();
-      const label =
-        mode.type === "whisper"
-          ? `WHISPER ${mode.target}`
-          : mode.type === "channel"
-            ? `CHANNEL ${mode.channel}`
-            : mode.type.toUpperCase();
-      writeLines(socket, [`OK ${label}`]);
-      return false;
-    }
-    case "say":
-      handle.sendSay(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "yell":
-      handle.sendYell(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild":
-      handle.sendGuild(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "party":
-      handle.sendParty(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "emote":
-      handle.sendEmote(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "dnd":
-      handle.sendDnd(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "afk":
-      handle.sendAfk(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "whisper":
-      handle.sendWhisper(cmd.target, cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "roll":
-      handle.sendRoll(cmd.min, cmd.max);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "read":
-      writeLines(socket, drainText(events));
-      return false;
-    case "read_json":
-      writeLines(socket, drainJson(events));
-      return false;
-    case "read_wait": {
-      const start = events.writePos;
-      const aborted = await waitUnlessAborted(cmd.ms, abort);
-      if (aborted) return false;
-      writeLines(socket, sliceText(events, start));
-      return false;
-    }
-    case "read_wait_json": {
-      const start = events.writePos;
-      const aborted = await waitUnlessAborted(cmd.ms, abort);
-      if (aborted) return false;
-      writeLines(socket, sliceJson(events, start));
-      return false;
-    }
-    case "stop":
-      writeLines(socket, ["OK"]);
-      cleanup();
-      return true;
-    case "status":
-      writeLines(socket, ["CONNECTED"]);
-      return false;
-    case "who": {
-      const results = await handle.who(cmd.filter ? { name: cmd.filter } : {});
-      writeLines(socket, formatWhoResults(results).split("\n"));
-      return false;
-    }
-    case "who_json": {
-      const results = await handle.who(cmd.filter ? { name: cmd.filter } : {});
-      writeLines(socket, [formatWhoResultsJson(results)]);
-      return false;
-    }
-    case "invite":
-      handle.invite(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "kick":
-      handle.uninvite(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "leave":
-      handle.leaveGroup();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "leader":
-      handle.setLeader(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "accept":
-      handle.acceptInvite();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "decline":
-      handle.declineInvite();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "nearby": {
-      const items = prepareNearbyEntities(handle, cmd.all);
-      writeLines(socket, items.map(formatNearbyLine));
-      return false;
-    }
-    case "nearby_json": {
-      const items = prepareNearbyEntities(handle, cmd.all);
-      writeLines(
-        socket,
-        items.map((p) => JSON.stringify(formatNearbyObj(p))),
-      );
-      return false;
-    }
-    case "friends": {
-      const friends = handle.getFriends();
-      writeLines(socket, formatFriendList(friends).split("\n"));
-      return false;
-    }
-    case "friends_json": {
-      const friends = handle.getFriends();
-      writeLines(socket, [formatFriendListJson(friends)]);
-      return false;
-    }
-    case "add_friend":
-      handle.addFriend(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "del_friend":
-      handle.removeFriend(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "ignored": {
-      const ignored = handle.getIgnored();
-      writeLines(socket, formatIgnoreList(ignored).split("\n"));
-      return false;
-    }
-    case "ignored_json": {
-      const ignored = handle.getIgnored();
-      writeLines(socket, [formatIgnoreListJson(ignored)]);
-      return false;
-    }
-    case "add_ignore":
-      handle.addIgnore(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "del_ignore":
-      handle.removeIgnore(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "join_channel":
-      handle.joinChannel(cmd.channel, cmd.password);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "leave_channel":
-      handle.leaveChannel(cmd.channel);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_roster": {
-      const roster = await handle.requestGuildRoster();
-      if (roster) {
-        writeLines(socket, formatGuildRoster(roster).split("\n"));
-      } else {
-        writeLines(socket, ["[guild] No guild roster available"]);
-      }
-      return false;
-    }
-    case "guild_roster_json": {
-      const roster = await handle.requestGuildRoster();
-      if (roster) {
-        writeLines(socket, [formatGuildRosterJson(roster)]);
-      } else {
-        writeLines(socket, [
-          JSON.stringify({ members: [], type: "GUILD_ROSTER" }),
-        ]);
-      }
-      return false;
-    }
-    case "guild_invite":
-      handle.guildInvite(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_kick":
-      handle.guildRemove(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_leave":
-      handle.guildLeave();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_promote":
-      handle.guildPromote(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_demote":
-      handle.guildDemote(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_leader":
-      handle.guildLeader(cmd.target);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_motd":
-      handle.guildMotd(cmd.message);
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_accept":
-      handle.acceptGuildInvite();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "guild_decline":
-      handle.declineGuildInvite();
-      writeLines(socket, ["OK"]);
-      return false;
-    case "control":
-      return reply(socket, () => handle.getControlState(), controlText);
-    case "control_json":
-      return reply(socket, () => handle.getControlState(), controlJson);
-    case "move":
-      return reply(
-        socket,
-        () => handle.move(cmd.direction, cmd.durationMs),
-        ok,
-      );
-    case "face":
-      return reply(socket, () => handle.face(cmd.orientation), ok);
-    case "face_guid":
-      return reply(socket, () => handle.faceGuid(cmd.guid), ok);
-    case "walk_toward":
-      return reply(
-        socket,
-        () => handle.walkToward(cmd.target, cmd.yards, abort),
-        json,
-      );
-    case "target":
-      return reply(socket, () => handle.selectTarget(cmd.guid), ok);
-    case "halt":
-      return reply(socket, () => handle.halt(), ok);
-    case "combat":
-      return reply(socket, () => handle.getCombatState(), pretty);
-    case "combat_json":
-      return reply(socket, () => handle.getCombatState(), json);
-    case "spells":
-      return reply(socket, () => handle.getSpellbook(), pretty);
-    case "spells_json":
-      return reply(socket, () => handle.getSpellbook(), json);
-    case "cast":
-      return reply(socket, () => handle.cast(cmd.spellId, cmd.guid), ok);
-    case "attack":
-      return reply(socket, () => handle.attack(cmd.guid), ok);
-    case "cancel_cast":
-      return reply(socket, () => handle.cancelCast(), ok);
-    case "stop_attack":
-      return reply(socket, () => handle.stopAttack(), ok);
-    case "fight":
-      return reply(
-        socket,
-        () =>
-          handle.startTactics(cmd.guid, cmd.instruction, abort, cmd.framing),
-        ok,
-      );
-    case "tactics":
-      return reply(socket, () => handle.getTacticsState(), pretty);
-    case "tactics_json":
-      return reply(socket, () => handle.getTacticsState(), json);
-    case "cycle":
-      return reply(
-        socket,
-        () => handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts),
-        ok,
-      );
-    case "cycling":
-      return reply(socket, () => handle.getCycleState(), formatCycleState);
-    case "cycling_json":
-      return reply(socket, () => handle.getCycleState(), json);
-    case "goto":
-      return reply(socket, () => handle.goTo(cmd.x, cmd.y, cmd.z), ok);
-    case "navigation":
-      return reply(socket, () => navigationObservation(handle), pretty);
-    case "navigation_json":
-      return reply(socket, () => navigationObservation(handle), json);
-    case "recovery":
-      return reply(
-        socket,
-        () => handle.getRecoveryState(),
-        formatRecoveryState,
-      );
-    case "recovery_json":
-      return reply(socket, () => handle.getRecoveryState(), json);
-    case "query_corpse":
-      return reply(socket, () => handle.queryCorpse(), ok);
-    case "release_spirit":
-      return reply(socket, () => handle.releaseSpirit(), ok);
-    case "reclaim_corpse":
-      return reply(socket, () => handle.reclaimCorpse(), ok);
-    case "spirit_healer":
-      return reply(socket, () => handle.activateSpiritHealer(cmd.guid), ok);
-    case "resurrect":
-      return reply(socket, () => handle.respondResurrection(cmd.accept), ok);
-    case "quests":
-      return reply(socket, () => handle.getQuestState(), pretty);
-    case "quests_json":
-      return reply(socket, () => handle.getQuestState(), json);
-    case "talk":
-      return reply(socket, () => handle.talk(cmd.guid), ok);
-    case "query_quest":
-      return reply(socket, () => handle.queryQuest(cmd.questId), ok);
-    case "select_option":
-      return reply(
-        socket,
-        () => handle.selectGossipOption(cmd.optionId, cmd.code),
-        ok,
-      );
-    case "select_quest":
-      return reply(socket, () => handle.selectQuest(cmd.questId), ok);
-    case "accept_quest":
-      return reply(socket, () => handle.acceptQuest(), ok);
-    case "complete_quest":
-      return reply(socket, () => handle.completeQuest(cmd.questId), ok);
-    case "request_reward":
-      return reply(socket, () => handle.requestQuestReward(), ok);
-    case "choose_reward":
-      return reply(socket, () => handle.chooseQuestReward(cmd.index), ok);
-    case "abandon_quest":
-      return reply(socket, () => handle.abandonQuest(cmd.slot), ok);
-    case "cancel_interaction":
-      return reply(socket, () => handle.cancelInteraction(), ok);
-    case "inventory":
-      return reply(
-        socket,
-        () => handle.getInventoryState(),
-        formatInventoryState,
-      );
-    case "inventory_json":
-      return reply(socket, () => handle.getInventoryState(), json);
-    case "loot":
-      return reply(socket, () => handle.getRewardsState(), formatRewardsState);
-    case "loot_json":
-      return reply(socket, () => handle.getRewardsState(), json);
-    case "open_loot":
-      return reply(socket, () => handle.openLoot(cmd.guid), ok);
-    case "take_loot":
-      return reply(socket, () => handle.takeLoot(cmd.slot), ok);
-    case "take_money":
-      return reply(socket, () => handle.takeLootMoney(), ok);
-    case "release_loot":
-      return reply(socket, () => handle.releaseLoot(), ok);
-    case "invalid":
-      writeLines(socket, [`ERR ${cmd.reason}`]);
-      return false;
-    case "unimplemented":
-      writeLines(socket, [`UNIMPLEMENTED ${cmd.feature}`]);
-      return false;
-  }
+  return await runHandler(cmd, ctx);
 }
 
 const ok = (): string[] => ["OK"];

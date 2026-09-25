@@ -1,7 +1,7 @@
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
 import type { ChatMessage, ChatMode, GroupEvent, WhoResult } from "wow/client";
-import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import type { Entity, EntityEvent, UnitEntity } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
@@ -78,19 +78,18 @@ const JSON_TYPE_LABELS: Record<number, string> = {
   [ChatType.ROLL]: "ROLL",
 };
 
+function messageObjType(msg: ChatMessage): string {
+  if (msg.origin === "server") return "SERVER_BROADCAST";
+  if (msg.origin === "notification") return "NOTIFICATION";
+  if (msg.origin === "mail") return "MAIL";
+  return JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
+}
+
 export function formatMessageObj(msg: ChatMessage): LogEntry {
-  const type =
-    msg.origin === "server"
-      ? "SERVER_BROADCAST"
-      : msg.origin === "notification"
-        ? "NOTIFICATION"
-        : msg.origin === "mail"
-          ? "MAIL"
-          : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
   const obj: LogEntry = {
     message: stripColorCodes(msg.message),
     sender: msg.sender,
-    type,
+    type: messageObjType(msg),
   };
   if (msg.channel) obj.channel = msg.channel;
   return obj;
@@ -156,27 +155,29 @@ function partyResultLabel(result: number): string {
   }
 }
 
+function partyCommandVerb(operation: number): "kick" | "leave" | "invite" {
+  if (operation === PartyOperation.UNINVITE) return "kick";
+  if (operation === PartyOperation.LEAVE) return "leave";
+  return "invite";
+}
+
+function partyCommandLabel(
+  event: Extract<GroupEvent, { type: "command_result" }>,
+): string {
+  const verb = partyCommandVerb(event.operation);
+  if (event.result !== PartyResult.SUCCESS)
+    return `Cannot ${verb}${event.target ? ` ${event.target}` : ""}: ${partyResultLabel(event.result)}`;
+  if (verb === "kick") return `Removed ${event.target} from group`;
+  if (verb === "leave") return "Left the group";
+  return `Invited ${event.target}`;
+}
+
 export function formatGroupEvent(event: GroupEvent): string | undefined {
   switch (event.type) {
     case "invite_received":
       return `[group] ${event.from} invites you to a group`;
-    case "command_result": {
-      const verb =
-        event.operation === PartyOperation.UNINVITE
-          ? "kick"
-          : event.operation === PartyOperation.LEAVE
-            ? "leave"
-            : "invite";
-      const label =
-        event.result === PartyResult.SUCCESS
-          ? verb === "kick"
-            ? `Removed ${event.target} from group`
-            : verb === "leave"
-              ? "Left the group"
-              : `Invited ${event.target}`
-          : `Cannot ${verb}${event.target ? ` ${event.target}` : ""}: ${partyResultLabel(event.result)}`;
-      return `[group] ${label}`;
-    }
+    case "command_result":
+      return `[group] ${partyCommandLabel(event)}`;
     case "leader_changed":
       return `[group] ${event.name} is now the group leader`;
     case "group_destroyed":
@@ -188,28 +189,29 @@ export function formatGroupEvent(event: GroupEvent): string | undefined {
     case "group_list":
     case "member_stats":
       return undefined;
+    default:
+      return;
   }
+}
+
+function formatEntityAppear(e: Entity): string | undefined {
+  if (!e.name) return undefined;
+  if (e.objectType === ObjectType.UNIT || e.objectType === ObjectType.PLAYER) {
+    const unit = e as UnitEntity;
+    const kind = e.objectType === ObjectType.PLAYER ? "Player" : "NPC";
+    const levelStr = unit.level > 0 ? `, level ${unit.level}` : "";
+    return `[world] ${e.name} appeared (${kind}${levelStr})`;
+  }
+  if (e.objectType === ObjectType.GAMEOBJECT) {
+    return `[world] ${e.name} appeared (GameObject)`;
+  }
+  return undefined;
 }
 
 export function formatEntityEvent(event: EntityEvent): string | undefined {
   switch (event.type) {
-    case "appear": {
-      const e = event.entity;
-      if (!e.name) return undefined;
-      if (
-        e.objectType === ObjectType.UNIT ||
-        e.objectType === ObjectType.PLAYER
-      ) {
-        const unit = e as UnitEntity;
-        const kind = e.objectType === ObjectType.PLAYER ? "Player" : "NPC";
-        const levelStr = unit.level > 0 ? `, level ${unit.level}` : "";
-        return `[world] ${e.name} appeared (${kind}${levelStr})`;
-      }
-      if (e.objectType === ObjectType.GAMEOBJECT) {
-        return `[world] ${e.name} appeared (GameObject)`;
-      }
-      return undefined;
-    }
+    case "appear":
+      return formatEntityAppear(event.entity);
     case "disappear": {
       const name = event.name ?? "Unknown entity";
       return `[world] ${name} left range`;
@@ -217,8 +219,10 @@ export function formatEntityEvent(event: EntityEvent): string | undefined {
     case "update": {
       if (!(event.changed.includes("name") && event.entity.name))
         return undefined;
-      return formatEntityEvent({ entity: event.entity, type: "appear" });
+      return formatEntityAppear(event.entity);
     }
+    default:
+      return;
   }
 }
 
@@ -258,6 +262,8 @@ export function formatEntityEventObj(
       };
     case "update":
       return undefined;
+    default:
+      return;
   }
 }
 
@@ -271,7 +277,7 @@ function friendStatusLabel(status: number): string {
 export function formatFriendList(friends: FriendEntry[]): string {
   if (friends.length === 0) return "[friends] No friends on your list";
   const lines = friends.map((f) => {
-    const name = f.name || `guid:${Number(f.guid & 0xffffffffn)}`;
+    const name = f.name || `guid:${Number(BigInt.asUintN(32, f.guid))}`;
     if (f.status === FriendStatus.OFFLINE) return `  ${name} — Offline`;
     const cls = CLASS_NAMES[f.playerClass] ?? `class ${f.playerClass}`;
     const statusLabel = friendStatusLabel(f.status);
@@ -333,6 +339,8 @@ export function formatFriendEvent(event: FriendEvent): string | undefined {
       return `[friends] Error: ${friendResultLabel(event.result)}`;
     case "friend-list":
       return undefined;
+    default:
+      return;
   }
 }
 
@@ -362,13 +370,15 @@ export function formatFriendEventObj(
       };
     case "friend-list":
       return undefined;
+    default:
+      return;
   }
 }
 
 export function formatIgnoreList(ignored: IgnoreEntry[]): string {
   if (ignored.length === 0) return "[ignore] Ignore list is empty";
   const lines = ignored.map((e) => {
-    const name = e.name || `guid:${Number(e.guid & 0xffffffffn)}`;
+    const name = e.name || `guid:${Number(BigInt.asUintN(32, e.guid))}`;
     return `  ${name}`;
   });
   return `[ignore] ${ignored.length} ignored\n${lines.join("\n")}`;
@@ -406,6 +416,8 @@ export function formatIgnoreEvent(event: IgnoreEvent): string | undefined {
       return `[ignore] Error: ${ignoreResultLabel(event.result)}`;
     case "ignore-list":
       return undefined;
+    default:
+      return;
   }
 }
 
@@ -425,6 +437,8 @@ export function formatIgnoreEventObj(
       };
     case "ignore-list":
       return undefined;
+    default:
+      return;
   }
 }
 

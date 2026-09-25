@@ -72,30 +72,29 @@ function parseObjects(lines: string[]): JsonObject[] | null {
   return objects;
 }
 
-export function decodeReply(
+function decodeObjectReply(
   command: string,
-  kind: ReplyKind,
+  kind: "nearby" | "events",
   lines: string[],
 ): OutputEnvelope {
-  for (const line of lines) {
-    const message = daemonError(line);
-    if (message !== null) return errorEnvelope(command, "command", message);
-  }
+  const objects = parseObjects(lines);
+  if (!objects)
+    return errorEnvelope(command, "command", "invalid JSON object reply");
+  if (kind === "nearby") return resultEnvelope(command, objects);
+  return {
+    command,
+    data: null,
+    error: null,
+    events: objects,
+    kind: "events",
+  };
+}
 
-  if (kind === "nearby" || kind === "events") {
-    const objects = parseObjects(lines);
-    if (!objects)
-      return errorEnvelope(command, "command", "invalid JSON object reply");
-    if (kind === "nearby") return resultEnvelope(command, objects);
-    return {
-      command,
-      data: null,
-      error: null,
-      events: objects,
-      kind: "events",
-    };
-  }
-
+function decodeLineReply(
+  command: string,
+  kind: "intent" | "json" | "slash",
+  lines: string[],
+): OutputEnvelope {
   const [line] = lines;
   if (line === undefined)
     return errorEnvelope(command, "command", "empty reply");
@@ -118,14 +117,30 @@ export function decodeReply(
   }
 }
 
+export function decodeReply(
+  command: string,
+  kind: ReplyKind,
+  lines: string[],
+): OutputEnvelope {
+  for (const line of lines) {
+    const message = daemonError(line);
+    if (message !== null) return errorEnvelope(command, "command", message);
+  }
+  if (kind === "nearby" || kind === "events")
+    return decodeObjectReply(command, kind, lines);
+  return decodeLineReply(command, kind, lines);
+}
+
 export function daemonCommandFailed(lines: string[]): boolean {
   return lines.some((line) => line.startsWith("ERR"));
 }
 
 export function walkCommandFailed(lines: string[]): boolean {
-  if (lines.length !== 1 || daemonCommandFailed(lines)) return true;
+  const [line] = lines;
+  if (line === undefined || lines.length !== 1 || daemonCommandFailed(lines))
+    return true;
   try {
-    const outcome: unknown = JSON.parse(lines[0]!);
+    const outcome: unknown = JSON.parse(line);
     return (
       typeof outcome !== "object" ||
       outcome === null ||

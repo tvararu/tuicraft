@@ -206,12 +206,12 @@ describe("main CLI against a daemon socket", () => {
       socket: {
         data(socket, bytes) {
           const command = Buffer.from(bytes).toString().trim();
-          const reply =
-            command === "STATUS"
-              ? "CONNECTED\n\n"
-              : command.startsWith("SAY ")
-                ? "OK\n\n"
-                : "ERR event_read_lost\n\n";
+          let reply = "ERR event_read_lost\n\n";
+          if (command === "STATUS") {
+            reply = "CONNECTED\n\n";
+          } else if (command.startsWith("SAY ")) {
+            reply = "OK\n\n";
+          }
           socket.write(reply);
           socket.flush();
         },

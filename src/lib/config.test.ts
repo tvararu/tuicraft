@@ -142,7 +142,7 @@ describe("readConfig", () => {
   test("parses an existing config file", async () => {
     const { mkdir } = await import("node:fs/promises");
     await mkdir(cfgDir, { recursive: true });
-    await Bun.write(cfgPath, serializeConfig(sampleConfig) + "\n");
+    await Bun.write(cfgPath, `${serializeConfig(sampleConfig)}\n`);
     const cfg = await readConfig(paths);
     expect(cfg).toEqual(sampleConfig);
   });
@@ -170,7 +170,7 @@ describe("writeConfig", () => {
   test("creates file with mode 0600", async () => {
     await writeConfig(sampleConfig, paths);
     const st = await stat(cfgPath);
-    expect(st.mode & 0o777).toBe(0o600);
+    expect(st.mode.toString(8).slice(-3)).toBe("600");
   });
 });
 

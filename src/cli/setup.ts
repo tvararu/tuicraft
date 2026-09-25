@@ -8,6 +8,8 @@ import { type Paths, resolvePaths } from "lib/paths";
 type CreateInterfaceFn = typeof createInterface;
 type WriteFn = NodeJS.WritableStream["write"];
 
+const PRINTABLE_ASCII = /^[\x20-\x7e]+$/;
+
 function rlOutput(rl: ReadlineInterface): NodeJS.WritableStream {
   return (rl as unknown as { output: NodeJS.WritableStream }).output;
 }
@@ -17,9 +19,11 @@ function maskEcho(output: NodeJS.WritableStream, label: string): () => void {
   let prompted = false;
   output.write = ((s: string | Uint8Array, ...args: unknown[]) => {
     if (!prompted && s === label) prompted = true;
-    else if (typeof s === "string" && /^[\x20-\x7e]+$/.test(s))
+    else if (typeof s === "string" && PRINTABLE_ASCII.test(s))
       return orig.call(output, "*".repeat(s.length));
-    return (orig as Function).call(output, s, ...args);
+    return (
+      orig as (s: string | Uint8Array, ...args: unknown[]) => boolean
+    ).call(output, s, ...args);
   }) as WriteFn;
   return () => {
     output.write = orig;

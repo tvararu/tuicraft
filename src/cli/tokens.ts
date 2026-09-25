@@ -13,16 +13,20 @@ const MAX_MOVE_MS = 10_000;
 const MAX_WALK_YARDS = 20;
 const DIRECTIONS: readonly string[] = ["forward", "backward", "left", "right"];
 const CYCLE_FLAGS = ["--max", "--instruction"];
+const WHITESPACE = /\s+/;
+const GUID_PATTERN = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
+const DIGITS = /^[0-9]+$/;
+const LINE_BREAK = /[\r\n]/;
 
 const ok = <T>(value: T): Parsed<T> => ({ ok: true, value });
 const fail = <T>(reason: string): Parsed<T> => ({ ok: false, reason });
 
 export function tokenize(rest: string): string[] {
-  return rest.split(/\s+/).filter(Boolean);
+  return rest.split(WHITESPACE).filter(Boolean);
 }
 
 export function parseGuid(raw: string): bigint | undefined {
-  if (!/^(0[xX][0-9a-fA-F]+|[0-9]+)$/.test(raw)) return undefined;
+  if (!GUID_PATTERN.test(raw)) return undefined;
   const guid = BigInt(raw);
   return guid <= MAX_GUID ? guid : undefined;
 }
@@ -32,7 +36,7 @@ export function parseUnsigned(
   min: number,
   max: number,
 ): number | undefined {
-  if (!/^[0-9]+$/.test(raw)) return undefined;
+  if (!DIGITS.test(raw)) return undefined;
   const value = Number(raw);
   return value >= min && value <= max ? value : undefined;
 }
@@ -57,7 +61,9 @@ export function parseGuidArg(
   tokens: string[],
   nonzero = false,
 ): Parsed<{ guid: bigint }> {
-  const guid = tokens.length === 1 ? parseGuid(tokens[0]!) : undefined;
+  const [raw] = tokens;
+  const guid =
+    tokens.length === 1 && raw !== undefined ? parseGuid(raw) : undefined;
   if (guid === undefined || (nonzero && guid === 0n))
     return fail("invalid guid");
   return ok({ guid });
@@ -69,8 +75,11 @@ export function parseBoundedArg(
   max: number,
   reason: string,
 ): Parsed<number> {
+  const [raw] = tokens;
   const value =
-    tokens.length === 1 ? parseUnsigned(tokens[0]!, min, max) : undefined;
+    tokens.length === 1 && raw !== undefined
+      ? parseUnsigned(raw, min, max)
+      : undefined;
   return value === undefined ? fail(reason) : ok(value);
 }
 
@@ -82,8 +91,9 @@ export function parseQuestId(tokens: string[]): Parsed<{ questId: number }> {
 export function parseMove(
   tokens: string[],
 ): Parsed<{ direction: MovementDirection; durationMs: number }> {
-  if (tokens.length < 1 || tokens.length > 2) return fail("invalid move");
-  const direction = tokens[0]!.toLowerCase();
+  const [first] = tokens;
+  if (first === undefined || tokens.length > 2) return fail("invalid move");
+  const direction = first.toLowerCase();
   if (!isDirection(direction)) return fail("invalid direction");
   const raw = tokens[1];
   const durationMs =
@@ -93,8 +103,11 @@ export function parseMove(
 }
 
 export function parseFace(tokens: string[]): Parsed<{ orientation: number }> {
+  const [raw] = tokens;
   const orientation =
-    tokens.length === 1 ? parseFiniteNumber(tokens[0]!) : undefined;
+    tokens.length === 1 && raw !== undefined
+      ? parseFiniteNumber(raw)
+      : undefined;
   return orientation === undefined
     ? fail("invalid facing")
     : ok({ orientation });
@@ -136,10 +149,12 @@ export function parseWalkToward(
 export function parseCast(
   tokens: string[],
 ): Parsed<{ spellId: number; guid: bigint }> {
-  if (tokens.length !== 2) return fail("invalid cast");
-  const spellId = parseUnsigned(tokens[0]!, 1, MAX_UINT32);
+  const [rawSpell, rawGuid] = tokens;
+  if (tokens.length !== 2 || rawSpell === undefined || rawGuid === undefined)
+    return fail("invalid cast");
+  const spellId = parseUnsigned(rawSpell, 1, MAX_UINT32);
   if (spellId === undefined) return fail("invalid spell");
-  const guid = parseGuid(tokens[1]!);
+  const guid = parseGuid(rawGuid);
   if (guid === undefined) return fail("invalid guid");
   return ok({ guid, spellId });
 }
@@ -156,7 +171,7 @@ export function parseOptionId(raw: string | undefined): number | undefined {
 }
 
 function oneLine(instruction: string): Parsed<string> {
-  return /[\r\n]/.test(instruction)
+  return LINE_BREAK.test(instruction)
     ? fail("instruction must not contain line breaks")
     : ok(instruction || DEFAULT_FIGHT_INSTRUCTION);
 }
@@ -179,22 +194,22 @@ export type FightArgs = {
 export function parseFight(tokens: string[]): Parsed<FightArgs> {
   let framing: FramingVariant | undefined;
   const words: string[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]!;
+  const queue = [...tokens];
+  for (let token = queue.shift(); token !== undefined; token = queue.shift()) {
     const inline = token.startsWith("--framing=");
     if (token !== "--framing" && !inline) {
       words.push(token);
       continue;
     }
     const parsed = parseFraming(
-      inline ? token.slice("--framing=".length) : tokens[++i],
+      inline ? token.slice("--framing=".length) : queue.shift(),
     );
     if (!parsed.ok) return parsed;
     framing = parsed.value;
   }
   const guid = parseGuid(words[0] ?? "");
   if (guid === undefined)
-    return fail(words.length ? "invalid guid" : "invalid fight");
+    return fail(words.length > 0 ? "invalid guid" : "invalid fight");
   const instruction = oneLine(words.slice(1).join(" "));
   if (!instruction.ok) return instruction;
   return ok({ framing, guid, instruction: instruction.value });
@@ -218,29 +233,58 @@ function parseCycleMax(raw: string | undefined): number | undefined {
     : parseUnsigned(raw, 1, Number.MAX_SAFE_INTEGER);
 }
 
-export function parseCycle(tokens: string[]): Parsed<CycleArgs> {
-  let maxStarts: number | undefined;
-  let words: string[] = [];
-  const guids: bigint[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]!;
-    if (token === "--max" || token.startsWith("--max=")) {
-      const raw =
-        token === "--max" ? tokens[++i] : token.slice("--max=".length);
-      maxStarts = parseCycleMax(raw);
-      if (maxStarts === undefined) return fail("invalid cycle max");
-    } else if (token.startsWith("--instruction=")) {
-      words = [token.slice("--instruction=".length)];
-    } else if (token === "--instruction") {
-      words = [];
-      while (i + 1 < tokens.length && !isCycleFlag(tokens[i + 1]!))
-        words.push(tokens[++i]!);
-    } else {
-      const guid = parseGuid(token);
-      if (guid === undefined || guid === 0n) return fail("invalid guid");
-      guids.push(guid);
-    }
+type CycleDraft = {
+  guids: bigint[];
+  maxStarts?: number;
+  words: string[];
+};
+
+function takeInstructionWords(queue: string[]): string[] {
+  const words: string[] = [];
+  for (
+    let next = queue[0];
+    next !== undefined && !isCycleFlag(next);
+    next = queue[0]
+  ) {
+    words.push(next);
+    queue.shift();
   }
+  return words;
+}
+
+function readCycleToken(
+  token: string,
+  queue: string[],
+  draft: CycleDraft,
+): string | null {
+  if (token === "--max" || token.startsWith("--max=")) {
+    const raw =
+      token === "--max" ? queue.shift() : token.slice("--max=".length);
+    draft.maxStarts = parseCycleMax(raw);
+    return draft.maxStarts === undefined ? "invalid cycle max" : null;
+  }
+  if (token.startsWith("--instruction=")) {
+    draft.words = [token.slice("--instruction=".length)];
+    return null;
+  }
+  if (token === "--instruction") {
+    draft.words = takeInstructionWords(queue);
+    return null;
+  }
+  const guid = parseGuid(token);
+  if (guid === undefined || guid === 0n) return "invalid guid";
+  draft.guids.push(guid);
+  return null;
+}
+
+export function parseCycle(tokens: string[]): Parsed<CycleArgs> {
+  const draft: CycleDraft = { guids: [], words: [] };
+  const queue = [...tokens];
+  for (let token = queue.shift(); token !== undefined; token = queue.shift()) {
+    const reason = readCycleToken(token, queue, draft);
+    if (reason !== null) return fail(reason);
+  }
+  const { guids, maxStarts, words } = draft;
   if (guids.length === 0) return fail("invalid cycle");
   const instruction = oneLine(words.join(" "));
   if (!instruction.ok) return instruction;
