@@ -655,12 +655,24 @@ Cutover progress (Theo's go, 2026-09-25):
   code from the main checkout, which has no `src/factory/` until the
   coordinator lands this branch. Enable the timer after that
   (`systemctl --user enable --now tuicraft-factory-reaper.timer`).
-- Theo in the Orca UI: the runtime (`orca serve`, `orca-server.service`)
-  keeps its settings in memory and rewrites `orca-data.json`, so editing the
-  file has no effect. Restarting the service would kill every agent terminal
-  it hosts. Set these in Settings instead: Agents → omp command
-  `~/.local/bin/omp-factory` (`agentCmdOverrides.omp`), and Experimental →
-  Agent sleep on, 120 minutes.
+- Done (2026-09-25): the Orca host settings. Theo's Mac app edits only its
+  own local settings, not the VM runtime's, and the runtime's
+  `settings.update` RPC does not accept `agentCmdOverrides` or the sleep
+  keys. So, with Theo's go, the settings were changed with the service
+  stopped, and it was then restarted:
+  - `~/.config/systemd/user/orca-server.service.d/keep-terminals.conf` sets
+    `KillMode=process`, so a restart stops only the server and leaves the
+    terminal daemon and its agents running. Every agent terminal survived
+    the restart.
+  - `~/.local/state/tuicraft-factory/orca-settings-restart.sh`, run through
+    `systemd-run --user`, backed up `orca-data.json`, stopped the service,
+    set `agentCmdOverrides.omp = /home/deity/.local/bin/omp-factory`,
+    `experimentalAgentHibernation = true` and
+    `agentHibernationIdleMs = 7200000`, then started the service. Its log
+    is next to it.
+  - Checked afterwards: the settings persisted. A plain Orca omp launch ran
+    `omp-factory '…'`, and the process was the real omp with the arguments
+    unchanged. A `[factory:qa]` launch ran `omp --max-time 2h [factory:qa] …`.
 - Theo on GitHub: the ruleset change in
   [GitHub configuration](#github-configuration).
 - Then: the AGENTS.md cutover, and `setup automations --apply --enable`.
