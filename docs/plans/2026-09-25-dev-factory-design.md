@@ -430,6 +430,12 @@ double-written.
 2. **Board status at every transition:** `in-progress` on claim,
    `in-review` when the PR opens, `completed` after the merge.
    `--comment` is a one-line mirror of the workpad.
+   Run worktrees are based on `origin/main`, not `main`. `--base-branch
+   main` resolves to the main checkout's local `main`, which nobody pulls,
+   so the first overnight runs started from `ab7b602` while `origin/main`
+   was at `b98c9b4`. Checked: an Orca worktree created with
+   `--base-branch origin/main` gets `baseRef: refs/remotes/origin/main` and
+   the current remote head.
 3. **Cleanup is entirely ours.** Orca never removes automation worktrees
    by itself, so the reaper is required. Phase 0 also found that after a
    branch switch, `worktree rm` deleted the checked-out branch it could
