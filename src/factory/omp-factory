@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+self=$(readlink -f "${BASH_SOURCE[0]}")
+
+real_omp() {
+  local IFS=:
+  local dir candidate
+  for dir in $PATH; do
+    candidate="${dir:-.}/omp"
+    [[ -x $candidate && ! -d $candidate ]] || continue
+    [[ $(readlink -f "$candidate") == "$self" ]] && continue
+    printf '%s\n' "$candidate"
+    return 0
+  done
+  printf 'omp-factory: no omp on PATH besides this wrapper\n' >&2
+  return 127
+}
+
+role=""
+for arg in "$@"; do
+  if [[ $arg =~ ^\[factory:(worker|reviewer|merger|qa)\] ]]; then
+    role=${BASH_REMATCH[1]}
+    break
+  fi
+done
+
+omp=$(real_omp)
+
+if [[ -z $role ]]; then
+  exec "$omp" "$@"
+fi
+
+case $role in
+  worker) cap=3h ;;
+  qa) cap=2h ;;
+  *) cap=1h ;;
+esac
+
+roles_env="${HOME}/.config/tuicraft-factory/roles.env"
+if [[ -f $roles_env ]]; then
+  source "$roles_env"
+fi
+
+prefix=${role^^}
+model_var="${prefix}_MODEL"
+thinking_var="${prefix}_THINKING"
+flags=(--max-time "$cap")
+if [[ -n ${!model_var:-} ]]; then
+  flags+=(--model "${!model_var}")
+fi
+if [[ -n ${!thinking_var:-} ]]; then
+  flags+=(--thinking "${!thinking_var}")
+fi
+
+exec "$omp" "${flags[@]}" "$@"
