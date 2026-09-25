@@ -5,6 +5,7 @@ import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
 import {
+  appearBeside,
   daemonSock,
   dist2d,
   type GpsFix,
@@ -125,25 +126,32 @@ describe("two-client chat", () => {
 
     const handle1 = await worldSession(config1, auth1);
     const handle2 = await worldSession(config2, auth2);
+    let restore: (() => Promise<void>) | undefined;
 
-    await Bun.sleep(1000);
-    handle1.sendWhisper(config1.character, `.appear ${config2.character}`);
-    await Bun.sleep(2500);
+    try {
+      await Bun.sleep(1000);
+      restore = await appearBeside(
+        handle1,
+        config1.character,
+        config2.character,
+      );
 
-    const received: ChatMessage[] = [];
-    handle2.onMessage((msg) => received.push(msg));
+      const received: ChatMessage[] = [];
+      handle2.onMessage((msg) => received.push(msg));
 
-    handle1.sendSay("hello from say test");
+      handle1.sendSay("hello from say test");
 
-    await Bun.sleep(3000);
+      await Bun.sleep(3000);
 
-    handle1.close();
-    handle2.close();
-    await Promise.all([handle1.closed, handle2.closed]);
-
-    const sayMsg = received.find((m) => m.message === "hello from say test");
-    expect(sayMsg).toBeDefined();
-  }, 30_000);
+      const sayMsg = received.find((m) => m.message === "hello from say test");
+      expect(sayMsg).toBeDefined();
+    } finally {
+      await restore?.();
+      handle1.close();
+      handle2.close();
+      await Promise.all([handle1.closed, handle2.closed]);
+    }
+  }, 40_000);
 });
 
 describe("fault paths", () => {
@@ -401,11 +409,15 @@ describe("entity tracking", () => {
 
     const handle1 = await worldSession(config1, auth1);
     let handle2: WorldHandle | undefined;
+    let restore: (() => Promise<void>) | undefined;
 
     try {
       await Bun.sleep(2000);
-      handle1.sendWhisper(config1.character, `.appear ${config2.character}`);
-      await Bun.sleep(2500);
+      restore = await appearBeside(
+        handle1,
+        config1.character,
+        config2.character,
+      );
 
       const events: EntityEvent[] = [];
       handle1.onEntityEvent((e) => events.push(e));
@@ -432,11 +444,12 @@ describe("entity tracking", () => {
         .filter((e) => e.name === config2.character);
       expect(inStore.length).toBe(1);
     } finally {
+      await restore?.();
       handle2?.close();
       handle1.close();
       await Promise.all([handle2?.closed, handle1.closed]);
     }
-  }, 30_000);
+  }, 40_000);
 
   test("getNearbyEntities returns entities with positions", async () => {
     const auth1 = await authHandshake(config1);

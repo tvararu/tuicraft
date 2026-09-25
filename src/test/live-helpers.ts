@@ -47,6 +47,27 @@ export function dist2d(a: GpsFix, b: GpsFix): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+export async function appearBeside(
+  handle: WorldHandle,
+  self: string,
+  target: string,
+): Promise<() => Promise<void>> {
+  const chat: ChatMessage[] = [];
+  handle.onMessage((m) => chat.push(m));
+  handle.sendWhisper(self, ".gps");
+  await Bun.sleep(2500);
+  const home = must(parseGps(chat));
+  handle.sendWhisper(self, `.appear ${target}`);
+  await Bun.sleep(2500);
+  return async () => {
+    handle.sendWhisper(
+      self,
+      `.go xyz ${home.x} ${home.y} ${home.z} ${home.map}`,
+    );
+    await Bun.sleep(2500);
+  };
+}
+
 export async function daemonSock(
   handle: WorldHandle,
   tag: string,
