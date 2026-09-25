@@ -1,5 +1,5 @@
-import { test, expect, describe } from "bun:test";
-import { IgnoreStore, type IgnoreEvent } from "wow/ignore-store";
+import { describe, expect, test } from "bun:test";
+import { type IgnoreEvent, IgnoreStore } from "wow/ignore-store";
 
 describe("IgnoreStore", () => {
   test("starts empty", () => {

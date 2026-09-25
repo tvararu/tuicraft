@@ -1,63 +1,63 @@
+import type { EventEntry } from "daemon/commands";
 import type { RingBuffer } from "lib/ring-buffer";
-import type { SessionLog, LogEntry } from "lib/session-log";
+import type { LogEntry, SessionLog } from "lib/session-log";
 import {
-  formatMessage,
-  formatMessageObj,
-  formatGroupEvent,
   formatEntityEvent,
   formatEntityEventObj,
   formatFriendEvent,
   formatFriendEventObj,
+  formatGroupEvent,
   formatIgnoreEvent,
   formatIgnoreEventObj,
+  formatMessage,
+  formatMessageObj,
   jsonSafe,
 } from "ui/format";
 import { formatControlEvent, formatControlEventObj } from "ui/format-control";
-import type { EventEntry } from "daemon/commands";
-import type { FriendEvent } from "wow/friend-store";
-import type { IgnoreEvent } from "wow/ignore-store";
-import type { GuildEvent } from "wow/guild-store";
-import { formatGuildCommandError } from "wow/protocol/guild";
-import type { ChatMessage, GroupEvent, DuelEvent } from "wow/client";
+import type { ChatMessage, DuelEvent, GroupEvent } from "wow/client";
 import type { ControlEvent } from "wow/control";
 import type { EntityEvent } from "wow/entity-store";
+import type { FriendEvent } from "wow/friend-store";
+import type { GuildEvent } from "wow/guild-store";
+import type { IgnoreEvent } from "wow/ignore-store";
+import { formatGuildCommandError } from "wow/protocol/guild";
 
 function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
   switch (event.type) {
     case "invite_received":
-      return { type: "GROUP_INVITE", from: event.from };
+      return { from: event.from, type: "GROUP_INVITE" };
     case "command_result":
       return {
-        type: "GROUP_COMMAND_RESULT",
         operation: event.operation,
-        target: event.target,
         result: event.result,
+        target: event.target,
+        type: "GROUP_COMMAND_RESULT",
       };
     case "leader_changed":
-      return { type: "GROUP_LEADER_CHANGED", name: event.name };
+      return { name: event.name, type: "GROUP_LEADER_CHANGED" };
     case "group_destroyed":
       return { type: "GROUP_DESTROYED" };
     case "kicked":
       return { type: "GROUP_KICKED" };
     case "invite_declined":
-      return { type: "GROUP_INVITE_DECLINED", name: event.name };
+      return { name: event.name, type: "GROUP_INVITE_DECLINED" };
     case "group_list":
       return {
-        type: "GROUP_LIST",
+        leader: event.leader,
         members: event.members.map((m) => ({
           name: m.name,
           online: m.online,
         })),
-        leader: event.leader,
+        type: "GROUP_LIST",
       };
     case "member_stats":
       return {
-        type: "PARTY_MEMBER_STATS",
         guidLow: event.guidLow,
-        online: event.online,
         hp: event.hp,
-        maxHp: event.maxHp,
         level: event.level,
+        maxHp: event.maxHp,
+        online: event.online,
+        type: "PARTY_MEMBER_STATS",
       };
   }
 }
@@ -69,7 +69,7 @@ export function onGroupEvent(
 ): void {
   const text = formatGroupEvent(event);
   const obj = formatGroupEventObj(event);
-  events.push({ text, json: JSON.stringify(obj) });
+  events.push({ json: JSON.stringify(obj), text });
   log.append(obj as LogEntry).catch(() => {});
 }
 
@@ -79,7 +79,7 @@ export function onChatMessage(
   log: SessionLog,
 ): void {
   const obj = formatMessageObj(msg);
-  events.push({ text: formatMessage(msg), json: JSON.stringify(obj) });
+  events.push({ json: JSON.stringify(obj), text: formatMessage(msg) });
   log.append(obj).catch(() => {});
 }
 
@@ -91,7 +91,7 @@ export function onEntityEvent(
   const text = formatEntityEvent(event);
   const obj = formatEntityEventObj(event);
   if (obj) {
-    events.push({ text, json: JSON.stringify(obj) });
+    events.push({ json: JSON.stringify(obj), text });
     log.append(obj as LogEntry).catch(() => {});
   }
 }
@@ -104,7 +104,7 @@ export function onFriendEvent(
   const text = formatFriendEvent(event);
   const obj = formatFriendEventObj(event);
   if (obj) {
-    events.push({ text, json: JSON.stringify(obj) });
+    events.push({ json: JSON.stringify(obj), text });
     log.append(obj as LogEntry).catch(() => {});
   }
 }
@@ -117,7 +117,7 @@ export function onIgnoreEvent(
   const text = formatIgnoreEvent(event);
   const obj = formatIgnoreEventObj(event);
   if (obj) {
-    events.push({ text, json: JSON.stringify(obj) });
+    events.push({ json: JSON.stringify(obj), text });
     log.append(obj as LogEntry).catch(() => {});
   }
 }
@@ -159,62 +159,62 @@ function formatGuildEventObj(event: GuildEvent): Record<string, unknown> {
   switch (event.type) {
     case "guild-roster":
       return {
-        type: "GUILD_ROSTER_UPDATED",
-        sender: "",
         message: `${event.roster.members.length} members`,
+        sender: "",
+        type: "GUILD_ROSTER_UPDATED",
       };
     case "promotion":
       return {
-        type: "GUILD_PROMOTION",
-        officer: event.officer,
         member: event.member,
+        officer: event.officer,
         rank: event.rank,
+        type: "GUILD_PROMOTION",
       };
     case "demotion":
       return {
-        type: "GUILD_DEMOTION",
-        officer: event.officer,
         member: event.member,
+        officer: event.officer,
         rank: event.rank,
+        type: "GUILD_DEMOTION",
       };
     case "motd":
-      return { type: "GUILD_MOTD", text: event.text };
+      return { text: event.text, type: "GUILD_MOTD" };
     case "joined":
-      return { type: "GUILD_JOINED", name: event.name };
+      return { name: event.name, type: "GUILD_JOINED" };
     case "left":
-      return { type: "GUILD_LEFT", name: event.name };
+      return { name: event.name, type: "GUILD_LEFT" };
     case "removed":
       return {
-        type: "GUILD_REMOVED",
         member: event.member,
         officer: event.officer,
+        type: "GUILD_REMOVED",
       };
     case "leader_is":
-      return { type: "GUILD_LEADER_IS", name: event.name };
+      return { name: event.name, type: "GUILD_LEADER_IS" };
     case "leader_changed":
       return {
-        type: "GUILD_LEADER_CHANGED",
-        oldLeader: event.oldLeader,
         newLeader: event.newLeader,
+        oldLeader: event.oldLeader,
+        type: "GUILD_LEADER_CHANGED",
       };
     case "disbanded":
       return { type: "GUILD_DISBANDED" };
     case "signed_on":
-      return { type: "GUILD_SIGNED_ON", name: event.name };
+      return { name: event.name, type: "GUILD_SIGNED_ON" };
     case "signed_off":
-      return { type: "GUILD_SIGNED_OFF", name: event.name };
+      return { name: event.name, type: "GUILD_SIGNED_OFF" };
     case "command_result":
       return {
-        type: "GUILD_COMMAND_RESULT",
         command: event.command,
         name: event.name,
         result: event.result,
+        type: "GUILD_COMMAND_RESULT",
       };
     case "guild_invite":
       return {
-        type: "GUILD_INVITE_RECEIVED",
-        inviter: event.inviter,
         guildName: event.guildName,
+        inviter: event.inviter,
+        type: "GUILD_INVITE_RECEIVED",
       };
   }
 }
@@ -226,7 +226,7 @@ export function onGuildEvent(
 ): void {
   const text = formatGuildEvent(event);
   const obj = formatGuildEventObj(event);
-  events.push({ text, json: JSON.stringify(obj) });
+  events.push({ json: JSON.stringify(obj), text });
   log.append(obj as LogEntry).catch(() => {});
 }
 
@@ -254,17 +254,17 @@ function formatDuelEventObj(
 ): Record<string, unknown> | undefined {
   switch (event.type) {
     case "duel_requested":
-      return { type: "DUEL_REQUESTED", challenger: event.challenger };
+      return { challenger: event.challenger, type: "DUEL_REQUESTED" };
     case "duel_countdown":
-      return { type: "DUEL_COUNTDOWN", timeMs: event.timeMs };
+      return { timeMs: event.timeMs, type: "DUEL_COUNTDOWN" };
     case "duel_complete":
-      return { type: "DUEL_COMPLETE", completed: event.completed };
+      return { completed: event.completed, type: "DUEL_COMPLETE" };
     case "duel_winner":
       return {
-        type: "DUEL_WINNER",
-        reason: event.reason,
-        winner: event.winner,
         loser: event.loser,
+        reason: event.reason,
+        type: "DUEL_WINNER",
+        winner: event.winner,
       };
     case "duel_out_of_bounds":
       return { type: "DUEL_OUT_OF_BOUNDS" };
@@ -281,7 +281,7 @@ export function onDuelEvent(
   const text = formatDuelEvent(event);
   const obj = formatDuelEventObj(event);
   if (obj) {
-    events.push({ text, json: JSON.stringify(obj) });
+    events.push({ json: JSON.stringify(obj), text });
     log.append(obj as LogEntry).catch(() => {});
   }
 }
@@ -293,8 +293,8 @@ export function onControlEvent(
 ): void {
   const obj = formatControlEventObj(event);
   events.push({
-    text: formatControlEvent(event),
     json: JSON.stringify(obj),
+    text: formatControlEvent(event),
   });
   log.append(obj as LogEntry).catch(() => {});
 }
@@ -306,9 +306,9 @@ export function onDomainEvent<E extends { type: string }>(
   log: SessionLog,
 ): void {
   const obj: Record<string, unknown> = {
-    type: tag.toUpperCase(),
     data: jsonSafe(event),
+    type: tag.toUpperCase(),
   };
-  events.push({ text: `[${tag}] ${event.type}`, json: JSON.stringify(obj) });
+  events.push({ json: JSON.stringify(obj), text: `[${tag}] ${event.type}` });
   log.append(obj as LogEntry).catch(() => {});
 }

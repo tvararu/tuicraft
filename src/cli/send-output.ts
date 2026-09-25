@@ -21,7 +21,7 @@ export function resultEnvelope(
   command: string,
   data: JsonValue,
 ): OutputEnvelope {
-  return { command, kind: "result", data, events: [], error: null };
+  return { command, data, error: null, events: [], kind: "result" };
 }
 
 export function errorEnvelope(
@@ -33,18 +33,18 @@ export function errorEnvelope(
   if (stage === "wait" && previous) {
     return {
       command,
-      kind: previous.kind,
       data: previous.data,
+      error: { message, stage },
       events: previous.events,
-      error: { stage, message },
+      kind: previous.kind,
     };
   }
   return {
     command,
-    kind: "error",
     data: null,
+    error: { message, stage },
     events: [],
-    error: { stage, message },
+    kind: "error",
   };
 }
 
@@ -89,10 +89,10 @@ export function decodeReply(
     if (kind === "nearby") return resultEnvelope(command, objects);
     return {
       command,
-      kind: "events",
       data: null,
-      events: objects,
       error: null,
+      events: objects,
+      kind: "events",
     };
   }
 
@@ -104,7 +104,7 @@ export function decodeReply(
   if (kind === "intent" || (kind === "slash" && acknowledged)) {
     if (lines.length !== 1 || !acknowledged)
       return errorEnvelope(command, "command", "invalid intent reply");
-    return { command, kind: "intent", data: null, events: [], error: null };
+    return { command, data: null, error: null, events: [], kind: "intent" };
   }
 
   if (kind === "slash") return resultEnvelope(command, { lines });
@@ -137,7 +137,7 @@ export function walkCommandFailed(lines: string[]): boolean {
   }
 }
 
-const RUNS: Record<string, string> = { fight: "tactics", cycle: "cycling" };
+const RUNS: Record<string, string> = { cycle: "cycling", fight: "tactics" };
 const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
 const RECOVERY = [
   "query-corpse",

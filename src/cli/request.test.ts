@@ -3,8 +3,8 @@ import { parseArgs } from "cli/args";
 import {
   inspectionLine,
   isRequest,
-  requestLine,
   type Request,
+  requestLine,
 } from "cli/request";
 import { parseIpcCommand } from "daemon/parse";
 
@@ -56,8 +56,8 @@ describe("requestLine", () => {
 
 describe("inspectionLine", () => {
   test("adds the JSON suffix only when requested", () => {
-    expect(inspectionLine({ mode: "loot", json: false })).toBe("LOOT");
-    expect(inspectionLine({ mode: "cycling", json: true })).toBe(
+    expect(inspectionLine({ json: false, mode: "loot" })).toBe("LOOT");
+    expect(inspectionLine({ json: true, mode: "cycling" })).toBe(
       "CYCLING_JSON",
     );
   });

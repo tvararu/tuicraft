@@ -1,23 +1,23 @@
-import { parseFramingVariant } from "wow/framing";
-import type { FramingVariant } from "wow/framing";
-import type { MovementDirection } from "wow/control";
-import type { WalkTarget } from "wow/client";
 import {
-  parseBare,
-  parseGuidArg,
-  parseBoundedArg,
-  parseQuestId,
-  parseMove,
-  parseFace,
-  parseGoto,
-  parseWalkToward,
-  parseCast,
-  parseResurrect,
-  parseOptionId,
-  parseFight,
-  parseCycle,
   type Parsed,
+  parseBare,
+  parseBoundedArg,
+  parseCast,
+  parseCycle,
+  parseFace,
+  parseFight,
+  parseGoto,
+  parseGuidArg,
+  parseMove,
+  parseOptionId,
+  parseQuestId,
+  parseResurrect,
+  parseWalkToward,
 } from "cli/tokens";
+import type { WalkTarget } from "wow/client";
+import type { MovementDirection } from "wow/control";
+import type { FramingVariant } from "wow/framing";
+import { parseFramingVariant } from "wow/framing";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -177,7 +177,7 @@ function parseWaitFlag(args: string[]): number | undefined {
   if (idx === -1) return undefined;
   const raw = args[idx + 1];
   if (raw === undefined) throw new Error("Invalid --wait value: missing");
-  const n = parseFloat(raw);
+  const n = Number.parseFloat(raw);
   if (!Number.isFinite(n) || n < 0)
     throw new Error(`Invalid --wait value: ${raw}`);
   return n;
@@ -186,23 +186,23 @@ function parseWaitFlag(args: string[]): number | undefined {
 function parseRead(args: string[]): CliAction {
   const rest = args.slice(1);
   return {
+    json: hasFlag(rest, "--json"),
     mode: "read",
     wait: parseWaitFlag(rest),
-    json: hasFlag(rest, "--json"),
   };
 }
 
 function parseTail(args: string[]): CliAction {
-  return { mode: "tail", json: hasFlag(args.slice(1), "--json") };
+  return { json: hasFlag(args.slice(1), "--json"), mode: "tail" };
 }
 
 function parseWho(args: string[]): CliAction {
   const rest = args.slice(1);
   const next = rest[0];
   return {
-    mode: "who",
     filter: next && !next.startsWith("-") ? next : undefined,
     json: hasFlag(rest, "--json"),
+    mode: "who",
   };
 }
 
@@ -215,45 +215,45 @@ function parseSend(args: string[]): CliAction {
   if (hasFlag(filtered, "-w")) {
     const idx = filtered.indexOf("-w");
     return {
+      json,
+      message: filtered.slice(idx + 2).join(" "),
       mode: "whisper",
       target: filtered[idx + 1] ?? "",
-      message: filtered.slice(idx + 2).join(" "),
-      json,
       wait,
     };
   }
   if (hasFlag(filtered, "-y")) {
     const idx = filtered.indexOf("-y");
     return {
-      mode: "yell",
-      message: filtered.slice(idx + 1).join(" "),
       json,
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "yell",
       wait,
     };
   }
   if (hasFlag(filtered, "-g")) {
     const idx = filtered.indexOf("-g");
     return {
-      mode: "guild",
-      message: filtered.slice(idx + 1).join(" "),
       json,
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "guild",
       wait,
     };
   }
   if (hasFlag(filtered, "-p")) {
     const idx = filtered.indexOf("-p");
     return {
-      mode: "party",
-      message: filtered.slice(idx + 1).join(" "),
       json,
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "party",
       wait,
     };
   }
 
   const message = filtered.filter((a) => a !== "-s").join(" ");
   if (message.startsWith("/"))
-    return { mode: "slash", input: message, json, wait };
-  return { mode: "say", message, json, wait };
+    return { input: message, json, mode: "slash", wait };
+  return { json, message, mode: "say", wait };
 }
 
 const FIXED = new Map<string, CliAction>([
@@ -303,7 +303,7 @@ function isInspection(cmd: string): cmd is (typeof INSPECTIONS)[number] {
 
 function parseSubcommand(args: string[]): CliAction | undefined {
   const cmd = args[0];
-  if (!cmd || !SUBCOMMANDS.has(cmd)) return undefined;
+  if (!(cmd && SUBCOMMANDS.has(cmd))) return undefined;
   const rest = args.slice(1);
   const fixed = FIXED.get(cmd);
   if (fixed) return fixed;
@@ -312,7 +312,7 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     take(parseBare(rest, cmd));
     return strict;
   }
-  if (isInspection(cmd)) return { mode: cmd, json: hasFlag(rest, "--json") };
+  if (isInspection(cmd)) return { json: hasFlag(rest, "--json"), mode: cmd };
   switch (cmd) {
     case "read":
       return parseRead(args);
@@ -325,8 +325,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     case "nearby": {
       const all = hasFlag(rest, "--all");
       return {
-        mode: "nearby",
         json: hasFlag(rest, "--json"),
+        mode: "nearby",
         ...(all ? { all: true } : {}),
       };
     }
@@ -358,10 +358,10 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
     const filtered = filterFlags(args);
     const idx = filtered.indexOf("-w");
     return {
+      json: hasFlag(args, "--json"),
+      message: filtered.slice(idx + 2).join(" "),
       mode: "whisper",
       target: filtered[idx + 1] ?? "",
-      message: filtered.slice(idx + 2).join(" "),
-      json: hasFlag(args, "--json"),
       wait: parseWaitFlag(args),
     };
   }
@@ -370,9 +370,9 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
     const filtered = filterFlags(args);
     const idx = filtered.indexOf("-y");
     return {
-      mode: "yell",
-      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "yell",
       wait: parseWaitFlag(args),
     };
   }
@@ -381,9 +381,9 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
     const filtered = filterFlags(args);
     const idx = filtered.indexOf("-g");
     return {
-      mode: "guild",
-      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "guild",
       wait: parseWaitFlag(args),
     };
   }
@@ -392,9 +392,9 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
     const filtered = filterFlags(args);
     const idx = filtered.indexOf("-p");
     return {
-      mode: "party",
-      message: filtered.slice(idx + 1).join(" "),
       json: hasFlag(args, "--json"),
+      message: filtered.slice(idx + 1).join(" "),
+      mode: "party",
       wait: parseWaitFlag(args),
     };
   }
@@ -404,11 +404,11 @@ function parseFlagCommands(args: string[]): CliAction | undefined {
 
 const SETUP_VALUE_FLAGS: Record<string, true> = {
   "--account": true,
-  "--password": true,
   "--character": true,
   "--host": true,
-  "--port": true,
   "--language": true,
+  "--password": true,
+  "--port": true,
   "--timeout_minutes": true,
 };
 
@@ -464,7 +464,7 @@ export function parseArgs(args: string[]): CliAction {
   if (args[0] === "setup") {
     if (hasJsonOption(args))
       throw new Error("--json is not supported for setup");
-    return { mode: "setup", args: args.slice(1) };
+    return { args: args.slice(1), mode: "setup" };
   }
 
   const json = hasJsonOption(args);
@@ -501,7 +501,7 @@ function parseSelectOption(rest: string[]): CliAction {
   if (optionId === undefined) throw new Error("invalid gossip option id");
   const code = rest[1];
   if (code?.includes("\0")) throw new Error("invalid gossip code");
-  return { mode: "select_option", optionId, code };
+  return { code, mode: "select_option", optionId };
 }
 
 function parseGameplay(cmd: string, rest: string[]): CliAction | undefined {
@@ -540,7 +540,7 @@ function parseGameplay(cmd: string, rest: string[]): CliAction | undefined {
       return { mode: "complete_quest", ...take(parseQuestId(rest)) };
     case "choose-reward": {
       const index = take(parseBoundedArg(rest, 0, 5, "invalid reward index"));
-      return { mode: "choose_reward", index };
+      return { index, mode: "choose_reward" };
     }
     case "abandon-quest": {
       const slot = take(parseBoundedArg(rest, 0, 24, "invalid quest slot"));

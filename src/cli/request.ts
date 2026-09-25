@@ -53,7 +53,7 @@ export function isInspection(action: CliAction): action is Inspection {
 }
 
 export function isRequest(action: CliAction): action is Request {
-  return !isInspection(action) && !LOCAL.some((mode) => mode === action.mode);
+  return !(isInspection(action) || LOCAL.some((mode) => mode === action.mode));
 }
 
 export function inspectionLine(action: Inspection): string {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
+import { PacketReader } from "wow/protocol/packet";
 import {
   buildQuestQuery,
   parseQuestQueryResponse,
@@ -67,7 +67,7 @@ describe("parseQuestQueryResponse", () => {
       honor: 12,
       honorMultiplier: 1.5,
       sourceItemId: 200,
-      flags: 0x80000200,
+      flags: 0x80_00_02_00,
       titleId: 6,
       playersSlain: 2,
       talents: 1,
@@ -103,7 +103,7 @@ describe("parseQuestQueryResponse", () => {
           unknownSourceCount: 2,
         },
         {
-          encodedNpcOrGoId: 0x80000141,
+          encodedNpcOrGoId: 0x80_00_01_41,
           npcOrGoId: -321,
           count: 1,
           itemDropId: 501,

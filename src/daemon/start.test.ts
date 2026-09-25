@@ -1,12 +1,12 @@
-import { createMockHandle } from "test/mock-handle";
-import { jest, test, expect, describe, afterEach } from "bun:test";
-import { access, rm, mkdir, unlink } from "node:fs/promises";
-import { serializeConfig } from "lib/config";
-import type { AuthResult } from "wow/auth";
-import type { WorldHandle } from "wow/client";
+import { afterEach, describe, expect, jest, test } from "bun:test";
+import { access, mkdir, rm, unlink } from "node:fs/promises";
 import { sendToSocket } from "cli/ipc";
 import { startDaemon } from "daemon/server";
+import { serializeConfig } from "lib/config";
+import { createMockHandle } from "test/mock-handle";
 import { pathsUnder } from "test/temp-paths";
+import type { AuthResult } from "wow/auth";
+import type { WorldHandle } from "wow/client";
 
 const tmpDir = `./tmp/daemon-start-${Date.now()}`;
 const paths = pathsUnder(tmpDir);
@@ -27,20 +27,20 @@ function makeMockClient(): {
   return {
     authHandshake: jest.fn(
       async (): Promise<AuthResult> => ({
-        sessionKey: new Uint8Array(40),
         realmHost: "localhost",
-        realmPort: 8085,
         realmId: 1,
-      }),
-    ),
-    worldSession: jest.fn(
-      async (): Promise<WorldHandle> => ({
-        ...createMockHandle(),
-        closed,
-        close: mockHandleClose,
+        realmPort: 8085,
+        sessionKey: new Uint8Array(40),
       }),
     ),
     mockHandleClose,
+    worldSession: jest.fn(
+      async (): Promise<WorldHandle> => ({
+        ...createMockHandle(),
+        close: mockHandleClose,
+        closed,
+      }),
+    ),
   };
 }
 
@@ -66,11 +66,11 @@ async function writeTestConfig(): Promise<void> {
     `${cfgDir}/config.toml`,
     serializeConfig({
       account: "TEST",
-      password: "TEST",
       character: "Testchar",
       host: "localhost",
-      port: 3724,
       language: 1,
+      password: "TEST",
+      port: 3724,
       timeout_minutes: 1,
     }) + "\n",
   );
@@ -94,7 +94,7 @@ afterEach(async () => {
     process.removeListener(event, fn);
   }
   signalListeners.length = 0;
-  await rm(tmpDir, { recursive: true, force: true });
+  await rm(tmpDir, { force: true, recursive: true });
 });
 
 describe("startDaemon", () => {

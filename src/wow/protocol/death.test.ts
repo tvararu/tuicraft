@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
 import {
   buildReclaimCorpse,
@@ -11,6 +10,7 @@ import {
   parseDeathReleaseLocation,
   parseResurrectRequest,
 } from "wow/protocol/death";
+import { PacketReader } from "wow/protocol/packet";
 
 const guid = 0x0102030405060708n;
 const guidBytes = [8, 7, 6, 5, 4, 3, 2, 1];
@@ -55,7 +55,7 @@ describe("corpse and recovery responses", () => {
       mapId: 530,
       position: { x: 1.5, y: -2.25, z: 3 },
       corpseMapId: 33,
-      unknown: 0x12345678,
+      unknown: 0x12_34_56_78,
     });
     expect(r.remaining).toBe(0);
   });
@@ -63,7 +63,7 @@ describe("corpse and recovery responses", () => {
   test("reclaim delay is retained in milliseconds", () => {
     expect(
       parseCorpseReclaimDelay(new PacketReader(bytes("30 75 00 00"))),
-    ).toEqual({ delayMs: 30000 });
+    ).toEqual({ delayMs: 30_000 });
   });
 
   test("spirit-healer marker clearing is distinct from a location at zero", () => {

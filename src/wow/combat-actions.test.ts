@@ -1,6 +1,6 @@
 import { expect, jest, test } from "bun:test";
-import { CombatActions } from "wow/combat-actions";
 import { CombatRuntime } from "wow/combat";
+import { CombatActions } from "wow/combat-actions";
 import { ControlRuntime } from "wow/control";
 import { EntityStore } from "wow/entity-store";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
@@ -113,7 +113,7 @@ function setup(
     [UNIT_FIELDS.HEALTH.offset, 100],
     [UNIT_FIELDS.MAXHEALTH.offset, 100],
     [UNIT_FIELDS.BYTES_0.offset, 1],
-    [0x7a, 0x2801],
+    [0x7a, 0x28_01],
     [UNIT_FIELDS.POWER1.offset, 15],
     [UNIT_FIELDS.MAXPOWER1.offset, 1000],
     [UNIT_FIELDS.BASE_MANA.offset, 100],
@@ -126,7 +126,7 @@ function setup(
   store.create(2n, ObjectType.UNIT, {
     health: 100,
     maxHealth: 100,
-    unitFlags: 0x80000,
+    unitFlags: 0x8_00_00,
     target: 1n,
     rawFields: new Map([[UNIT_FIELDS.HEALTH.offset, 100]]),
   });
@@ -246,7 +246,7 @@ test("unsupported hostile range blocks the kit even during cooldown", () => {
 test("normal-form spell restrictions use the observed high form byte", () => {
   const { actions, combat, fields } = setup();
   const data = spell();
-  data.attributes.raw = 0x10000;
+  data.attributes.raw = 0x1_00_00;
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   try {
     expect(
@@ -254,7 +254,7 @@ test("normal-form spell restrictions use the observed high form byte", () => {
         .observe(context)
         .candidates.some((candidate) => candidate.id === "spell:17:target"),
     ).toBe(true);
-    fields.set(0x7a, 0x1c002801);
+    fields.set(0x7a, 0x1c_00_28_01);
     expect(() => actions.execute("spell:17:target", context)).toThrow(
       "action_no_longer_legal",
     );
@@ -267,14 +267,14 @@ test("normal-form spell restrictions use the observed high form byte", () => {
 test("a nonzero stance mask permits normal form only with its allowance flag", () => {
   const { actions, combat } = setup();
   const data = spell();
-  data.attributes.raw = 0x10000;
-  data.targets.stances = 0x80000000;
+  data.attributes.raw = 0x1_00_00;
+  data.targets.stances = 0x80_00_00_00;
   const definition = jest.spyOn(combat, "definition").mockReturnValue(data);
   try {
     expect(() => actions.execute("spell:17:target", context)).toThrow(
       "action_no_longer_legal",
     );
-    data.attributes.ex2 = 0x80000;
+    data.attributes.ex2 = 0x8_00_00;
     actions.execute("spell:17:target", context);
     expect(combat.snapshot().pendingCast?.spellId).toBe(17);
   } finally {
@@ -418,7 +418,7 @@ test("a target re-entering range resets the unreachable persistence threshold", 
       z: 0,
       orientation: 0,
     });
-    let frame = actions.observe(context);
+    const frame = actions.observe(context);
     expect(frame.outcome).toBeUndefined();
     expect(
       frame.candidates.some((candidate) => candidate.id === "spell:17:target"),
@@ -457,7 +457,7 @@ test("facing remains recoverable and does not stop as unreachable", () => {
     let frame = actions.observe(context);
     expect(frame.outcome).toBeUndefined();
     expect(frame.candidates.map((c) => c.id)).toContain("face_target");
-    time = 10000;
+    time = 10_000;
     frame = actions.observe(context);
     expect(frame.outcome).toBeUndefined();
     expect(frame.candidates.map((c) => c.id)).toContain("face_target");
@@ -472,7 +472,7 @@ test("an attacking creature whose faction relation is not verified as hostile ca
     [UNIT_FIELDS.HEALTH.offset, 100],
     [UNIT_FIELDS.MAXHEALTH.offset, 100],
     [UNIT_FIELDS.BYTES_0.offset, 1],
-    [0x7a, 0x2801],
+    [0x7a, 0x28_01],
     [UNIT_FIELDS.POWER1.offset, 15],
     [UNIT_FIELDS.MAXPOWER1.offset, 1000],
     [UNIT_FIELDS.BASE_MANA.offset, 100],

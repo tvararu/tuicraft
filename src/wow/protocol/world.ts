@@ -1,22 +1,22 @@
 import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import type { Arc4 } from "wow/crypto/arc4";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export const INCOMING_HEADER_SIZE = 4;
 export const OUTGOING_HEADER_SIZE = 6;
 
 export interface CharacterInfo {
-  guidLow: number;
-  guidHigh: number;
-  name: string;
-  race: number;
   classId: number;
   gender: number;
-  level: number;
-  zone: number;
-  map: number;
+  guidHigh: number;
+  guidLow: number;
   guildId: number;
+  level: number;
+  map: number;
+  name: string;
+  race: number;
+  zone: number;
 }
 
 export const CLASS_NAMES: Record<number, string> = {
@@ -38,7 +38,12 @@ const ADDON_ENTRIES = [
   { name: "Blizzard_AuctionUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_BarbershopUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_BattlefieldMinimap", flags: 0, modulusCrc: 0, urlCrc: 0 },
-  { name: "Blizzard_BindingUI", flags: 225, modulusCrc: 1276933997, urlCrc: 0 },
+  {
+    name: "Blizzard_BindingUI",
+    flags: 225,
+    modulusCrc: 1_276_933_997,
+    urlCrc: 0,
+  },
   { name: "Blizzard_Calendar", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_CombatLog", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_CombatText", flags: 0, modulusCrc: 0, urlCrc: 0 },
@@ -47,10 +52,15 @@ const ADDON_ENTRIES = [
   { name: "Blizzard_GMChatUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_GMSurveyUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_GuildBankUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
-  { name: "Blizzard_InspectUI", flags: 92, modulusCrc: 1276933997, urlCrc: 0 },
+  {
+    name: "Blizzard_InspectUI",
+    flags: 92,
+    modulusCrc: 1_276_933_997,
+    urlCrc: 0,
+  },
   { name: "Blizzard_ItemSocketingUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
-  { name: "Blizzard_MacroUI", flags: 31, modulusCrc: 1276933997, urlCrc: 0 },
-  { name: "Blizzard_RaidUI", flags: 201, modulusCrc: 1276933997, urlCrc: 0 },
+  { name: "Blizzard_MacroUI", flags: 31, modulusCrc: 1_276_933_997, urlCrc: 0 },
+  { name: "Blizzard_RaidUI", flags: 201, modulusCrc: 1_276_933_997, urlCrc: 0 },
   { name: "Blizzard_TalentUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_TimeManager", flags: 0, modulusCrc: 0, urlCrc: 0 },
   { name: "Blizzard_TokenUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
@@ -58,7 +68,7 @@ const ADDON_ENTRIES = [
   { name: "Blizzard_TrainerUI", flags: 0, modulusCrc: 0, urlCrc: 0 },
 ];
 
-const ADDON_LAST_MODIFIED = 1636457673;
+const ADDON_LAST_MODIFIED = 1_636_457_673;
 
 function buildAddonInfo(): Uint8Array {
   const w = new PacketWriter(512);
@@ -95,7 +105,7 @@ export async function buildWorldAuthPacket(
   const addonCompressed = deflateSync(addonRaw, { level: 9 });
 
   const w = new PacketWriter(256);
-  w.uint32LE(12340);
+  w.uint32LE(12_340);
   w.uint32LE(0);
   w.cString(upperAccount);
   w.uint32LE(0);

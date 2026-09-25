@@ -1,24 +1,24 @@
-import { test, expect, describe, beforeAll, afterAll } from "bun:test";
-import { authHandshake, authWithRetry, ReconnectRequiredError } from "wow/auth";
-import { startMockAuthServer } from "test/mock-auth-server";
-import { startMockWorldServer } from "test/mock-world-server";
-import { PacketWriter } from "wow/protocol/packet";
-import { AuthOpcode } from "wow/protocol/opcodes";
-import { bigIntToLeBytes } from "wow/crypto/srp";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
-  FIXTURE_ACCOUNT,
-  FIXTURE_PASSWORD,
-  FIXTURE_CHARACTER,
+  B_LE,
   clientPrivateKey,
   clientSeed,
-  sessionKey,
-  salt,
+  FIXTURE_ACCOUNT,
+  FIXTURE_CHARACTER,
+  FIXTURE_PASSWORD,
   g,
-  N,
-  B_LE,
   M2_bytes,
+  N,
   reconnectChallengeData,
+  salt,
+  sessionKey,
 } from "test/fixtures";
+import { startMockAuthServer } from "test/mock-auth-server";
+import { startMockWorldServer } from "test/mock-world-server";
+import { authHandshake, authWithRetry, ReconnectRequiredError } from "wow/auth";
+import { bigIntToLeBytes } from "wow/crypto/srp";
+import { AuthOpcode } from "wow/protocol/opcodes";
+import { PacketWriter } from "wow/protocol/packet";
 
 const base = {
   account: FIXTURE_ACCOUNT,
@@ -49,7 +49,7 @@ function buildSuccessProofResponse(): Uint8Array {
   w.uint8(AuthOpcode.LOGON_PROOF);
   w.uint8(0x00);
   w.rawBytes(M2_bytes);
-  w.uint32LE(0x00800000);
+  w.uint32LE(0x00_80_00_00);
   w.uint32LE(0);
   w.uint16LE(0);
   return w.finish();
@@ -144,7 +144,7 @@ describe("auth error paths", () => {
             w.uint8(AuthOpcode.LOGON_PROOF);
             w.uint8(0x00);
             w.rawBytes(new Uint8Array(20));
-            w.uint32LE(0x00800000);
+            w.uint32LE(0x00_80_00_00);
             w.uint32LE(0);
             w.uint16LE(0);
             socket.write(w.finish());

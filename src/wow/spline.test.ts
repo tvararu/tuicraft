@@ -1,6 +1,6 @@
-import { test, expect, describe } from "bun:test";
-import { createTrajectory, sampleSplinePosition } from "wow/spline";
+import { describe, expect, test } from "bun:test";
 import type { CreateSpline } from "wow/protocol/monster-move";
+import { createTrajectory, sampleSplinePosition } from "wow/spline";
 
 describe("sampleSplinePosition", () => {
   test("linear midpoint is predicted between observed points", () => {
@@ -33,7 +33,7 @@ describe("sampleSplinePosition", () => {
           { x: 20, y: 0, z: 0 },
         ],
         duration: 1000,
-        flags: 0x00040000,
+        flags: 0x00_04_00_00,
         cyclic: false,
         interpolation: "catmullrom",
         orientation: 0,
@@ -54,7 +54,7 @@ describe("sampleSplinePosition", () => {
           { x: 10, y: 0, z: 0 },
         ],
         duration: 1000,
-        flags: 0x00040000,
+        flags: 0x00_04_00_00,
         cyclic: false,
         interpolation: "catmullrom",
         orientation: 0,
@@ -74,7 +74,7 @@ describe("sampleSplinePosition", () => {
         { x: 10, y: 0, z: 0 },
       ],
       duration: 1000,
-      flags: 0x00040000,
+      flags: 0x00_04_00_00,
       cyclic: false,
       interpolation: "catmullrom" as const,
     };
@@ -93,7 +93,7 @@ describe("sampleSplinePosition", () => {
           { x: 10, y: 0, z: 0 },
         ],
         duration: 1000,
-        flags: 0x00080000,
+        flags: 0x00_08_00_00,
         cyclic: true,
         interpolation: "linear",
       },
@@ -113,7 +113,7 @@ describe("sampleSplinePosition", () => {
             { x: 4, y: 5, z: 6 },
           ],
           duration: 1000,
-          flags: 0x00000200,
+          flags: 0x00_00_02_00,
           cyclic: false,
           interpolation: "linear",
         },
@@ -128,7 +128,7 @@ describe("sampleSplinePosition", () => {
         {
           points: [{ x: 0, y: 0, z: 0 }],
           duration: 500,
-          flags: 0x00000800,
+          flags: 0x00_00_08_00,
           cyclic: false,
           interpolation: "linear",
         },
@@ -170,7 +170,7 @@ describe("createTrajectory", () => {
   });
 
   test("drops the extra closing node of a cyclic spline", () => {
-    const traj = createTrajectory({ ...spline, flags: 0x00080000 }, 1);
+    const traj = createTrajectory({ ...spline, flags: 0x00_08_00_00 }, 1);
     expect(traj.cyclic).toBe(true);
     expect(traj.points).toEqual([{ x: 0, y: 5, z: 0 }]);
   });

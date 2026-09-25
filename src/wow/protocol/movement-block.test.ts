@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader, PacketWriter } from "./packet";
+import { MovementFlag, MovementFlagExtra, UpdateFlag } from "./entity-fields";
 import { parseMovementBlock } from "./movement-block";
-import { UpdateFlag, MovementFlag, MovementFlagExtra } from "./entity-fields";
+import { PacketReader, PacketWriter } from "./packet";
 
 function buildLivingBlock(
   opts: {
@@ -289,7 +289,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     w.floatLE(0);
     for (let i = 0; i < 9; i++) w.floatLE(0);
-    w.uint32LE(0x00020000);
+    w.uint32LE(0x00_02_00_00);
     w.floatLE(1.23);
     w.uint32LE(0);
     w.uint32LE(0);
@@ -321,7 +321,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     w.floatLE(0);
     for (let i = 0; i < 9; i++) w.floatLE(0);
-    w.uint32LE(0x00010000);
+    w.uint32LE(0x00_01_00_00);
     w.uint64LE(42n);
     w.uint32LE(0);
     w.uint32LE(0);
@@ -353,7 +353,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     w.floatLE(0);
     for (let i = 0; i < 9; i++) w.floatLE(0);
-    w.uint32LE(0x00008000);
+    w.uint32LE(0x00_00_80_00);
     w.floatLE(0);
     w.floatLE(0);
     w.floatLE(0);

@@ -1,9 +1,9 @@
-import { joinGuid } from "wow/protocol/packet";
 import {
+  GAMEOBJECT_FIELDS,
   OBJECT_FIELDS,
   UNIT_FIELDS,
-  GAMEOBJECT_FIELDS,
 } from "wow/protocol/entity-fields";
+import { joinGuid } from "wow/protocol/packet";
 
 function uint32ToFloat(v: number): number {
   const buf = new ArrayBuffer(4);

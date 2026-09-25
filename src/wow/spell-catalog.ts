@@ -1,4 +1,5 @@
 import {
+  type DbcFile,
   DbcTable,
   f32,
   i32,
@@ -6,7 +7,6 @@ import {
   localeString,
   openDbc,
   u32,
-  type DbcFile,
 } from "wow/dbc";
 
 export type SpellPower = {

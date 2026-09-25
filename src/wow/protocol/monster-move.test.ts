@@ -1,6 +1,6 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { parseCreateSpline, parseMonsterMove } from "wow/protocol/monster-move";
 import { PacketReader } from "wow/protocol/packet";
-import { parseMonsterMove, parseCreateSpline } from "wow/protocol/monster-move";
 
 function reader(bytes: number[]): PacketReader {
   return new PacketReader(Uint8Array.from(bytes));
@@ -80,7 +80,7 @@ describe("parseMonsterMove", () => {
   });
 
   test("linear packed offset reconstructs signed intermediate", () => {
-    const packed = ((-8 & 0x7ff) << 11) >>> 0;
+    const packed = ((-8 & 0x7_ff) << 11) >>> 0;
     const result = parseMonsterMove(
       reader([
         0x00,
@@ -116,7 +116,7 @@ describe("parseMonsterMove", () => {
         ...u32(4),
         0x04,
         ...f32(1.5),
-        ...u32(0x00040000),
+        ...u32(0x00_04_00_00),
         ...u32(800),
         ...u32(1),
         ...f32(2),
@@ -144,7 +144,7 @@ describe("parseMonsterMove", () => {
         ...f32(3),
         ...u32(8),
         0x00,
-        ...u32(0x000c0000),
+        ...u32(0x00_0c_00_00),
         ...u32(1000),
         ...u32(3),
         ...f32(4),
@@ -238,7 +238,7 @@ describe("parseCreateSpline", () => {
   test("final target guid is unpacked", () => {
     const result = parseCreateSpline(
       reader([
-        ...u32(0x00010000),
+        ...u32(0x00_01_00_00),
         0x42,
         0x00,
         0x00,

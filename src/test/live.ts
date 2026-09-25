@@ -1,40 +1,40 @@
-import { test, expect, describe } from "bun:test";
-import { authHandshake } from "wow/auth";
-import {
-  worldSession,
-  type ChatMessage,
-  type GroupEvent,
-  type EntityEvent,
-} from "wow/client";
-import type { ControlEvent } from "wow/control";
-import type { RecoveryEvent } from "wow/recovery";
+import { describe, expect, test } from "bun:test";
+import { unlink } from "node:fs/promises";
+import { join } from "node:path";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
 import { SessionLog } from "lib/session-log";
-import { join } from "node:path";
-import { unlink } from "node:fs/promises";
+import { authHandshake } from "wow/auth";
+import {
+  type ChatMessage,
+  type EntityEvent,
+  type GroupEvent,
+  worldSession,
+} from "wow/client";
+import type { ControlEvent } from "wow/control";
+import type { RecoveryEvent } from "wow/recovery";
 
 const host = process.env["WOW_HOST"] ?? "t1";
-const port = parseInt(process.env["WOW_PORT"] ?? "3724", 10);
+const port = Number.parseInt(process.env["WOW_PORT"] ?? "3724", 10);
 
-const language = parseInt(process.env["WOW_LANGUAGE"] ?? "1", 10);
+const language = Number.parseInt(process.env["WOW_LANGUAGE"] ?? "1", 10);
 
 const config1 = {
-  host,
-  port,
   account: process.env["WOW_ACCOUNT_1"] ?? "",
-  password: process.env["WOW_PASSWORD_1"] ?? "",
   character: process.env["WOW_CHARACTER_1"] ?? "",
+  host,
   language,
+  password: process.env["WOW_PASSWORD_1"] ?? "",
+  port,
 };
 
 const config2 = {
-  host,
-  port,
   account: process.env["WOW_ACCOUNT_2"] ?? "",
-  password: process.env["WOW_PASSWORD_2"] ?? "",
   character: process.env["WOW_CHARACTER_2"] ?? "",
+  host,
   language,
+  password: process.env["WOW_PASSWORD_2"] ?? "",
+  port,
 };
 
 test("full login flow against live server", async () => {
@@ -146,15 +146,15 @@ function parseGps(messages: ChatMessage[]): GpsFix | undefined {
       const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
       if (posMatch) {
         pos = {
-          x: parseFloat(posMatch[1]!),
-          y: parseFloat(posMatch[2]!),
-          z: parseFloat(posMatch[3]!),
+          x: Number.parseFloat(posMatch[1]!),
+          y: Number.parseFloat(posMatch[2]!),
+          z: Number.parseFloat(posMatch[3]!),
         };
       }
     }
     if (map === undefined) {
       const mapMatch = msg.match(/^Map: (\d+)/);
-      if (mapMatch) map = parseInt(mapMatch[1]!, 10);
+      if (mapMatch) map = Number.parseInt(mapMatch[1]!, 10);
     }
     if (map !== undefined && pos !== undefined) break;
   }
@@ -173,15 +173,15 @@ async function daemonSock(
   const sockPath = join("./tmp", `test-fault-${tag}-${Date.now()}.sock`);
   const logFile = join("./tmp", `test-fault-${tag}-${Date.now()}.log`);
   const log = new SessionLog(logFile);
-  const { server } = startDaemonServer({ handle, sock: sockPath, log });
+  const { server } = startDaemonServer({ handle, log, sock: sockPath });
   return {
-    sock: sockPath,
-    log: logFile,
     close: async () => {
       server.stop(true);
       await unlink(sockPath).catch(() => {});
       await unlink(logFile).catch(() => {});
     },
+    log: logFile,
+    sock: sockPath,
   };
 }
 
@@ -311,26 +311,26 @@ describe("fault paths", () => {
           resolve(split(buffer));
         };
         Bun.connect({
-          unix: daemon.sock,
           socket: {
-            open(socket) {
-              socket.write("WHO_JSON\nHALT\n");
-              socket.flush();
-            },
-            data(socket, data) {
-              buffer += Buffer.from(data).toString();
-              if (split(buffer).length >= 2) finish(socket);
-            },
             close() {
               if (!done) {
                 done = true;
                 resolve(split(buffer));
               }
             },
+            data(socket, data) {
+              buffer += Buffer.from(data).toString();
+              if (split(buffer).length >= 2) finish(socket);
+            },
             error(_socket, err) {
               reject(err);
             },
+            open(socket) {
+              socket.write("WHO_JSON\nHALT\n");
+              socket.flush();
+            },
           },
+          unix: daemon.sock,
         });
       });
       expect(lines.length).toBeGreaterThanOrEqual(2);
@@ -435,7 +435,7 @@ describe("daemon IPC", () => {
     const sockPath = join("./tmp", `test-daemon-${Date.now()}.sock`);
     const logFile = join("./tmp", `test-session-${Date.now()}.log`);
     const log = new SessionLog(logFile);
-    const { server } = startDaemonServer({ handle, sock: sockPath, log });
+    const { server } = startDaemonServer({ handle, log, sock: sockPath });
 
     try {
       await Bun.sleep(1000);
@@ -464,7 +464,7 @@ function waitForEntityEvent<T extends EntityEvent["type"]>(
   events: EntityEvent[],
   type: T,
   filter?: (e: Extract<EntityEvent, { type: T }>) => boolean,
-  timeoutMs = 10000,
+  timeoutMs = 10_000,
 ): Promise<Extract<EntityEvent, { type: T }>> {
   const startIdx = events.length;
   return new Promise((resolve, reject) => {
@@ -565,7 +565,7 @@ describe("entity tracking", () => {
   }, 15_000);
 });
 
-function waitUntil(check: () => boolean, timeoutMs = 10000): Promise<void> {
+function waitUntil(check: () => boolean, timeoutMs = 10_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const deadline = setTimeout(() => {
       clearInterval(poll);

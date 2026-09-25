@@ -1,29 +1,29 @@
-import { readConfig, clientConfig } from "lib/config";
-import { authHandshake, authWithRetry } from "wow/auth";
-import { worldSession } from "wow/client";
-import type { WorldHandle } from "wow/client";
-import { RingBuffer } from "lib/ring-buffer";
-import { type Paths, resolvePaths } from "lib/paths";
-import { SessionLog } from "lib/session-log";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import {
   dispatchCommand,
-  writeLines,
   type EventEntry,
   type IpcSocket,
+  writeLines,
 } from "daemon/commands";
 import {
   onChatMessage,
-  onGroupEvent,
-  onEntityEvent,
-  onFriendEvent,
-  onIgnoreEvent,
-  onGuildEvent,
-  onDuelEvent,
   onControlEvent,
   onDomainEvent,
+  onDuelEvent,
+  onEntityEvent,
+  onFriendEvent,
+  onGroupEvent,
+  onGuildEvent,
+  onIgnoreEvent,
 } from "daemon/events";
-import { parseIpcCommand, type IpcCommand } from "daemon/parse";
+import { type IpcCommand, parseIpcCommand } from "daemon/parse";
+import { clientConfig, readConfig } from "lib/config";
+import { type Paths, resolvePaths } from "lib/paths";
+import { RingBuffer } from "lib/ring-buffer";
+import { SessionLog } from "lib/session-log";
+import { type authHandshake, authWithRetry } from "wow/auth";
+import type { WorldHandle } from "wow/client";
+import { worldSession } from "wow/client";
 
 type Queued = { line: string; cmd: IpcCommand | undefined };
 
@@ -68,11 +68,11 @@ function getSocketState(socket: IpcSocket): SocketState {
   const existing = socketStates.get(socket);
   if (existing) return existing;
   const state: SocketState = {
-    buffer: "",
-    queue: [],
-    processing: false,
-    ended: false,
     abort: undefined,
+    buffer: "",
+    ended: false,
+    processing: false,
+    queue: [],
   };
   socketStates.set(socket, state);
   return state;
@@ -92,7 +92,7 @@ function enqueueCompleteLines(state: SocketState): void {
     if (breakIdx === -1) return;
     const line = state.buffer.slice(0, breakIdx).trim();
     state.buffer = state.buffer.slice(breakIdx + 1);
-    state.queue.push({ line, cmd: parseIpcCommand(line) });
+    state.queue.push({ cmd: parseIpcCommand(line), line });
   }
 }
 
@@ -182,12 +182,12 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
     drainQueue(ctx, socket);
   }
   const gated: IpcSocket = {
+    end() {
+      if (!abort.signal.aborted) socket.end();
+    },
     write(data) {
       if (abort.signal.aborted) return 0;
       return socket.write(data);
-    },
-    end() {
-      if (!abort.signal.aborted) socket.end();
     },
   };
   abort.signal.addEventListener("abort", () => finish(false), { once: true });
@@ -233,7 +233,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onPacketError((opcode, err) =>
     onDomainEvent(
       "packet",
-      { type: "packet_error", opcode, error: err.message },
+      { error: err.message, opcode, type: "packet_error" },
       events,
       log,
     ),
@@ -248,17 +248,17 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
     unlink(sock).catch(() => {});
   }
 
-  const ctx: ServerCtx = { handle, events, cleanup, onActivity, onStop };
+  const ctx: ServerCtx = { cleanup, events, handle, onActivity, onStop };
   const server = Bun.listen({
-    unix: sock,
     socket: {
-      data: (socket, data) => onSocketData(ctx, socket, data),
       close: (socket) => onSocketClose(socket),
+      data: (socket, data) => onSocketData(ctx, socket, data),
       error: (socket) => onSocketClose(socket),
     },
+    unix: sock,
   });
 
-  return { server, events, cleanup };
+  return { cleanup, events, server };
 }
 
 async function prepareDaemonPaths(
@@ -269,7 +269,7 @@ async function prepareDaemonPaths(
   await mkdir(paths.runtimeDir, { recursive: true });
   await writeFile(pid, String(process.pid));
   await unlink(sock).catch(() => {});
-  return { sock, pid };
+  return { pid, sock };
 }
 
 export async function startDaemon(
@@ -305,12 +305,12 @@ export async function startDaemon(
 
   const { cleanup: stopServer } = startDaemonServer({
     handle,
-    sock,
     log,
     onActivity: () => {
       lastActivity = Date.now();
     },
     onStop: exit,
+    sock,
   });
 
   const idleCheck = setInterval(() => {

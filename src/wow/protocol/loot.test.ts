@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
 import {
   buildAutostoreLootItem,
@@ -11,6 +10,7 @@ import {
   parseLootRemoved,
   parseLootResponse,
 } from "wow/protocol/loot";
+import { PacketReader } from "wow/protocol/packet";
 
 const guid = 0x0102030405060708n;
 const guidBytes = [8, 7, 6, 5, 4, 3, 2, 1];
@@ -42,22 +42,22 @@ describe("loot responses", () => {
       kind: "loot",
       guid,
       lootType: 1,
-      money: 0x01020304,
+      money: 0x01_02_03_04,
       items: [
         {
           slot: 2,
-          itemId: 0x12345678,
+          itemId: 0x12_34_56_78,
           count: 3,
-          displayId: 0x11223344,
-          randomSuffix: 0xa1b2c3d4,
+          displayId: 0x11_22_33_44,
+          randomSuffix: 0xa1_b2_c3_d4,
           randomPropertyId: -17,
           slotType: 4,
         },
         {
           slot: 7,
-          itemId: 0x90abcdef,
+          itemId: 0x90_ab_cd_ef,
           count: 8,
-          displayId: 0x55667788,
+          displayId: 0x55_66_77_88,
           randomSuffix: 0,
           randomPropertyId: 0,
           slotType: 1,
@@ -94,9 +94,9 @@ describe("loot responses", () => {
       created: 1,
       showInChat: 1,
       bagSlot: 255,
-      slot: 0xffffffff,
-      itemId: 0x12345678,
-      randomSuffix: 0xaabbccdd,
+      slot: 0xff_ff_ff_ff,
+      itemId: 0x12_34_56_78,
+      randomSuffix: 0xaa_bb_cc_dd,
       randomPropertyId: -17,
       count: 3,
       totalCount: 9,
@@ -106,7 +106,7 @@ describe("loot responses", () => {
   test("money notifications distinguish a shared award from solo loot", () => {
     expect(
       parseLootMoneyNotify(new PacketReader(bytes("78 56 34 12 00"))),
-    ).toEqual({ money: 0x12345678, alone: false });
+    ).toEqual({ money: 0x12_34_56_78, alone: false });
     expect(
       parseLootMoneyNotify(new PacketReader(bytes("01 00 00 00 01"))),
     ).toEqual({ money: 1, alone: true });

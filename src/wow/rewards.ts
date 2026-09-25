@@ -1,23 +1,23 @@
-import { fieldOf, type EntityEvent, type EntityLookup } from "wow/entity-store";
-import { readInventory, type InventoryState } from "wow/inventory";
+import { type EntityEvent, type EntityLookup, fieldOf } from "wow/entity-store";
+import { type InventoryState, readInventory } from "wow/inventory";
 import { readLife } from "wow/player-state";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
-import { GameOpcode } from "wow/protocol/opcodes";
+import {
+  type InventoryChangeFailure,
+  InventoryResult,
+} from "wow/protocol/inventory";
 import {
   buildAutostoreLootItem,
   buildLoot,
   buildLootRelease,
   type ItemPushResult,
-  type LootRemoved,
-  type LootResponse,
   type LootItem,
   type LootMoneyNotify,
   type LootReleaseResponse,
+  type LootRemoved,
+  type LootResponse,
 } from "wow/protocol/loot";
-import {
-  InventoryResult,
-  type InventoryChangeFailure,
-} from "wow/protocol/inventory";
+import { GameOpcode } from "wow/protocol/opcodes";
 
 export type RewardsDeps = {
   send: (opcode: number, body?: Uint8Array) => void;

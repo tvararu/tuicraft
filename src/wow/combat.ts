@@ -1,28 +1,37 @@
-import { GameOpcode } from "wow/protocol/opcodes";
-import {
-  buildAttackSwing,
-  type AttackStart,
-  type AttackSwingError,
-  type AttackStop,
-  type XpGain,
-} from "wow/protocol/combat";
-import type { AuraUpdate, AuraUpdateAll } from "wow/protocol/aura";
 import { AuraStore, type CombatAura } from "wow/aura-store";
-import { CooldownStore, type CombatCooldown } from "wow/cooldown-store";
+import type { ControlPose } from "wow/control";
+import { type CombatCooldown, CooldownStore } from "wow/cooldown-store";
 import {
-  MotionStore,
+  type EntityLookup,
+  fieldOf,
+  isUnit,
+  type Position,
+} from "wow/entity-store";
+import {
   type CombatPose,
+  MotionStore,
   type UnitMotion,
 } from "wow/motion-store";
+import type { AuraUpdate, AuraUpdateAll } from "wow/protocol/aura";
+import {
+  type AttackStart,
+  type AttackStop,
+  type AttackSwingError,
+  buildAttackSwing,
+  type XpGain,
+} from "wow/protocol/combat";
+import { UNIT_FIELDS } from "wow/protocol/entity-fields";
+import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
+import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildCancelCast,
   buildCastSpell,
-  SpellCastResult,
   type CastFailed,
   type CooldownNotice,
   type InitialSpells,
   type LearnedSpell,
   type RemovedSpell,
+  SpellCastResult,
   type SpellCooldown,
   type SpellDelayed,
   type SpellFailure,
@@ -30,16 +39,7 @@ import {
   type SpellStart,
   type SupersededSpell,
 } from "wow/protocol/spell";
-import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
-import type { ControlPose } from "wow/control";
-import { UNIT_FIELDS } from "wow/protocol/entity-fields";
-import {
-  fieldOf,
-  isUnit,
-  type EntityLookup,
-  type Position,
-} from "wow/entity-store";
 
 export type CombatCast = {
   spellId: number;
@@ -232,7 +232,7 @@ export class CombatRuntime {
   }
 
   cast(spellId: number, targetGuid: bigint): void {
-    if (!Number.isInteger(spellId) || spellId <= 0 || spellId > 0xffffffff)
+    if (!Number.isInteger(spellId) || spellId <= 0 || spellId > 0xff_ff_ff_ff)
       throw new Error("invalid_spell");
     if (targetGuid < 0n || targetGuid > 0xffffffffffffffffn)
       throw new Error("invalid_guid");

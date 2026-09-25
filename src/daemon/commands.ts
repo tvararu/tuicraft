@@ -1,20 +1,20 @@
-import type { RingBuffer } from "lib/ring-buffer";
-import { messageOf } from "lib/errors";
-import type { IpcCommand } from "daemon/parse";
 import {
-  prepareNearbyEntities,
   formatNearbyLine,
   formatNearbyObj,
+  prepareNearbyEntities,
 } from "daemon/nearby";
+import type { IpcCommand } from "daemon/parse";
+import { messageOf } from "lib/errors";
+import type { RingBuffer } from "lib/ring-buffer";
 import {
-  formatWhoResults,
-  formatWhoResultsJson,
   formatFriendList,
   formatFriendListJson,
-  formatIgnoreList,
-  formatIgnoreListJson,
   formatGuildRoster,
   formatGuildRosterJson,
+  formatIgnoreList,
+  formatIgnoreListJson,
+  formatWhoResults,
+  formatWhoResultsJson,
   jsonSafe,
 } from "ui/format";
 import {
@@ -24,8 +24,8 @@ import {
 } from "ui/format-control";
 import {
   formatCycleState,
-  formatRecoveryState,
   formatInventoryState,
+  formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
 import type { WorldHandle } from "wow/client";
@@ -44,7 +44,7 @@ export function writeLines(socket: IpcSocket, lines: string[]): void {
 }
 
 function drainText(events: RingBuffer<EventEntry>): string[] {
-  return events.drain().flatMap((e) => (e.text !== undefined ? [e.text] : []));
+  return events.drain().flatMap((e) => (e.text === undefined ? [] : [e.text]));
 }
 
 function drainJson(events: RingBuffer<EventEntry>): string[] {
@@ -54,7 +54,7 @@ function drainJson(events: RingBuffer<EventEntry>): string[] {
 function sliceText(events: RingBuffer<EventEntry>, from: number): string[] {
   return events
     .slice(from)
-    .flatMap((e) => (e.text !== undefined ? [e.text] : []));
+    .flatMap((e) => (e.text === undefined ? [] : [e.text]));
 }
 
 function sliceJson(events: RingBuffer<EventEntry>, from: number): string[] {
@@ -266,7 +266,7 @@ export async function dispatchCommand(
         writeLines(socket, [formatGuildRosterJson(roster)]);
       } else {
         writeLines(socket, [
-          JSON.stringify({ type: "GUILD_ROSTER", members: [] }),
+          JSON.stringify({ members: [], type: "GUILD_ROSTER" }),
         ]);
       }
       return false;

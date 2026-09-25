@@ -1,7 +1,7 @@
-import { test, expect } from "bun:test";
-import { createMockHandle } from "./mock-handle";
-import { ObjectType } from "wow/protocol/entity-fields";
+import { expect, test } from "bun:test";
 import type { UnitEntity } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { createMockHandle } from "./mock-handle";
 
 test("resolveClosed resolves closed promise", async () => {
   const handle = createMockHandle();
@@ -27,10 +27,10 @@ test("getLastChatMode defaults to say", () => {
 
 test("setLastChatMode updates getLastChatMode", () => {
   const handle = createMockHandle();
-  handle.setLastChatMode({ type: "whisper", target: "Xiara" });
+  handle.setLastChatMode({ target: "Xiara", type: "whisper" });
   expect(handle.getLastChatMode()).toEqual({
-    type: "whisper",
     target: "Xiara",
+    type: "whisper",
   });
 });
 
@@ -40,7 +40,7 @@ test("triggerMessage forwards to onMessage callback", () => {
   handle.onMessage((msg) => {
     seen = `${msg.sender}:${msg.message}`;
   });
-  handle.triggerMessage({ type: 0, sender: "Alice", message: "hi" });
+  handle.triggerMessage({ message: "hi", sender: "Alice", type: 0 });
   expect(seen).toBe("Alice:hi");
 });
 
@@ -70,7 +70,7 @@ test("triggerFriendEvent forwards to onFriendEvent callback", () => {
   handle.onFriendEvent((event) => {
     seen = event.type;
   });
-  handle.triggerFriendEvent({ type: "friend-list", friends: [] });
+  handle.triggerFriendEvent({ friends: [], type: "friend-list" });
   expect(seen).toBe("friend-list");
 });
 
@@ -81,29 +81,29 @@ test("triggerEntityEvent forwards to onEntityEvent callback", () => {
     seen = event.type;
   });
   handle.triggerEntityEvent({
-    type: "appear",
     entity: {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "NPC",
-      level: 10,
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
-      health: 100,
-      maxHealth: 100,
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [],
+      guid: 1n,
+      health: 100,
+      level: 10,
+      maxHealth: 100,
       maxPower: [],
+      name: "NPC",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: undefined,
+      power: [],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     } satisfies UnitEntity,
+    type: "appear",
   });
   expect(seen).toBe("appear");
 });
@@ -114,7 +114,7 @@ test("triggerIgnoreEvent forwards to onIgnoreEvent callback", () => {
   handle.onIgnoreEvent((event) => {
     seen = event.type;
   });
-  handle.triggerIgnoreEvent({ type: "ignore-list", entries: [] });
+  handle.triggerIgnoreEvent({ entries: [], type: "ignore-list" });
   expect(seen).toBe("ignore-list");
 });
 
@@ -125,14 +125,14 @@ test("triggerGuildEvent forwards to onGuildEvent callback", () => {
     seen = event.type;
   });
   handle.triggerGuildEvent({
-    type: "guild-roster",
     roster: {
-      guildName: "",
-      motd: "",
       guildInfo: "",
-      rankNames: [],
+      guildName: "",
       members: [],
+      motd: "",
+      rankNames: [],
     },
+    type: "guild-roster",
   });
   expect(seen).toBe("guild-roster");
 });

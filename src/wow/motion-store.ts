@@ -4,8 +4,8 @@ import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import {
   createTrajectory,
   pathTrajectory,
-  sampleSplinePosition,
   type SplineTrajectory,
+  sampleSplinePosition,
 } from "wow/spline";
 
 export type CombatPose = Omit<ControlPose, "orientation"> & {

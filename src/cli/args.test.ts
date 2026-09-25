@@ -1,5 +1,5 @@
-import { test, expect, describe } from "bun:test";
-import { parseArgs, type CliAction } from "cli/args";
+import { describe, expect, test } from "bun:test";
+import { type CliAction, parseArgs } from "cli/args";
 
 describe("parseArgs", () => {
   test("no args with tty = interactive", () => {
@@ -12,8 +12,8 @@ describe("parseArgs", () => {
 
   test("setup subcommand", () => {
     expect(parseArgs(["setup", "--account", "x"])).toEqual({
-      mode: "setup",
       args: ["--account", "x"],
+      mode: "setup",
     });
   });
 
@@ -31,32 +31,32 @@ describe("parseArgs", () => {
 
   test("read subcommand", () => {
     expect(parseArgs(["read"])).toEqual({
+      json: false,
       mode: "read",
       wait: undefined,
-      json: false,
     });
   });
 
   test("read with --wait", () => {
     expect(parseArgs(["read", "--wait", "5"])).toEqual({
+      json: false,
       mode: "read",
       wait: 5,
-      json: false,
     });
   });
 
   test("read with --json", () => {
     expect(parseArgs(["read", "--json"])).toEqual({
+      json: true,
       mode: "read",
       wait: undefined,
-      json: true,
     });
   });
 
   test("tail subcommand", () => {
     expect(parseArgs(["tail"])).toEqual({
-      mode: "tail",
       json: false,
+      mode: "tail",
     });
   });
 
@@ -90,91 +90,91 @@ describe("parseArgs", () => {
 
   test("send = say", () => {
     expect(parseArgs(["send", "hello world"])).toEqual({
-      mode: "say",
-      message: "hello world",
       json: false,
+      message: "hello world",
+      mode: "say",
       wait: undefined,
     });
   });
 
   test("send -s = explicit say", () => {
     expect(parseArgs(["send", "-s", "hello"])).toEqual({
-      mode: "say",
-      message: "hello",
       json: false,
+      message: "hello",
+      mode: "say",
       wait: undefined,
     });
   });
 
   test("send with --json", () => {
     expect(parseArgs(["send", "--json", "hello"])).toEqual({
-      mode: "say",
-      message: "hello",
       json: true,
+      message: "hello",
+      mode: "say",
       wait: undefined,
     });
   });
 
   test("send slash command uses slash mode", () => {
     expect(parseArgs(["send", "/accept"])).toEqual({
-      mode: "slash",
       input: "/accept",
       json: false,
+      mode: "slash",
       wait: undefined,
     });
   });
 
   test("send -w = whisper", () => {
     expect(parseArgs(["send", "-w", "Xiara", "follow me"])).toEqual({
+      json: false,
+      message: "follow me",
       mode: "whisper",
       target: "Xiara",
-      message: "follow me",
-      json: false,
       wait: undefined,
     });
   });
 
   test("send -y = yell", () => {
     expect(parseArgs(["send", "-y", "HELLO"])).toEqual({
-      mode: "yell",
-      message: "HELLO",
       json: false,
+      message: "HELLO",
+      mode: "yell",
       wait: undefined,
     });
   });
 
   test("send -g = guild", () => {
     expect(parseArgs(["send", "-g", "guild msg"])).toEqual({
-      mode: "guild",
-      message: "guild msg",
       json: false,
+      message: "guild msg",
+      mode: "guild",
       wait: undefined,
     });
   });
 
   test("send -p = party", () => {
     expect(parseArgs(["send", "-p", "party msg"])).toEqual({
-      mode: "party",
-      message: "party msg",
       json: false,
+      message: "party msg",
+      mode: "party",
       wait: undefined,
     });
   });
 
   test("send with --wait", () => {
     expect(parseArgs(["send", "hello", "--wait", "5"])).toEqual({
-      mode: "say",
-      message: "hello",
       json: false,
+      message: "hello",
+      mode: "say",
       wait: 5,
     });
   });
 
   test("send -y with --json", () => {
     expect(parseArgs(["send", "-y", "--json", "hello"])).toEqual({
-      mode: "yell",
-      message: "hello",
       json: true,
+      message: "hello",
+      mode: "yell",
       wait: undefined,
     });
   });
@@ -183,64 +183,64 @@ describe("parseArgs", () => {
     expect(
       parseArgs(["send", "-w", "Xiara", "los", "--wait", "3", "--json"]),
     ).toEqual({
+      json: true,
+      message: "los",
       mode: "whisper",
       target: "Xiara",
-      message: "los",
-      json: true,
       wait: 3,
     });
   });
 
   test("-w flag = whisper", () => {
     expect(parseArgs(["-w", "Xiara", "follow me"])).toEqual({
+      json: false,
+      message: "follow me",
       mode: "whisper",
       target: "Xiara",
-      message: "follow me",
-      json: false,
       wait: undefined,
     });
   });
 
   test("-y flag = yell", () => {
     expect(parseArgs(["-y", "HELLO"])).toEqual({
-      mode: "yell",
-      message: "HELLO",
       json: false,
+      message: "HELLO",
+      mode: "yell",
       wait: undefined,
     });
   });
 
   test("-g flag = guild", () => {
     expect(parseArgs(["-g", "guild msg"])).toEqual({
-      mode: "guild",
-      message: "guild msg",
       json: false,
+      message: "guild msg",
+      mode: "guild",
       wait: undefined,
     });
   });
 
   test("-p flag = party", () => {
     expect(parseArgs(["-p", "party msg"])).toEqual({
-      mode: "party",
-      message: "party msg",
       json: false,
+      message: "party msg",
+      mode: "party",
       wait: undefined,
     });
   });
 
   test("who subcommand", () => {
     expect(parseArgs(["who"])).toEqual({
-      mode: "who",
       filter: undefined,
       json: false,
+      mode: "who",
     });
   });
 
   test("who with filter", () => {
     expect(parseArgs(["who", "mage"])).toEqual({
-      mode: "who",
       filter: "mage",
       json: false,
+      mode: "who",
     });
   });
 
@@ -260,66 +260,66 @@ describe("parseArgs", () => {
 
   test("--json does not leak into yell message", () => {
     expect(parseArgs(["-y", "--json", "hello"])).toEqual({
-      mode: "yell",
-      message: "hello",
       json: true,
+      message: "hello",
+      mode: "yell",
       wait: undefined,
     });
   });
 
   test("--json does not leak into guild message", () => {
     expect(parseArgs(["-g", "--json", "inv pls"])).toEqual({
-      mode: "guild",
-      message: "inv pls",
       json: true,
+      message: "inv pls",
+      mode: "guild",
       wait: undefined,
     });
   });
 
   test("--json does not leak into party message", () => {
     expect(parseArgs(["-p", "--json", "pull now"])).toEqual({
-      mode: "party",
-      message: "pull now",
       json: true,
+      message: "pull now",
+      mode: "party",
       wait: undefined,
     });
   });
 
   test("--json does not leak into whisper message", () => {
     expect(parseArgs(["-w", "Xiara", "--json", "hey"])).toEqual({
+      json: true,
+      message: "hey",
       mode: "whisper",
       target: "Xiara",
-      message: "hey",
-      json: true,
       wait: undefined,
     });
   });
 
   test("whisper with --wait", () => {
     expect(parseArgs(["-w", "Xiara", "los", "--wait", "3"])).toEqual({
+      json: false,
+      message: "los",
       mode: "whisper",
       target: "Xiara",
-      message: "los",
-      json: false,
       wait: 3,
     });
   });
 
   test("yell with --wait", () => {
     expect(parseArgs(["-y", "hey", "--wait", "2"])).toEqual({
-      mode: "yell",
-      message: "hey",
       json: false,
+      message: "hey",
+      mode: "yell",
       wait: 2,
     });
   });
 
   test("--wait does not leak into whisper message", () => {
     expect(parseArgs(["-w", "Xiara", "--wait", "3", "follow me"])).toEqual({
+      json: false,
+      message: "follow me",
       mode: "whisper",
       target: "Xiara",
-      message: "follow me",
-      json: false,
       wait: 3,
     });
   });
@@ -332,20 +332,20 @@ describe("parseArgs", () => {
 
   test("fractional --wait", () => {
     expect(parseArgs(["-w", "Xiara", "los", "--wait", "0.1"])).toEqual({
+      json: false,
+      message: "los",
       mode: "whisper",
       target: "Xiara",
-      message: "los",
-      json: false,
       wait: 0.1,
     });
   });
 
   test("whisper with --wait and --json", () => {
     expect(parseArgs(["-w", "Xiara", "los", "--wait", "3", "--json"])).toEqual({
+      json: true,
+      message: "los",
       mode: "whisper",
       target: "Xiara",
-      message: "los",
-      json: true,
       wait: 3,
     });
   });
@@ -363,56 +363,56 @@ describe("parseArgs", () => {
   });
 
   test("control subcommand", () => {
-    expect(parseArgs(["control"])).toEqual({ mode: "control", json: false });
+    expect(parseArgs(["control"])).toEqual({ json: false, mode: "control" });
   });
 
   test("control --json", () => {
     expect(parseArgs(["control", "--json"])).toEqual({
-      mode: "control",
       json: true,
+      mode: "control",
     });
   });
 
   test("nearby subcommand", () => {
-    expect(parseArgs(["nearby"])).toEqual({ mode: "nearby", json: false });
+    expect(parseArgs(["nearby"])).toEqual({ json: false, mode: "nearby" });
   });
 
   test("nearby --json", () => {
     expect(parseArgs(["nearby", "--json"])).toEqual({
-      mode: "nearby",
       json: true,
+      mode: "nearby",
     });
   });
 
   test("nearby --all", () => {
     expect(parseArgs(["nearby", "--all"])).toEqual({
-      mode: "nearby",
-      json: false,
       all: true,
+      json: false,
+      mode: "nearby",
     });
   });
 
   test("nearby --all --json", () => {
     expect(parseArgs(["nearby", "--all", "--json"])).toEqual({
-      mode: "nearby",
-      json: true,
       all: true,
+      json: true,
+      mode: "nearby",
     });
   });
 
   test("move defaults to 1000ms", () => {
     expect(parseArgs(["move", "forward"])).toEqual({
-      mode: "move",
       direction: "forward",
       durationMs: 1000,
+      mode: "move",
     });
   });
 
   test("move accepts duration in range", () => {
     expect(parseArgs(["move", "left", "2500"])).toEqual({
-      mode: "move",
       direction: "left",
       durationMs: 2500,
+      mode: "move",
     });
   });
 
@@ -425,8 +425,8 @@ describe("parseArgs", () => {
 
   test("face-guid preserves a current entity GUID", () => {
     expect(parseArgs(["face-guid", "0xffffffffffffffff"])).toEqual({
-      mode: "face_guid",
       guid: 0xffff_ffff_ffff_ffffn,
+      mode: "face_guid",
     });
     expect(() => parseArgs(["face-guid", "0"])).toThrow();
   });
@@ -434,24 +434,24 @@ describe("parseArgs", () => {
   test("walk-toward accepts a bounded observed GUID or grounded point", () => {
     expect(parseArgs(["walk-toward", "3", "0x42"])).toEqual({
       mode: "walk_toward",
+      target: { guid: 0x42n, kind: "guid" },
       yards: 3,
-      target: { kind: "guid", guid: 0x42n },
     });
     expect(parseArgs(["walk-toward", "2.5", "1", "-2", "3"])).toEqual({
       mode: "walk_toward",
-      yards: 2.5,
       target: { kind: "point", x: 1, y: -2, z: 3 },
+      yards: 2.5,
     });
     expect(() => parseArgs(["walk-toward", "21", "0x42"])).toThrow();
     expect(() => parseArgs(["walk-toward", "2", "NaN", "0", "0"])).toThrow();
   });
 
   test("target accepts hex and decimal uint64", () => {
-    expect(parseArgs(["target", "0x1"])).toEqual({ mode: "target", guid: 1n });
-    expect(parseArgs(["target", "0"])).toEqual({ mode: "target", guid: 0n });
+    expect(parseArgs(["target", "0x1"])).toEqual({ guid: 1n, mode: "target" });
+    expect(parseArgs(["target", "0"])).toEqual({ guid: 0n, mode: "target" });
     expect(parseArgs(["target", "18446744073709551615"])).toEqual({
-      mode: "target",
       guid: 0xffff_ffff_ffff_ffffn,
+      mode: "target",
     });
   });
 
@@ -461,31 +461,31 @@ describe("parseArgs", () => {
 
   test("cast attack fight goto parse and reject", () => {
     expect(parseArgs(["cast", "585", "0xa"])).toEqual({
+      guid: 0xan,
       mode: "cast",
       spellId: 585,
-      guid: 0xan,
     });
     expect(parseArgs(["fight", "0xa"])).toEqual({
-      mode: "fight",
+      framing: "none",
       guid: 0xan,
       instruction:
         "defeat the selected target while keeping the character alive",
-      framing: "none",
+      mode: "fight",
     });
     expect(parseArgs(["fight", "--framing", "minimal", "0xa"])).toEqual({
-      mode: "fight",
+      framing: "minimal",
       guid: 0xan,
       instruction:
         "defeat the selected target while keeping the character alive",
-      framing: "minimal",
+      mode: "fight",
     });
     expect(
       parseArgs(["fight", "--framing=mechanics", "0xa", "hold threat"]),
     ).toEqual({
-      mode: "fight",
+      framing: "mechanics",
       guid: 0xan,
       instruction: "hold threat",
-      framing: "mechanics",
+      mode: "fight",
     });
     expect(() => parseArgs(["fight", "--framing", "bogus", "0xa"])).toThrow(
       'Unknown framing variant: "bogus". Must be one of: none, minimal, mechanics',
@@ -503,8 +503,8 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow("invalid goto");
     expect(() => parseArgs(["fight"])).toThrow("invalid fight");
     expect(parseArgs(["combat", "--json"])).toEqual({
-      mode: "combat",
       json: true,
+      mode: "combat",
     });
   });
 });
@@ -512,16 +512,16 @@ describe("parseArgs", () => {
 describe("cycle arguments", () => {
   test("parses guid queue, instruction and max starts", () => {
     expect(parseArgs(["cycle", "0xa", "0xb", "--max", "3"])).toEqual({
-      mode: "cycle",
       guids: [0xan, 0xbn],
       instruction:
         "defeat the selected target while keeping the character alive",
       maxStarts: 3,
+      mode: "cycle",
     });
     expect(parseArgs(["cycle", "0xa", "--instruction", "kill fast"])).toEqual({
-      mode: "cycle",
       guids: [0xan],
       instruction: "kill fast",
+      mode: "cycle",
     });
     expect(
       parseArgs([
@@ -534,14 +534,14 @@ describe("cycle arguments", () => {
         "5",
       ]),
     ).toEqual({
-      mode: "cycle",
       guids: [0xan, 0xbn],
       instruction: "hold aggro",
       maxStarts: 5,
+      mode: "cycle",
     });
     expect(parseArgs(["cycling", "--json"])).toEqual({
-      mode: "cycling",
       json: true,
+      mode: "cycling",
     });
   });
 
@@ -569,19 +569,19 @@ describe("cycle arguments", () => {
 describe("recovery arguments", () => {
   test("parses inspection and explicit resurrection decisions", () => {
     expect(parseArgs(["recovery", "--json"])).toEqual({
-      mode: "recovery",
       json: true,
+      mode: "recovery",
     });
     expect(parseArgs(["query-corpse"])).toEqual({ mode: "query_corpse" });
     expect(parseArgs(["release-spirit"])).toEqual({ mode: "release_spirit" });
     expect(parseArgs(["reclaim-corpse"])).toEqual({ mode: "reclaim_corpse" });
     expect(parseArgs(["resurrect", "accept"])).toEqual({
-      mode: "resurrect",
       accept: true,
+      mode: "resurrect",
     });
     expect(parseArgs(["resurrect", "decline"])).toEqual({
-      mode: "resurrect",
       accept: false,
+      mode: "resurrect",
     });
   });
 
@@ -599,8 +599,8 @@ describe("recovery arguments", () => {
 
   test("parses an explicit spirit-healer GUID and rejects bare or zero GUIDs", () => {
     expect(parseArgs(["spirit-healer", "0xa"])).toEqual({
-      mode: "spirit_healer",
       guid: 10n,
+      mode: "spirit_healer",
     });
     for (const args of [
       ["spirit-healer"],
@@ -614,20 +614,20 @@ describe("recovery arguments", () => {
 describe("quest arguments", () => {
   test("distinguishes absent and empty gossip code without concatenating arguments", () => {
     expect(parseArgs(["select-option", "0"])).toEqual({
+      code: undefined,
       mode: "select_option",
       optionId: 0,
-      code: undefined,
     });
     expect(parseArgs(["select-option", "0", ""])).toEqual({
+      code: "",
       mode: "select_option",
       optionId: 0,
-      code: "",
     });
     const code = "  two words\nHALT\r\n  ";
     expect(parseArgs(["select-option", "4294967295", code])).toEqual({
-      mode: "select_option",
-      optionId: 0xffff_ffff,
       code,
+      mode: "select_option",
+      optionId: 0xff_ff_ff_ff,
     });
     expect(() => parseArgs(["select-option", "0", "one", "two"])).toThrow();
     expect(() => parseArgs(["select-option", "0", "bad\0code"])).toThrow();
@@ -635,24 +635,24 @@ describe("quest arguments", () => {
 
   test("preserves GUID precision and uses zero-based reward and log slots", () => {
     expect(parseArgs(["talk", "18446744073709551615"])).toEqual({
-      mode: "talk",
       guid: 0xffff_ffff_ffff_ffffn,
+      mode: "talk",
     });
     expect(parseArgs(["query-quest", "4294967295"])).toEqual({
       mode: "query_quest",
-      questId: 0xffff_ffff,
+      questId: 0xff_ff_ff_ff,
     });
     expect(parseArgs(["choose-reward", "0"])).toEqual({
-      mode: "choose_reward",
       index: 0,
+      mode: "choose_reward",
     });
     expect(parseArgs(["abandon-quest", "24"])).toEqual({
       mode: "abandon_quest",
       slot: 24,
     });
     expect(parseArgs(["quests", "--json"])).toEqual({
-      mode: "quests",
       json: true,
+      mode: "quests",
     });
   });
 
@@ -676,8 +676,8 @@ describe("quest arguments", () => {
 describe("loot arguments", () => {
   test("preserves creature GUID precision and the uint8 offered-slot boundary", () => {
     expect(parseArgs(["open-loot", "18446744073709551615"])).toEqual({
-      mode: "open_loot",
       guid: 0xffff_ffff_ffff_ffffn,
+      mode: "open_loot",
     });
     expect(parseArgs(["take-loot", "0"])).toEqual({
       mode: "take_loot",
@@ -688,10 +688,10 @@ describe("loot arguments", () => {
       slot: 255,
     });
     expect(parseArgs(["inventory", "--json"])).toEqual({
-      mode: "inventory",
       json: true,
+      mode: "inventory",
     });
-    expect(parseArgs(["loot", "--json"])).toEqual({ mode: "loot", json: true });
+    expect(parseArgs(["loot", "--json"])).toEqual({ json: true, mode: "loot" });
   });
 
   test("rejects invalid loot targets, slots and extra mutation arguments", () => {
@@ -718,53 +718,53 @@ describe("daemon JSON arguments", () => {
     [["stop"], { mode: "stop" }],
     [
       ["move", "left", "250"],
-      { mode: "move", direction: "left", durationMs: 250 },
+      { direction: "left", durationMs: 250, mode: "move" },
     ],
     [["face", "1.57"], { mode: "face", orientation: 1.57 }],
-    [["target", "0xa"], { mode: "target", guid: 10n }],
+    [["target", "0xa"], { guid: 10n, mode: "target" }],
     [["halt"], { mode: "halt" }],
-    [["cast", "585", "0xa"], { mode: "cast", spellId: 585, guid: 10n }],
-    [["attack", "0xa"], { mode: "attack", guid: 10n }],
+    [["cast", "585", "0xa"], { guid: 10n, mode: "cast", spellId: 585 }],
+    [["attack", "0xa"], { guid: 10n, mode: "attack" }],
     [["cancel-cast"], { mode: "cancel_cast" }],
     [["stop-attack"], { mode: "stop_attack" }],
     [
       ["fight", "--framing", "minimal", "0xa", "hold threat"],
       {
-        mode: "fight",
+        framing: "minimal",
         guid: 10n,
         instruction: "hold threat",
-        framing: "minimal",
+        mode: "fight",
       },
     ],
     [
       ["cycle", "0xa", "0xb", "--max", "3", "--instruction", "hold threat"],
       {
-        mode: "cycle",
         guids: [10n, 11n],
         instruction: "hold threat",
         maxStarts: 3,
+        mode: "cycle",
       },
     ],
     [["goto", "1.5", "2", "3"], { mode: "goto", x: 1.5, y: 2, z: 3 }],
     [["query-corpse"], { mode: "query_corpse" }],
     [["release-spirit"], { mode: "release_spirit" }],
     [["reclaim-corpse"], { mode: "reclaim_corpse" }],
-    [["spirit-healer", "0xa"], { mode: "spirit_healer", guid: 10n }],
-    [["resurrect", "accept"], { mode: "resurrect", accept: true }],
-    [["talk", "0xa"], { mode: "talk", guid: 10n }],
+    [["spirit-healer", "0xa"], { guid: 10n, mode: "spirit_healer" }],
+    [["resurrect", "accept"], { accept: true, mode: "resurrect" }],
+    [["talk", "0xa"], { guid: 10n, mode: "talk" }],
     [["query-quest", "7"], { mode: "query_quest", questId: 7 }],
     [
       ["select-option", "0", "door"],
-      { mode: "select_option", optionId: 0, code: "door" },
+      { code: "door", mode: "select_option", optionId: 0 },
     ],
     [["select-quest", "7"], { mode: "select_quest", questId: 7 }],
     [["accept-quest"], { mode: "accept_quest" }],
     [["complete-quest", "7"], { mode: "complete_quest", questId: 7 }],
     [["request-reward"], { mode: "request_reward" }],
-    [["choose-reward", "0"], { mode: "choose_reward", index: 0 }],
+    [["choose-reward", "0"], { index: 0, mode: "choose_reward" }],
     [["abandon-quest", "24"], { mode: "abandon_quest", slot: 24 }],
     [["cancel-interaction"], { mode: "cancel_interaction" }],
-    [["open-loot", "0xa"], { mode: "open_loot", guid: 10n }],
+    [["open-loot", "0xa"], { guid: 10n, mode: "open_loot" }],
     [["take-loot", "255"], { mode: "take_loot", slot: 255 }],
     [["take-money"], { mode: "take_money" }],
     [["release-loot"], { mode: "release_loot" }],
@@ -779,24 +779,24 @@ describe("daemon JSON arguments", () => {
 
   test("removes JSON from fight instructions and positions before parsing", () => {
     expect(parseArgs(["fight", "--json", "0xa", "hold", "threat"])).toEqual({
-      mode: "fight",
+      framing: "none",
       guid: 10n,
       instruction: "hold threat",
-      framing: "none",
       json: true,
+      mode: "fight",
     });
     expect(parseArgs(["goto", "1", "--json", "2", "3"])).toEqual({
+      json: true,
       mode: "goto",
       x: 1,
       y: 2,
       z: 3,
-      json: true,
     });
     expect(parseArgs(["move", "forward", "--json"])).toEqual({
-      mode: "move",
       direction: "forward",
       durationMs: 1000,
       json: true,
+      mode: "move",
     });
   });
 
@@ -804,16 +804,16 @@ describe("daemon JSON arguments", () => {
     expect(
       parseArgs(["cycle", "0xa", "--instruction", "hold", "--json", "threat"]),
     ).toEqual({
-      mode: "cycle",
       guids: [10n],
       instruction: "hold threat",
       json: true,
+      mode: "cycle",
     });
     expect(parseArgs(["-w", "--json", "Xiara", "follow me"])).toEqual({
+      json: true,
+      message: "follow me",
       mode: "whisper",
       target: "Xiara",
-      message: "follow me",
-      json: true,
       wait: undefined,
     });
   });
@@ -839,8 +839,8 @@ describe("daemon JSON arguments", () => {
 
   test("keeps setup password values equal to --json", () => {
     expect(parseArgs(["setup", "--password", "--json"])).toEqual({
-      mode: "setup",
       args: ["--password", "--json"],
+      mode: "setup",
     });
     expect(
       parseArgs([
@@ -853,7 +853,6 @@ describe("daemon JSON arguments", () => {
         "Hero",
       ]),
     ).toEqual({
-      mode: "setup",
       args: [
         "--account",
         "player",
@@ -862,6 +861,7 @@ describe("daemon JSON arguments", () => {
         "--character",
         "Hero",
       ],
+      mode: "setup",
     });
     expect(() =>
       parseArgs(["setup", "--password", "--json", "--json"]),

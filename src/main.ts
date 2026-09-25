@@ -1,29 +1,29 @@
-import {
-  parseArgs,
-  hasJsonOption,
-  commandNameFromArgs,
-  type CliAction,
-} from "cli/args";
-import { sendToSocket as sendRawToSocket, ensureDaemon } from "cli/ipc";
-import {
-  decodeReply,
-  resultEnvelope,
-  errorEnvelope,
-  daemonCommandFailed,
-  walkCommandFailed,
-  formatHumanIntent,
-  type ReplyKind,
-  type OutputEnvelope,
-  type OutputStage,
-  type JsonValue,
-} from "cli/send-output";
 import { access } from "node:fs/promises";
 import {
-  isInspection,
-  inspectionLine,
-  requestLine,
+  type CliAction,
+  commandNameFromArgs,
+  hasJsonOption,
+  parseArgs,
+} from "cli/args";
+import { ensureDaemon, sendToSocket as sendRawToSocket } from "cli/ipc";
+import {
   type Inspection,
+  inspectionLine,
+  isInspection,
+  requestLine,
 } from "cli/request";
+import {
+  daemonCommandFailed,
+  decodeReply,
+  errorEnvelope,
+  formatHumanIntent,
+  type JsonValue,
+  type OutputEnvelope,
+  type OutputStage,
+  type ReplyKind,
+  resultEnvelope,
+  walkCommandFailed,
+} from "cli/send-output";
 import { messageOf } from "lib/errors";
 import { resolvePaths } from "lib/paths";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
@@ -231,9 +231,9 @@ async function main() {
       await ensureDaemon();
       const base = action.json ? "READ_JSON" : "READ";
       const cmd =
-        action.wait != null
-          ? `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`
-          : base;
+        action.wait == null
+          ? base
+          : `${action.json ? "READ_WAIT_JSON" : "READ_WAIT"} ${action.wait * 1000}`;
       const lines = await sendToSocket(cmd);
       printReply(lines, "events");
       break;
@@ -285,8 +285,7 @@ async function main() {
         if (jsonRequested()) emit(decodeReply("stop", "intent", lines));
         else for (const line of lines) console.log(line);
       } catch (error) {
-        if (!jsonRequested()) console.log("Daemon is not running.");
-        else {
+        if (jsonRequested()) {
           const absent = await access(resolvePaths().socketPath)
             .then(() => false)
             .catch(
@@ -297,7 +296,7 @@ async function main() {
             );
           if (absent) emit(resultEnvelope("stop", { socket: "not_running" }));
           else emit(errorEnvelope("stop", "command", messageOf(error)));
-        }
+        } else console.log("Daemon is not running.");
       }
       break;
     }

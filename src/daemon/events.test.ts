@@ -1,52 +1,52 @@
-import { test, expect, describe, jest } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
+import type { EventEntry } from "daemon/commands";
 import {
   onChatMessage,
-  onGroupEvent,
+  onControlEvent,
+  onDuelEvent,
   onEntityEvent,
   onFriendEvent,
-  onIgnoreEvent,
+  onGroupEvent,
   onGuildEvent,
-  onDuelEvent,
-  onControlEvent,
+  onIgnoreEvent,
 } from "daemon/events";
-import type { EventEntry } from "daemon/commands";
+import { RingBuffer } from "lib/ring-buffer";
+import type { SessionLog } from "lib/session-log";
+import type { ControlState } from "wow/control";
+import type { UnitEntity } from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
 import { ChatType } from "wow/protocol/opcodes";
 import { FriendStatus } from "wow/protocol/social";
-import { ObjectType } from "wow/protocol/entity-fields";
-import type { UnitEntity } from "wow/entity-store";
-import { SessionLog } from "lib/session-log";
-import { RingBuffer } from "lib/ring-buffer";
-import type { ControlState } from "wow/control";
 
 function sampleState(overrides: Partial<ControlState> = {}): ControlState {
   return {
-    selfGuid: 0xabcden,
+    blockedReason: undefined,
+    direction: "forward",
+    movementAllowed: true,
+    moving: true,
+    owner: "manual",
     pose: {
       mapId: 530,
-      x: 8709.46,
-      y: -6671.76,
-      z: 70.34,
       orientation: 1.5,
       source: "predicted",
       updatedAt: 1000,
-    },
-    serverPose: {
-      mapId: 530,
       x: 8709.46,
       y: -6671.76,
       z: 70.34,
+    },
+    requestedTarget: 0xan,
+    selfGuid: 0xabcden,
+    serverPose: {
+      mapId: 530,
       orientation: 1.57,
       source: "server",
       updatedAt: 900,
+      x: 8709.46,
+      y: -6671.76,
+      z: 70.34,
     },
-    target: 0xan,
-    requestedTarget: 0xan,
-    moving: true,
-    direction: "forward",
-    movementAllowed: true,
-    blockedReason: undefined,
     speed: 7,
-    owner: "manual",
+    target: 0xan,
     ...overrides,
   };
 }
@@ -59,7 +59,7 @@ describe("onChatMessage", () => {
     } as unknown as SessionLog;
 
     onChatMessage(
-      { type: ChatType.SAY, sender: "Alice", message: "hi" },
+      { message: "hi", sender: "Alice", type: ChatType.SAY },
       events,
       log,
     );
@@ -67,9 +67,9 @@ describe("onChatMessage", () => {
     const drained = events.drain();
     expect(drained[0]!.text).toBe("[say] Alice: hi");
     expect(JSON.parse(drained[0]!.json)).toEqual({
-      type: "SAY",
-      sender: "Alice",
       message: "hi",
+      sender: "Alice",
+      type: "SAY",
     });
   });
 
@@ -79,15 +79,15 @@ describe("onChatMessage", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onChatMessage(
-      { type: ChatType.WHISPER, sender: "Eve", message: "psst" },
+      { message: "psst", sender: "Eve", type: ChatType.WHISPER },
       events,
       log,
     );
 
     expect(append).toHaveBeenCalledWith({
-      type: "WHISPER_FROM",
-      sender: "Eve",
       message: "psst",
+      sender: "Eve",
+      type: "WHISPER_FROM",
     });
   });
 
@@ -97,7 +97,7 @@ describe("onChatMessage", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onChatMessage(
-      { type: ChatType.WHISPER, sender: "Eve", message: "psst" },
+      { message: "psst", sender: "Eve", type: ChatType.WHISPER },
       events,
       log,
     );
@@ -116,9 +116,9 @@ describe("onGroupEvent", () => {
 
     onGroupEvent(
       {
-        type: "group_list",
-        members: [{ name: "Alice", guidLow: 1, guidHigh: 0, online: true }],
         leader: "Alice",
+        members: [{ guidHigh: 0, guidLow: 1, name: "Alice", online: true }],
+        type: "group_list",
       },
       events,
       log,
@@ -136,13 +136,13 @@ describe("onGroupEvent", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onGroupEvent(
-      { type: "member_stats", guidLow: 42, hp: 100, maxHp: 200 },
+      { guidLow: 42, hp: 100, maxHp: 200, type: "member_stats" },
       events,
       log,
     );
 
     expect(append).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "PARTY_MEMBER_STATS", guidLow: 42 }),
+      expect.objectContaining({ guidLow: 42, type: "PARTY_MEMBER_STATS" }),
     );
   });
 
@@ -163,7 +163,7 @@ describe("onGroupEvent", () => {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
 
-    onGroupEvent({ type: "invite_received", from: "Bob" }, events, log);
+    onGroupEvent({ from: "Bob", type: "invite_received" }, events, log);
 
     const drained = events.drain();
     expect(drained[0]!.text).toBe("[group] Bob invites you to a group");
@@ -177,10 +177,10 @@ describe("onGroupEvent", () => {
 
     onGroupEvent(
       {
-        type: "command_result",
         operation: 1,
-        target: "Voidtrix",
         result: 0,
+        target: "Voidtrix",
+        type: "command_result",
       },
       events,
       log,
@@ -188,10 +188,10 @@ describe("onGroupEvent", () => {
 
     const drained = events.drain();
     expect(JSON.parse(drained[0]!.json)).toEqual({
-      type: "GROUP_COMMAND_RESULT",
       operation: 1,
-      target: "Voidtrix",
       result: 0,
+      target: "Voidtrix",
+      type: "GROUP_COMMAND_RESULT",
     });
   });
 
@@ -201,17 +201,17 @@ describe("onGroupEvent", () => {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
 
-    onGroupEvent({ type: "leader_changed", name: "Alice" }, events, log);
+    onGroupEvent({ name: "Alice", type: "leader_changed" }, events, log);
     onGroupEvent({ type: "group_destroyed" }, events, log);
     onGroupEvent({ type: "kicked" }, events, log);
-    onGroupEvent({ type: "invite_declined", name: "Bob" }, events, log);
+    onGroupEvent({ name: "Bob", type: "invite_declined" }, events, log);
 
     const drained = events.drain().map((entry) => JSON.parse(entry.json));
     expect(drained).toEqual([
-      { type: "GROUP_LEADER_CHANGED", name: "Alice" },
+      { name: "Alice", type: "GROUP_LEADER_CHANGED" },
       { type: "GROUP_DESTROYED" },
       { type: "GROUP_KICKED" },
-      { type: "GROUP_INVITE_DECLINED", name: "Bob" },
+      { name: "Bob", type: "GROUP_INVITE_DECLINED" },
     ]);
   });
 });
@@ -220,31 +220,31 @@ describe("onEntityEvent", () => {
   test("pushes appear event to ring buffer with text and json", () => {
     const events = new RingBuffer<EventEntry>(10);
     const entity: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "Test NPC",
-      level: 10,
-      health: 100,
-      maxHealth: 100,
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 100,
+      level: 10,
+      maxHealth: 100,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Test NPC",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: undefined,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
 
     const append = jest.fn(async () => {});
     const log = { append } as unknown as SessionLog;
-    onEntityEvent({ type: "appear", entity }, events, log);
+    onEntityEvent({ entity, type: "appear" }, events, log);
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
@@ -261,7 +261,7 @@ describe("onEntityEvent", () => {
     const append = jest.fn(async () => {});
     const log = { append } as unknown as SessionLog;
     onEntityEvent(
-      { type: "disappear", guid: 1n, name: "Gone NPC" },
+      { guid: 1n, name: "Gone NPC", type: "disappear" },
       events,
       log,
     );
@@ -277,31 +277,31 @@ describe("onEntityEvent", () => {
   test("skips update events with no obj", () => {
     const events = new RingBuffer<EventEntry>(10);
     const entity: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "Test NPC",
-      level: 10,
-      health: 100,
-      maxHealth: 100,
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 100,
+      level: 10,
+      maxHealth: 100,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Test NPC",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: undefined,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
 
     const append = jest.fn(async () => {});
     const log = { append } as unknown as SessionLog;
-    onEntityEvent({ type: "update", entity, changed: ["health"] }, events, log);
+    onEntityEvent({ changed: ["health"], entity, type: "update" }, events, log);
 
     expect(events.drain()).toHaveLength(0);
     expect(append).not.toHaveBeenCalled();
@@ -313,7 +313,7 @@ describe("onEntityEvent", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onEntityEvent(
-      { type: "disappear", guid: 1n, name: "Gone NPC" },
+      { guid: 1n, name: "Gone NPC", type: "disappear" },
       events,
       log,
     );
@@ -331,16 +331,16 @@ describe("onFriendEvent", () => {
 
     onFriendEvent(
       {
-        type: "friend-online",
         friend: {
+          area: 0,
           guid: 1n,
+          level: 80,
           name: "Arthas",
           note: "",
-          status: FriendStatus.ONLINE,
-          area: 0,
-          level: 80,
           playerClass: 6,
+          status: FriendStatus.ONLINE,
         },
+        type: "friend-online",
       },
       events,
       log,
@@ -362,7 +362,7 @@ describe("onFriendEvent", () => {
     const log = { append } as unknown as SessionLog;
 
     onFriendEvent(
-      { type: "friend-offline", guid: 1n, name: "Arthas" },
+      { guid: 1n, name: "Arthas", type: "friend-offline" },
       events,
       log,
     );
@@ -380,7 +380,7 @@ describe("onFriendEvent", () => {
     const append = jest.fn(async () => {});
     const log = { append } as unknown as SessionLog;
 
-    onFriendEvent({ type: "friend-list", friends: [] }, events, log);
+    onFriendEvent({ friends: [], type: "friend-list" }, events, log);
 
     expect(events.drain()).toHaveLength(0);
     expect(append).not.toHaveBeenCalled();
@@ -392,7 +392,7 @@ describe("onFriendEvent", () => {
     const log = { append } as unknown as SessionLog;
 
     onFriendEvent(
-      { type: "friend-error", result: 0x04, name: "Nobody" },
+      { name: "Nobody", result: 0x04, type: "friend-error" },
       events,
       log,
     );
@@ -411,7 +411,7 @@ describe("onFriendEvent", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onFriendEvent(
-      { type: "friend-offline", guid: 1n, name: "Gone" },
+      { guid: 1n, name: "Gone", type: "friend-offline" },
       events,
       log,
     );
@@ -428,7 +428,7 @@ describe("onIgnoreEvent", () => {
     const log = { append } as unknown as SessionLog;
 
     onIgnoreEvent(
-      { type: "ignore-added", entry: { guid: 1n, name: "Spammer" } },
+      { entry: { guid: 1n, name: "Spammer" }, type: "ignore-added" },
       events,
       log,
     );
@@ -449,7 +449,7 @@ describe("onIgnoreEvent", () => {
     const log = { append } as unknown as SessionLog;
 
     onIgnoreEvent(
-      { type: "ignore-removed", guid: 1n, name: "Spammer" },
+      { guid: 1n, name: "Spammer", type: "ignore-removed" },
       events,
       log,
     );
@@ -467,7 +467,7 @@ describe("onIgnoreEvent", () => {
     const append = jest.fn(async () => {});
     const log = { append } as unknown as SessionLog;
 
-    onIgnoreEvent({ type: "ignore-list", entries: [] }, events, log);
+    onIgnoreEvent({ entries: [], type: "ignore-list" }, events, log);
 
     expect(events.drain()).toHaveLength(0);
     expect(append).not.toHaveBeenCalled();
@@ -479,7 +479,7 @@ describe("onIgnoreEvent", () => {
     const log = { append } as unknown as SessionLog;
 
     onIgnoreEvent(
-      { type: "ignore-error", result: 0x0d, name: "Nobody" },
+      { name: "Nobody", result: 0x0d, type: "ignore-error" },
       events,
       log,
     );
@@ -498,7 +498,7 @@ describe("onIgnoreEvent", () => {
     const log: SessionLog = { append } as unknown as SessionLog;
 
     onIgnoreEvent(
-      { type: "ignore-removed", guid: 1n, name: "Gone" },
+      { guid: 1n, name: "Gone", type: "ignore-removed" },
       events,
       log,
     );
@@ -516,28 +516,28 @@ describe("onGuildEvent", () => {
 
     onGuildEvent(
       {
-        type: "guild-roster",
         roster: {
-          guildName: "Horde Elite",
-          motd: "Welcome!",
           guildInfo: "",
-          rankNames: ["GM"],
+          guildName: "Horde Elite",
           members: [
             {
-              guid: 1n,
-              name: "Thrall",
-              rankIndex: 0,
-              level: 80,
-              playerClass: 7,
-              gender: 0,
               area: 10,
+              gender: 0,
+              guid: 1n,
+              level: 80,
+              name: "Thrall",
+              officerNote: "",
+              playerClass: 7,
+              publicNote: "",
+              rankIndex: 0,
               status: 1,
               timeOffline: 0,
-              publicNote: "",
-              officerNote: "",
             },
           ],
+          motd: "Welcome!",
+          rankNames: ["GM"],
         },
+        type: "guild-roster",
       },
       events,
       log,
@@ -559,14 +559,14 @@ describe("onGuildEvent", () => {
 
     onGuildEvent(
       {
-        type: "guild-roster",
         roster: {
-          guildName: "",
-          motd: "",
           guildInfo: "",
-          rankNames: [],
+          guildName: "",
           members: [],
+          motd: "",
+          rankNames: [],
         },
+        type: "guild-roster",
       },
       events,
       log,
@@ -581,10 +581,10 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
       {
-        type: "promotion",
-        officer: "Thrall",
         member: "Garrosh",
+        officer: "Thrall",
         rank: "Officer",
+        type: "promotion",
       },
       events,
       log,
@@ -592,10 +592,10 @@ describe("onGuildEvent", () => {
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Thrall promoted Garrosh to Officer");
     expect(JSON.parse(d[0]!.json)).toEqual({
-      type: "GUILD_PROMOTION",
-      officer: "Thrall",
       member: "Garrosh",
+      officer: "Thrall",
       rank: "Officer",
+      type: "GUILD_PROMOTION",
     });
   });
 
@@ -604,10 +604,10 @@ describe("onGuildEvent", () => {
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
       {
-        type: "demotion",
-        officer: "Thrall",
         member: "Garrosh",
+        officer: "Thrall",
         rank: "Member",
+        type: "demotion",
       },
       events,
       log,
@@ -620,7 +620,7 @@ describe("onGuildEvent", () => {
   test("motd formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "motd", text: "Raid tonight!" }, events, log);
+    onGuildEvent({ text: "Raid tonight!", type: "motd" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] MOTD: Raid tonight!");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_MOTD");
@@ -629,7 +629,7 @@ describe("onGuildEvent", () => {
   test("joined formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "joined", name: "Arthas" }, events, log);
+    onGuildEvent({ name: "Arthas", type: "joined" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Arthas has joined the guild");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_JOINED");
@@ -638,7 +638,7 @@ describe("onGuildEvent", () => {
   test("left formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "left", name: "Sylvanas" }, events, log);
+    onGuildEvent({ name: "Sylvanas", type: "left" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Sylvanas has left the guild");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEFT");
@@ -648,7 +648,7 @@ describe("onGuildEvent", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
-      { type: "removed", member: "Garrosh", officer: "Thrall" },
+      { member: "Garrosh", officer: "Thrall", type: "removed" },
       events,
       log,
     );
@@ -660,7 +660,7 @@ describe("onGuildEvent", () => {
   test("leader_is formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "leader_is", name: "Thrall" }, events, log);
+    onGuildEvent({ name: "Thrall", type: "leader_is" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Thrall is the guild leader");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_LEADER_IS");
@@ -670,7 +670,7 @@ describe("onGuildEvent", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
-      { type: "leader_changed", oldLeader: "Thrall", newLeader: "Garrosh" },
+      { newLeader: "Garrosh", oldLeader: "Thrall", type: "leader_changed" },
       events,
       log,
     );
@@ -693,7 +693,7 @@ describe("onGuildEvent", () => {
   test("signed_on formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "signed_on", name: "Jaina" }, events, log);
+    onGuildEvent({ name: "Jaina", type: "signed_on" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Jaina has come online");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_ON");
@@ -702,7 +702,7 @@ describe("onGuildEvent", () => {
   test("signed_off formats text and JSON", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
-    onGuildEvent({ type: "signed_off", name: "Varian" }, events, log);
+    onGuildEvent({ name: "Varian", type: "signed_off" }, events, log);
     const d = events.drain();
     expect(d[0]!.text).toBe("[guild] Varian has gone offline");
     expect(JSON.parse(d[0]!.json).type).toBe("GUILD_SIGNED_OFF");
@@ -712,7 +712,7 @@ describe("onGuildEvent", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
-      { type: "command_result", command: 1, name: "Thrall", result: 0x03 },
+      { command: 1, name: "Thrall", result: 0x03, type: "command_result" },
       events,
       log,
     );
@@ -729,7 +729,7 @@ describe("onGuildEvent", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log = { append: jest.fn(async () => {}) } as unknown as SessionLog;
     onGuildEvent(
-      { type: "guild_invite", inviter: "Thrall", guildName: "Horde Heroes" },
+      { guildName: "Horde Heroes", inviter: "Thrall", type: "guild_invite" },
       events,
       log,
     );
@@ -750,13 +750,13 @@ describe("onDuelEvent", () => {
     const log = {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
-    onDuelEvent({ type: "duel_requested", challenger: "Arthas" }, events, log);
+    onDuelEvent({ challenger: "Arthas", type: "duel_requested" }, events, log);
     const entries = events.drain();
     expect(entries).toHaveLength(1);
     expect(entries[0]!.text).toBe("[duel] Arthas challenges you to a duel");
     expect(JSON.parse(entries[0]!.json)).toEqual({
-      type: "DUEL_REQUESTED",
       challenger: "Arthas",
+      type: "DUEL_REQUESTED",
     });
   });
 
@@ -765,7 +765,7 @@ describe("onDuelEvent", () => {
     const log = {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
-    onDuelEvent({ type: "duel_countdown", timeMs: 3000 }, events, log);
+    onDuelEvent({ timeMs: 3000, type: "duel_countdown" }, events, log);
     const entries = events.drain();
     expect(entries[0]!.text).toBe("[duel] Duel starting in 3 seconds");
   });
@@ -777,10 +777,10 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent(
       {
-        type: "duel_winner",
-        reason: "won",
-        winner: "Thrall",
         loser: "Garrosh",
+        reason: "won",
+        type: "duel_winner",
+        winner: "Thrall",
       },
       events,
       log,
@@ -798,10 +798,10 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent(
       {
-        type: "duel_winner",
-        reason: "fled",
-        winner: "Thrall",
         loser: "Garrosh",
+        reason: "fled",
+        type: "duel_winner",
+        winner: "Thrall",
       },
       events,
       log,
@@ -839,12 +839,12 @@ describe("onDuelEvent", () => {
     const log = {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
-    onDuelEvent({ type: "duel_complete", completed: true }, events, log);
+    onDuelEvent({ completed: true, type: "duel_complete" }, events, log);
     const entries = events.drain();
     expect(entries[0]!.text).toBeUndefined();
     expect(JSON.parse(entries[0]!.json)).toEqual({
-      type: "DUEL_COMPLETE",
       completed: true,
+      type: "DUEL_COMPLETE",
     });
   });
 
@@ -853,7 +853,7 @@ describe("onDuelEvent", () => {
     const log = {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
-    onDuelEvent({ type: "duel_complete", completed: false }, events, log);
+    onDuelEvent({ completed: false, type: "duel_complete" }, events, log);
     const entries = events.drain();
     expect(entries[0]!.text).toBe("[duel] Duel interrupted");
   });
@@ -874,20 +874,20 @@ describe("onDuelEvent", () => {
     } as unknown as SessionLog;
     onDuelEvent(
       {
-        type: "duel_winner",
-        reason: "won",
-        winner: "A",
         loser: "B",
+        reason: "won",
+        type: "duel_winner",
+        winner: "A",
       },
       events,
       log,
     );
     const json = JSON.parse(events.drain()[0]!.json);
     expect(json).toEqual({
-      type: "DUEL_WINNER",
-      reason: "won",
-      winner: "A",
       loser: "B",
+      reason: "won",
+      type: "DUEL_WINNER",
+      winner: "A",
     });
   });
 });
@@ -898,7 +898,7 @@ describe("onControlEvent", () => {
     const append = jest.fn(() => Promise.resolve());
     const log = { append } as unknown as SessionLog;
     onControlEvent(
-      { type: "target_requested", state: sampleState(), reason: "select" },
+      { reason: "select", state: sampleState(), type: "target_requested" },
       events,
       log,
     );
@@ -924,15 +924,15 @@ describe("onControlEvent", () => {
     const state = sampleState({
       pose: {
         mapId: 530,
-        x: 1,
-        y: 2,
-        z: 3,
         orientation: 0,
         source: "server",
         updatedAt: 5,
+        x: 1,
+        y: 2,
+        z: 3,
       },
     });
-    onControlEvent({ type: "server_correction", state }, events, log);
+    onControlEvent({ state, type: "server_correction" }, events, log);
     const entry = events.drain()[0]!;
     expect(JSON.parse(entry.json).pose.source).toBe("server");
     expect(entry.text).toContain("server");

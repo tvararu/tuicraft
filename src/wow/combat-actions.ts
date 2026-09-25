@@ -1,12 +1,12 @@
 import type { CombatRuntime, CombatState, CombatUnit } from "wow/combat";
 import type { ControlRuntime, MovementDirection } from "wow/control";
-import { isUnit, type EntityLookup } from "wow/entity-store";
-import { bearing, distance } from "wow/geometry";
-import type { SpellDefinition } from "wow/spell-catalog";
+import { type EntityLookup, isUnit } from "wow/entity-store";
 import type { FactionTemplateCatalog } from "wow/faction-template";
+import { bearing, distance } from "wow/geometry";
 import type { JevCandidate } from "wow/jev";
-import type { TacticsContext, TacticsFrame } from "wow/tactics";
 import { ObjectType, UnitFlag } from "wow/protocol/entity-fields";
+import type { SpellDefinition } from "wow/spell-catalog";
+import type { TacticsContext, TacticsFrame } from "wow/tactics";
 
 type ActionDeps = {
   combat: CombatRuntime;
@@ -401,20 +401,22 @@ export class CombatActions {
     )
       return { status: "blocked", reason: control.blockedReason };
     if (
-      !state.pendingCast &&
-      !state.casting &&
-      !state.pendingAttack &&
-      !state.attacking &&
-      !this.inMelee(state) &&
-      !spells.some((action) => action.supported)
+      !(
+        state.pendingCast ||
+        state.casting ||
+        state.pendingAttack ||
+        state.attacking ||
+        this.inMelee(state) ||
+        spells.some((action) => action.supported)
+      )
     )
       return { status: "blocked", reason: "no_supported_combat_actions" };
-    if (!this.targetReachable(context, state, spells)) {
+    if (this.targetReachable(context, state, spells)) {
+      this.unreachableAt = undefined;
+    } else {
       this.unreachableAt ??= now;
       if (now - this.unreachableAt >= UNREACHABLE_TIMEOUT_MS)
         return { status: "blocked", reason: "target_unreachable" };
-    } else {
-      this.unreachableAt = undefined;
     }
     return undefined;
   }
@@ -515,7 +517,7 @@ function unsupportedSpell(
   spell: SpellDefinition,
   form: number | undefined,
 ): string | undefined {
-  if (spell.attributes.raw & (0x40 | 0x10 | 0x200))
+  if (spell.attributes.raw & (0x40 | 0x10 | 0x2_00))
     return "unsupported_spell_attribute";
   if (spell.attributes.ex & (0x2 | 0x4 | 0x40))
     return "unsupported_channel_or_power";
@@ -523,7 +525,7 @@ function unsupportedSpell(
     return "unsupported_item_requirement";
   if (form === undefined) return "unobserved_shapeshift_form";
   if (form !== 0) return "unsupported_shapeshift_form";
-  if (spell.targets.stances && !(spell.attributes.ex2 & 0x80000))
+  if (spell.targets.stances && !(spell.attributes.ex2 & 0x8_00_00))
     return "required_shapeshift_form";
   if (
     spell.targets.creatureType ||
@@ -557,8 +559,10 @@ function unsupportedSpell(
     if (effect.implicitTargetA === 0 && effect.implicitTargetB === 0)
       return "unspecified_effect_target";
     if (
-      ![0, 1, 6, 21].includes(effect.implicitTargetA) ||
-      ![0, 1, 6, 21].includes(effect.implicitTargetB)
+      !(
+        [0, 1, 6, 21].includes(effect.implicitTargetA) &&
+        [0, 1, 6, 21].includes(effect.implicitTargetB)
+      )
     )
       return "unsupported_implicit_target";
     if (effect.radius && effect.radius.max > 0)
@@ -589,14 +593,14 @@ function describeSpell(spell: SpellDefinition, self: boolean): string {
 function separation(state: CombatState): number | undefined {
   const a = state.self.pose;
   const b = state.target?.pose;
-  if (!a || !b || a.mapId !== b.mapId) return undefined;
+  if (!(a && b) || a.mapId !== b.mapId) return undefined;
   return distance(a, b);
 }
 
 function facing(state: CombatState): boolean {
   const a = state.self.pose;
   const b = state.target?.pose;
-  if (!a || !b || a.orientation === undefined) return false;
+  if (!(a && b) || a.orientation === undefined) return false;
   const angle = bearing(a, b) - a.orientation;
   return Math.cos(angle) >= 0;
 }

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { WorldConn } from "wow/client";
 import { EntityStore } from "wow/entity-store";
+import { registerQuestHandlers } from "wow/gameplay-handlers";
 import {
   ObjectType,
   PLAYER_FIELDS,
@@ -7,11 +9,9 @@ import {
 } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { QuestRuntime, type QuestEvent } from "wow/quests";
-import { readQuestLog } from "wow/quest-slots";
 import { OpcodeDispatch } from "wow/protocol/world";
-import { registerQuestHandlers } from "wow/gameplay-handlers";
-import type { WorldConn } from "wow/client";
+import { readQuestLog } from "wow/quest-slots";
+import { type QuestEvent, QuestRuntime } from "wow/quests";
 
 const self = 1n;
 const giver = 2n;
@@ -299,7 +299,7 @@ describe("authoritative quest-log transitions", () => {
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.complete).toBe(false);
     expect(runtime.snapshot().log.slots[0]?.questId).toBeUndefined();
-    setSlot(entities, 0, questId, 0, 0x00020001, 0x00040003);
+    setSlot(entities, 0, questId, 0, 0x00_02_00_01, 0x00_04_00_03);
     runtime.observeQuestLog();
     expect(runtime.snapshot().log.slots[0]?.counters).toEqual([1, 2, 3, 4]);
     expect(events.some((event) => event.type === "accepted")).toBe(false);
@@ -482,7 +482,7 @@ describe("quest packet and lifecycle failures", () => {
   test("kill notifications retain sign-magnitude targets, empty item updates carry no count", () => {
     const { runtime } = setup();
     const w = new PacketWriter();
-    w.rawBytes(words(questId, 0x80000141, 1, 3));
+    w.rawBytes(words(questId, 0x80_00_01_41, 1, 3));
     w.uint64LE(9n);
     packet(runtime, GameOpcode.SMSG_QUESTUPDATE_ADD_KILL, w.finish());
     expect(runtime.snapshot().lastProgress).toMatchObject({

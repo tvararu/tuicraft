@@ -36,9 +36,9 @@ describe("self field authority", () => {
 
   test("does not zero hidden or unrecognized fields from a complete self CREATE", () => {
     const self = player([], true);
-    expect(readSelfField(1n, self, 0x492)).toBe(0);
+    expect(readSelfField(1n, self, 0x4_92)).toBe(0);
     expect(readSelfField(1n, self, 0x9e)).toBeUndefined();
-    expect(readSelfField(1n, self, 0xdead)).toBeUndefined();
-    expect(readSelfField(2n, self, 0x492)).toBeUndefined();
+    expect(readSelfField(1n, self, 0xde_ad)).toBeUndefined();
+    expect(readSelfField(2n, self, 0x4_92)).toBeUndefined();
   });
 });

@@ -1,5 +1,5 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { GroupUpdateFlag } from "wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export function buildGroupInvite(name: string): Uint8Array {
   const w = new PacketWriter();

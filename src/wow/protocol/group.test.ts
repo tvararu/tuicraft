@@ -1,24 +1,24 @@
-import { test, expect, describe } from "bun:test";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { describe, expect, test } from "bun:test";
 import {
-  buildGroupInvite,
   buildGroupAccept,
   buildGroupDecline,
-  buildGroupUninvite,
   buildGroupDisband,
+  buildGroupInvite,
   buildGroupSetLeader,
-  parsePartyCommandResult,
-  parseGroupInvite,
-  parseGroupSetLeader,
+  buildGroupUninvite,
   parseGroupDecline,
+  parseGroupInvite,
   parseGroupList,
+  parseGroupSetLeader,
+  parsePartyCommandResult,
   parsePartyMemberStats,
 } from "wow/protocol/group";
 import {
-  PartyResult,
-  PartyOperation,
   GroupUpdateFlag,
+  PartyOperation,
+  PartyResult,
 } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 describe("buildGroupInvite", () => {
   test("writes name and trailing u32 zero", () => {
@@ -199,15 +199,15 @@ describe("parsePartyMemberStats", () => {
       GroupUpdateFlag.LEVEL;
     w.uint32LE(mask);
     w.uint16LE(0x01);
-    w.uint32LE(12000);
-    w.uint32LE(15000);
+    w.uint32LE(12_000);
+    w.uint32LE(15_000);
     w.uint16LE(80);
 
     const result = parsePartyMemberStats(new PacketReader(w.finish()));
     expect(result.guidLow).toBe(0x42);
     expect(result.online).toBe(true);
-    expect(result.hp).toBe(12000);
-    expect(result.maxHp).toBe(15000);
+    expect(result.hp).toBe(12_000);
+    expect(result.maxHp).toBe(15_000);
     expect(result.level).toBe(80);
   });
 
@@ -257,9 +257,9 @@ describe("parsePartyMemberStats", () => {
     w.uint16LE(0x01);
     w.uint32LE(0x05);
     w.uint32LE(0x00);
-    w.uint32LE(12345);
+    w.uint32LE(12_345);
     w.uint8(0);
-    w.uint32LE(67890);
+    w.uint32LE(67_890);
     w.uint8(0);
 
     const result = parsePartyMemberStats(new PacketReader(w.finish()));
@@ -275,7 +275,7 @@ describe("parsePartyMemberStats", () => {
     w.uint16LE(0x01);
     w.uint32LE(0x00);
     w.uint32LE(0x02);
-    w.uint32LE(54321);
+    w.uint32LE(54_321);
     w.uint8(0);
 
     const result = parsePartyMemberStats(new PacketReader(w.finish()));
@@ -289,11 +289,11 @@ describe("parsePartyMemberStats", () => {
     w.uint8(0x42);
     w.uint32LE(GroupUpdateFlag.STATUS | GroupUpdateFlag.CUR_HP);
     w.uint16LE(0x01);
-    w.uint32LE(10000);
+    w.uint32LE(10_000);
 
     const result = parsePartyMemberStats(new PacketReader(w.finish()), true);
     expect(result.guidLow).toBe(0x42);
-    expect(result.hp).toBe(10000);
+    expect(result.hp).toBe(10_000);
   });
 
   test("skips position and pet guid fields correctly", () => {
@@ -308,8 +308,8 @@ describe("parsePartyMemberStats", () => {
     w.uint16LE(0x01);
     w.uint16LE(1234);
     w.uint16LE(5678);
-    w.uint32LE(0xaaaa);
-    w.uint32LE(0xbbbb);
+    w.uint32LE(0xaa_aa);
+    w.uint32LE(0xbb_bb);
 
     const result = parsePartyMemberStats(new PacketReader(w.finish()));
     expect(result.online).toBe(true);

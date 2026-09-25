@@ -351,7 +351,7 @@ export function validateNativePoint(point: NativePoint): void {
 }
 
 export function validateNativeXY(x: number, y: number): void {
-  if (!insideAdts(x) || !insideAdts(y))
+  if (!(insideAdts(x) && insideAdts(y)))
     throw new Error("native coordinate outside the 64x64 ADT domain");
 }
 

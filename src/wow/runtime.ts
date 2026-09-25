@@ -1,26 +1,26 @@
 import type { ClientConfig, WorldConn } from "wow/client";
-import { ControlRuntime } from "wow/control";
 import { CombatRuntime } from "wow/combat";
-import { loadSpellCatalog } from "wow/spell-catalog";
-import { TacticsLoop } from "wow/tactics";
 import { CombatActions } from "wow/combat-actions";
-import { selectJevAction, type JevSelect } from "wow/jev";
-import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
+import { ControlRuntime } from "wow/control";
+import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import {
-  loadFactionTemplates,
   type FactionTemplateCatalog,
+  loadFactionTemplates,
 } from "wow/faction-template";
+import { type JevSelect, selectJevAction } from "wow/jev";
+import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
 import {
   createNavigation,
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
-import { RecoveryRuntime } from "wow/recovery";
-import { QuestRuntime } from "wow/quests";
-import { RewardsRuntime } from "wow/rewards";
-import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import { ObjectType } from "wow/protocol/entity-fields";
-import { sendPacket, selfGuid } from "wow/world-handlers";
+import { QuestRuntime } from "wow/quests";
+import { RecoveryRuntime } from "wow/recovery";
+import { RewardsRuntime } from "wow/rewards";
+import { loadSpellCatalog } from "wow/spell-catalog";
+import { TacticsLoop } from "wow/tactics";
+import { selfGuid, sendPacket } from "wow/world-handlers";
 
 export type Runtimes = {
   control: ControlRuntime;
@@ -51,7 +51,7 @@ export function createRuntimes(
       try {
         return getNavigation().height(mapId, x, y, from);
       } catch {
-        return undefined;
+        return;
       }
     },
     isPathClear: (mapId, from, to) => {
@@ -109,7 +109,7 @@ export function createRuntimes(
     return factionPromise;
   }
   function getNavigation(): Navigation {
-    if (!config.navigationDataDir || !config.navigationLibrary)
+    if (!(config.navigationDataDir && config.navigationLibrary))
       throw new Error("missing_navigation");
     navigation ??= createNavigation({
       dataPath: config.navigationDataDir,
@@ -205,8 +205,7 @@ export function createRuntimes(
       throw new Error("target_stale");
     const position = unit?.serverPose ?? entity.position;
     if (
-      !position ||
-      ![position.x, position.y, position.z].every(Number.isFinite)
+      !(position && [position.x, position.y, position.z].every(Number.isFinite))
     )
       throw new Error("target_not_observed");
     if (position.mapId !== self.mapId) throw new Error("target_map_changed");

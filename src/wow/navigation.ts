@@ -2,10 +2,10 @@ import { bearing, distance2d } from "wow/geometry";
 import {
   groundError,
   isGroundError,
+  type NativeMap,
   openNativeMap,
   validateNativePoint,
   validateNativeXY,
-  type NativeMap,
 } from "wow/navigation-native";
 
 export type NavPoint = { x: number; y: number; z: number };

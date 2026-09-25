@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { UpdateFlag } from "./entity-fields";
 import { PacketReader, PacketWriter } from "./packet";
 import { parseUpdateObject } from "./update-object";
-import { UpdateFlag } from "./entity-fields";
 
 function writePackedGuid(w: PacketWriter, guid: bigint) {
   const low = Number(guid & 0xffffffffn);
@@ -95,8 +95,8 @@ describe("parseUpdateObject", () => {
       [1, 0],
       [2, 0x19],
       [55, 1],
-      [67, 0x4d0c],
-      [68, 0x4d0c],
+      [67, 0x4d_0c],
+      [68, 0x4d_0c],
     ]);
     writeUpdateMask(w, fields);
 

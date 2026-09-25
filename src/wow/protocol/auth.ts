@@ -1,31 +1,31 @@
 import { createHash, randomBytes } from "node:crypto";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { AuthOpcode } from "wow/protocol/opcodes";
 import {
-  leBytesToBigInt,
   beBytesToBigInt,
+  leBytesToBigInt,
   type SRPResult,
 } from "wow/crypto/srp";
+import { AuthOpcode } from "wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export interface LogonChallengeResult {
-  status: number;
   B?: bigint;
   g?: bigint;
   N?: bigint;
   salt?: Uint8Array;
+  status: number;
 }
 
 export interface Realm {
-  icon: number;
-  lock: number;
-  flags: number;
-  name: string;
-  host: string;
-  port: number;
-  population: number;
   characters: number;
-  timezone: number;
+  flags: number;
+  host: string;
+  icon: number;
   id: number;
+  lock: number;
+  name: string;
+  population: number;
+  port: number;
+  timezone: number;
 }
 
 function reverseString(s: string): string {
@@ -47,7 +47,7 @@ export function buildLogonChallenge(account: string): Uint8Array {
   w.uint8(3);
   w.uint8(3);
   w.uint8(5);
-  w.uint16LE(12340);
+  w.uint16LE(12_340);
   w.cString(reverseString("x86"));
   w.cString(reverseString("Win"));
   w.rawBytes(new TextEncoder().encode(reverseString("enUS")));
@@ -82,8 +82,8 @@ export function parseLogonChallengeResponse(
 }
 
 export interface ReconnectChallengeResult {
-  status: number;
   challengeData?: Uint8Array;
+  status: number;
 }
 
 export function parseReconnectChallengeResponse(
@@ -167,7 +167,7 @@ export function parseRealmList(r: PacketReader): Realm[] {
     const colonIdx = address.indexOf(":");
     if (colonIdx === -1) throw new Error(`Invalid realm address: ${address}`);
     const host = address.slice(0, colonIdx);
-    const port = parseInt(address.slice(colonIdx + 1), 10);
+    const port = Number.parseInt(address.slice(colonIdx + 1), 10);
     if (Number.isNaN(port)) throw new Error(`Invalid realm port: ${address}`);
     const population = r.uint32LE();
     const characters = r.uint8();

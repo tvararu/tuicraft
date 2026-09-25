@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
+import { PacketReader } from "wow/protocol/packet";
 import {
-  buildQuestgiverQueryQuest,
   buildQuestgiverAcceptQuest,
-  buildQuestgiverCompleteQuest,
-  buildQuestgiverRequestReward,
   buildQuestgiverChooseReward,
-  parseQuestgiverStatus,
-  parseQuestgiverQuestList,
-  parseQuestgiverQuestDetails,
-  parseQuestgiverRequestItems,
+  buildQuestgiverCompleteQuest,
+  buildQuestgiverQueryQuest,
+  buildQuestgiverRequestReward,
   parseQuestgiverOfferReward,
   parseQuestgiverQuestComplete,
+  parseQuestgiverQuestDetails,
+  parseQuestgiverQuestList,
+  parseQuestgiverRequestItems,
+  parseQuestgiverStatus,
 } from "wow/protocol/questgiver";
 
 const guid = 0x0102030405060708n;
@@ -33,7 +33,7 @@ const rewardBytes = `
   01000000 e9030000 03000000 a10f0000
   38ffffff 2c010000 0c000000 0000c03f
 `;
-const spellBytes = `64000000 9bffffff 06000000 01000000 14000000 0a000000`;
+const spellBytes = "64000000 9bffffff 06000000 01000000 14000000 0a000000";
 const rewards = {
   choices: [{ itemId: 2001, count: 2, displayId: 3001 }],
   items: [{ itemId: 1001, count: 3, displayId: 4001 }],
@@ -72,7 +72,7 @@ describe("questgiver requests", () => {
     expect(buildQuestgiverQueryQuest(guid, 42, 127)).toEqual(
       bytes("0807060504030201 2a000000 7f"),
     );
-    expect(buildQuestgiverAcceptQuest(guid, 42, 0x12345678)).toEqual(
+    expect(buildQuestgiverAcceptQuest(guid, 42, 0x12_34_56_78)).toEqual(
       bytes("0807060504030201 2a000000 78563412"),
     );
     expect(buildQuestgiverCompleteQuest(guid, 42)).toEqual(
@@ -111,7 +111,7 @@ describe("quest menus and rewards", () => {
           questId: 42,
           icon: 8,
           level: -1,
-          flags: 0x80000200,
+          flags: 0x80_00_02_00,
           repeatable: 2,
           title: "Quest",
         },
@@ -128,7 +128,7 @@ describe("quest menus and rewards", () => {
       details: "D",
       objectives: "O",
       activateAccept: 2,
-      flags: 0x80000200,
+      flags: 0x80_00_02_00,
       suggestedPlayers: 3,
       unknown: 127,
       rewards,
@@ -143,7 +143,7 @@ describe("quest menus and rewards", () => {
       title: "T",
       rewardText: "R",
       enableNext: 2,
-      flags: 0x80000200,
+      flags: 0x80_00_02_00,
       suggestedPlayers: 3,
       emotes: [{ emote: 7, delay: 1000 }],
       rewards,
@@ -160,7 +160,7 @@ describe("quest menus and rewards", () => {
       unknown: 9,
       emote: 7,
       closeOnCancel: 2,
-      flags: 0x80000200,
+      flags: 0x80_00_02_00,
       suggestedPlayers: 3,
       requiredMoney: 200,
       items: [{ itemId: 1001, count: 3, displayId: 4001 }],
@@ -176,7 +176,7 @@ describe("quest menus and rewards", () => {
       0c000000 0000c03f ${spellBytes} ${reputationBytes} 00000000
     `);
     const result = parseQuestgiverQuestDetails(new PacketReader(data));
-    expect(result.flags).toBe(0x200);
+    expect(result.flags).toBe(0x2_00);
     expect(result.rewards).toEqual({
       ...rewards,
       choices: [],

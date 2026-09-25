@@ -1,24 +1,24 @@
+import {
+  type Parsed,
+  parseBare,
+  parseBoundedArg,
+  parseCast,
+  parseCycle,
+  parseFace,
+  parseFight,
+  parseGoto,
+  parseGuidArg,
+  parseMove,
+  parseOptionId,
+  parseQuestId,
+  parseResurrect,
+  parseWalkToward,
+  tokenize,
+} from "cli/tokens";
 import { parseCommand } from "ui/commands";
 import type { WalkTarget } from "wow/client";
 import type { MovementDirection } from "wow/control";
 import type { FramingVariant } from "wow/framing";
-import {
-  tokenize,
-  parseBare,
-  parseGuidArg,
-  parseBoundedArg,
-  parseQuestId,
-  parseMove,
-  parseFace,
-  parseGoto,
-  parseWalkToward,
-  parseCast,
-  parseResurrect,
-  parseOptionId,
-  parseFight,
-  parseCycle,
-  type Parsed,
-} from "cli/tokens";
 
 export type IpcCommand =
   | { type: "chat"; message: string }
@@ -149,7 +149,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return parsed;
       case "who":
         return parsed.target
-          ? { type: "who", filter: parsed.target }
+          ? { filter: parsed.target, type: "who" }
           : { type: "who" };
       case "invite":
       case "kick":
@@ -160,42 +160,42 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
         return parsed;
       case "join-channel":
         return {
-          type: "join_channel",
           channel: parsed.channel,
           password: parsed.password,
+          type: "join_channel",
         };
       case "leave-channel":
-        return { type: "leave_channel", channel: parsed.channel };
+        return { channel: parsed.channel, type: "leave_channel" };
       case "friends":
         return { type: "friends" };
       case "add-friend":
-        return { type: "add_friend", target: parsed.target };
+        return { target: parsed.target, type: "add_friend" };
       case "remove-friend":
-        return { type: "del_friend", target: parsed.target };
+        return { target: parsed.target, type: "del_friend" };
       case "ignored":
         return { type: "ignored" };
       case "add-ignore":
-        return { type: "add_ignore", target: parsed.target };
+        return { target: parsed.target, type: "add_ignore" };
       case "remove-ignore":
-        return { type: "del_ignore", target: parsed.target };
+        return { target: parsed.target, type: "del_ignore" };
       case "roll":
         return parsed;
       case "guild-roster":
         return { type: "guild_roster" };
       case "guild-invite":
-        return { type: "guild_invite", target: parsed.target };
+        return { target: parsed.target, type: "guild_invite" };
       case "guild-kick":
-        return { type: "guild_kick", target: parsed.target };
+        return { target: parsed.target, type: "guild_kick" };
       case "guild-leave":
         return { type: "guild_leave" };
       case "guild-promote":
-        return { type: "guild_promote", target: parsed.target };
+        return { target: parsed.target, type: "guild_promote" };
       case "guild-demote":
-        return { type: "guild_demote", target: parsed.target };
+        return { target: parsed.target, type: "guild_demote" };
       case "guild-leader":
-        return { type: "guild_leader", target: parsed.target };
+        return { target: parsed.target, type: "guild_leader" };
       case "guild-motd":
-        return { type: "guild_motd", message: parsed.message };
+        return { message: parsed.message, type: "guild_motd" };
       case "guild-accept":
         return { type: "guild_accept" };
       case "guild-decline":
@@ -203,7 +203,7 @@ export function parseIpcCommand(line: string): IpcCommand | undefined {
       case "unimplemented":
         return parsed;
       default:
-        return { type: "say", message: line };
+        return { message: line, type: "say" };
     }
   }
 
@@ -260,23 +260,23 @@ function from<T>(
 ): IpcCommand {
   return parsed.ok
     ? build(parsed.value)
-    : { type: "invalid", reason: parsed.reason };
+    : { reason: parsed.reason, type: "invalid" };
 }
 
 function parseSelectOption(tokens: string[], rest: string): IpcCommand {
   const optionId = parseOptionId(tokens[0]);
   if (optionId === undefined)
-    return { type: "invalid", reason: "invalid gossip option id" };
+    return { reason: "invalid gossip option id", type: "invalid" };
   const raw = rest.trim().slice(tokens[0]!.length).trim();
   let code: unknown = null;
   try {
     if (raw) code = JSON.parse(raw);
   } catch {
-    return { type: "invalid", reason: "invalid gossip code JSON" };
+    return { reason: "invalid gossip code JSON", type: "invalid" };
   }
   if (code !== null && (typeof code !== "string" || code.includes("\0")))
-    return { type: "invalid", reason: "invalid gossip code" };
-  return { type: "select_option", optionId, code: code ?? undefined };
+    return { reason: "invalid gossip code", type: "invalid" };
+  return { code: code ?? undefined, optionId, type: "select_option" };
 }
 
 function parseGameplay(verb: string, rest: string): IpcCommand | undefined {
@@ -340,12 +340,12 @@ function parseGameplay(verb: string, rest: string): IpcCommand | undefined {
     case "CHOOSE_REWARD":
       return from(
         parseBoundedArg(tokens, 0, 5, "invalid reward index"),
-        (index) => ({ type: "choose_reward", index }),
+        (index) => ({ index, type: "choose_reward" }),
       );
     case "ABANDON_QUEST":
       return from(
         parseBoundedArg(tokens, 0, 24, "invalid quest slot"),
-        (slot) => ({ type: "abandon_quest", slot }),
+        (slot) => ({ slot, type: "abandon_quest" }),
       );
     case "OPEN_LOOT":
       return from(parseGuidArg(tokens, true), (v) => ({
@@ -357,7 +357,7 @@ function parseGameplay(verb: string, rest: string): IpcCommand | undefined {
     case "TAKE_LOOT":
       return from(
         parseBoundedArg(tokens, 0, 255, "invalid loot slot"),
-        (slot) => ({ type: "take_loot", slot }),
+        (slot) => ({ slot, type: "take_loot" }),
       );
     default:
       return undefined;
@@ -378,6 +378,7 @@ function parseSocial(
     case "DND":
     case "AFK":
       return {
+        message: rest,
         type: verb.toLowerCase() as
           | "say"
           | "yell"
@@ -386,16 +387,15 @@ function parseSocial(
           | "emote"
           | "dnd"
           | "afk",
-        message: rest,
       };
     case "WHISPER": {
       const targetEnd = rest.indexOf(" ");
       if (targetEnd === -1)
-        return { type: "whisper", target: rest, message: "" };
+        return { message: "", target: rest, type: "whisper" };
       return {
-        type: "whisper",
-        target: rest.slice(0, targetEnd),
         message: rest.slice(targetEnd + 1),
+        target: rest.slice(0, targetEnd),
+        type: "whisper",
       };
     }
     case "READ":
@@ -403,105 +403,105 @@ function parseSocial(
     case "READ_JSON":
       return { type: "read_json" };
     case "READ_WAIT": {
-      const ms = parseInt(rest, 10);
+      const ms = Number.parseInt(rest, 10);
       if (!Number.isFinite(ms) || ms < 0) return undefined;
-      return { type: "read_wait", ms: Math.min(ms, 60_000) };
+      return { ms: Math.min(ms, 60_000), type: "read_wait" };
     }
     case "READ_WAIT_JSON": {
-      const ms = parseInt(rest, 10);
+      const ms = Number.parseInt(rest, 10);
       if (!Number.isFinite(ms) || ms < 0) return undefined;
-      return { type: "read_wait_json", ms: Math.min(ms, 60_000) };
+      return { ms: Math.min(ms, 60_000), type: "read_wait_json" };
     }
     case "STOP":
       return { type: "stop" };
     case "STATUS":
       return { type: "status" };
     case "WHO":
-      return rest ? { type: "who", filter: rest } : { type: "who" };
+      return rest ? { filter: rest, type: "who" } : { type: "who" };
     case "WHO_JSON":
-      return rest ? { type: "who_json", filter: rest } : { type: "who_json" };
+      return rest ? { filter: rest, type: "who_json" } : { type: "who_json" };
     case "INVITE":
-      return rest ? { type: "invite", target: rest } : undefined;
+      return rest ? { target: rest, type: "invite" } : undefined;
     case "KICK":
-      return rest ? { type: "kick", target: rest } : undefined;
+      return rest ? { target: rest, type: "kick" } : undefined;
     case "LEAVE":
       if (rest) {
         const channel = rest.split(" ")[0]!;
-        return { type: "leave_channel", channel };
+        return { channel, type: "leave_channel" };
       }
       return { type: "leave" };
     case "LEADER":
-      return rest ? { type: "leader", target: rest } : undefined;
+      return rest ? { target: rest, type: "leader" } : undefined;
     case "ACCEPT":
       return { type: "accept" };
     case "DECLINE":
       return { type: "decline" };
     case "NEARBY":
       return rest.trim().toLowerCase() === "all"
-        ? { type: "nearby", all: true }
+        ? { all: true, type: "nearby" }
         : { type: "nearby" };
     case "NEARBY_JSON":
       return rest.trim().toLowerCase() === "all"
-        ? { type: "nearby_json", all: true }
+        ? { all: true, type: "nearby_json" }
         : { type: "nearby_json" };
     case "FRIENDS":
       return { type: "friends" };
     case "FRIENDS_JSON":
       return { type: "friends_json" };
     case "ADD_FRIEND":
-      return rest ? { type: "add_friend", target: rest } : undefined;
+      return rest ? { target: rest, type: "add_friend" } : undefined;
     case "DEL_FRIEND":
-      return rest ? { type: "del_friend", target: rest } : undefined;
+      return rest ? { target: rest, type: "del_friend" } : undefined;
     case "IGNORED":
       return { type: "ignored" };
     case "IGNORED_JSON":
       return { type: "ignored_json" };
     case "ADD_IGNORE":
-      return rest ? { type: "add_ignore", target: rest } : undefined;
+      return rest ? { target: rest, type: "add_ignore" } : undefined;
     case "DEL_IGNORE":
-      return rest ? { type: "del_ignore", target: rest } : undefined;
+      return rest ? { target: rest, type: "del_ignore" } : undefined;
     case "JOIN": {
       if (!rest) return undefined;
       const [channel, password] = rest.split(" ") as [string, string?];
-      return { type: "join_channel", channel, password };
+      return { channel, password, type: "join_channel" };
     }
     case "GUILD_ROSTER":
       return { type: "guild_roster" };
     case "GUILD_ROSTER_JSON":
       return { type: "guild_roster_json" };
     case "GINVITE":
-      return rest ? { type: "guild_invite", target: rest } : undefined;
+      return rest ? { target: rest, type: "guild_invite" } : undefined;
     case "GKICK":
-      return rest ? { type: "guild_kick", target: rest } : undefined;
+      return rest ? { target: rest, type: "guild_kick" } : undefined;
     case "GLEAVE":
       return { type: "guild_leave" };
     case "GPROMOTE":
-      return rest ? { type: "guild_promote", target: rest } : undefined;
+      return rest ? { target: rest, type: "guild_promote" } : undefined;
     case "GDEMOTE":
-      return rest ? { type: "guild_demote", target: rest } : undefined;
+      return rest ? { target: rest, type: "guild_demote" } : undefined;
     case "GLEADER":
-      return rest ? { type: "guild_leader", target: rest } : undefined;
+      return rest ? { target: rest, type: "guild_leader" } : undefined;
     case "GMOTD":
-      return { type: "guild_motd", message: rest };
+      return { message: rest, type: "guild_motd" };
     case "GACCEPT":
       return { type: "guild_accept" };
     case "GDECLINE":
       return { type: "guild_decline" };
     case "MAIL":
-      return { type: "unimplemented", feature: "Mail reading" };
+      return { feature: "Mail reading", type: "unimplemented" };
     case "ROLL": {
       const parts = rest.split(" ").filter(Boolean);
       if (parts.length >= 2)
         return {
+          max: Number.parseInt(parts[1]!, 10),
+          min: Number.parseInt(parts[0]!, 10),
           type: "roll",
-          min: parseInt(parts[0]!, 10),
-          max: parseInt(parts[1]!, 10),
         };
       if (parts.length === 1)
-        return { type: "roll", min: 1, max: parseInt(parts[0]!, 10) };
-      return { type: "roll", min: 1, max: 100 };
+        return { max: Number.parseInt(parts[0]!, 10), min: 1, type: "roll" };
+      return { max: 100, min: 1, type: "roll" };
     }
     default:
-      return line ? { type: "chat", message: line } : undefined;
+      return line ? { message: line, type: "chat" } : undefined;
   }
 }

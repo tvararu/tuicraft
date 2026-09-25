@@ -1,145 +1,141 @@
 import type { Socket } from "bun";
-import type { FramingVariant } from "wow/framing";
-import { bearing } from "wow/geometry";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { Arc4 } from "wow/crypto/arc4";
-import { GameOpcode, ChatType, Language } from "wow/protocol/opcodes";
-import {
-  buildChatMessage,
-  buildWhoRequest,
-  parseWhoResponse,
-  buildRandomRoll,
-  buildJoinChannel,
-  buildLeaveChannel,
-  type ChatMessage as RawChatMessage,
-  type WhoResult,
-} from "wow/protocol/chat";
-import {
-  buildWorldAuthPacket,
-  parseCharacterList,
-  CLASS_NAMES,
-  OpcodeDispatch,
-  AccumulatorBuffer,
-  INCOMING_HEADER_SIZE,
-  buildOutgoingPacket,
-  decryptIncomingHeader,
-} from "wow/protocol/world";
-import {
-  buildGroupInvite,
-  buildGroupAccept,
-  buildGroupDecline,
-  buildGroupUninvite,
-  buildGroupDisband,
-  buildGroupSetLeader,
-} from "wow/protocol/group";
-import { registerStubs } from "wow/protocol/stubs";
-import { EntityStore, type Entity, type EntityEvent } from "wow/entity-store";
-import {
-  FriendStore,
-  type FriendEntry,
-  type FriendEvent,
-} from "wow/friend-store";
-import {
-  IgnoreStore,
-  type IgnoreEntry,
-  type IgnoreEvent,
-} from "wow/ignore-store";
-import { GuildStore, type GuildRoster, type GuildEvent } from "wow/guild-store";
-import {
-  buildAddFriend,
-  buildDelFriend,
-  buildAddIgnore,
-  buildDelIgnore,
-} from "wow/protocol/social";
-import {
-  buildGuildQuery,
-  buildGuildInvite,
-  buildGuildRemove,
-  buildGuildPromote,
-  buildGuildDemote,
-  buildGuildLeader,
-  buildGuildMotd,
-} from "wow/protocol/guild";
-import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
-import {
+import type { CombatEvent, CombatRuntime, CombatState } from "wow/combat";
+import type {
+  ControlEvent,
   ControlRuntime,
-  type ControlEvent,
-  type ControlState,
-  type MovementDirection,
-  type NavigationState,
-  type WalkOutcome,
+  ControlState,
+  MovementDirection,
+  NavigationState,
+  WalkOutcome,
 } from "wow/control";
-import { CombatRuntime, type CombatEvent, type CombatState } from "wow/combat";
-import type { SpellDefinition } from "wow/spell-catalog";
-import { TacticsLoop, type TacticsEvent, type TacticsState } from "wow/tactics";
-import { classifyNavigationRefusal } from "wow/navigation";
-import {
-  RecoveryRuntime,
-  type RecoveryState,
-  type RecoveryEvent,
-} from "wow/recovery";
-import { QuestRuntime, type QuestState, type QuestEvent } from "wow/quests";
-import {
-  RewardsRuntime,
-  type RewardsState,
-  type RewardsEvent,
-} from "wow/rewards";
+import { Arc4 } from "wow/crypto/arc4";
 import type {
   CycleEvent,
   CycleState,
   EncounterCycleRuntime,
 } from "wow/encounter-cycle";
-import type { InventoryState } from "wow/inventory";
-import { createRuntimes } from "wow/runtime";
+import { type Entity, type EntityEvent, EntityStore } from "wow/entity-store";
+import type { FramingVariant } from "wow/framing";
 import {
-  sendPacket,
-  handleTimeSync,
-  handleChatMessage,
-  handleGmChatMessage,
-  handleNameQueryResponse,
-  handleMotd,
-  handlePlayerNotFound,
-  handleChatRestricted,
-  handleChatWrongFaction,
-  handleChannelNotify,
-  handleServerBroadcast,
-  handleNotification,
-  handleReceivedMail,
-  handlePartyCommandResult,
-  handleGroupInviteReceived,
-  handleGroupSetLeaderMsg,
-  handleGroupListMsg,
-  handleGroupDestroyed,
-  handleGroupUninvite,
-  handleGroupDeclineMsg,
-  handleRandomRoll,
-  handleUpdateObject,
-  handleCompressedUpdateObject,
-  handleDestroyObject,
-  handleCreatureQueryResponse,
-  handleGameObjectQueryResponse,
-  handlePartyMemberStatsMsg,
-  handleContactList,
-  handleFriendStatus,
-  handleGuildRoster,
-  handleGuildQueryResponse,
-  handleGuildEvent,
-  handleDuelRequested,
-  handleDuelCountdown,
-  handleDuelComplete,
-  handleDuelWinner,
-  handleDuelOutOfBounds,
-  handleDuelInBounds,
-  handleGuildCommandResult,
-  handleGuildInvitePacket,
-} from "wow/world-handlers";
-import { registerMovementHandlers } from "wow/movement-handlers";
+  type FriendEntry,
+  type FriendEvent,
+  FriendStore,
+} from "wow/friend-store";
 import {
   registerCombatHandlers,
   registerLootHandlers,
   registerQuestHandlers,
   registerRecoveryHandlers,
 } from "wow/gameplay-handlers";
+import { bearing } from "wow/geometry";
+import { type GuildEvent, type GuildRoster, GuildStore } from "wow/guild-store";
+import {
+  type IgnoreEntry,
+  type IgnoreEvent,
+  IgnoreStore,
+} from "wow/ignore-store";
+import type { InventoryState } from "wow/inventory";
+import { registerMovementHandlers } from "wow/movement-handlers";
+import { classifyNavigationRefusal } from "wow/navigation";
+import {
+  buildChatMessage,
+  buildJoinChannel,
+  buildLeaveChannel,
+  buildRandomRoll,
+  buildWhoRequest,
+  parseWhoResponse,
+  type ChatMessage as RawChatMessage,
+  type WhoResult,
+} from "wow/protocol/chat";
+import { buildDuelAccepted, buildDuelCancelled } from "wow/protocol/duel";
+import {
+  buildGroupAccept,
+  buildGroupDecline,
+  buildGroupDisband,
+  buildGroupInvite,
+  buildGroupSetLeader,
+  buildGroupUninvite,
+} from "wow/protocol/group";
+import {
+  buildGuildDemote,
+  buildGuildInvite,
+  buildGuildLeader,
+  buildGuildMotd,
+  buildGuildPromote,
+  buildGuildQuery,
+  buildGuildRemove,
+} from "wow/protocol/guild";
+import { ChatType, GameOpcode, Language } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import {
+  buildAddFriend,
+  buildAddIgnore,
+  buildDelFriend,
+  buildDelIgnore,
+} from "wow/protocol/social";
+import { registerStubs } from "wow/protocol/stubs";
+import {
+  AccumulatorBuffer,
+  buildOutgoingPacket,
+  buildWorldAuthPacket,
+  CLASS_NAMES,
+  decryptIncomingHeader,
+  INCOMING_HEADER_SIZE,
+  OpcodeDispatch,
+  parseCharacterList,
+} from "wow/protocol/world";
+import type { QuestEvent, QuestRuntime, QuestState } from "wow/quests";
+import type {
+  RecoveryEvent,
+  RecoveryRuntime,
+  RecoveryState,
+} from "wow/recovery";
+import type { RewardsEvent, RewardsRuntime, RewardsState } from "wow/rewards";
+import { createRuntimes } from "wow/runtime";
+import type { SpellDefinition } from "wow/spell-catalog";
+import type { TacticsEvent, TacticsLoop, TacticsState } from "wow/tactics";
+import {
+  handleChannelNotify,
+  handleChatMessage,
+  handleChatRestricted,
+  handleChatWrongFaction,
+  handleCompressedUpdateObject,
+  handleContactList,
+  handleCreatureQueryResponse,
+  handleDestroyObject,
+  handleDuelComplete,
+  handleDuelCountdown,
+  handleDuelInBounds,
+  handleDuelOutOfBounds,
+  handleDuelRequested,
+  handleDuelWinner,
+  handleFriendStatus,
+  handleGameObjectQueryResponse,
+  handleGmChatMessage,
+  handleGroupDeclineMsg,
+  handleGroupDestroyed,
+  handleGroupInviteReceived,
+  handleGroupListMsg,
+  handleGroupSetLeaderMsg,
+  handleGroupUninvite,
+  handleGuildCommandResult,
+  handleGuildEvent,
+  handleGuildInvitePacket,
+  handleGuildQueryResponse,
+  handleGuildRoster,
+  handleMotd,
+  handleNameQueryResponse,
+  handleNotification,
+  handlePartyCommandResult,
+  handlePartyMemberStatsMsg,
+  handlePlayerNotFound,
+  handleRandomRoll,
+  handleReceivedMail,
+  handleServerBroadcast,
+  handleTimeSync,
+  handleUpdateObject,
+  sendPacket,
+} from "wow/world-handlers";
 
 export type ClientConfig = {
   host: string;
@@ -214,11 +210,17 @@ export type DuelEvent =
   | { type: "duel_out_of_bounds" }
   | { type: "duel_in_bounds" };
 
-export type { WhoResult };
-export type { Entity, EntityEvent };
-export type { FriendEntry, FriendEvent };
-export type { IgnoreEntry, IgnoreEvent };
-export type { GuildRoster, GuildEvent };
+export type {
+  Entity,
+  EntityEvent,
+  FriendEntry,
+  FriendEvent,
+  GuildEvent,
+  GuildRoster,
+  IgnoreEntry,
+  IgnoreEvent,
+  WhoResult,
+};
 
 export type ChatMode =
   | { type: "say" }
@@ -447,8 +449,8 @@ async function authenticateWorld(
   const status = resp.uint8();
   if (status !== 0x0c) {
     const names: Record<number, string> = {
-      0x0d: "system error",
-      0x15: "account in use",
+      13: "system error",
+      21: "account in use",
     };
     const label = names[status] ?? `status 0x${status.toString(16)}`;
     throw new Error(`World auth failed: ${label}`);

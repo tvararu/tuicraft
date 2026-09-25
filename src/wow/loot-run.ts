@@ -1,7 +1,7 @@
 import { messageOf } from "lib/errors";
-import { cycleStop as stop, type CycleStop } from "wow/cycle-stop";
+import { type CycleStop, cycleStop as stop } from "wow/cycle-stop";
 import type { CycleDeps, CycleLootRecord } from "wow/encounter-cycle";
-import { fieldOf, type EntityEvent } from "wow/entity-store";
+import { type EntityEvent, fieldOf } from "wow/entity-store";
 import type { EventWaiter } from "wow/event-waiter";
 import { UNIT_FIELDS } from "wow/protocol/entity-fields";
 import {

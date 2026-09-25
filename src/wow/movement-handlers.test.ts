@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { registerMovementHandlers } from "wow/movement-handlers";
+import type { WorldConn } from "wow/client";
 import { ControlRuntime } from "wow/control";
 import { EntityStore } from "wow/entity-store";
-import type { WorldConn } from "wow/client";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { GameOpcode } from "wow/protocol/opcodes";
+import { registerMovementHandlers } from "wow/movement-handlers";
 import { ObjectType } from "wow/protocol/entity-fields";
-import { OpcodeDispatch } from "wow/protocol/world";
 import { writeMovementInfo } from "wow/protocol/movement";
+import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { OpcodeDispatch } from "wow/protocol/world";
 
 describe("handleNearTeleport", () => {
   function nearTeleportBody(guidLow: number): Uint8Array {
@@ -29,7 +29,7 @@ describe("handleNearTeleport", () => {
   function fakeConn(control: unknown, store: EntityStore): WorldConn {
     return {
       dispatch: new OpcodeDispatch(),
-      selfGuidLow: 0x0764,
+      selfGuidLow: 0x07_64,
       selfGuidHigh: 0,
       control,
       entityStore: store,
@@ -62,7 +62,7 @@ describe("handleNearTeleport", () => {
     expect(conn.dispatch.has(GameOpcode.MSG_MOVE_TELEPORT)).toBe(true);
     conn.dispatch.handle(
       GameOpcode.MSG_MOVE_TELEPORT,
-      new PacketReader(nearTeleportBody(0x0764)),
+      new PacketReader(nearTeleportBody(0x07_64)),
     );
     expect(runtime.snapshot().moving).toBe(false);
     expect(runtime.snapshot().pose?.source).toBe("server");

@@ -1,5 +1,5 @@
-import type { OpcodeDispatch } from "wow/protocol/world";
 import { GameOpcode } from "wow/protocol/opcodes";
+import type { OpcodeDispatch } from "wow/protocol/world";
 
 export const STUBS: [opcode: number, label: string][] = [
   [GameOpcode.SMSG_CHANNEL_LIST, "Channel member list"],

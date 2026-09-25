@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
 import { bytes } from "test/hex";
 import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import { PacketReader } from "wow/protocol/packet";
 
 const guid = 0x0102030405060708n;
 

@@ -1,14 +1,14 @@
-import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
-import { ObjectType } from "wow/protocol/entity-fields";
-import { FriendStatus, FriendResult } from "wow/protocol/social";
+import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
-import type { ChatMessage, ChatMode, WhoResult, GroupEvent } from "wow/client";
+import type { ChatMessage, ChatMode, GroupEvent, WhoResult } from "wow/client";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
-import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { GuildRoster } from "wow/guild-store";
+import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import { ObjectType } from "wow/protocol/entity-fields";
 import { GuildMemberStatus } from "wow/protocol/guild";
-import type { LogEntry } from "lib/session-log";
+import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
+import { FriendResult, FriendStatus } from "wow/protocol/social";
 import { CLASS_NAMES } from "wow/protocol/world";
 
 const CHAT_TYPE_LABELS: Record<number, string> = {
@@ -88,9 +88,9 @@ export function formatMessageObj(msg: ChatMessage): LogEntry {
           ? "MAIL"
           : (JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`);
   const obj: LogEntry = {
-    type,
-    sender: msg.sender,
     message: stripColorCodes(msg.message),
+    sender: msg.sender,
+    type,
   };
   if (msg.channel) obj.channel = msg.channel;
   return obj;
@@ -112,17 +112,17 @@ export function formatWhoResults(results: WhoResult[]): string {
 
 export function formatWhoResultsJson(results: WhoResult[]): string {
   return JSON.stringify({
-    type: "WHO",
     count: results.length,
     results: results.map((r) => ({
-      name: r.name,
+      classId: r.classId,
+      gender: r.gender,
       guild: r.guild,
       level: r.level,
-      classId: r.classId,
+      name: r.name,
       race: r.race,
-      gender: r.gender,
       zone: r.zone,
     })),
+    type: "WHO",
   });
 }
 
@@ -215,9 +215,9 @@ export function formatEntityEvent(event: EntityEvent): string | undefined {
       return `[world] ${name} left range`;
     }
     case "update": {
-      if (!event.changed.includes("name") || !event.entity.name)
+      if (!(event.changed.includes("name") && event.entity.name))
         return undefined;
-      return formatEntityEvent({ type: "appear", entity: event.entity });
+      return formatEntityEvent({ entity: event.entity, type: "appear" });
     }
   }
 }
@@ -229,10 +229,10 @@ export function formatEntityEventObj(
     case "appear": {
       const e = event.entity;
       const obj: Record<string, unknown> = {
-        type: "ENTITY_APPEAR",
         guid: formatGuid(e.guid),
-        objectType: e.objectType,
         name: e.name,
+        objectType: e.objectType,
+        type: "ENTITY_APPEAR",
       };
       if (
         e.objectType === ObjectType.UNIT ||
@@ -252,9 +252,9 @@ export function formatEntityEventObj(
     }
     case "disappear":
       return {
-        type: "ENTITY_DISAPPEAR",
         guid: formatGuid(event.guid),
         name: event.name,
+        type: "ENTITY_DISAPPEAR",
       };
     case "update":
       return undefined;
@@ -285,29 +285,29 @@ export function formatFriendList(friends: FriendEntry[]): string {
 
 export function formatFriendListJson(friends: FriendEntry[]): string {
   return JSON.stringify({
-    type: "FRIENDS",
     count: friends.length,
-    online: friends.filter((f) => f.status !== FriendStatus.OFFLINE).length,
     friends: friends.map((f) => ({
+      area: f.area,
+      class: CLASS_NAMES[f.playerClass] ?? `class ${f.playerClass}`,
       guid: formatGuid(f.guid),
+      level: f.level,
       name: f.name,
       note: f.note,
       status: friendStatusLabel(f.status).toUpperCase(),
-      level: f.level,
-      class: CLASS_NAMES[f.playerClass] ?? `class ${f.playerClass}`,
-      area: f.area,
     })),
+    online: friends.filter((f) => f.status !== FriendStatus.OFFLINE).length,
+    type: "FRIENDS",
   });
 }
 
 function friendResultLabel(result: number): string {
   const labels: Record<number, string> = {
-    0x00: "database error",
-    0x01: "friends list is full",
-    0x04: "player not found",
-    0x08: "already on friends list",
-    0x09: "cannot add yourself",
-    0x0a: "cannot add enemy faction",
+    0: "database error",
+    1: "friends list is full",
+    4: "player not found",
+    8: "already on friends list",
+    9: "cannot add yourself",
+    10: "cannot add enemy faction",
   };
   return labels[result] ?? `error ${result}`;
 }
@@ -342,23 +342,23 @@ export function formatFriendEventObj(
   switch (event.type) {
     case "friend-online":
       return {
-        type: "FRIEND_ONLINE",
-        name: event.friend.name,
-        level: event.friend.level,
-        class: CLASS_NAMES[event.friend.playerClass],
         area: event.friend.area,
+        class: CLASS_NAMES[event.friend.playerClass],
+        level: event.friend.level,
+        name: event.friend.name,
+        type: "FRIEND_ONLINE",
       };
     case "friend-offline":
-      return { type: "FRIEND_OFFLINE", name: event.name };
+      return { name: event.name, type: "FRIEND_OFFLINE" };
     case "friend-added":
-      return { type: "FRIEND_ADDED", name: event.friend.name };
+      return { name: event.friend.name, type: "FRIEND_ADDED" };
     case "friend-removed":
-      return { type: "FRIEND_REMOVED", name: event.name };
+      return { name: event.name, type: "FRIEND_REMOVED" };
     case "friend-error":
       return {
-        type: "FRIEND_ERROR",
-        result: event.result,
         message: friendResultLabel(event.result),
+        result: event.result,
+        type: "FRIEND_ERROR",
       };
     case "friend-list":
       return undefined;
@@ -376,12 +376,12 @@ export function formatIgnoreList(ignored: IgnoreEntry[]): string {
 
 export function formatIgnoreListJson(ignored: IgnoreEntry[]): string {
   return JSON.stringify({
-    type: "IGNORED",
     count: ignored.length,
     ignored: ignored.map((e) => ({
       guid: formatGuid(e.guid),
       name: e.name,
     })),
+    type: "IGNORED",
   });
 }
 
@@ -414,14 +414,14 @@ export function formatIgnoreEventObj(
 ): Record<string, unknown> | undefined {
   switch (event.type) {
     case "ignore-added":
-      return { type: "IGNORE_ADDED", name: event.entry.name };
+      return { name: event.entry.name, type: "IGNORE_ADDED" };
     case "ignore-removed":
-      return { type: "IGNORE_REMOVED", name: event.name };
+      return { name: event.name, type: "IGNORE_REMOVED" };
     case "ignore-error":
       return {
-        type: "IGNORE_ERROR",
-        result: event.result,
         message: ignoreResultLabel(event.result),
+        result: event.result,
+        type: "IGNORE_ERROR",
       };
     case "ignore-list":
       return undefined;
@@ -469,26 +469,26 @@ export function formatGuildRoster(roster: GuildRoster): string {
 
 export function formatGuildRosterJson(roster: GuildRoster): string {
   return JSON.stringify({
-    type: "GUILD_ROSTER",
-    guildName: roster.guildName,
-    motd: roster.motd,
-    guildInfo: roster.guildInfo,
-    rankNames: roster.rankNames,
     count: roster.members.length,
-    online: roster.members.filter((m) => m.status !== GuildMemberStatus.OFFLINE)
-      .length,
+    guildInfo: roster.guildInfo,
+    guildName: roster.guildName,
     members: roster.members.map((m) => ({
+      area: m.area,
+      class: CLASS_NAMES[m.playerClass] ?? `class ${m.playerClass}`,
       guid: formatGuid(m.guid),
+      level: m.level,
       name: m.name,
+      officerNote: m.officerNote,
+      publicNote: m.publicNote,
       rank: rankName(roster, m.rankIndex),
       rankIndex: m.rankIndex,
-      level: m.level,
-      class: CLASS_NAMES[m.playerClass] ?? `class ${m.playerClass}`,
       status: m.status === GuildMemberStatus.OFFLINE ? "OFFLINE" : "ONLINE",
-      area: m.area,
-      publicNote: m.publicNote,
-      officerNote: m.officerNote,
     })),
+    motd: roster.motd,
+    online: roster.members.filter((m) => m.status !== GuildMemberStatus.OFFLINE)
+      .length,
+    rankNames: roster.rankNames,
+    type: "GUILD_ROSTER",
   });
 }
 

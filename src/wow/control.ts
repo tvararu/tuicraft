@@ -1,18 +1,17 @@
 import {
-  classifyNavigationRefusal,
-  type GroundRoute,
-  type NavPoint,
-  type NavigationRefusal,
-} from "wow/navigation";
-import {
-  MOVING_BITS,
-  groundStep,
-  unsupportedReason,
   type Ground,
+  groundStep,
+  MOVING_BITS,
+  unsupportedReason,
 } from "wow/control-motion";
 import type { Position } from "wow/entity-store";
 import { bearing, distance, distance2d, normalizeAngle } from "wow/geometry";
-import { GameOpcode } from "wow/protocol/opcodes";
+import {
+  classifyNavigationRefusal,
+  type GroundRoute,
+  type NavigationRefusal,
+  type NavPoint,
+} from "wow/navigation";
 import { MovementFlag, UnitFlag } from "wow/protocol/entity-fields";
 import {
   buildCanFlyAck,
@@ -27,10 +26,11 @@ import {
   type ForceSpeed,
   type KnockBack,
   type MoveAck,
-  type SpeedAck,
   type MovementInfo,
+  type SpeedAck,
   type TransportInfo,
 } from "wow/protocol/movement";
+import { GameOpcode } from "wow/protocol/opcodes";
 
 export type MovementDirection = "forward" | "backward" | "left" | "right";
 
@@ -111,7 +111,7 @@ export type ControlDeps = Ground & {
 };
 
 const MIN_DURATION_MS = 1;
-const MAX_DURATION_MS = 10000;
+const MAX_DURATION_MS = 10_000;
 const HEARTBEAT_MS = 500;
 const ROUTE_HEARTBEAT_MS = 100;
 const STEP_MS = 100;
@@ -295,9 +295,11 @@ export class ControlRuntime {
   ): Promise<WalkOutcome> {
     const { x: targetX, y: targetY, z: targetZ } = target;
     if (
-      !Number.isFinite(targetX) ||
-      !Number.isFinite(targetY) ||
-      !Number.isFinite(targetZ)
+      !(
+        Number.isFinite(targetX) &&
+        Number.isFinite(targetY) &&
+        Number.isFinite(targetZ)
+      )
     )
       throw new Error("invalid_destination");
     if (!Number.isFinite(yards) || yards <= 0 || yards > 20)
@@ -666,7 +668,7 @@ export class ControlRuntime {
   }
 
   private integrate(): void {
-    if (!this.moving || !this.predicted || !this.direction) return;
+    if (!(this.moving && this.predicted && this.direction)) return;
     const now = this.deps.now();
     const dt = (now - this.lastIntegrate) / 1000;
     this.lastIntegrate = now;

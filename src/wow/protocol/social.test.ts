@@ -1,15 +1,15 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
-  SocialFlag,
-  FriendStatus,
-  FriendResult,
   buildAddFriend,
-  buildDelFriend,
   buildAddIgnore,
+  buildDelFriend,
   buildDelIgnore,
+  FriendResult,
+  FriendStatus,
   parseContactList,
   parseFriendStatus,
+  SocialFlag,
 } from "wow/protocol/social";
 
 describe("SocialFlag", () => {

@@ -1,5 +1,5 @@
-import { test, expect } from "bun:test";
-import { createHmac, createDecipheriv } from "node:crypto";
+import { expect, test } from "bun:test";
+import { createDecipheriv, createHmac } from "node:crypto";
 import { Arc4 } from "wow/crypto/arc4";
 
 test("Arc4 encrypts header bytes", () => {

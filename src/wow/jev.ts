@@ -1,5 +1,5 @@
-import { buildFraming, type FramingVariant } from "wow/framing";
 import { abortReason, isAbort } from "lib/abort";
+import { buildFraming, type FramingVariant } from "wow/framing";
 
 const SYSTEMONE_URL = "https://api.typesafe.ai/v1/systemone";
 const DEFAULT_MODEL = "jev-latest";

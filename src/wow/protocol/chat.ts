@@ -1,5 +1,5 @@
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { ChatType, ChannelNotify, HighGuid } from "wow/protocol/opcodes";
+import { ChannelNotify, ChatType, HighGuid } from "wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 
 export type ChatMessage = {
   type: number;
@@ -137,8 +137,8 @@ export function buildWhoRequest(opts: {
   w.uint32LE(opts.maxLevel ?? 100);
   w.cString(opts.name ?? "");
   w.cString("");
-  w.uint32LE(0xffffffff);
-  w.uint32LE(0xffffffff);
+  w.uint32LE(0xff_ff_ff_ff);
+  w.uint32LE(0xff_ff_ff_ff);
   w.uint32LE(0);
   w.uint32LE(0);
   return w.finish();

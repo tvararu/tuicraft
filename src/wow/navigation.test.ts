@@ -104,7 +104,7 @@ describe("grounded navigation", () => {
   });
 
   test("preserves the original start pose despite native numeric rounding", () => {
-    const from = { x: 8709.460001, y: -6671.760001, z: 70.340001 };
+    const from = { x: 8709.460_001, y: -6671.760_001, z: 70.340_001 };
     const to = { ...from, x: from.x + 2 };
     const map = native({
       findHeight: () => 70.34,
@@ -309,7 +309,11 @@ describe("validated direct corridor selection", () => {
 
 test("a direct candidate cannot hide malformed native corridor coordinates", () => {
   const map = native({
-    findPath: (from, to) => [from, { x: Infinity, y: 0, z: 0 }, to],
+    findPath: (from, to) => [
+      from,
+      { x: Number.POSITIVE_INFINITY, y: 0, z: 0 },
+      to,
+    ],
   });
   expect(() => navigation(map).plan(530, start, end)).toThrow(
     /native coordinate/,
@@ -350,7 +354,7 @@ describe("ground destinations", () => {
   });
 
   test("rejects missing and nonfinite destination columns", () => {
-    for (const heights of [[], [NaN], [Infinity]]) {
+    for (const heights of [[], [Number.NaN], [Number.POSITIVE_INFINITY]]) {
       const nav = navigation(
         native({ findHeights: (x) => (x === 10 ? heights : [0]) }),
       );

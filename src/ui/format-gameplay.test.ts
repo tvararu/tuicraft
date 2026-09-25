@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { createMockHandle } from "test/mock-handle";
 import {
   formatCycleState,
   formatInventoryState,
   formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
-import { createMockHandle } from "test/mock-handle";
 import type { CycleState } from "wow/encounter-cycle";
-import type { RecoveryState } from "wow/recovery";
 import type { InventoryState } from "wow/inventory";
+import type { RecoveryState } from "wow/recovery";
 import type { RewardsState } from "wow/rewards";
 
 const handle = createMockHandle();
@@ -17,9 +17,9 @@ const TARGET = 0xf130003f220576e9n;
 function cycle(overrides: Partial<CycleState>): string {
   return formatCycleState({
     ...handle.getCycleState(),
+    maxStarts: 1,
     phase: "stopped",
     startsUsed: 1,
-    maxStarts: 1,
     ...overrides,
   }).join("\n");
 }
@@ -48,29 +48,29 @@ function rewards(overrides: Partial<RewardsState>): string {
 function killed(victim: bigint) {
   return {
     guid: TARGET,
-    status: "done" as const,
     outcome: {
-      status: "completed" as const,
-      reason: "server_kill_credit",
       observation: {
-        lastXp: { victim: `0x${victim.toString(16)}`, total: 84, kind: "kill" },
+        lastXp: { kind: "kill", total: 84, victim: `0x${victim.toString(16)}` },
       },
+      reason: "server_kill_credit",
+      status: "completed" as const,
     },
+    status: "done" as const,
   };
 }
 
 describe("formatCycleState", () => {
   test("shows observed kill credit and coinage instead of loot intent", () => {
     const output = cycle({
-      stopCause: "queue_exhausted",
-      queue: [killed(TARGET)],
       lastLoot: {
-        guid: "0xf130003f220576e9",
-        slotsTaken: [],
-        moneyTaken: 5,
-        coinageBefore: 6174,
         coinageAfter: 6179,
+        coinageBefore: 6174,
+        guid: "0xf130003f220576e9",
+        moneyTaken: 5,
+        slotsTaken: [],
       },
+      queue: [killed(TARGET)],
+      stopCause: "queue_exhausted",
     });
     expect(output).toContain(
       "Target 0xf130003f220576e9: done (server_kill_credit), 84 XP",
@@ -95,14 +95,14 @@ describe("formatCycleState", () => {
 
   test("does not report gained money without a coinage observation", () => {
     const output = cycle({
-      queue: [],
       lastLoot: {
-        guid: "0xa",
-        slotsTaken: [0],
-        moneyTaken: 10,
-        coinageBefore: 6174,
         coinageAfter: undefined,
+        coinageBefore: 6174,
+        guid: "0xa",
+        moneyTaken: 10,
+        slotsTaken: [0],
       },
+      queue: [],
     });
     expect(output).toContain("10 copper requested");
     expect(output).toContain("Coinage change: unknown");
@@ -113,30 +113,30 @@ describe("formatCycleState", () => {
 describe("formatRecoveryState", () => {
   test("shows blockers without reading a pending request as resurrection", () => {
     const output = recovery({
-      life: "ghost",
-      health: 202,
       corpse: {
-        status: "found",
-        mapId: 530,
         corpseMapId: 530,
-        position: { x: 0, y: 0, z: 0 },
-        unknown: 0,
+        mapId: 530,
         observedAt: 1,
+        position: { x: 0, y: 0, z: 0 },
+        status: "found",
+        unknown: 0,
       },
+      health: 202,
+      life: "ghost",
       reclaim: {
         canRequest: false,
+        distance: 184.15,
+        pose: undefined,
         readiness: "blocked",
         reason: "corpse_out_of_range",
-        distance: 184.15,
         remainingMs: undefined,
-        pose: undefined,
       },
       request: {
         action: "spirit-healer",
-        guid: 1n,
-        status: "unanswered",
         epoch: 2,
+        guid: 1n,
         requestedAt: 1,
+        status: "unanswered",
       },
     });
     expect(output).toContain("Life: ghost");
@@ -151,16 +151,16 @@ describe("formatRewardsState", () => {
   test("shows an unanswered opening without claiming a denial", () => {
     const output = rewards({
       loot: {
-        phase: "opening",
         guid: TARGET,
-        requestedAt: 1,
         invalidatedReason: undefined,
+        phase: "opening",
+        requestedAt: 1,
       },
       pending: {
         action: "open",
         guid: TARGET,
-        status: "unanswered",
         requestedAt: 1,
+        status: "unanswered",
       },
     });
     expect(output).toContain("Loot: opening");
@@ -171,21 +171,21 @@ describe("formatRewardsState", () => {
   test("labels offered slots that allow direct pickup", () => {
     const item = {
       displayId: 0,
-      randomSuffix: 0,
       randomPropertyId: 0,
+      randomSuffix: 0,
     };
     const output = rewards({
       loot: {
-        phase: "open",
         guid: TARGET,
+        invalidatedReason: undefined,
+        items: [
+          { ...item, count: 2, itemId: 27_668, slot: 0, slotType: 0 },
+          { ...item, count: 1, itemId: 20_772, slot: 1, slotType: 2 },
+        ],
         lootType: 1,
         money: 10,
         openedAt: 1,
-        invalidatedReason: undefined,
-        items: [
-          { ...item, slot: 0, itemId: 27668, count: 2, slotType: 0 },
-          { ...item, slot: 1, itemId: 20772, count: 1, slotType: 2 },
-        ],
+        phase: "open",
       },
     });
     expect(output).toContain("Offer: 10 copper");
@@ -196,19 +196,19 @@ describe("formatRewardsState", () => {
   test("labels past loot and inventory errors without raw JSON", () => {
     const output = rewards({
       lastInventoryError: {
+        bagFull: false,
+        inventoryFull: true,
+        observedAt: 1,
         packet: {
-          kind: "error",
-          result: 49,
-          item1: 0n,
-          item2: 0n,
           bagType: 0,
           detail: { kind: "none" },
+          item1: 0n,
+          item2: 0n,
+          kind: "error",
+          result: 49,
         },
-        inventoryFull: true,
-        bagFull: false,
-        observedAt: 1,
       },
-      lastLootError: { guid: TARGET, error: 4, observedAt: 1 },
+      lastLootError: { error: 4, guid: TARGET, observedAt: 1 },
     });
     expect(output).toContain("Last inventory error: inventory full");
     expect(output).toContain("Last loot error code: 4");
@@ -219,30 +219,30 @@ describe("formatRewardsState", () => {
 describe("formatInventoryState", () => {
   test("shows item counts and keeps unknown values unknown", () => {
     const output = inventory({
-      status: "partial",
       coinage: undefined,
       freeSlots: undefined,
       slots: [
         {
           bag: 20,
-          slot: 16,
-          region: "bag_item",
-          status: "occupied",
           guid: 1n,
           item: {
-            guid: 1n,
-            entry: 27668,
-            owner: undefined,
             contained: undefined,
             count: 12,
-            flags: undefined,
-            randomPropertyId: undefined,
             durability: undefined,
+            entry: 27_668,
+            flags: undefined,
+            guid: 1n,
             maxDurability: undefined,
+            owner: undefined,
+            randomPropertyId: undefined,
           },
+          region: "bag_item",
+          slot: 16,
+          status: "occupied",
         },
-        { bag: 20, slot: 17, region: "bag_item", status: "unknown" },
+        { bag: 20, region: "bag_item", slot: 17, status: "unknown" },
       ],
+      status: "partial",
     });
     expect(output).toContain("Inventory: partial (carried)");
     expect(output).toContain("Coinage: unknown");

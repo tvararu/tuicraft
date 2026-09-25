@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { bytes } from "test/hex";
-import type { Entity } from "wow/entity-store";
 import type { ControlPose } from "wow/control";
-import { RecoveryRuntime, type RecoveryEvent } from "wow/recovery";
-import { ObjectType } from "wow/protocol/entity-fields";
-import { PacketReader } from "wow/protocol/packet";
+import type { Entity } from "wow/entity-store";
 import {
   parseCorpseQuery,
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
   parseResurrectRequest,
 } from "wow/protocol/death";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { PacketReader } from "wow/protocol/packet";
+import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 
 function fixture(health = 0, flags = 0) {
   const self: Entity = {
@@ -69,7 +69,7 @@ describe("ordinary-player recovery", () => {
   test("release and graveyard packets do not invent ghost or alive state", () => {
     const f = fixture();
     f.runtime.releaseSpirit();
-    expect(f.sent).toEqual([{ opcode: 0x15a, body: bytes("00") }]);
+    expect(f.sent).toEqual([{ opcode: 0x1_5a, body: bytes("00") }]);
     expect(f.runtime.snapshot()).toMatchObject({
       life: "dead",
       request: { action: "release", status: "unanswered" },
@@ -104,17 +104,17 @@ describe("ordinary-player recovery", () => {
     expect(f.runtime.snapshot().reclaim).toMatchObject({
       canRequest: false,
       reason: "reclaim_delay",
-      remainingMs: 30000,
+      remainingMs: 30_000,
       pose: { source: "predicted" },
     });
     expect(() => f.runtime.reclaimCorpse()).toThrow();
-    f.clock.now = 31000;
+    f.clock.now = 31_000;
     f.pose.z = 40;
     expect(f.runtime.snapshot().reclaim.reason).toBe("corpse_out_of_range");
     f.pose.z = 39;
     f.runtime.reclaimCorpse();
     expect(f.sent.at(-1)).toEqual({
-      opcode: 0x1d2,
+      opcode: 0x1_d2,
       body: bytes("0000000000000000"),
     });
     expect(f.runtime.snapshot().life).toBe("ghost");
@@ -204,7 +204,7 @@ describe("ordinary-player recovery", () => {
     expect(() => f.runtime.respondResurrection(true)).toThrow();
     f.runtime.respondResurrection(false);
     expect(f.sent.at(-1)).toEqual({
-      opcode: 0x15c,
+      opcode: 0x1_5c,
       body: bytes("6300000000000000 00"),
     });
     expect(f.runtime.snapshot().resurrection?.response).toBe(
@@ -216,11 +216,11 @@ describe("ordinary-player recovery", () => {
     );
     f.runtime.respondResurrection(true);
     expect(f.sent.at(-1)).toEqual({
-      opcode: 0x15c,
+      opcode: 0x1_5c,
       body: bytes("6300000000000000 01"),
     });
     expect(f.runtime.snapshot().life).toBe("ghost");
-    expect(f.runtime.snapshot().reclaimDelay?.readyAt).toBe(31000);
+    expect(f.runtime.snapshot().reclaimDelay?.readyAt).toBe(31_000);
     f.life(100, 0);
     expect(f.runtime.snapshot().resurrection).toBeUndefined();
   });
@@ -290,7 +290,7 @@ describe("ordinary-player recovery", () => {
       scale: 1,
       position: undefined,
       rawFields: new Map(),
-      npcFlags: 0x4000,
+      npcFlags: 0x40_00,
       health: 100,
       maxHealth: 100,
       level: 1,
@@ -312,7 +312,7 @@ describe("ordinary-player recovery", () => {
     });
     ghost.runtime.activateSpiritHealer(healerGuid);
     expect(ghost.sent.at(-1)).toEqual({
-      opcode: 0x21c,
+      opcode: 0x2_1c,
       body: bytes("0807060504030201"),
     });
     expect(ghost.runtime.snapshot()).toMatchObject({
@@ -333,7 +333,7 @@ describe("ordinary-player recovery", () => {
       scale: 1,
       position: undefined,
       rawFields: new Map(),
-      npcFlags: 0x4000,
+      npcFlags: 0x40_00,
       health: 100,
       maxHealth: 100,
       level: 1,
@@ -355,16 +355,16 @@ describe("ordinary-player recovery", () => {
     });
     ghost.runtime.activateSpiritHealer(healerGuid);
     expect(ghost.sent).toHaveLength(1);
-    expect(ghost.sent[0]!.opcode).toBe(0x21c);
+    expect(ghost.sent[0]!.opcode).toBe(0x2_1c);
 
     ghost.runtime.queryCorpse();
     expect(ghost.sent).toHaveLength(2);
-    expect(ghost.sent[1]!.opcode).toBe(0x216);
+    expect(ghost.sent[1]!.opcode).toBe(0x2_16);
 
     expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
       "Previous spirit-healer request remains unanswered",
     );
-    expect(ghost.sent.filter((p) => p.opcode === 0x21c)).toHaveLength(1);
+    expect(ghost.sent.filter((p) => p.opcode === 0x2_1c)).toHaveLength(1);
 
     ghost.runtime.receiveCorpse(
       parseCorpseQuery(new PacketReader(bytes(corpse))),
@@ -372,7 +372,7 @@ describe("ordinary-player recovery", () => {
     expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
       "Previous spirit-healer request remains unanswered",
     );
-    expect(ghost.sent.filter((p) => p.opcode === 0x21c)).toHaveLength(1);
+    expect(ghost.sent.filter((p) => p.opcode === 0x2_1c)).toHaveLength(1);
     expect(ghost.runtime.snapshot()).toMatchObject({
       life: "ghost",
       request: { action: "spirit-healer", status: "unanswered" },

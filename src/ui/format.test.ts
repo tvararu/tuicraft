@@ -1,111 +1,111 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
+  formatEntityEvent,
+  formatEntityEventObj,
+  formatFriendEvent,
+  formatFriendEventObj,
+  formatFriendList,
+  formatFriendListJson,
+  formatGroupEvent,
+  formatIgnoreEvent,
+  formatIgnoreEventObj,
+  formatIgnoreList,
+  formatIgnoreListJson,
   formatMessage,
   formatMessageJson,
   formatMessageObj,
   formatPrompt,
-  formatGroupEvent,
-  formatEntityEvent,
-  formatEntityEventObj,
-  formatFriendList,
-  formatFriendListJson,
-  formatFriendEvent,
-  formatFriendEventObj,
-  formatIgnoreList,
-  formatIgnoreListJson,
-  formatIgnoreEvent,
-  formatIgnoreEventObj,
 } from "ui/format";
-import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
-import { ObjectType } from "wow/protocol/entity-fields";
-import { FriendStatus } from "wow/protocol/social";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
+import { FriendStatus } from "wow/protocol/social";
 
 describe("formatMessage", () => {
   test("whisper from", () => {
-    const msg = { type: ChatType.WHISPER, sender: "Eve", message: "psst" };
+    const msg = { message: "psst", sender: "Eve", type: ChatType.WHISPER };
     expect(formatMessage(msg)).toBe("[whisper from Eve] psst");
   });
 
   test("whisper to", () => {
     const msg = {
-      type: ChatType.WHISPER_INFORM,
-      sender: "Eve",
       message: "hey",
+      sender: "Eve",
+      type: ChatType.WHISPER_INFORM,
     };
     expect(formatMessage(msg)).toBe("[whisper to Eve] hey");
   });
 
   test("system message", () => {
-    const msg = { type: ChatType.SYSTEM, sender: "", message: "Welcome" };
+    const msg = { message: "Welcome", sender: "", type: ChatType.SYSTEM };
     expect(formatMessage(msg)).toBe("[system] Welcome");
   });
 
   test("channel message", () => {
     const msg = {
-      type: ChatType.CHANNEL,
-      sender: "Al",
-      message: "hey",
       channel: "General",
+      message: "hey",
+      sender: "Al",
+      type: ChatType.CHANNEL,
     };
     expect(formatMessage(msg)).toBe("[General] Al: hey");
   });
 
   test("generic say", () => {
-    const msg = { type: ChatType.SAY, sender: "Alice", message: "hi" };
+    const msg = { message: "hi", sender: "Alice", type: ChatType.SAY };
     expect(formatMessage(msg)).toBe("[say] Alice: hi");
   });
 
   test("unknown type", () => {
-    const msg = { type: 99, sender: "Bob", message: "wat" };
+    const msg = { message: "wat", sender: "Bob", type: 99 };
     expect(formatMessage(msg)).toBe("[type 99] Bob: wat");
   });
 
   test("strips color codes from message", () => {
     const msg = {
-      type: ChatType.SAY,
-      sender: "Alice",
       message: "|cff1eff00|Hitem:1234|h[Cool Sword]|h|r equipped",
+      sender: "Alice",
+      type: ChatType.SAY,
     };
     expect(formatMessage(msg)).toBe("[say] Alice: [Cool Sword] equipped");
   });
 
   test("roll message", () => {
     const msg = {
-      type: ChatType.ROLL,
-      sender: "Xiara",
       message: "rolled 42 (1-100)",
+      sender: "Xiara",
+      type: ChatType.ROLL,
     };
     expect(formatMessage(msg)).toBe("[roll] Xiara rolled 42 (1-100)");
   });
 
   test("server broadcast origin shows [server] label", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "Server shutdown in 15:00",
       origin: "server" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessage(msg)).toBe("[server] Server shutdown in 15:00");
   });
 
   test("notification origin shows [server] label", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "Autobroadcast text",
       origin: "notification" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessage(msg)).toBe("[server] Autobroadcast text");
   });
 
   test("mail origin shows [mail] label", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "You have new mail.",
       origin: "mail" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessage(msg)).toBe("[mail] You have new mail.");
   });
@@ -113,121 +113,121 @@ describe("formatMessage", () => {
 
 describe("formatMessageJson", () => {
   test("json say", () => {
-    const msg = { type: ChatType.SAY, sender: "Alice", message: "hi" };
+    const msg = { message: "hi", sender: "Alice", type: ChatType.SAY };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "SAY",
-      sender: "Alice",
       message: "hi",
+      sender: "Alice",
+      type: "SAY",
     });
   });
 
   test("json whisper from", () => {
-    const msg = { type: ChatType.WHISPER, sender: "Eve", message: "psst" };
+    const msg = { message: "psst", sender: "Eve", type: ChatType.WHISPER };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "WHISPER_FROM",
-      sender: "Eve",
       message: "psst",
+      sender: "Eve",
+      type: "WHISPER_FROM",
     });
   });
 
   test("json whisper to", () => {
     const msg = {
-      type: ChatType.WHISPER_INFORM,
-      sender: "Eve",
       message: "hey",
+      sender: "Eve",
+      type: ChatType.WHISPER_INFORM,
     };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "WHISPER_TO",
-      sender: "Eve",
       message: "hey",
+      sender: "Eve",
+      type: "WHISPER_TO",
     });
   });
 
   test("json channel includes channel field", () => {
     const msg = {
-      type: ChatType.CHANNEL,
-      sender: "Al",
-      message: "hey",
       channel: "General",
+      message: "hey",
+      sender: "Al",
+      type: ChatType.CHANNEL,
     };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "CHANNEL",
-      sender: "Al",
-      message: "hey",
       channel: "General",
+      message: "hey",
+      sender: "Al",
+      type: "CHANNEL",
     });
   });
 
   test("json system message", () => {
-    const msg = { type: ChatType.SYSTEM, sender: "", message: "Welcome" };
+    const msg = { message: "Welcome", sender: "", type: ChatType.SYSTEM };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "SYSTEM",
-      sender: "",
       message: "Welcome",
+      sender: "",
+      type: "SYSTEM",
     });
   });
 
   test("json unknown type uses TYPE_N", () => {
-    const msg = { type: 99, sender: "Bob", message: "wat" };
+    const msg = { message: "wat", sender: "Bob", type: 99 };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "TYPE_99",
-      sender: "Bob",
       message: "wat",
+      sender: "Bob",
+      type: "TYPE_99",
     });
   });
 
   test("json roll message", () => {
     const msg = {
-      type: ChatType.ROLL,
-      sender: "Xiara",
       message: "rolled 42 (1-100)",
+      sender: "Xiara",
+      type: ChatType.ROLL,
     };
     expect(JSON.parse(formatMessageJson(msg))).toEqual({
-      type: "ROLL",
-      sender: "Xiara",
       message: "rolled 42 (1-100)",
+      sender: "Xiara",
+      type: "ROLL",
     });
   });
 
   test("server broadcast origin uses SERVER_BROADCAST JSON type", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "Shutdown in 5:00",
       origin: "server" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessageObj(msg)).toEqual({
-      type: "SERVER_BROADCAST",
-      sender: "",
       message: "Shutdown in 5:00",
+      sender: "",
+      type: "SERVER_BROADCAST",
     });
   });
 
   test("notification origin uses NOTIFICATION JSON type", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "Auto message",
       origin: "notification" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessageObj(msg)).toEqual({
-      type: "NOTIFICATION",
-      sender: "",
       message: "Auto message",
+      sender: "",
+      type: "NOTIFICATION",
     });
   });
 
   test("mail origin uses MAIL JSON type", () => {
     const msg = {
-      type: ChatType.SYSTEM,
-      sender: "",
       message: "You have new mail.",
       origin: "mail" as const,
+      sender: "",
+      type: ChatType.SYSTEM,
     };
     expect(formatMessageObj(msg)).toEqual({
-      type: "MAIL",
-      sender: "",
       message: "You have new mail.",
+      sender: "",
+      type: "MAIL",
     });
   });
 });
@@ -242,13 +242,13 @@ describe("formatPrompt", () => {
   });
 
   test("whisper mode includes target", () => {
-    expect(formatPrompt({ type: "whisper", target: "Xiara" })).toBe(
+    expect(formatPrompt({ target: "Xiara", type: "whisper" })).toBe(
       "[whisper: Xiara] > ",
     );
   });
 
   test("channel mode includes channel name", () => {
-    expect(formatPrompt({ type: "channel", channel: "General" })).toBe(
+    expect(formatPrompt({ channel: "General", type: "channel" })).toBe(
       "[General] > ",
     );
   });
@@ -258,10 +258,10 @@ describe("formatGroupEvent", () => {
   test("invite success", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.SUCCESS,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Invited Voidtrix");
   });
@@ -269,10 +269,10 @@ describe("formatGroupEvent", () => {
   test("invite failure", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.BAD_PLAYER_NAME,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot invite Voidtrix: player not found");
   });
@@ -280,10 +280,10 @@ describe("formatGroupEvent", () => {
   test("uninvite success", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.UNINVITE,
-        target: "Voidtrix",
         result: PartyResult.SUCCESS,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Removed Voidtrix from group");
   });
@@ -291,10 +291,10 @@ describe("formatGroupEvent", () => {
   test("uninvite failure", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.UNINVITE,
-        target: "Voidtrix",
         result: PartyResult.NOT_LEADER,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot kick Voidtrix: you are not the leader");
   });
@@ -302,10 +302,10 @@ describe("formatGroupEvent", () => {
   test("leave success", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.LEAVE,
-        target: "",
         result: PartyResult.SUCCESS,
+        target: "",
+        type: "command_result",
       }),
     ).toBe("[group] Left the group");
   });
@@ -313,10 +313,10 @@ describe("formatGroupEvent", () => {
   test("leave failure", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.LEAVE,
-        target: "",
         result: PartyResult.NOT_LEADER,
+        target: "",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot leave: you are not the leader");
   });
@@ -324,10 +324,10 @@ describe("formatGroupEvent", () => {
   test("command_result with empty target omits extra space", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.UNINVITE,
-        target: "",
         result: PartyResult.NOT_LEADER,
+        target: "",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot kick: you are not the leader");
   });
@@ -335,10 +335,10 @@ describe("formatGroupEvent", () => {
   test("invite failure with group full label", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.GROUP_FULL,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot invite Voidtrix: group is full");
   });
@@ -346,10 +346,10 @@ describe("formatGroupEvent", () => {
   test("invite failure with already in group label", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.ALREADY_IN_GROUP,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot invite Voidtrix: already in a group");
   });
@@ -357,10 +357,10 @@ describe("formatGroupEvent", () => {
   test("invite failure with wrong faction label", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.PLAYER_WRONG_FACTION,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot invite Voidtrix: wrong faction");
   });
@@ -368,16 +368,16 @@ describe("formatGroupEvent", () => {
   test("invite failure with ignoring you label", () => {
     expect(
       formatGroupEvent({
-        type: "command_result",
         operation: PartyOperation.INVITE,
-        target: "Voidtrix",
         result: PartyResult.IGNORING_YOU,
+        target: "Voidtrix",
+        type: "command_result",
       }),
     ).toBe("[group] Cannot invite Voidtrix: player is ignoring you");
   });
 
   test("leader changed", () => {
-    expect(formatGroupEvent({ type: "leader_changed", name: "Alice" })).toBe(
+    expect(formatGroupEvent({ name: "Alice", type: "leader_changed" })).toBe(
       "[group] Alice is now the group leader",
     );
   });
@@ -395,7 +395,7 @@ describe("formatGroupEvent", () => {
   });
 
   test("invite declined", () => {
-    expect(formatGroupEvent({ type: "invite_declined", name: "Bob" })).toBe(
+    expect(formatGroupEvent({ name: "Bob", type: "invite_declined" })).toBe(
       "[group] Bob has declined your invitation",
     );
   });
@@ -403,9 +403,9 @@ describe("formatGroupEvent", () => {
   test("group_list returns undefined", () => {
     expect(
       formatGroupEvent({
-        type: "group_list",
-        members: [],
         leader: "",
+        members: [],
+        type: "group_list",
       }),
     ).toBeUndefined();
   });
@@ -414,147 +414,147 @@ describe("formatGroupEvent", () => {
 describe("formatEntityEvent", () => {
   test("formats unit appear with name and level", () => {
     const result = formatEntityEvent({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Innkeeper Palla",
-        level: 55,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        health: 100,
-        maxHealth: 100,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 1n,
+        health: 100,
+        level: 55,
+        maxHealth: 100,
         maxPower: [],
+        name: "Innkeeper Palla",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
     expect(result).toBe("[world] Innkeeper Palla appeared (NPC, level 55)");
   });
 
   test("suppresses appear without name", () => {
     const result = formatEntityEvent({
-      type: "appear",
       entity: {
         guid: 2n,
-        objectType: ObjectType.UNIT,
-        name: undefined,
         level: 1,
+        name: undefined,
+        objectType: ObjectType.UNIT,
       } as any,
+      type: "appear",
     });
     expect(result).toBeUndefined();
   });
 
   test("formats player appear", () => {
     const result = formatEntityEvent({
-      type: "appear",
       entity: {
-        guid: 2n,
-        objectType: ObjectType.PLAYER,
-        name: "Thrall",
-        level: 80,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        health: 100,
-        maxHealth: 100,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 2n,
+        health: 100,
+        level: 80,
+        maxHealth: 100,
         maxPower: [],
+        name: "Thrall",
+        npcFlags: 0,
+        objectType: ObjectType.PLAYER,
+        position: undefined,
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
     expect(result).toBe("[world] Thrall appeared (Player, level 80)");
   });
 
   test("formats gameobject appear", () => {
     const result = formatEntityEvent({
-      type: "appear",
       entity: {
-        guid: 3n,
-        objectType: ObjectType.GAMEOBJECT,
-        name: "Mailbox",
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
+        bytes1: 0,
         displayId: 0,
+        entry: 0,
         flags: 0,
         gameObjectType: 19,
-        bytes1: 0,
+        guid: 3n,
+        name: "Mailbox",
+        objectType: ObjectType.GAMEOBJECT,
+        position: undefined,
+        rawFields: new Map(),
+        scale: 1,
       },
+      type: "appear",
     });
     expect(result).toBe("[world] Mailbox appeared (GameObject)");
   });
 
   test("formats disappear", () => {
     const result = formatEntityEvent({
-      type: "disappear",
       guid: 1n,
       name: "Silvermoon Guardian",
+      type: "disappear",
     });
     expect(result).toBe("[world] Silvermoon Guardian left range");
   });
 
   test("formats disappear without name", () => {
     const result = formatEntityEvent({
-      type: "disappear",
       guid: 1n,
+      type: "disappear",
     });
     expect(result).toBe("[world] Unknown entity left range");
   });
 
   test("update returns undefined for non-name changes", () => {
     const result = formatEntityEvent({
-      type: "update",
-      entity: { guid: 1n } as any,
       changed: ["health"],
+      entity: { guid: 1n } as any,
+      type: "update",
     });
     expect(result).toBeUndefined();
   });
 
   test("update with name change formats appear-like message for NPC", () => {
     const result = formatEntityEvent({
-      type: "update",
+      changed: ["name"],
       entity: {
         guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Springpaw Cub",
         level: 1,
+        name: "Springpaw Cub",
+        objectType: ObjectType.UNIT,
       } as any,
-      changed: ["name"],
+      type: "update",
     });
     expect(result).toBe("[world] Springpaw Cub appeared (NPC, level 1)");
   });
 
   test("appear for CORPSE returns undefined", () => {
     const result = formatEntityEvent({
-      type: "appear",
       entity: {
-        guid: 10n,
-        objectType: ObjectType.CORPSE,
-        name: "Some Corpse",
         entry: 0,
-        scale: 1,
+        guid: 10n,
+        name: "Some Corpse",
+        objectType: ObjectType.CORPSE,
         position: undefined,
         rawFields: new Map(),
+        scale: 1,
       },
+      type: "appear",
     });
     expect(result).toBeUndefined();
   });
@@ -563,38 +563,38 @@ describe("formatEntityEvent", () => {
 describe("formatEntityEventObj", () => {
   test("appear for UNIT with position", () => {
     const result = formatEntityEventObj({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Innkeeper Palla",
-        level: 55,
-        entry: 0,
-        scale: 1,
-        position: { mapId: 0, x: 100.5, y: 200.5, z: 50.0, orientation: 0 },
-        rawFields: new Map(),
-        health: 4200,
-        maxHealth: 5000,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 1n,
+        health: 4200,
+        level: 55,
+        maxHealth: 5000,
         maxPower: [],
+        name: "Innkeeper Palla",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: { mapId: 0, orientation: 0, x: 100.5, y: 200.5, z: 50.0 },
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
     expect(result).toEqual({
-      type: "ENTITY_APPEAR",
       guid: "0x1",
-      objectType: ObjectType.UNIT,
-      name: "Innkeeper Palla",
-      level: 55,
       health: 4200,
+      level: 55,
       maxHealth: 5000,
+      name: "Innkeeper Palla",
+      objectType: ObjectType.UNIT,
+      type: "ENTITY_APPEAR",
       x: 100.5,
       y: 200.5,
       z: 50.0,
@@ -603,38 +603,38 @@ describe("formatEntityEventObj", () => {
 
   test("appear for UNIT without position", () => {
     const result = formatEntityEventObj({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Guard",
-        level: 75,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        health: 100,
-        maxHealth: 100,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 1n,
+        health: 100,
+        level: 75,
+        maxHealth: 100,
         maxPower: [],
+        name: "Guard",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
     expect(result).toEqual({
-      type: "ENTITY_APPEAR",
       guid: "0x1",
-      objectType: ObjectType.UNIT,
-      name: "Guard",
-      level: 75,
       health: 100,
+      level: 75,
       maxHealth: 100,
+      name: "Guard",
+      objectType: ObjectType.UNIT,
+      type: "ENTITY_APPEAR",
     });
     expect(result).not.toHaveProperty("x");
     expect(result).not.toHaveProperty("y");
@@ -643,38 +643,38 @@ describe("formatEntityEventObj", () => {
 
   test("appear for PLAYER with position", () => {
     const result = formatEntityEventObj({
-      type: "appear",
       entity: {
-        guid: 5n,
-        objectType: ObjectType.PLAYER,
-        name: "Thrall",
-        level: 80,
-        entry: 0,
-        scale: 1,
-        position: { mapId: 0, x: 1, y: 2, z: 3, orientation: 0 },
-        rawFields: new Map(),
-        health: 9000,
-        maxHealth: 9000,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 5n,
+        health: 9000,
+        level: 80,
+        maxHealth: 9000,
         maxPower: [],
+        name: "Thrall",
+        npcFlags: 0,
+        objectType: ObjectType.PLAYER,
+        position: { mapId: 0, orientation: 0, x: 1, y: 2, z: 3 },
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
     expect(result).toEqual({
-      type: "ENTITY_APPEAR",
       guid: "0x5",
-      objectType: ObjectType.PLAYER,
-      name: "Thrall",
-      level: 80,
       health: 9000,
+      level: 80,
       maxHealth: 9000,
+      name: "Thrall",
+      objectType: ObjectType.PLAYER,
+      type: "ENTITY_APPEAR",
       x: 1,
       y: 2,
       z: 3,
@@ -683,26 +683,26 @@ describe("formatEntityEventObj", () => {
 
   test("appear for GAMEOBJECT", () => {
     const result = formatEntityEventObj({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.GAMEOBJECT,
-        name: "Mailbox",
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
+        bytes1: 0,
         displayId: 0,
+        entry: 0,
         flags: 0,
         gameObjectType: 19,
-        bytes1: 0,
+        guid: 1n,
+        name: "Mailbox",
+        objectType: ObjectType.GAMEOBJECT,
+        position: undefined,
+        rawFields: new Map(),
+        scale: 1,
       },
+      type: "appear",
     });
     expect(result).toEqual({
-      type: "ENTITY_APPEAR",
       guid: "0x1",
-      objectType: ObjectType.GAMEOBJECT,
       name: "Mailbox",
+      objectType: ObjectType.GAMEOBJECT,
+      type: "ENTITY_APPEAR",
     });
     expect(result).not.toHaveProperty("level");
     expect(result).not.toHaveProperty("health");
@@ -711,22 +711,22 @@ describe("formatEntityEventObj", () => {
 
   test("disappear", () => {
     const result = formatEntityEventObj({
-      type: "disappear",
       guid: 1n,
       name: "Silvermoon Guardian",
+      type: "disappear",
     });
     expect(result).toEqual({
-      type: "ENTITY_DISAPPEAR",
       guid: "0x1",
       name: "Silvermoon Guardian",
+      type: "ENTITY_DISAPPEAR",
     });
   });
 
   test("update returns undefined", () => {
     const result = formatEntityEventObj({
-      type: "update",
-      entity: { guid: 1n, objectType: ObjectType.UNIT } as any,
       changed: ["health"],
+      entity: { guid: 1n, objectType: ObjectType.UNIT } as any,
+      type: "update",
     });
     expect(result).toBeUndefined();
   });
@@ -740,22 +740,22 @@ describe("formatFriendList", () => {
   test("shows online and offline friends", () => {
     const friends: FriendEntry[] = [
       {
+        area: 0,
         guid: 1n,
+        level: 80,
         name: "Arthas",
         note: "",
-        status: FriendStatus.ONLINE,
-        area: 0,
-        level: 80,
         playerClass: 6,
+        status: FriendStatus.ONLINE,
       },
       {
+        area: 0,
         guid: 2n,
+        level: 80,
         name: "Jaina",
         note: "",
-        status: FriendStatus.OFFLINE,
-        area: 0,
-        level: 80,
         playerClass: 8,
+        status: FriendStatus.OFFLINE,
       },
     ];
     const result = formatFriendList(friends);
@@ -767,22 +767,22 @@ describe("formatFriendList", () => {
   test("shows AFK and DND statuses", () => {
     const friends: FriendEntry[] = [
       {
+        area: 0,
         guid: 1n,
+        level: 70,
         name: "Afker",
         note: "",
-        status: FriendStatus.AFK,
-        area: 0,
-        level: 70,
         playerClass: 1,
+        status: FriendStatus.AFK,
       },
       {
+        area: 0,
         guid: 2n,
+        level: 60,
         name: "Dnder",
         note: "",
-        status: FriendStatus.DND,
-        area: 0,
-        level: 60,
         playerClass: 4,
+        status: FriendStatus.DND,
       },
     ];
     const result = formatFriendList(friends);
@@ -793,13 +793,13 @@ describe("formatFriendList", () => {
   test("falls back to guid when name is empty", () => {
     const friends: FriendEntry[] = [
       {
+        area: 0,
         guid: 42n,
+        level: 1,
         name: "",
         note: "",
-        status: FriendStatus.OFFLINE,
-        area: 0,
-        level: 1,
         playerClass: 1,
+        status: FriendStatus.OFFLINE,
       },
     ];
     const result = formatFriendList(friends);
@@ -811,22 +811,22 @@ describe("formatFriendListJson", () => {
   test("serializes friends with status, class, and area", () => {
     const friends: FriendEntry[] = [
       {
+        area: 394,
         guid: 1n,
+        level: 80,
         name: "Arthas",
         note: "buddy",
-        status: FriendStatus.ONLINE,
-        area: 394,
-        level: 80,
         playerClass: 6,
+        status: FriendStatus.ONLINE,
       },
       {
+        area: 0,
         guid: 2n,
+        level: 80,
         name: "Jaina",
         note: "",
-        status: FriendStatus.OFFLINE,
-        area: 0,
-        level: 80,
         playerClass: 8,
+        status: FriendStatus.OFFLINE,
       },
     ];
     const result = JSON.parse(formatFriendListJson(friends));
@@ -848,16 +848,16 @@ describe("formatFriendListJson", () => {
 describe("formatFriendEvent", () => {
   test("friend-online with class and level", () => {
     const result = formatFriendEvent({
-      type: "friend-online",
       friend: {
+        area: 0,
         guid: 1n,
+        level: 80,
         name: "Arthas",
         note: "",
-        status: FriendStatus.ONLINE,
-        area: 0,
-        level: 80,
         playerClass: 6,
+        status: FriendStatus.ONLINE,
       },
+      type: "friend-online",
     });
     expect(result).toBe(
       "[friends] Arthas is now online (Level 80 Death Knight)",
@@ -866,58 +866,58 @@ describe("formatFriendEvent", () => {
 
   test("friend-offline", () => {
     const result = formatFriendEvent({
-      type: "friend-offline",
       guid: 1n,
       name: "Arthas",
+      type: "friend-offline",
     });
     expect(result).toBe("[friends] Arthas went offline");
   });
 
   test("friend-added", () => {
     const result = formatFriendEvent({
-      type: "friend-added",
       friend: {
+        area: 0,
         guid: 1n,
+        level: 80,
         name: "Jaina",
         note: "",
-        status: FriendStatus.OFFLINE,
-        area: 0,
-        level: 80,
         playerClass: 8,
+        status: FriendStatus.OFFLINE,
       },
+      type: "friend-added",
     });
     expect(result).toBe("[friends] Jaina added to friends list");
   });
 
   test("friend-removed", () => {
     const result = formatFriendEvent({
-      type: "friend-removed",
       guid: 1n,
       name: "Jaina",
+      type: "friend-removed",
     });
     expect(result).toBe("[friends] Jaina removed from friends list");
   });
 
   test("friend-error", () => {
     const result = formatFriendEvent({
-      type: "friend-error",
-      result: 0x04,
       name: "Nobody",
+      result: 0x04,
+      type: "friend-error",
     });
     expect(result).toBe("[friends] Error: player not found");
   });
 
   test("friend-error with unknown code", () => {
     const result = formatFriendEvent({
-      type: "friend-error",
-      result: 0xff,
       name: "Nobody",
+      result: 0xff,
+      type: "friend-error",
     });
     expect(result).toBe("[friends] Error: error 255");
   });
 
   test("friend-list returns undefined", () => {
-    const result = formatFriendEvent({ type: "friend-list", friends: [] });
+    const result = formatFriendEvent({ friends: [], type: "friend-list" });
     expect(result).toBeUndefined();
   });
 });
@@ -925,75 +925,75 @@ describe("formatFriendEvent", () => {
 describe("formatFriendEventObj", () => {
   test("friend-online", () => {
     const result = formatFriendEventObj({
-      type: "friend-online",
       friend: {
+        area: 394,
         guid: 1n,
+        level: 80,
         name: "Arthas",
         note: "",
-        status: FriendStatus.ONLINE,
-        area: 394,
-        level: 80,
         playerClass: 6,
+        status: FriendStatus.ONLINE,
       },
+      type: "friend-online",
     });
     expect(result).toEqual({
-      type: "FRIEND_ONLINE",
-      name: "Arthas",
-      level: 80,
-      class: "Death Knight",
       area: 394,
+      class: "Death Knight",
+      level: 80,
+      name: "Arthas",
+      type: "FRIEND_ONLINE",
     });
   });
 
   test("friend-offline", () => {
     const result = formatFriendEventObj({
-      type: "friend-offline",
       guid: 1n,
       name: "Arthas",
+      type: "friend-offline",
     });
-    expect(result).toEqual({ type: "FRIEND_OFFLINE", name: "Arthas" });
+    expect(result).toEqual({ name: "Arthas", type: "FRIEND_OFFLINE" });
   });
 
   test("friend-added", () => {
     const result = formatFriendEventObj({
-      type: "friend-added",
       friend: {
+        area: 0,
         guid: 1n,
+        level: 80,
         name: "Jaina",
         note: "",
-        status: FriendStatus.OFFLINE,
-        area: 0,
-        level: 80,
         playerClass: 8,
+        status: FriendStatus.OFFLINE,
       },
+      type: "friend-added",
     });
-    expect(result).toEqual({ type: "FRIEND_ADDED", name: "Jaina" });
+    expect(result).toEqual({ name: "Jaina", type: "FRIEND_ADDED" });
   });
 
   test("friend-removed", () => {
     const result = formatFriendEventObj({
-      type: "friend-removed",
       guid: 1n,
       name: "Jaina",
+      type: "friend-removed",
     });
-    expect(result).toEqual({ type: "FRIEND_REMOVED", name: "Jaina" });
+    expect(result).toEqual({ name: "Jaina", type: "FRIEND_REMOVED" });
   });
 
   test("friend-error", () => {
     const result = formatFriendEventObj({
-      type: "friend-error",
-      result: 0x08,
       name: "Self",
+      result: 0x08,
+      type: "friend-error",
     });
     expect(result).toEqual({
-      type: "FRIEND_ERROR",
-      result: 0x08,
       message: "already on friends list",
+      result: 0x08,
+      type: "FRIEND_ERROR",
     });
   });
 
   test("friend-list returns undefined", () => {
-    const result = formatFriendEventObj({ type: "friend-list", friends: [] });
+    const result = formatFriendEventObj({ friends: [], type: "friend-list" });
     expect(result).toBeUndefined();
   });
 });
@@ -1038,76 +1038,76 @@ describe("formatIgnoreListJson", () => {
 describe("formatIgnoreEvent", () => {
   test("ignore-added", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-added",
       entry: { guid: 1n, name: "Spammer" },
+      type: "ignore-added",
     });
     expect(result).toBe("[ignore] Spammer added to ignore list");
   });
 
   test("ignore-removed", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-removed",
       guid: 1n,
       name: "Spammer",
+      type: "ignore-removed",
     });
     expect(result).toBe("[ignore] Spammer removed from ignore list");
   });
 
   test("ignore-error", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0x0d,
       name: "Nobody",
+      result: 0x0d,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: player not found");
   });
 
   test("ignore-error with unknown code", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0xff,
       name: "Nobody",
+      result: 0xff,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: error 255");
   });
 
   test("ignore-list returns undefined", () => {
-    const result = formatIgnoreEvent({ type: "ignore-list", entries: [] });
+    const result = formatIgnoreEvent({ entries: [], type: "ignore-list" });
     expect(result).toBeUndefined();
   });
 
   test("ignore-error ignore list full", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0x0b,
       name: "Someone",
+      result: 0x0b,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: ignore list is full");
   });
 
   test("ignore-error cannot ignore yourself", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0x0c,
       name: "Self",
+      result: 0x0c,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: cannot ignore yourself");
   });
 
   test("ignore-error already ignoring", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0x0e,
       name: "Dup",
+      result: 0x0e,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: already ignoring");
   });
 
   test("ignore-error ambiguous name", () => {
     const result = formatIgnoreEvent({
-      type: "ignore-error",
-      result: 0x11,
       name: "Amb",
+      result: 0x11,
+      type: "ignore-error",
     });
     expect(result).toBe("[ignore] Error: name is ambiguous");
   });
@@ -1116,36 +1116,36 @@ describe("formatIgnoreEvent", () => {
 describe("formatIgnoreEventObj", () => {
   test("ignore-added", () => {
     const result = formatIgnoreEventObj({
-      type: "ignore-added",
       entry: { guid: 1n, name: "Spammer" },
+      type: "ignore-added",
     });
-    expect(result).toEqual({ type: "IGNORE_ADDED", name: "Spammer" });
+    expect(result).toEqual({ name: "Spammer", type: "IGNORE_ADDED" });
   });
 
   test("ignore-removed", () => {
     const result = formatIgnoreEventObj({
-      type: "ignore-removed",
       guid: 1n,
       name: "Spammer",
+      type: "ignore-removed",
     });
-    expect(result).toEqual({ type: "IGNORE_REMOVED", name: "Spammer" });
+    expect(result).toEqual({ name: "Spammer", type: "IGNORE_REMOVED" });
   });
 
   test("ignore-error", () => {
     const result = formatIgnoreEventObj({
-      type: "ignore-error",
-      result: 0x0e,
       name: "Dup",
+      result: 0x0e,
+      type: "ignore-error",
     });
     expect(result).toEqual({
-      type: "IGNORE_ERROR",
-      result: 0x0e,
       message: "already ignoring",
+      result: 0x0e,
+      type: "IGNORE_ERROR",
     });
   });
 
   test("ignore-list returns undefined", () => {
-    const result = formatIgnoreEventObj({ type: "ignore-list", entries: [] });
+    const result = formatIgnoreEventObj({ entries: [], type: "ignore-list" });
     expect(result).toBeUndefined();
   });
 });

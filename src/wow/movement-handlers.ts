@@ -1,7 +1,5 @@
-import type { PacketReader } from "wow/protocol/packet";
-import { GameOpcode } from "wow/protocol/opcodes";
+import type { WorldConn } from "wow/client";
 import {
-  SPEED_ACKS,
   parseClientControl,
   parseForceSpeed,
   parseKnockBack,
@@ -9,9 +7,11 @@ import {
   parseMovementInfo,
   parseTeleportAck,
   parseWorldPosition,
+  SPEED_ACKS,
   type SpeedAck,
 } from "wow/protocol/movement";
-import type { WorldConn } from "wow/client";
+import { GameOpcode } from "wow/protocol/opcodes";
+import type { PacketReader } from "wow/protocol/packet";
 import { selfGuid } from "wow/world-handlers";
 
 export function handleNearTeleport(conn: WorldConn, r: PacketReader): void {

@@ -1,22 +1,22 @@
-import { test, expect, describe, jest, afterEach } from "bun:test";
+import { afterEach, describe, expect, jest, test } from "bun:test";
 import { unlink } from "node:fs/promises";
-import { dispatchCommand, writeLines, type EventEntry } from "daemon/commands";
+import { sendToSocket } from "cli/ipc";
+import { dispatchCommand, type EventEntry, writeLines } from "daemon/commands";
 import { onDomainEvent } from "daemon/events";
 import { parseIpcCommand } from "daemon/parse";
 import { startDaemonServer } from "daemon/server";
-import { sendToSocket } from "cli/ipc";
 import { RingBuffer } from "lib/ring-buffer";
-import { ChatType } from "wow/protocol/opcodes";
-import { ObjectType } from "wow/protocol/entity-fields";
-import type {
-  UnitEntity,
-  GameObjectEntity,
-  BaseEntity,
-} from "wow/entity-store";
 import { SessionLog } from "lib/session-log";
 import { createMockHandle } from "test/mock-handle";
 import type { ControlEvent, ControlState } from "wow/control";
 import type { CycleState } from "wow/encounter-cycle";
+import type {
+  BaseEntity,
+  GameObjectEntity,
+  UnitEntity,
+} from "wow/entity-store";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { ChatType } from "wow/protocol/opcodes";
 
 function createMockSocket(): {
   write: ReturnType<typeof jest.fn>;
@@ -25,6 +25,7 @@ function createMockSocket(): {
 } {
   const chunks: string[] = [];
   return {
+    end: jest.fn(),
     write: jest.fn((data: string | Uint8Array) => {
       chunks.push(
         typeof data === "string" ? data : Buffer.from(data).toString(),
@@ -32,7 +33,6 @@ function createMockSocket(): {
       return (typeof data === "string" ? data : Buffer.from(data).toString())
         .length;
     }),
-    end: jest.fn(),
     written() {
       return chunks.join("");
     },
@@ -47,14 +47,9 @@ async function sendRawCommands(
   let buffer = "";
   return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
-      unix: path,
       socket: {
-        async open(socket) {
-          for (const [i, chunk] of chunks.entries()) {
-            if (i > 0 && gapMs > 0) await Bun.sleep(gapMs);
-            socket.write(chunk);
-            socket.flush();
-          }
+        close() {
+          resolve(buffer.split("\n").filter((line) => line !== ""));
         },
         data(socket, data) {
           buffer += Buffer.from(data).toString();
@@ -63,13 +58,18 @@ async function sendRawCommands(
             resolve(buffer.split("\n").filter((line) => line !== ""));
           }
         },
-        close() {
-          resolve(buffer.split("\n").filter((line) => line !== ""));
-        },
         error(_socket, err) {
           reject(err);
         },
+        async open(socket) {
+          for (const [i, chunk] of chunks.entries()) {
+            if (i > 0 && gapMs > 0) await Bun.sleep(gapMs);
+            socket.write(chunk);
+            socket.flush();
+          }
+        },
       },
+      unix: path,
     }).catch(reject);
   });
 }
@@ -82,8 +82,16 @@ async function sendRawUntilClose(
   let buffer = "";
   return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
-      unix: path,
       socket: {
+        close() {
+          resolve(buffer.split("\n").filter((line) => line !== ""));
+        },
+        data(_socket, data) {
+          buffer += Buffer.from(data).toString();
+        },
+        error(_socket, err) {
+          reject(err);
+        },
         async open(socket) {
           for (const [i, chunk] of chunks.entries()) {
             if (i > 0 && gapMs > 0) await Bun.sleep(gapMs);
@@ -91,16 +99,8 @@ async function sendRawUntilClose(
             socket.flush();
           }
         },
-        data(_socket, data) {
-          buffer += Buffer.from(data).toString();
-        },
-        close() {
-          resolve(buffer.split("\n").filter((line) => line !== ""));
-        },
-        error(_socket, err) {
-          reject(err);
-        },
       },
+      unix: path,
     }).catch(reject);
   });
 }
@@ -130,71 +130,71 @@ function attachControl(
   handle: ReturnType<typeof createMockHandle>,
 ): ControlMock {
   Object.assign(handle, {
-    getControlState: jest.fn(
-      (): ControlState => ({
-        selfGuid: 1n,
-        pose: undefined,
-        serverPose: undefined,
-        target: undefined,
-        requestedTarget: undefined,
-        moving: false,
-        direction: undefined,
-        movementAllowed: true,
-        blockedReason: undefined,
-        speed: 0,
-        owner: "none",
-      }),
-    ),
-    move: jest.fn(),
-    face: jest.fn(),
-    selectTarget: jest.fn(),
-    halt: jest.fn(),
-    onControlEvent: jest.fn(),
-    getCombatState: jest.fn(() => ({})),
-    getSpellbook: jest.fn(async () => []),
-    cast: jest.fn(),
     attack: jest.fn(),
     cancelCast: jest.fn(),
-    stopAttack: jest.fn(),
-    startTactics: jest.fn(async () => {}),
+    cast: jest.fn(),
+    face: jest.fn(),
+    getCombatState: jest.fn(() => ({})),
+    getControlState: jest.fn(
+      (): ControlState => ({
+        blockedReason: undefined,
+        direction: undefined,
+        movementAllowed: true,
+        moving: false,
+        owner: "none",
+        pose: undefined,
+        requestedTarget: undefined,
+        selfGuid: 1n,
+        serverPose: undefined,
+        speed: 0,
+        target: undefined,
+      }),
+    ),
+    getNavigationState: jest.fn(() => ({})),
+    getSpellbook: jest.fn(async () => []),
     getTacticsState: jest.fn(() => ({})),
     goTo: jest.fn(),
-    getNavigationState: jest.fn(() => ({})),
+    halt: jest.fn(),
+    move: jest.fn(),
     onCombatEvent: jest.fn(),
+    onControlEvent: jest.fn(),
     onTacticsEvent: jest.fn(),
+    selectTarget: jest.fn(),
+    startTactics: jest.fn(async () => {}),
+    stopAttack: jest.fn(),
   });
   return handle as ControlMock;
 }
 
 function sampleState(overrides: Partial<ControlState> = {}): ControlState {
   return {
-    selfGuid: 0xabcden,
+    blockedReason: undefined,
+    direction: "forward",
+    movementAllowed: true,
+    moving: true,
+    owner: "manual",
     pose: {
       mapId: 530,
-      x: 8709.46,
-      y: -6671.76,
-      z: 70.34,
       orientation: 1.5,
       source: "predicted",
       updatedAt: 1000,
-    },
-    serverPose: {
-      mapId: 530,
       x: 8709.46,
       y: -6671.76,
       z: 70.34,
+    },
+    requestedTarget: 0xan,
+    selfGuid: 0xabcden,
+    serverPose: {
+      mapId: 530,
       orientation: 1.57,
       source: "server",
       updatedAt: 900,
+      x: 8709.46,
+      y: -6671.76,
+      z: 70.34,
     },
-    target: 0xan,
-    requestedTarget: 0xan,
-    moving: true,
-    direction: "forward",
-    movementAllowed: true,
-    blockedReason: undefined,
     speed: 7,
-    owner: "manual",
+    target: 0xan,
     ...overrides,
   };
 }
@@ -207,7 +207,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     const result = await dispatchCommand(
-      { type: "say", message: "hello" },
+      { message: "hello", type: "say" },
       handle,
       events,
       socket,
@@ -226,7 +226,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "yell", message: "HEY" },
+      { message: "HEY", type: "yell" },
       handle,
       events,
       socket,
@@ -244,7 +244,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild", message: "inv pls" },
+      { message: "inv pls", type: "guild" },
       handle,
       events,
       socket,
@@ -262,7 +262,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "party", message: "pull" },
+      { message: "pull", type: "party" },
       handle,
       events,
       socket,
@@ -280,7 +280,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "emote", message: "waves hello" },
+      { message: "waves hello", type: "emote" },
       handle,
       events,
       socket,
@@ -298,7 +298,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "dnd", message: "busy" },
+      { message: "busy", type: "dnd" },
       handle,
       events,
       socket,
@@ -316,7 +316,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "afk", message: "grabbing coffee" },
+      { message: "grabbing coffee", type: "afk" },
       handle,
       events,
       socket,
@@ -334,7 +334,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "roll", min: 1, max: 100 },
+      { max: 100, min: 1, type: "roll" },
       handle,
       events,
       socket,
@@ -352,7 +352,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "whisper", target: "Xiara", message: "hey" },
+      { message: "hey", target: "Xiara", type: "whisper" },
       handle,
       events,
       socket,
@@ -366,8 +366,8 @@ describe("dispatchCommand", () => {
   test("read drains ring buffer text", async () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
-    events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
-    events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
+    events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
+    events.push({ json: '{"type":"SAY"}', text: "[say] Bob: hey" });
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
@@ -396,7 +396,7 @@ describe("dispatchCommand", () => {
       const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { type: "read_wait", ms: 1000 },
+        { ms: 1000, type: "read_wait" },
         handle,
         events,
         socket,
@@ -404,7 +404,7 @@ describe("dispatchCommand", () => {
       );
 
       expect(socket.written()).toBe("");
-      events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
+      events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
       jest.advanceTimersByTime(1000);
       await promise;
       expect(socket.written()).toBe("[say] Alice: hi\n\n");
@@ -418,25 +418,25 @@ describe("dispatchCommand", () => {
     try {
       const handle = createMockHandle();
       const events = new RingBuffer<EventEntry>(10);
-      events.push({ text: "[say] Old: before", json: '{"type":"SAY"}' });
+      events.push({ json: '{"type":"SAY"}', text: "[say] Old: before" });
       const socket = createMockSocket();
       const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { type: "read_wait", ms: 1000 },
+        { ms: 1000, type: "read_wait" },
         handle,
         events,
         socket,
         cleanup,
       );
 
-      events.push({ text: "[say] New: during", json: '{"type":"SAY"}' });
+      events.push({ json: '{"type":"SAY"}', text: "[say] New: during" });
       jest.advanceTimersByTime(1000);
       await promise;
       expect(socket.written()).toBe("[say] New: during\n\n");
       expect(events.drain()).toEqual([
-        { text: "[say] Old: before", json: '{"type":"SAY"}' },
-        { text: "[say] New: during", json: '{"type":"SAY"}' },
+        { json: '{"type":"SAY"}', text: "[say] Old: before" },
+        { json: '{"type":"SAY"}', text: "[say] New: during" },
       ]);
     } finally {
       jest.useRealTimers();
@@ -477,12 +477,12 @@ describe("dispatchCommand", () => {
     const handle = createMockHandle();
     (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([
       {
-        name: "Test",
+        classId: 1,
+        gender: 0,
         guild: "G",
         level: 80,
-        classId: 1,
+        name: "Test",
         race: 1,
-        gender: 0,
         zone: 1,
       },
     ]);
@@ -491,7 +491,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "who", filter: "mage" },
+      { filter: "mage", type: "who" },
       handle,
       events,
       socket,
@@ -518,8 +518,8 @@ describe("dispatchCommand", () => {
     const handle = createMockHandle();
     const events = new RingBuffer<EventEntry>(10);
     events.push({
-      text: "[say] Alice: hi",
       json: '{"type":"SAY","sender":"Alice","message":"hi"}',
+      text: "[say] Alice: hi",
     });
     const socket = createMockSocket();
     const cleanup = jest.fn();
@@ -546,7 +546,7 @@ describe("dispatchCommand", () => {
       const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { type: "read_wait_json", ms: 500 },
+        { ms: 500, type: "read_wait_json" },
         handle,
         events,
         socket,
@@ -554,7 +554,7 @@ describe("dispatchCommand", () => {
       );
 
       expect(socket.written()).toBe("");
-      events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
+      events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
       jest.advanceTimersByTime(500);
       await promise;
       expect(socket.written()).toBe('{"type":"SAY"}\n\n');
@@ -568,19 +568,19 @@ describe("dispatchCommand", () => {
     try {
       const handle = createMockHandle();
       const events = new RingBuffer<EventEntry>(10);
-      events.push({ text: "[say] Old: before", json: '{"old":true}' });
+      events.push({ json: '{"old":true}', text: "[say] Old: before" });
       const socket = createMockSocket();
       const cleanup = jest.fn();
 
       const promise = dispatchCommand(
-        { type: "read_wait_json", ms: 500 },
+        { ms: 500, type: "read_wait_json" },
         handle,
         events,
         socket,
         cleanup,
       );
 
-      events.push({ text: "[say] New: during", json: '{"new":true}' });
+      events.push({ json: '{"new":true}', text: "[say] New: during" });
       jest.advanceTimersByTime(500);
       await promise;
       expect(socket.written()).toBe('{"new":true}\n\n');
@@ -596,7 +596,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "invite", target: "Voidtrix" },
+      { target: "Voidtrix", type: "invite" },
       handle,
       events,
       socket,
@@ -614,7 +614,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "kick", target: "Voidtrix" },
+      { target: "Voidtrix", type: "kick" },
       handle,
       events,
       socket,
@@ -644,7 +644,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "join_channel", channel: "Trade" },
+      { channel: "Trade", type: "join_channel" },
       handle,
       events,
       socket,
@@ -662,7 +662,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "join_channel", channel: "Secret", password: "hunter2" },
+      { channel: "Secret", password: "hunter2", type: "join_channel" },
       handle,
       events,
       socket,
@@ -680,7 +680,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "leave_channel", channel: "Trade" },
+      { channel: "Trade", type: "leave_channel" },
       handle,
       events,
       socket,
@@ -698,7 +698,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "leader", target: "Voidtrix" },
+      { target: "Voidtrix", type: "leader" },
       handle,
       events,
       socket,
@@ -737,12 +737,12 @@ describe("dispatchCommand", () => {
     const handle = createMockHandle();
     (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([
       {
-        name: "Test",
+        classId: 1,
+        gender: 0,
         guild: "G",
         level: 80,
-        classId: 1,
+        name: "Test",
         race: 1,
-        gender: 0,
         zone: 1,
       },
     ]);
@@ -751,7 +751,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "who_json", filter: "mage" },
+      { filter: "mage", type: "who_json" },
       handle,
       events,
       socket,
@@ -768,39 +768,39 @@ describe("dispatchCommand", () => {
   test("nearby returns formatted entity list", async () => {
     const handle = createMockHandle();
     const testUnit: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "Thrall",
-      level: 80,
-      health: 5000,
-      maxHealth: 5000,
-      entry: 0,
-      scale: 1,
-      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 5000,
+      level: 80,
+      maxHealth: 5000,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Thrall",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: { mapId: 1, orientation: 0, x: 1.23, y: 4.56, z: 7.89 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const testGo: GameObjectEntity = {
-      guid: 2n,
-      objectType: ObjectType.GAMEOBJECT,
-      name: "Mailbox",
-      entry: 0,
-      scale: 1,
-      position: { mapId: 1, x: 1.5, y: 4.6, z: 7.89, orientation: 0 },
-      rawFields: new Map(),
+      bytes1: 0,
       displayId: 0,
+      entry: 0,
       flags: 0,
       gameObjectType: 19,
-      bytes1: 0,
+      guid: 2n,
+      name: "Mailbox",
+      objectType: ObjectType.GAMEOBJECT,
+      position: { mapId: 1, orientation: 0, x: 1.5, y: 4.6, z: 7.89 },
+      rawFields: new Map(),
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testUnit,
@@ -822,26 +822,26 @@ describe("dispatchCommand", () => {
   test("nearby_json returns JSONL entity list", async () => {
     const handle = attachControl(createMockHandle());
     const testUnit: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "Thrall",
-      level: 80,
-      health: 5000,
-      maxHealth: 5000,
-      entry: 0,
-      scale: 1,
-      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 5000,
+      level: 80,
+      maxHealth: 5000,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Thrall",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: { mapId: 1, orientation: 0, x: 1.23, y: 4.56, z: 7.89 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testUnit,
@@ -885,26 +885,26 @@ describe("dispatchCommand", () => {
   test("nearby formats player entity", async () => {
     const handle = createMockHandle();
     const testPlayer: UnitEntity = {
-      guid: 10n,
-      objectType: ObjectType.PLAYER,
-      name: "Arthas",
-      level: 55,
-      health: 3000,
-      maxHealth: 4000,
-      entry: 0,
-      scale: 1,
-      position: { mapId: 0, x: 10.0, y: 20.0, z: 30.0, orientation: 0 },
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 10n,
+      health: 3000,
+      level: 55,
+      maxHealth: 4000,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Arthas",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: { mapId: 0, orientation: 0, x: 10.0, y: 20.0, z: 30.0 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testPlayer,
@@ -924,13 +924,13 @@ describe("dispatchCommand", () => {
   test("nearby formats unknown entity type", async () => {
     const handle = createMockHandle();
     const testCorpse: BaseEntity = {
-      guid: 0xabn,
-      objectType: ObjectType.CORPSE,
       entry: 0,
-      scale: 1,
+      guid: 0xabn,
+      name: undefined,
+      objectType: ObjectType.CORPSE,
       position: undefined,
       rawFields: new Map(),
-      name: undefined,
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testCorpse,
@@ -948,48 +948,48 @@ describe("dispatchCommand", () => {
   test("nearby_json formats player and gameobject types", async () => {
     const handle = attachControl(createMockHandle());
     const testPlayer: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.PLAYER,
-      name: "Jaina",
-      level: 70,
-      health: 8000,
-      maxHealth: 8000,
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 8000,
+      level: 70,
+      maxHealth: 8000,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Jaina",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: undefined,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const testGo: GameObjectEntity = {
-      guid: 2n,
-      objectType: ObjectType.GAMEOBJECT,
-      name: "Chest",
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
+      bytes1: 0,
       displayId: 0,
+      entry: 0,
       flags: 0,
       gameObjectType: 3,
-      bytes1: 0,
-    };
-    const testCorpse: BaseEntity = {
-      guid: 3n,
-      objectType: ObjectType.CORPSE,
-      entry: 0,
-      scale: 1,
+      guid: 2n,
+      name: "Chest",
+      objectType: ObjectType.GAMEOBJECT,
       position: undefined,
       rawFields: new Map(),
+      scale: 1,
+    };
+    const testCorpse: BaseEntity = {
+      entry: 0,
+      guid: 3n,
       name: undefined,
+      objectType: ObjectType.CORPSE,
+      position: undefined,
+      rawFields: new Map(),
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testPlayer,
@@ -1030,71 +1030,71 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
       sampleState({
-        selfGuid: 0x1n,
         pose: {
           mapId: 530,
-          x: 10,
-          y: 10,
-          z: 10,
           orientation: 0,
           source: "predicted",
           updatedAt: 1000,
+          x: 10,
+          y: 10,
+          z: 10,
         },
+        selfGuid: 0x1n,
       }),
     );
     const selfEntity: UnitEntity = {
-      guid: 0x1n,
-      objectType: ObjectType.PLAYER,
-      name: "PlayerOne",
-      entry: 0,
-      scale: 1,
-      position: { mapId: 530, x: 1000, y: 1000, z: 10, orientation: 0 },
-      rawFields: new Map(),
-      health: 100,
-      maxHealth: 100,
-      level: 70,
-      factionTemplate: 1,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 1,
       class_: 1,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 1,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 0x1n,
+      health: 100,
+      level: 70,
+      maxHealth: 100,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "PlayerOne",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: { mapId: 530, orientation: 0, x: 1000, y: 1000, z: 10 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 1,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const near1: UnitEntity = {
       ...selfEntity,
       guid: 0x2n,
       name: "NearUnit",
-      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+      position: { mapId: 530, orientation: 0, x: 13, y: 14, z: 10 },
     };
     const near2: GameObjectEntity = {
-      guid: 0x3n,
-      objectType: ObjectType.GAMEOBJECT,
-      name: "NearChest",
-      entry: 100,
-      scale: 1,
-      position: { mapId: 530, x: 20, y: 10, z: 10, orientation: 0 },
-      rawFields: new Map(),
+      bytes1: 0,
       displayId: 0,
+      entry: 100,
       flags: 0,
       gameObjectType: 3,
-      bytes1: 0,
+      guid: 0x3n,
+      name: "NearChest",
+      objectType: ObjectType.GAMEOBJECT,
+      position: { mapId: 530, orientation: 0, x: 20, y: 10, z: 10 },
+      rawFields: new Map(),
+      scale: 1,
     };
     const distant: GameObjectEntity = {
       ...near2,
+      gameObjectType: 11,
       guid: 0x4n,
       name: "DistantElevator",
-      gameObjectType: 11,
-      position: { mapId: 530, x: 200, y: 10, z: 10, orientation: 0 },
+      position: { mapId: 530, orientation: 0, x: 200, y: 10, z: 10 },
     };
     const offMap: UnitEntity = {
       ...selfEntity,
       guid: 0x5n,
       name: "OffMapUnit",
-      position: { mapId: 0, x: 10, y: 10, z: 10, orientation: 0 },
+      position: { mapId: 0, orientation: 0, x: 10, y: 10, z: 10 },
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       distant,
@@ -1129,8 +1129,8 @@ describe("dispatchCommand", () => {
     expect(rows[1]!.guid).toBe("0x2");
     expect(rows[1]!.distance).toBe(5);
     expect(rows[1]!.horizontalDistance).toBe(5);
-    expect(rows[1]!.bearingRadians).toBeCloseTo(0.927295218, 8);
-    expect(rows[1]!.turnRadians).toBeCloseTo(0.927295218, 8);
+    expect(rows[1]!.bearingRadians).toBeCloseTo(0.927_295_218, 8);
+    expect(rows[1]!.turnRadians).toBeCloseTo(0.927_295_218, 8);
     expect(rows[1]!.originSource).toBe("predicted");
     expect(rows[1]!.originUpdatedAt).toBe(1000);
     expect(rows[2]!.guid).toBe("0x3");
@@ -1141,19 +1141,19 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(sampleState());
     const target: BaseEntity = {
-      guid: 0xfn,
-      objectType: ObjectType.CORPSE,
       entry: 0,
-      scale: 1,
+      guid: 0xfn,
+      name: undefined,
+      objectType: ObjectType.CORPSE,
       position: {
         mapId: 530,
+        orientation: 0,
         x: 8809.464,
         y: -6671.76,
         z: 70.34,
-        orientation: 0,
       },
       rawFields: new Map(),
-      name: undefined,
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       target,
@@ -1173,64 +1173,64 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
       sampleState({
-        selfGuid: 0x1n,
         pose: {
           mapId: 530,
-          x: 10,
-          y: 10,
-          z: 10,
           orientation: 0,
           source: "predicted",
           updatedAt: 1000,
+          x: 10,
+          y: 10,
+          z: 10,
         },
+        selfGuid: 0x1n,
       }),
     );
     const selfEntity: UnitEntity = {
-      guid: 0x1n,
-      objectType: ObjectType.PLAYER,
-      name: "PlayerOne",
-      entry: 0,
-      scale: 1,
-      position: { mapId: 530, x: 10, y: 10, z: 10, orientation: 0 },
-      rawFields: new Map(),
-      health: 100,
-      maxHealth: 100,
-      level: 70,
-      factionTemplate: 1,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 1,
       class_: 1,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 1,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 0x1n,
+      health: 100,
+      level: 70,
+      maxHealth: 100,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "PlayerOne",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: { mapId: 530, orientation: 0, x: 10, y: 10, z: 10 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 1,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const near: UnitEntity = {
       ...selfEntity,
       guid: 0x2n,
       name: "NearUnit",
-      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+      position: { mapId: 530, orientation: 0, x: 13, y: 14, z: 10 },
     };
     const distant: GameObjectEntity = {
-      guid: 0x4n,
-      objectType: ObjectType.GAMEOBJECT,
-      name: "DistantElevator",
-      entry: 100,
-      scale: 1,
+      bytes1: 0,
       displayId: 0,
+      entry: 100,
       flags: 0,
       gameObjectType: 11,
-      bytes1: 0,
-      position: { mapId: 530, x: 210, y: 10, z: 10, orientation: 0 },
+      guid: 0x4n,
+      name: "DistantElevator",
+      objectType: ObjectType.GAMEOBJECT,
+      position: { mapId: 530, orientation: 0, x: 210, y: 10, z: 10 },
       rawFields: new Map(),
+      scale: 1,
     };
     const offMap: UnitEntity = {
       ...selfEntity,
       guid: 0x5n,
       name: "OffMapUnit",
-      position: { mapId: 0, x: 10, y: 10, z: 10, orientation: 0 },
+      position: { mapId: 0, orientation: 0, x: 10, y: 10, z: 10 },
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       distant,
@@ -1241,7 +1241,7 @@ describe("dispatchCommand", () => {
 
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "nearby_json", all: true },
+      { all: true, type: "nearby_json" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,
@@ -1271,58 +1271,58 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
       sampleState({
-        selfGuid: 0x1n,
         pose: {
           mapId: 530,
-          x: 10,
-          y: 10,
-          z: 10,
           orientation: 0,
           source: "predicted",
           updatedAt: 1000,
+          x: 10,
+          y: 10,
+          z: 10,
         },
+        selfGuid: 0x1n,
       }),
     );
     const selfEntity: UnitEntity = {
-      guid: 0x1n,
-      objectType: ObjectType.PLAYER,
-      name: "PlayerOne",
-      entry: 0,
-      scale: 1,
-      position: { mapId: 530, x: 1000, y: 1000, z: 10, orientation: 0 },
-      rawFields: new Map(),
-      health: 100,
-      maxHealth: 100,
-      level: 70,
-      factionTemplate: 1,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 1,
       class_: 1,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 1,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 0x1n,
+      health: 100,
+      level: 70,
+      maxHealth: 100,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "PlayerOne",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: { mapId: 530, orientation: 0, x: 1000, y: 1000, z: 10 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 1,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const near: UnitEntity = {
       ...selfEntity,
       guid: 0x2n,
       name: "NearUnit",
-      position: { mapId: 530, x: 13, y: 14, z: 10, orientation: 0 },
+      position: { mapId: 530, orientation: 0, x: 13, y: 14, z: 10 },
     };
     const distant: GameObjectEntity = {
-      guid: 0x4n,
-      objectType: ObjectType.GAMEOBJECT,
-      name: "DistantElevator",
-      entry: 100,
-      scale: 1,
+      bytes1: 0,
       displayId: 0,
+      entry: 100,
       flags: 0,
       gameObjectType: 11,
-      bytes1: 0,
-      position: { mapId: 530, x: 210, y: 10, z: 10, orientation: 0 },
+      guid: 0x4n,
+      name: "DistantElevator",
+      objectType: ObjectType.GAMEOBJECT,
+      position: { mapId: 530, orientation: 0, x: 210, y: 10, z: 10 },
       rawFields: new Map(),
+      scale: 1,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       distant,
@@ -1352,7 +1352,7 @@ describe("dispatchCommand", () => {
 
     const socket2 = createMockSocket();
     await dispatchCommand(
-      { type: "nearby", all: true },
+      { all: true, type: "nearby" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket2,
@@ -1406,7 +1406,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "add_friend", target: "Arthas" },
+      { target: "Arthas", type: "add_friend" },
       handle,
       events,
       socket,
@@ -1424,7 +1424,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "del_friend", target: "Arthas" },
+      { target: "Arthas", type: "del_friend" },
       handle,
       events,
       socket,
@@ -1476,7 +1476,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "add_ignore", target: "Spammer" },
+      { target: "Spammer", type: "add_ignore" },
       handle,
       events,
       socket,
@@ -1494,7 +1494,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "del_ignore", target: "Spammer" },
+      { target: "Spammer", type: "del_ignore" },
       handle,
       events,
       socket,
@@ -1546,25 +1546,25 @@ describe("dispatchCommand", () => {
   test("guild_roster with data writes formatted roster", async () => {
     const handle = createMockHandle();
     const roster = {
-      guildName: "Horde Elite",
-      motd: "Welcome!",
       guildInfo: "",
-      rankNames: ["GM"],
+      guildName: "Horde Elite",
       members: [
         {
-          guid: 1n,
-          name: "Thrall",
-          rankIndex: 0,
-          level: 80,
-          playerClass: 7,
-          gender: 0,
           area: 10,
+          gender: 0,
+          guid: 1n,
+          level: 80,
+          name: "Thrall",
+          officerNote: "",
+          playerClass: 7,
+          publicNote: "",
+          rankIndex: 0,
           status: 1,
           timeOffline: 0,
-          publicNote: "",
-          officerNote: "",
         },
       ],
+      motd: "Welcome!",
+      rankNames: ["GM"],
     };
     (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
       roster,
@@ -1588,25 +1588,25 @@ describe("dispatchCommand", () => {
   test("guild_roster_json with data writes JSON roster", async () => {
     const handle = createMockHandle();
     const roster = {
-      guildName: "Horde Elite",
-      motd: "Welcome!",
       guildInfo: "",
-      rankNames: ["GM"],
+      guildName: "Horde Elite",
       members: [
         {
-          guid: 1n,
-          name: "Thrall",
-          rankIndex: 0,
-          level: 80,
-          playerClass: 7,
-          gender: 0,
           area: 10,
+          gender: 0,
+          guid: 1n,
+          level: 80,
+          name: "Thrall",
+          officerNote: "",
+          playerClass: 7,
+          publicNote: "",
+          rankIndex: 0,
           status: 1,
           timeOffline: 0,
-          publicNote: "",
-          officerNote: "",
         },
       ],
+      motd: "Welcome!",
+      rankNames: ["GM"],
     };
     (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
       roster,
@@ -1636,7 +1636,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_invite", target: "Thrall" },
+      { target: "Thrall", type: "guild_invite" },
       handle,
       events,
       socket,
@@ -1654,7 +1654,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_kick", target: "Garrosh" },
+      { target: "Garrosh", type: "guild_kick" },
       handle,
       events,
       socket,
@@ -1690,7 +1690,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_promote", target: "Jaina" },
+      { target: "Jaina", type: "guild_promote" },
       handle,
       events,
       socket,
@@ -1708,7 +1708,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_demote", target: "Arthas" },
+      { target: "Arthas", type: "guild_demote" },
       handle,
       events,
       socket,
@@ -1726,7 +1726,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_leader", target: "Sylvanas" },
+      { target: "Sylvanas", type: "guild_leader" },
       handle,
       events,
       socket,
@@ -1744,7 +1744,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "guild_motd", message: "Raid tonight" },
+      { message: "Raid tonight", type: "guild_motd" },
       handle,
       events,
       socket,
@@ -1798,7 +1798,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     const result = await dispatchCommand(
-      { type: "unimplemented", feature: "Friends list" },
+      { feature: "Friends list", type: "unimplemented" },
       handle,
       events,
       socket,
@@ -1819,7 +1819,7 @@ describe("dispatchCommand", () => {
     const cleanup = jest.fn();
 
     const result = await dispatchCommand(
-      { type: "chat", message: "hello" },
+      { message: "hello", type: "chat" },
       handle,
       events,
       socket,
@@ -1834,15 +1834,15 @@ describe("dispatchCommand", () => {
   test("chat mode label includes whisper target", async () => {
     const handle = createMockHandle();
     (handle.getLastChatMode as ReturnType<typeof jest.fn>).mockReturnValue({
-      type: "whisper",
       target: "Xiara",
+      type: "whisper",
     });
     const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "chat", message: "follow me" },
+      { message: "follow me", type: "chat" },
       handle,
       events,
       socket,
@@ -1855,15 +1855,15 @@ describe("dispatchCommand", () => {
   test("chat mode label includes channel name", async () => {
     const handle = createMockHandle();
     (handle.getLastChatMode as ReturnType<typeof jest.fn>).mockReturnValue({
-      type: "channel",
       channel: "General",
+      type: "channel",
     });
     const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     const cleanup = jest.fn();
 
     await dispatchCommand(
-      { type: "chat", message: "hello general" },
+      { message: "hello general", type: "chat" },
       handle,
       events,
       socket,
@@ -1879,7 +1879,7 @@ describe("dispatchCommand", () => {
     const socket = createMockSocket();
     const cleanup = jest.fn();
     const result = await dispatchCommand(
-      { type: "move", direction: "forward", durationMs: 1000 },
+      { direction: "forward", durationMs: 1000, type: "move" },
       handle,
       events,
       socket,
@@ -1896,7 +1896,7 @@ describe("dispatchCommand", () => {
     const events = new RingBuffer<EventEntry>(10);
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "invalid", reason: "invalid direction" },
+      { reason: "invalid direction", type: "invalid" },
       handle,
       events,
       socket,
@@ -1916,7 +1916,7 @@ describe("dispatchCommand", () => {
     });
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "move", direction: "forward", durationMs: 500 },
+      { direction: "forward", durationMs: 500, type: "move" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,
@@ -1952,9 +1952,9 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
       sampleState({
-        moving: false,
-        direction: undefined,
         blockedReason: "obstructed",
+        direction: undefined,
+        moving: false,
       }),
     );
     const socket = createMockSocket();
@@ -1974,7 +1974,7 @@ describe("dispatchCommand", () => {
   test("control recommends a new heading after unresolved height", async () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(
-      sampleState({ moving: false, blockedReason: "height_unresolved" }),
+      sampleState({ blockedReason: "height_unresolved", moving: false }),
     );
     const socket = createMockSocket();
     await dispatchCommand(
@@ -1993,11 +1993,11 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getNavigationState.mockReturnValue({
       active: false,
-      destination: { x: 8713.8, y: -6625.3, z: 70 },
-      remaining: undefined,
-      owner: "none",
       blockedReason: "ambiguous ground column",
+      destination: { x: 8713.8, y: -6625.3, z: 70 },
+      owner: "none",
       refusal: "pick_destination",
+      remaining: undefined,
     });
     const socket = createMockSocket();
     await dispatchCommand(
@@ -2037,32 +2037,32 @@ describe("dispatchCommand", () => {
   test("nearby json includes targeting fields", async () => {
     const handle = attachControl(createMockHandle());
     const testUnit: UnitEntity = {
+      class_: 0,
+      displayId: 0,
+      entry: 15_652,
+      factionTemplate: 7,
+      gender: 0,
       guid: 0x11n,
-      objectType: ObjectType.UNIT,
-      name: "Lynx",
-      level: 8,
       health: 100,
+      level: 8,
       maxHealth: 120,
-      entry: 15652,
-      scale: 1,
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Lynx",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
       position: {
         mapId: 530,
+        orientation: 0.5,
         x: 1,
         y: 2,
         z: 3,
-        orientation: 0.5,
       },
-      rawFields: new Map(),
-      factionTemplate: 7,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0x2n,
-      race: 0,
-      class_: 0,
-      gender: 0,
       power: [0, 0, 0, 0, 0, 0, 0],
-      maxPower: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0x2n,
+      unitFlags: 0,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testUnit,
@@ -2077,7 +2077,7 @@ describe("dispatchCommand", () => {
     );
     const parsed = JSON.parse(socket.written().trim());
     expect(parsed.guid).toBe("0x11");
-    expect(parsed.entry).toBe(15652);
+    expect(parsed.entry).toBe(15_652);
     expect(parsed.mapId).toBe(530);
     expect(parsed.orientation).toBe(0.5);
     expect(parsed.target).toBe("0x2");
@@ -2089,26 +2089,26 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(sampleState({ selfGuid: 0x10n }));
     const selfPlayer: UnitEntity = {
-      guid: 0x10n,
-      objectType: ObjectType.PLAYER,
-      name: "Xiara",
-      level: 10,
-      health: 187,
-      maxHealth: 187,
-      entry: 0,
-      scale: 1,
-      position: undefined,
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 0x10n,
+      health: 187,
+      level: 10,
+      maxHealth: 187,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Xiara",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: undefined,
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     const otherPlayer: UnitEntity = {
       ...selfPlayer,
@@ -2190,7 +2190,7 @@ describe("IPC round-trip", () => {
     exitSpy = jest
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
-    result = startDaemonServer({ handle, sock: sockPath, log, ...opts });
+    result = startDaemonServer({ handle, log, sock: sockPath, ...opts });
   }
 
   afterEach(async () => {
@@ -2248,8 +2248,8 @@ describe("IPC round-trip", () => {
 
   test("READ returns buffered events", async () => {
     startTestServer();
-    result.events.push({ text: "[say] Alice: hi", json: '{"type":"SAY"}' });
-    result.events.push({ text: "[say] Bob: hey", json: '{"type":"SAY"}' });
+    result.events.push({ json: '{"type":"SAY"}', text: "[say] Alice: hi" });
+    result.events.push({ json: '{"type":"SAY"}', text: "[say] Bob: hey" });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
   });
@@ -2369,17 +2369,17 @@ describe("IPC round-trip", () => {
       walkToward: async (_target: unknown, yards: number) => {
         actions.push(`walk:${yards}`);
         return {
-          status: "completed",
-          traveled: yards,
           pose: {
             mapId: 530,
-            x: 0,
-            y: 0,
-            z: 0,
             orientation: 0,
             source: "predicted",
             updatedAt: 0,
+            x: 0,
+            y: 0,
+            z: 0,
           },
+          status: "completed",
+          traveled: yards,
         };
       },
     });
@@ -2404,16 +2404,16 @@ describe("IPC round-trip", () => {
     });
     const closed = Promise.withResolvers<void>();
     const client = await Bun.connect({
-      unix: sockPath,
       socket: {
-        data() {},
         close() {
           closed.resolve();
         },
+        data() {},
         error(_socket, error) {
           closed.reject(error);
         },
       },
+      unix: sockPath,
     });
     client.write("WALK_TOWARD 10 1\n");
     client.flush();
@@ -2421,7 +2421,7 @@ describe("IPC round-trip", () => {
     client.terminate();
     await closed.promise;
     await aborted.promise;
-  }, 2_000);
+  }, 2000);
 
   test("HALT drops older CYCLE", async () => {
     startTestServer();
@@ -2438,11 +2438,11 @@ describe("IPC round-trip", () => {
       queryCorpse: () => {
         actions.push("query");
       },
-      releaseSpirit: () => {
-        actions.push("release");
-      },
       reclaimCorpse: () => {
         actions.push("reclaim");
+      },
+      releaseSpirit: () => {
+        actions.push("release");
       },
       respondResurrection: (accept: boolean) => {
         actions.push(accept ? "accept" : "decline");
@@ -2476,8 +2476,26 @@ describe("IPC round-trip", () => {
     startTestServer();
     const actions: string[] = [];
     Object.assign(handle, {
-      talk: () => {
-        actions.push("talk");
+      abandonQuest: () => {
+        actions.push("abandon");
+      },
+      acceptQuest: () => {
+        actions.push("accept");
+      },
+      cancelInteraction: () => {
+        actions.push("cancel");
+      },
+      chooseQuestReward: () => {
+        actions.push("choose_reward");
+      },
+      completeQuest: () => {
+        actions.push("complete");
+      },
+      queryQuest: () => {
+        actions.push("query");
+      },
+      requestQuestReward: () => {
+        actions.push("request_reward");
       },
       selectGossipOption: () => {
         actions.push("option");
@@ -2485,26 +2503,8 @@ describe("IPC round-trip", () => {
       selectQuest: () => {
         actions.push("select");
       },
-      acceptQuest: () => {
-        actions.push("accept");
-      },
-      completeQuest: () => {
-        actions.push("complete");
-      },
-      requestQuestReward: () => {
-        actions.push("request_reward");
-      },
-      chooseQuestReward: () => {
-        actions.push("choose_reward");
-      },
-      abandonQuest: () => {
-        actions.push("abandon");
-      },
-      cancelInteraction: () => {
-        actions.push("cancel");
-      },
-      queryQuest: () => {
-        actions.push("query");
+      talk: () => {
+        actions.push("talk");
       },
     });
     await sendRawUntilClose(sockPath, [
@@ -2517,21 +2517,21 @@ describe("IPC round-trip", () => {
     startTestServer();
     const actions: string[] = [];
     Object.assign(handle, {
+      getInventoryState: () => {
+        actions.push("inventory");
+        return { status: "unknown" };
+      },
       openLoot: (guid: bigint) => {
         actions.push(`open:${guid}`);
+      },
+      releaseLoot: () => {
+        actions.push("release");
       },
       takeLoot: () => {
         actions.push("take");
       },
       takeLootMoney: () => {
         actions.push("money");
-      },
-      releaseLoot: () => {
-        actions.push("release");
-      },
-      getInventoryState: () => {
-        actions.push("inventory");
-        return { status: "unknown" };
       },
     });
     await sendRawUntilClose(sockPath, [
@@ -2674,7 +2674,7 @@ describe("IPC round-trip", () => {
     const cb = handle.onControlEvent.mock.calls[0]![0] as (
       event: ControlEvent,
     ) => void;
-    cb({ type: "movement_started", state: sampleState() });
+    cb({ state: sampleState(), type: "movement_started" });
     const jsonLines = await sendToSocket("READ_JSON", sockPath);
     const parsed = JSON.parse(jsonLines[0]!);
     expect(parsed.type).toBe("CONTROL");
@@ -2706,8 +2706,8 @@ describe("IPC round-trip", () => {
       const log = new SessionLog(`./tmp/test-daemon-split-${Date.now()}.jsonl`);
       const { cleanup } = startDaemonServer({
         handle,
-        sock: `./tmp/test-daemon-split-${Date.now()}.sock`,
         log,
+        sock: `./tmp/test-daemon-split-${Date.now()}.sock`,
       });
       const socket = createMockSocket();
 
@@ -2750,8 +2750,8 @@ describe("IPC round-trip", () => {
       );
       const { cleanup } = startDaemonServer({
         handle,
-        sock: `./tmp/test-daemon-split-next-${Date.now()}.sock`,
         log,
+        sock: `./tmp/test-daemon-split-next-${Date.now()}.sock`,
       });
       const socket = createMockSocket();
 
@@ -2794,8 +2794,8 @@ describe("IPC round-trip", () => {
       const log = new SessionLog(`./tmp/test-daemon-multi-${Date.now()}.jsonl`);
       const { cleanup } = startDaemonServer({
         handle,
-        sock: `./tmp/test-daemon-multi-${Date.now()}.sock`,
         log,
+        sock: `./tmp/test-daemon-multi-${Date.now()}.sock`,
       });
       const socket = createMockSocket();
 
@@ -2814,9 +2814,9 @@ describe("IPC round-trip", () => {
   test("onMessage wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerMessage({
-      type: ChatType.SAY,
-      sender: "Alice",
       message: "hi",
+      sender: "Alice",
+      type: ChatType.SAY,
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[say] Alice: hi"]);
@@ -2832,16 +2832,16 @@ describe("IPC round-trip", () => {
   test("onFriendEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerFriendEvent({
-      type: "friend-online",
       friend: {
-        guid: 1n,
-        name: "Arthas",
-        level: 80,
-        playerClass: 1,
         area: 0,
-        status: 0,
+        guid: 1n,
+        level: 80,
+        name: "Arthas",
         note: "",
+        playerClass: 1,
+        status: 0,
       },
+      type: "friend-online",
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines[0]).toContain("Arthas");
@@ -2850,8 +2850,8 @@ describe("IPC round-trip", () => {
   test("onIgnoreEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerIgnoreEvent({
-      type: "ignore-added",
       entry: { guid: 1n, name: "Spammer" },
+      type: "ignore-added",
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines[0]).toContain("Spammer");
@@ -2868,44 +2868,44 @@ describe("IPC round-trip", () => {
     startTestServer();
     const [cb] = (handle.onPacketError as ReturnType<typeof jest.fn>).mock
       .calls[0] as [(opcode: number, err: Error) => void];
-    cb(0x012a, new RangeError("Out of bounds access"));
+    cb(0x01_2a, new RangeError("Out of bounds access"));
     const lines = await sendToSocket("READ_JSON", sockPath);
     expect(JSON.parse(lines[0]!)).toEqual({
-      type: "PACKET",
       data: {
-        type: "packet_error",
-        opcode: 0x012a,
         error: "Out of bounds access",
+        opcode: 0x01_2a,
+        type: "packet_error",
       },
+      type: "PACKET",
     });
   });
 
   test("onEntityEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerEntityEvent({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Test NPC",
-        level: 10,
-        health: 100,
-        maxHealth: 100,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [0, 0, 0, 0, 0, 0, 0],
+        guid: 1n,
+        health: 100,
+        level: 10,
+        maxHealth: 100,
         maxPower: [0, 0, 0, 0, 0, 0, 0],
+        name: "Test NPC",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [0, 0, 0, 0, 0, 0, 0],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       } satisfies UnitEntity,
+      type: "appear",
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines[0]).toContain("Test NPC");
@@ -2914,29 +2914,29 @@ describe("IPC round-trip", () => {
   test("onEntityEvent wiring round-trip via READ_JSON", async () => {
     startTestServer();
     handle.triggerEntityEvent({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Test NPC",
-        level: 10,
-        health: 100,
-        maxHealth: 100,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [0, 0, 0, 0, 0, 0, 0],
+        guid: 1n,
+        health: 100,
+        level: 10,
+        maxHealth: 100,
         maxPower: [0, 0, 0, 0, 0, 0, 0],
+        name: "Test NPC",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [0, 0, 0, 0, 0, 0, 0],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       } satisfies UnitEntity,
+      type: "appear",
     });
     const lines = await sendToSocket("READ_JSON", sockPath);
     const parsed = JSON.parse(lines[0]!);
@@ -2947,26 +2947,26 @@ describe("IPC round-trip", () => {
   test("NEARBY round-trip returns formatted entities", async () => {
     startTestServer();
     const testUnit: UnitEntity = {
-      guid: 1n,
-      objectType: ObjectType.UNIT,
-      name: "Thrall",
-      level: 80,
-      health: 5000,
-      maxHealth: 5000,
-      entry: 0,
-      scale: 1,
-      position: { mapId: 1, x: 1.23, y: 4.56, z: 7.89, orientation: 0 },
-      rawFields: new Map(),
-      factionTemplate: 0,
-      displayId: 0,
-      npcFlags: 0,
-      unitFlags: 0,
-      target: 0n,
-      race: 0,
       class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
       gender: 0,
-      power: [0, 0, 0, 0, 0, 0, 0],
+      guid: 1n,
+      health: 5000,
+      level: 80,
+      maxHealth: 5000,
       maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Thrall",
+      npcFlags: 0,
+      objectType: ObjectType.UNIT,
+      position: { mapId: 1, orientation: 0, x: 1.23, y: 4.56, z: 7.89 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       testUnit,
@@ -2979,28 +2979,28 @@ describe("IPC round-trip", () => {
   test("onGuildEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerGuildEvent({
-      type: "guild-roster",
       roster: {
-        guildName: "Horde Elite",
-        motd: "Welcome!",
         guildInfo: "",
-        rankNames: ["GM"],
+        guildName: "Horde Elite",
         members: [
           {
-            guid: 1n,
-            name: "Thrall",
-            rankIndex: 0,
-            level: 80,
-            playerClass: 7,
-            gender: 0,
             area: 10,
+            gender: 0,
+            guid: 1n,
+            level: 80,
+            name: "Thrall",
+            officerNote: "",
+            playerClass: 7,
+            publicNote: "",
+            rankIndex: 0,
             status: 1,
             timeOffline: 0,
-            publicNote: "",
-            officerNote: "",
           },
         ],
+        motd: "Welcome!",
+        rankNames: ["GM"],
       },
+      type: "guild-roster",
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines[0]).toContain("Roster updated");
@@ -3009,25 +3009,25 @@ describe("IPC round-trip", () => {
   test("GUILD_ROSTER round-trip with data", async () => {
     startTestServer();
     const roster = {
-      guildName: "Horde Elite",
-      motd: "Welcome!",
       guildInfo: "",
-      rankNames: ["GM"],
+      guildName: "Horde Elite",
       members: [
         {
-          guid: 1n,
-          name: "Thrall",
-          rankIndex: 0,
-          level: 80,
-          playerClass: 7,
-          gender: 0,
           area: 10,
+          gender: 0,
+          guid: 1n,
+          level: 80,
+          name: "Thrall",
+          officerNote: "",
+          playerClass: 7,
+          publicNote: "",
+          rankIndex: 0,
           status: 1,
           timeOffline: 0,
-          publicNote: "",
-          officerNote: "",
         },
       ],
+      motd: "Welcome!",
+      rankNames: ["GM"],
     };
     (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
       roster,
@@ -3049,8 +3049,8 @@ describe("IPC round-trip", () => {
   test("onDuelEvent wiring pushes to ring buffer", async () => {
     startTestServer();
     handle.triggerDuelEvent({
-      type: "duel_requested",
       challenger: "Arthas",
+      type: "duel_requested",
     });
     const lines = await sendToSocket("READ", sockPath);
     expect(lines).toEqual(["[duel] Arthas challenges you to a duel"]);
@@ -3062,16 +3062,16 @@ describe("recovery IPC boundary", () => {
     expect(parseIpcCommand("RECOVERY_JSON")).toEqual({ type: "recovery_json" });
     expect(parseIpcCommand("QUERY_CORPSE")).toEqual({ type: "query_corpse" });
     expect(parseIpcCommand("SPIRIT_HEALER 0xa")).toEqual({
-      type: "spirit_healer",
       guid: 10n,
+      type: "spirit_healer",
     });
     expect(parseIpcCommand("RESURRECT accept")).toEqual({
-      type: "resurrect",
       accept: true,
+      type: "resurrect",
     });
     expect(parseIpcCommand("RESURRECT decline")).toEqual({
-      type: "resurrect",
       accept: false,
+      type: "resurrect",
     });
     for (const line of [
       "QUERY_CORPSE 1",
@@ -3090,8 +3090,8 @@ describe("recovery IPC boundary", () => {
   test("a recovery request acknowledgement does not claim a life transition", async () => {
     const handle = Object.assign(attachControl(createMockHandle()), {
       releaseSpirit: () => ({
-        request: { action: "release", status: "unanswered" },
         life: "dead",
+        request: { action: "release", status: "unanswered" },
       }),
     });
     const socket = createMockSocket();
@@ -3130,7 +3130,7 @@ describe("recovery IPC boundary", () => {
     });
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "spirit_healer", guid: 10n },
+      { guid: 10n, type: "spirit_healer" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,
@@ -3144,23 +3144,23 @@ describe("recovery IPC boundary", () => {
   test("recovery JSON preserves unknown timing, pose provenance and distinct corpse maps", async () => {
     const handle = Object.assign(attachControl(createMockHandle()), {
       getRecoveryState: () => ({
-        selfGuid: 0xffff_ffff_ffff_ffffn,
-        life: "ghost",
-        health: 1,
         corpse: {
-          status: "found",
-          mapId: 530,
           corpseMapId: 540,
-          position: { x: 1, y: 2, z: 3 },
+          mapId: 530,
           observedAt: 1000,
+          position: { x: 1, y: 2, z: 3 },
+          status: "found",
         },
+        health: 1,
+        life: "ghost",
         reclaim: {
           canRequest: false,
+          pose: { source: "predicted", updatedAt: 1200 },
           readiness: "blocked",
           remainingMs: undefined,
-          pose: { source: "predicted", updatedAt: 1200 },
         },
-        request: { action: "reclaim", timing: "unknown", status: "unanswered" },
+        request: { action: "reclaim", status: "unanswered", timing: "unknown" },
+        selfGuid: 0xffff_ffff_ffff_ffffn,
       }),
     });
     const socket = createMockSocket();
@@ -3208,10 +3208,10 @@ describe("cycle IPC boundary", () => {
     const socket = createMockSocket();
     await dispatchCommand(
       {
-        type: "cycle",
         guids: [1n, 2n],
         instruction: "kill fast",
         maxStarts: 3,
+        type: "cycle",
       },
       handle,
       new RingBuffer<EventEntry>(10),
@@ -3230,7 +3230,7 @@ describe("cycle IPC boundary", () => {
     });
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "cycle", guids: [1n], instruction: "fight", maxStarts: 10 },
+      { guids: [1n], instruction: "fight", maxStarts: 10, type: "cycle" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,
@@ -3243,16 +3243,16 @@ describe("cycle IPC boundary", () => {
     const handle = Object.assign(attachControl(createMockHandle()), {
       getCycleState: (): CycleState => ({
         active: true,
-        phase: "fighting",
-        queue: [{ guid: 1n, status: "queued" }],
         currentIndex: 0,
         instruction: "fight",
+        lastLoot: undefined,
         maxStarts: 10,
+        phase: "fighting",
+        queue: [{ guid: 1n, status: "queued" }],
+        startedAt: 1000,
         startsUsed: 1,
         stopCause: undefined,
         stopDetail: undefined,
-        startedAt: 1000,
-        lastLoot: undefined,
       }),
     });
     const socket = createMockSocket();
@@ -3292,7 +3292,7 @@ describe("cycle IPC boundary", () => {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
     const state = createMockHandle().getCycleState();
-    onDomainEvent("cycle", { type: "started", state, at: 1000 }, events, log);
+    onDomainEvent("cycle", { at: 1000, state, type: "started" }, events, log);
     const drained = events.drain();
     expect(drained[0]!.text).toBe("[cycle] started");
     expect(JSON.parse(drained[0]!.json).type).toBe("CYCLE");
@@ -3302,25 +3302,25 @@ describe("cycle IPC boundary", () => {
 describe("quest IPC boundary", () => {
   test("JSON gossip code preserves omitted, null, empty and whitespace values", () => {
     expect(parseIpcCommand("SELECT_OPTION 0")).toEqual({
-      type: "select_option",
-      optionId: 0,
       code: undefined,
+      optionId: 0,
+      type: "select_option",
     });
     expect(parseIpcCommand("SELECT_OPTION 0 null")).toEqual({
-      type: "select_option",
-      optionId: 0,
       code: undefined,
+      optionId: 0,
+      type: "select_option",
     });
     expect(parseIpcCommand('SELECT_OPTION 0 ""')).toEqual({
-      type: "select_option",
-      optionId: 0,
       code: "",
+      optionId: 0,
+      type: "select_option",
     });
     const code = '  hello "friend"\nHALT  ';
     expect(parseIpcCommand(`SELECT_OPTION 0 ${JSON.stringify(code)}`)).toEqual({
-      type: "select_option",
-      optionId: 0,
       code,
+      optionId: 0,
+      type: "select_option",
     });
   });
 
@@ -3371,14 +3371,14 @@ describe("quest IPC boundary", () => {
     const handle = Object.assign(attachControl(createMockHandle()), {
       getQuestState: () => ({
         giver: 0xffff_ffff_ffff_ffffn,
-        queries: [{ questId: 42, status: "unanswered", sentAt: 1000 }],
         log: {
           complete: false,
           slots: [
-            { slot: 0, questId: undefined, counters: [undefined, 1, 0, 0] },
+            { counters: [undefined, 1, 0, 0], questId: undefined, slot: 0 },
           ],
         },
         pending: { action: "accept", questId: 42 },
+        queries: [{ questId: 42, sentAt: 1000, status: "unanswered" }],
       }),
     });
     const socket = createMockSocket();
@@ -3401,12 +3401,12 @@ describe("quest IPC boundary", () => {
 describe("loot IPC boundary", () => {
   test("uses nonzero uint64 targets and actual uint8 slot range", () => {
     expect(parseIpcCommand("OPEN_LOOT 18446744073709551615")).toEqual({
-      type: "open_loot",
       guid: 0xffff_ffff_ffff_ffffn,
+      type: "open_loot",
     });
     expect(parseIpcCommand("TAKE_LOOT 255")).toEqual({
-      type: "take_loot",
       slot: 255,
+      type: "take_loot",
     });
     for (const line of [
       "OPEN_LOOT 0",
@@ -3428,7 +3428,7 @@ describe("loot IPC boundary", () => {
     });
     const socket = createMockSocket();
     await dispatchCommand(
-      { type: "take_loot", slot: 0 },
+      { slot: 0, type: "take_loot" },
       handle,
       new RingBuffer<EventEntry>(10),
       socket,
@@ -3442,14 +3442,14 @@ describe("loot IPC boundary", () => {
     const guid = 0xffff_ffff_ffff_ffffn;
     const handle = Object.assign(attachControl(createMockHandle()), {
       getRewardsState: () => ({
-        loot: { phase: "opening", guid, requestedAt: 1000 },
+        lastRelease: { guid, observedAt: 1100, status: 1 },
+        loot: { guid, phase: "opening", requestedAt: 1000 },
         pending: {
           action: "open",
           guid,
-          status: "unanswered",
           requestedAt: 1000,
+          status: "unanswered",
         },
-        lastRelease: { guid, status: 1, observedAt: 1100 },
       }),
     });
     const socket = createMockSocket();
@@ -3471,23 +3471,23 @@ describe("loot IPC boundary", () => {
     const guid = 0xffff_ffff_ffff_ffffn;
     const handle = Object.assign(attachControl(createMockHandle()), {
       getInventoryState: () => ({
-        selfGuid: 1n,
-        scope: "carried",
-        status: "partial",
+        bags: [],
         coinage: undefined,
         freeSlots: undefined,
+        issues: [],
+        scope: "carried",
+        selfGuid: 1n,
         slots: [
           {
             bag: 255,
-            slot: 23,
-            region: "backpack",
-            status: "occupied",
             guid,
-            item: { guid, count: undefined },
+            item: { count: undefined, guid },
+            region: "backpack",
+            slot: 23,
+            status: "occupied",
           },
         ],
-        bags: [],
-        issues: [],
+        status: "partial",
       }),
     });
     const socket = createMockSocket();

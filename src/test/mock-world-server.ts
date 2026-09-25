@@ -1,9 +1,9 @@
+import { createCipheriv, createDecipheriv, createHmac } from "node:crypto";
 import type { Socket, TCPSocketListener } from "bun";
-import { createHmac, createCipheriv, createDecipheriv } from "node:crypto";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { GameOpcode, ChatType, ChannelNotify } from "wow/protocol/opcodes";
+import { FIXTURE_CHARACTER, serverSeed, sessionKey } from "test/fixtures";
 import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
-import { sessionKey, serverSeed, FIXTURE_CHARACTER } from "test/fixtures";
+import { ChannelNotify, ChatType, GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 const ENCRYPT_KEY = "C2B3723CC6AED9B5343C53EE2F4367CE";
 const DECRYPT_KEY = "CC98AE04E897EACA12DDC09342915357";
@@ -72,7 +72,7 @@ function decryptClientHeader(
     decrypted.byteOffset,
     decrypted.byteLength,
   );
-  return { size: view.getUint16(0, false), opcode: view.getUint32(2, true) };
+  return { opcode: view.getUint32(2, true), size: view.getUint16(0, false) };
 }
 
 function send(
@@ -277,7 +277,7 @@ function handlePacket(
   captureListeners: CaptureListener[],
   guildId = 0,
 ): void {
-  const packet: CapturedPacket = { opcode, body: new Uint8Array(body) };
+  const packet: CapturedPacket = { body: new Uint8Array(body), opcode };
   captured.push(packet);
   for (const listener of captureListeners) listener(packet);
   if (opcode === GameOpcode.CMSG_AUTH_SESSION)
@@ -378,17 +378,16 @@ export function startMockWorldServer(opts?: {
 
   return new Promise((resolve) => {
     const listener: TCPSocketListener<ConnState> = Bun.listen({
-      hostname: "127.0.0.1",
-      port: 0,
       data: {
         buf: new Uint8Array(0),
-        loginMapId,
         coalesceSelfCreate,
+        loginMapId,
       },
+      hostname: "127.0.0.1",
+      port: 0,
       socket: {
-        open(socket) {
-          activeSocket = socket;
-          sendAuthChallenge(socket);
+        close() {
+          activeSocket = undefined;
         },
         data(socket, data) {
           appendToBuffer(socket, new Uint8Array(data));
@@ -401,24 +400,25 @@ export function startMockWorldServer(opts?: {
             guildId,
           );
         },
-        close() {
-          activeSocket = undefined;
+        open(socket) {
+          activeSocket = socket;
+          sendAuthChallenge(socket);
         },
       },
     });
 
     resolve({
-      port: listener.port,
-      stop() {
-        listener.stop(true);
-      },
+      captured,
       inject(opcode: number, body: Uint8Array) {
         if (!activeSocket) throw new Error("No active connection");
         activeSocket.write(
           buildServerPacket(opcode, body, activeSocket.data.arc4),
         );
       },
-      captured,
+      port: listener.port,
+      stop() {
+        listener.stop(true);
+      },
       waitForCapture(predicate: (p: CapturedPacket) => boolean) {
         const existing = captured.find(predicate);
         if (existing) return Promise.resolve(existing);

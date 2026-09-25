@@ -1,4 +1,5 @@
 import { type Paths, resolvePaths } from "lib/paths";
+
 function parseResponseLines(buffer: string): string[] {
   const result: string[] = [];
   for (const line of buffer.split("\n")) {
@@ -16,11 +17,9 @@ export async function sendToSocket(
   let complete = false;
   return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
-      unix: sock,
       socket: {
-        open(socket) {
-          socket.write(command + "\n");
-          socket.flush();
+        close() {
+          if (!complete) reject(new Error("Incomplete daemon response"));
         },
         data(socket, data) {
           buffer += Buffer.from(data).toString();
@@ -30,13 +29,15 @@ export async function sendToSocket(
             resolve(parseResponseLines(buffer));
           }
         },
-        close() {
-          if (!complete) reject(new Error("Incomplete daemon response"));
-        },
         error(_socket, err) {
           reject(err);
         },
+        open(socket) {
+          socket.write(command + "\n");
+          socket.flush();
+        },
       },
+      unix: sock,
     }).catch(reject);
   });
 }

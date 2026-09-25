@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { OBJECT_FIELDS, UNIT_FIELDS, GAMEOBJECT_FIELDS } from "./entity-fields";
+import { GAMEOBJECT_FIELDS, OBJECT_FIELDS, UNIT_FIELDS } from "./entity-fields";
 import {
+  extractGameObjectFields,
   extractObjectFields,
   extractUnitFields,
-  extractGameObjectFields,
 } from "./extract-fields";
 
 function floatBits(value: number): number {
@@ -14,9 +14,9 @@ function floatBits(value: number): number {
 
 describe("extractObjectFields", () => {
   test("extracts entry", () => {
-    const raw = new Map([[OBJECT_FIELDS.ENTRY.offset, 12345]]);
+    const raw = new Map([[OBJECT_FIELDS.ENTRY.offset, 12_345]]);
     const result = extractObjectFields(raw);
-    expect(result.entry).toBe(12345);
+    expect(result.entry).toBe(12_345);
     expect(result._changed).toContain("entry");
   });
 
@@ -132,22 +132,22 @@ describe("extractUnitFields", () => {
 
   test("extracts displayId and npcFlags", () => {
     const raw = new Map([
-      [UNIT_FIELDS.DISPLAYID.offset, 19876],
+      [UNIT_FIELDS.DISPLAYID.offset, 19_876],
       [UNIT_FIELDS.NPC_FLAGS.offset, 0x01],
     ]);
     const result = extractUnitFields(raw);
-    expect(result.displayId).toBe(19876);
+    expect(result.displayId).toBe(19_876);
     expect(result.npcFlags).toBe(1);
   });
 
   test("extracts factionTemplate and unitFlags", () => {
     const raw = new Map([
       [UNIT_FIELDS.FACTIONTEMPLATE.offset, 35],
-      [UNIT_FIELDS.FLAGS.offset, 0x00080000],
+      [UNIT_FIELDS.FLAGS.offset, 0x00_08_00_00],
     ]);
     const result = extractUnitFields(raw);
     expect(result.factionTemplate).toBe(35);
-    expect(result.unitFlags).toBe(0x00080000);
+    expect(result.unitFlags).toBe(0x00_08_00_00);
   });
 
   test("extracts nativeDisplayId", () => {

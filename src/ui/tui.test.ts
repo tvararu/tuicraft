@@ -1,9 +1,9 @@
-import { test, expect, describe, jest } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
 import { PassThrough } from "node:stream";
-import { startTui } from "ui/tui";
-import { ChatType } from "wow/protocol/opcodes";
-import { ObjectType } from "wow/protocol/entity-fields";
 import { createMockHandle } from "test/mock-handle";
+import { startTui } from "ui/tui";
+import { ObjectType } from "wow/protocol/entity-fields";
+import { ChatType } from "wow/protocol/opcodes";
 
 function writeLine(stream: PassThrough, line: string): void {
   stream.write(line + "\n");
@@ -140,12 +140,12 @@ describe("startTui", () => {
     const handle = createMockHandle();
     (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([
       {
-        name: "Test",
+        classId: 1,
+        gender: 0,
         guild: "G",
         level: 80,
-        classId: 1,
+        name: "Test",
         race: 1,
-        gender: 0,
         zone: 1,
       },
     ]);
@@ -225,9 +225,9 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     handle.triggerMessage({
-      type: ChatType.SAY,
-      sender: "Alice",
       message: "hi",
+      sender: "Alice",
+      type: ChatType.SAY,
     });
 
     expect(output.join("")).toContain("[say] Alice: hi");
@@ -242,9 +242,9 @@ describe("startTui", () => {
 
     const done = startTui(handle, false, { input, write: () => {} });
     handle.triggerMessage({
-      type: ChatType.WHISPER,
-      sender: "Eve",
       message: "psst",
+      sender: "Eve",
+      type: ChatType.WHISPER,
     });
 
     writeLine(input, "/r got it");
@@ -305,9 +305,9 @@ describe("startTui", () => {
     try {
       const done = startTui(handle, false, { input });
       handle.triggerMessage({
-        type: ChatType.SAY,
-        sender: "Al",
         message: "hi",
+        sender: "Al",
+        type: ChatType.SAY,
       });
 
       expect(spy).toHaveBeenCalled();
@@ -322,12 +322,12 @@ describe("startTui", () => {
     const handle = createMockHandle();
     (handle.who as ReturnType<typeof jest.fn>).mockResolvedValue([
       {
-        name: "Test",
+        classId: 1,
+        gender: 0,
         guild: "G",
         level: 80,
-        classId: 1,
+        name: "Test",
         race: 1,
-        gender: 0,
         zone: 1,
       },
     ]);
@@ -368,9 +368,9 @@ describe("startTui", () => {
         write: (s) => void output.push(s),
       });
       handle.triggerMessage({
-        type: ChatType.SAY,
-        sender: "Alice",
         message: "hi",
+        sender: "Alice",
+        type: ChatType.SAY,
       });
 
       expect(output.join("")).toContain("\r\x1b[K[say] Alice: hi\n");
@@ -557,8 +557,8 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     handle.triggerGroupEvent({
-      type: "invite_declined",
       name: "Voidtrix",
+      type: "invite_declined",
     });
 
     expect(output.join("")).toContain(
@@ -579,9 +579,9 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     handle.triggerGroupEvent({
-      type: "group_list",
-      members: [],
       leader: "",
+      members: [],
+      type: "group_list",
     });
 
     expect(output).toEqual([]);
@@ -677,29 +677,29 @@ describe("tuicraft command", () => {
     await flush();
 
     handle.triggerEntityEvent({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Innkeeper Palla",
-        level: 55,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        health: 100,
-        maxHealth: 100,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 1n,
+        health: 100,
+        level: 55,
+        maxHealth: 100,
         maxPower: [],
+        name: "Innkeeper Palla",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
 
     expect(output.join("")).toContain(
@@ -721,29 +721,29 @@ describe("tuicraft command", () => {
     });
 
     handle.triggerEntityEvent({
-      type: "appear",
       entity: {
-        guid: 1n,
-        objectType: ObjectType.UNIT,
-        name: "Innkeeper Palla",
-        level: 55,
-        entry: 0,
-        scale: 1,
-        position: undefined,
-        rawFields: new Map(),
-        health: 100,
-        maxHealth: 100,
-        factionTemplate: 0,
-        displayId: 0,
-        npcFlags: 0,
-        unitFlags: 0,
-        target: 0n,
-        race: 0,
         class_: 0,
+        displayId: 0,
+        entry: 0,
+        factionTemplate: 0,
         gender: 0,
-        power: [],
+        guid: 1n,
+        health: 100,
+        level: 55,
+        maxHealth: 100,
         maxPower: [],
+        name: "Innkeeper Palla",
+        npcFlags: 0,
+        objectType: ObjectType.UNIT,
+        position: undefined,
+        power: [],
+        race: 0,
+        rawFields: new Map(),
+        scale: 1,
+        target: 0n,
+        unitFlags: 0,
       },
+      type: "appear",
     });
 
     expect(output.join("")).not.toContain("[world]");
@@ -897,25 +897,25 @@ describe("guild TUI commands", () => {
     const handle = createMockHandle();
     (handle.requestGuildRoster as ReturnType<typeof jest.fn>).mockResolvedValue(
       {
-        guildName: "Horde Elite",
-        motd: "Welcome!",
         guildInfo: "",
-        rankNames: ["GM"],
+        guildName: "Horde Elite",
         members: [
           {
-            guid: 1n,
-            name: "Thrall",
-            rankIndex: 0,
-            level: 80,
-            playerClass: 7,
-            gender: 0,
             area: 10,
+            gender: 0,
+            guid: 1n,
+            level: 80,
+            name: "Thrall",
+            officerNote: "",
+            playerClass: 7,
+            publicNote: "",
+            rankIndex: 0,
             status: 1,
             timeOffline: 0,
-            publicNote: "",
-            officerNote: "",
           },
         ],
+        motd: "Welcome!",
+        rankNames: ["GM"],
       },
     );
     const input = new PassThrough();

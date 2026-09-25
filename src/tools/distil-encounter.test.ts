@@ -1,60 +1,60 @@
-import { test, expect, describe } from "bun:test";
-import { parseLog, runIds, distil } from "tools/distil-encounter";
+import { describe, expect, test } from "bun:test";
+import { distil, parseLog, runIds } from "tools/distil-encounter";
 
 function line(at: number, event: Record<string, unknown>): string {
-  return JSON.stringify({ type: "TACTICS", data: event, timestamp: at });
+  return JSON.stringify({ data: event, timestamp: at, type: "TACTICS" });
 }
 
 const log = [
   line(1000, {
-    type: "started",
+    instruction: "kill it",
     runId: "r1",
     targetGuid: "0xf13",
-    instruction: "kill it",
+    type: "started",
   }),
   line(1100, {
-    type: "request",
-    runId: "r1",
-    instruction: "kill it",
     candidates: [{ id: "wait" }, { id: "spell:585:target" }],
+    instruction: "kill it",
     observation: {
-      self: { level: 10, maxPower: 547, maxHealth: 187 },
+      self: { level: 10, maxHealth: 187, maxPower: 547 },
       target: {
         guid: "0xf13",
-        name: "Springpaw Stalker",
         level: 6,
         maxHealth: 120,
+        name: "Springpaw Stalker",
       },
     },
+    runId: "r1",
     sentAtMs: 1100,
+    type: "request",
   }),
   line(1360, {
-    type: "result",
-    runId: "r1",
     choice: "spell:585:target",
-    probabilities: { wait: 0.1, "spell:585:target": 0.9 },
     confidence: 0.8,
-    model: "jev-1.13.0",
-    inputTokens: 100,
     elapsedMs: 258,
+    inputTokens: 100,
+    model: "jev-1.13.0",
+    probabilities: { "spell:585:target": 0.9, wait: 0.1 },
+    runId: "r1",
+    type: "result",
   }),
   line(1370, {
-    type: "applied",
-    runId: "r1",
     actionId: "spell:585:target",
     ageMs: 10,
+    runId: "r1",
+    type: "applied",
   }),
   line(1500, {
-    type: "discarded",
-    runId: "r1",
-    reason: "stale",
     actionId: "wait",
+    reason: "stale",
+    runId: "r1",
+    type: "discarded",
   }),
   line(2000, {
-    type: "outcome",
+    reason: "target died",
     runId: "r1",
     status: "completed",
-    reason: "target died",
+    type: "outcome",
   }),
 ].join("\n");
 
@@ -70,7 +70,7 @@ describe("distil-encounter", () => {
   });
 
   test("lists run ids in first-seen order", () => {
-    const text = [log, line(3000, { type: "started", runId: "r2" })].join("\n");
+    const text = [log, line(3000, { runId: "r2", type: "started" })].join("\n");
     expect(runIds(parseLog(text))).toEqual(["r1", "r2"]);
   });
 
@@ -100,7 +100,7 @@ describe("distil-encounter", () => {
 
   test("retains discarded decisions and the outcome", () => {
     const rec = distil(parseLog(log), "r1", "minimal-framing");
-    expect(rec.discarded).toEqual([{ reason: "stale", actionId: "wait" }]);
+    expect(rec.discarded).toEqual([{ actionId: "wait", reason: "stale" }]);
     expect(rec.outcome.status).toBe("completed");
   });
 
@@ -112,14 +112,14 @@ describe("distil-encounter", () => {
 
   test("extracts framing from request event into promptVariant", () => {
     const customLog = [
-      line(1000, { type: "started", runId: "r2", targetGuid: "0xf13" }),
+      line(1000, { runId: "r2", targetGuid: "0xf13", type: "started" }),
       line(1100, {
-        type: "request",
-        runId: "r2",
-        instruction: "kill it",
-        framing: "mechanics",
         candidates: [{ id: "wait" }],
+        framing: "mechanics",
+        instruction: "kill it",
         observation: { self: { level: 10 } },
+        runId: "r2",
+        type: "request",
       }),
     ].join("\n");
     const rec = distil(parseLog(customLog), "r2", "unrecorded");
@@ -129,18 +129,18 @@ describe("distil-encounter", () => {
   test("extracts fault marker from events into encounter record", () => {
     const faultLog = [
       line(1000, {
-        type: "started",
+        fault: "delay:2500ms",
         runId: "r3",
         targetGuid: "0xf13",
-        fault: "delay:2500ms",
+        type: "started",
       }),
       line(1100, {
-        type: "request",
-        runId: "r3",
-        instruction: "kill it",
         candidates: [{ id: "wait" }],
-        observation: { self: { level: 10 } },
         fault: "delay:2500ms",
+        instruction: "kill it",
+        observation: { self: { level: 10 } },
+        runId: "r3",
+        type: "request",
       }),
     ].join("\n");
     const rec = distil(parseLog(faultLog), "r3", "unrecorded");

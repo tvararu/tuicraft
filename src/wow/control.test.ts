@@ -1,20 +1,19 @@
+import { describe, expect, jest, test } from "bun:test";
+import {
+  type ControlDeps,
+  type ControlEvent,
+  ControlRuntime,
+} from "wow/control";
 import { GroundRoute } from "wow/navigation";
 import type { NativeMap } from "wow/navigation-native";
-import { test, expect, describe, jest } from "bun:test";
-import { PacketReader } from "wow/protocol/packet";
-import { GameOpcode } from "wow/protocol/opcodes";
 import { MovementFlag } from "wow/protocol/entity-fields";
 import {
+  type MovementInfo,
   parseMovementInfo,
   speedAckFor,
-  type MovementInfo,
 } from "wow/protocol/movement";
-
-import {
-  ControlRuntime,
-  type ControlEvent,
-  type ControlDeps,
-} from "wow/control";
+import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader } from "wow/protocol/packet";
 
 type Sent = { opcode: number; body: Uint8Array };
 
@@ -238,7 +237,7 @@ describe("ControlRuntime", () => {
         now: () => now,
         ticks: () => now - 10_000,
         findHeight: (_map, x, _y, from) => {
-          if (x > startX + 0.5 && x < startX + 1.5) return undefined;
+          if (x > startX + 0.5 && x < startX + 1.5) return;
           return from?.z ?? 70.34;
         },
       });
@@ -323,7 +322,7 @@ describe("ControlRuntime", () => {
       );
       advance(10_000);
       expect(runtime.snapshot().moving).toBe(true);
-      advance(5_000);
+      advance(5000);
       expect(await walk).toMatchObject({ status: "completed", traveled: 15 });
     } finally {
       jest.useRealTimers();
@@ -421,7 +420,7 @@ describe("ControlRuntime", () => {
       noSpeed.loginVerified(LOGIN);
       expect(() => noSpeed.move("forward", 1000)).toThrow("missing_speed");
       expect(() => runtime.move("forward", 0)).toThrow("invalid_duration");
-      expect(() => runtime.move("forward", 10001)).toThrow("invalid_duration");
+      expect(() => runtime.move("forward", 10_001)).toThrow("invalid_duration");
       runtime.forceRoot(3);
       expect(runtime.snapshot().movementAllowed).toBe(false);
       expect(runtime.snapshot().blockedReason).toBe("rooted");
@@ -845,7 +844,7 @@ test("ground-route movement samples mesh height and HALT prevents lease renewal"
     runtime.halt();
     const stopped = runtime.snapshot().pose;
     const count = sent.length;
-    advance(10000);
+    advance(10_000);
     expect(runtime.snapshot().pose).toEqual(stopped);
     expect(runtime.navigationState().active).toBe(false);
     expect(sent.length).toBe(count);
@@ -956,7 +955,7 @@ test("free movement stops with obstructed when an obstacle blocks forward path b
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
     });
     sent.length = 0;
@@ -985,7 +984,7 @@ test("free movement stops with height_unresolved when the path ahead is clear bu
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
       isPathClear: () => true,
     });
@@ -1012,7 +1011,7 @@ test("free movement stops with obstructed when the path ahead is not clear", () 
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
       isPathClear: () => false,
     });
@@ -1037,7 +1036,7 @@ test("movement away from an obstruction clears blockedReason and succeeds", () =
     const { runtime, sent, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (x <= 8709.46) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
     });
     runtime.move("forward", 1000);
@@ -1067,7 +1066,7 @@ test("consecutive moves into an obstruction remain non-fatal and leave pose unch
     const { runtime, events, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
     });
     for (let i = 0; i < 20; i++) {
@@ -1089,7 +1088,7 @@ test("explicit halt clears stale obstruction while obstruction halt preserves it
     const { runtime, advance } = setup({
       findHeight: (_mapId, x, _y, from) => {
         if (Math.abs(x - 8709.46) < 0.1) return from?.z ?? 70.34;
-        return undefined;
+        return;
       },
     });
     runtime.move("forward", 1000);

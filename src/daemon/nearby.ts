@@ -1,8 +1,8 @@
-import type { WorldHandle } from "wow/client";
-import { ObjectType } from "wow/protocol/entity-fields";
-import type { Entity, UnitEntity, GameObjectEntity } from "wow/entity-store";
-import { bearing, distance2d, normalizeAngle } from "wow/geometry";
 import { formatGuid } from "ui/format";
+import type { WorldHandle } from "wow/client";
+import type { Entity, GameObjectEntity, UnitEntity } from "wow/entity-store";
+import { bearing, distance2d, normalizeAngle } from "wow/geometry";
+import { ObjectType } from "wow/protocol/entity-fields";
 
 function objectTypeName(type: ObjectType): string {
   switch (type) {
@@ -116,15 +116,15 @@ export function prepareNearbyEntities(
       }
     }
     return {
-      position: isSelf ? selfPos : entity.position,
-      entity,
-      distance,
-      horizontalDistance,
       bearingRadians,
-      turnRadians,
+      distance,
+      entity,
+      horizontalDistance,
       originSource,
       originUpdatedAt,
+      position: isSelf ? selfPos : entity.position,
       self: isSelf,
+      turnRadians,
     };
   });
 
@@ -176,20 +176,20 @@ export function formatNearbyObj(
     originUpdatedAt,
   } = p;
   const obj: Record<string, unknown> = {
-    guid: formatGuid(entity.guid),
-    type: objectTypeString(entity.objectType),
-    name: entity.name,
-    entry: entity.entry,
-    self,
+    bearingRadians,
     distance: distance === null ? null : Math.round(distance * 100) / 100,
+    entry: entity.entry,
+    guid: formatGuid(entity.guid),
     horizontalDistance:
       horizontalDistance === null
         ? null
         : Math.round(horizontalDistance * 100) / 100,
-    bearingRadians,
-    turnRadians,
+    name: entity.name,
     originSource,
     originUpdatedAt,
+    self,
+    turnRadians,
+    type: objectTypeString(entity.objectType),
   };
   if (
     entity.objectType === ObjectType.UNIT ||

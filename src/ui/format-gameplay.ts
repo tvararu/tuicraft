@@ -1,12 +1,12 @@
+import { formatGuid } from "ui/format";
 import type {
   CycleLootRecord,
   CycleState,
   CycleTargetRecord,
 } from "wow/encounter-cycle";
-import type { RecoveryState } from "wow/recovery";
 import type { InventoryState } from "wow/inventory";
+import type { RecoveryState } from "wow/recovery";
 import type { RewardsState } from "wow/rewards";
-import { formatGuid } from "ui/format";
 
 function show(value: string | number | undefined): string {
   return value === undefined ? "unknown" : String(value);

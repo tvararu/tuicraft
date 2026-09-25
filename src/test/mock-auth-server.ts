@@ -1,17 +1,17 @@
-import type { Socket, TCPSocketListener } from "bun";
 import { createHash } from "node:crypto";
-import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { AuthOpcode } from "wow/protocol/opcodes";
-import { bigIntToLeBytes } from "wow/crypto/srp";
+import type { Socket, TCPSocketListener } from "bun";
 import {
-  salt,
-  g,
-  N,
   B_LE,
   expectedA,
   expectedM1,
+  g,
   M2_bytes,
+  N,
+  salt,
 } from "test/fixtures";
+import { bigIntToLeBytes } from "wow/crypto/srp";
+import { AuthOpcode } from "wow/protocol/opcodes";
+import { PacketReader, PacketWriter } from "wow/protocol/packet";
 
 function handleChallenge(socket: Socket) {
   const w = new PacketWriter();
@@ -53,7 +53,7 @@ function handleProof(socket: Socket, data: Uint8Array) {
   if (match) {
     w.uint8(0x00);
     w.rawBytes(M2_bytes);
-    w.uint32LE(0x00800000);
+    w.uint32LE(0x00_80_00_00);
     w.uint32LE(0);
     w.uint16LE(0);
   } else {
@@ -82,7 +82,7 @@ function handleRealmList(socket: Socket, realmAddress: string) {
   w.uint32LE(0);
   w.uint16LE(1);
   w.rawBytes(realmData);
-  w.uint16LE(0x0010);
+  w.uint16LE(0x00_10);
   socket.write(w.finish());
 }
 
@@ -130,6 +130,7 @@ export function startMockAuthServer(opts: {
       hostname: "127.0.0.1",
       port: 0,
       socket: {
+        close() {},
         data(socket: Socket, data: Uint8Array) {
           const opcode = data[0];
           if (opcode === AuthOpcode.LOGON_CHALLENGE) {
@@ -153,7 +154,6 @@ export function startMockAuthServer(opts: {
           }
         },
         open() {},
-        close() {},
       },
     });
 
