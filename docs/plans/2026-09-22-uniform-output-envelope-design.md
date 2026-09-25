@@ -1,6 +1,8 @@
 # Uniform CLI JSON output envelope
 
-Date: 2026-09-22. Status: design approved in chat, pending written review.
+Date: 2026-09-22. Status: implemented (`7f1f8d4`, `9affc74`, `d7b6341`,
+`412e2f5`). Updated 2026-09-24: the `follow` command in the examples was
+deleted by the post-roadmap review (`05ee035`), so they now use `goto`.
 
 ## Purpose
 
@@ -68,7 +70,7 @@ is `null` on success. The CLI sets exit status 1 when `error` is not `null`.
 
 `kind: "intent"` means that the daemon acknowledged a request. It does not
 mean that the server accepted it or that its effect occurred. For example,
-`fight`, `goto`, `follow`, quest mutations, and loot mutations return intent.
+`fight`, `goto`, quest mutations, and loot mutations return intent.
 Inspect subsequent state and server events for their outcomes. `kind:
 "result"` means that the CLI returned data. It does not upgrade predicted
 poses or unknown state to server observations. `kind: "events"` contains
@@ -94,7 +96,7 @@ Examples omit no fields:
 {"command":"read","kind":"events","data":null,"events":[],"error":null}
 {"command":"send","kind":"intent","data":null,"events":[{"type":"SAY","sender":"A","message":"hi"}],"error":null}
 {"command":"tail","kind":"events","data":null,"events":[{"type":"SAY","sender":"A","message":"hi"}],"error":null}
-{"command":"follow","kind":"error","data":null,"events":[],"error":{"stage":"command","message":"target_motion_unknown"}}
+{"command":"goto","kind":"error","data":null,"events":[],"error":{"stage":"command","message":"start is not on connected ground"}}
 {"command":"send","kind":"intent","data":null,"events":[],"error":{"stage":"wait","message":"connection lost"}}
 ```
 
