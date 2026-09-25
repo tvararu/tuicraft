@@ -163,9 +163,10 @@ export function strayIgnored(status: string[]): string[] {
   );
 }
 
-export function isClean(status: string[]): boolean {
+export function isClean(status: string[], scratchOk = false): boolean {
   const changed = status.filter((e) => !e.startsWith("!! "));
-  return changed.length === 0 && strayIgnored(status).length === 0;
+  if (changed.length > 0) return false;
+  return scratchOk || strayIgnored(status).length === 0;
 }
 
 export function landed(f: LandFacts): boolean {
@@ -335,9 +336,10 @@ async function decideAuto(
   const done = runDone(autoRun);
   const over = overCap(ageHours, owner.role);
   const status = done || over ? await statusOf(wt) : [];
-  const ok = (done || over) && isClean(status) && (await allPushed(wt));
+  const clean = isClean(status, true);
+  const ok = (done || over) && clean && (await allPushed(wt));
   return {
-    action: autoAction({ clean: isClean(status), done, over, pushed: ok }),
+    action: autoAction({ clean, done, over, pushed: ok }),
     ageHours,
     owner,
     status,
