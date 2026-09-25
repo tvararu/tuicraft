@@ -413,6 +413,7 @@ all event objects in `events[]`, including `events: []` when empty.
 | RECOVERY              | Death and recovery event; payload in `data`      |
 | QUEST                 | Quest dialog or log event; payload in `data`     |
 | REWARDS               | Loot, inventory or reward event; payload in `data` |
+| PACKET                | Server packet the client failed to parse; `data` has `opcode` and `error` |
 
 The `channel` field appears on CHANNEL events only.
 
