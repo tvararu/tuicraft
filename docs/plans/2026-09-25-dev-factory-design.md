@@ -138,11 +138,18 @@ work out the state again from GitHub after a crash.
 |---|---|---|---|
 | `ready` | Theo wants this worked on | Theo | Worker on claim |
 | `agent:working` | A worker owns the issue | Worker | Worker on PR |
-| `agent:review` | PR waits for review | Worker | Reviewer |
+| `agent:review` | PR waits for review | Worker | Reviewer on claim |
+| `agent:reviewing` | A reviewer run owns the PR's review | Reviewer | Reviewer on outcome |
 | `agent:rework` | Reviewer or merger wants changes | Reviewer, Merger | Worker on claim |
 | `agent:merging` | Reviewed, waiting for the merger | Reviewer | Merger |
+| `agent:landing` | The one merger run is landing this issue | Merger | Merger after landing |
 | `needs:pm` | Theo must decide something | Any role | Theo |
 | `qa:found` | Filed by QA | QA | nobody |
+
+Runs of one automation overlap (phase 0), so every role claims by swapping a
+label and re-reading the issue. `agent:reviewing` stops two reviewers from
+taking the same PR. `agent:landing` is held on at most one issue, so only
+one merger lands at a time.
 
 Closed means done. PRs close their issue with `Fixes #N` in the body.
 
