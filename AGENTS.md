@@ -291,16 +291,21 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 
 Shipping:
 
-- Everything reaches `main` through a pull request that Theo (`tvararu`)
-  approves on github.com. Approvals clicked inside Orca are sent as
-  `OpenHubris`, the PR author, and never count.
+- Everything reaches `main` through a pull request that has green
+  `signoff/ci`, `factory/ci` and `factory/review` statuses (the `main`
+  ruleset). Theo's approval is not required right now
+  (`required_approving_review_count: 0`, and `pmApproval = false` in
+  `src/factory/config.ts`). If it is turned back on, only an approval by
+  `tvararu` on github.com counts: approvals clicked inside Orca are sent as
+  `OpenHubris`, the PR author.
 - The dev factory works issues that Theo has labelled `ready`: workers open
   PRs as `OpenHubris` from `factory/<issue>-<slug>` branches, reviewers post
   `factory/ci` and `factory/review`, and only the merger lands them, by
   rebase-merge. Do not land or relabel factory PRs by hand.
-- Other PRs are landed by their author with `gh pr merge <N> --rebase` once
-  Theo has approved and `signoff/ci` and the other required checks are
-  green.
+- Work that doesn't come from the factory goes through the same review.
+  Open the PR with `Fixes #N` against an issue, then add `agent:review` to
+  that issue. The factory reviewer posts the statuses and the merger lands
+  it. Never post `factory/*` statuses on your own PR.
 - Rebase-merge lands every commit of a PR on `main` by itself. Each must be
   a Conventional Commit that passes the hooks and `mise ci` on its own:
   clean the history with `git commit --fixup` and
