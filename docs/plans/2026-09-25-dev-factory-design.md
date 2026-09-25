@@ -224,14 +224,136 @@ compares `git rev-parse origin/main` with a stored SHA.
    File as `OpenHubris` with `qa:found` and `needs:pm`. If `main` is badly
    broken, file one issue that names the commit that caused it.
 
-**Reaper.** Not an agent. Orca marks a run `completed` when the agent goes
-idle, but the interactive `omp` process and the worktree stay until the
-worktree is removed (phase 0), and automations cannot pass `--max-time`. A
-precheck-only automation, or a cron'd shell script, lists automation
-worktrees (`auto-<name>-run-N-<ts>`) and runs `orca-ide worktree rm` on those
-whose run is `completed` or older than the role's time cap. `worktree rm`
-kills the session and deletes the branch. Branches the worker pushed survive,
-because the PR branch is `factory/<issue>-<slug>`, not the run branch.
+**Reaper.** Not an agent, so it spends no tokens. It is the owner of every
+factory run worktree and the backstop for all other tuicraft worktrees. See
+[Worktree lifecycle](#worktree-lifecycle).
+
+### Worktree lifecycle
+
+Theo's hard requirement: he must never find stale worktrees or idle agents
+using RAM in Orca. For scale, phase 0 measured each idle interactive omp
+session at 0.7-1.1 GB RSS, plus about 140 MB for each omp broker process.
+
+**Every worktree has exactly one owner, recorded when it is created.**
+
+| Worktree | Owner | Where the owner is recorded | Owner removes it when |
+|---|---|---|---|
+| `auto-<automation>-run-N-<ts>` | Reaper | The automation run's `workspaceId` (`orca-ide automations runs --json`) | The run is `completed`, or past its role's time cap |
+| Created by an agent with `orca-ide worktree create` (mostly the coordinator) | The agent that created it | Orca lineage: `parentWorktreeId` is the creator's worktree and `cliProvenance.kind` is `created-by-cli` | Its work is integrated on `main`, or its PR is merged |
+| Created by Theo in the Orca app | Theo | No `cliProvenance` ([INFERENCE]; check on Theo's first new worktree in phase 1) | Theo decides |
+| Main checkout (`~/code/tuicraft`) | Theo | `isMainWorktree` | Never |
+
+Lineage is the record, and the reaper reads only lineage. A worktree comment
+is a status line that agents rewrite at every checkpoint, so it only labels
+the card for humans. Agents create worktrees with
+`--parent-worktree active --comment "owner: <agent>, <purpose>"`, and never
+with `--no-parent`. Phase 0 checked this: a worktree created from
+`dev-factory` recorded `parentWorktreeId` as `dev-factory`, lineage origin
+`cli` and `created-by-cli`. The capture confidence was only `inferred`,
+which is why the flag must be explicit. Factory runs never create worktrees
+([Worker fan-out](#worker-fan-out)).
+
+**The owner removes its worktree when the work is done.**
+
+- Factory runs end with everything pushed and a clean tree, then stop. They
+  do not remove their own worktree, because `worktree rm` kills the session
+  that runs it. The reaper removes them after `completed`.
+- The coordinator runs `orca-ide worktree rm` after cherry-picking a
+  worker's commits onto `main` and pushing. It then deletes the branch.
+  Orca keeps any branch it cannot prove is merged, so a squash or
+  cherry-pick leaves it behind.
+- Theo removes his own worktrees. The reaper's backstop covers the ones he
+  forgets.
+
+**The reaper is the backstop for every tuicraft worktree except the main
+checkout.** A systemd user timer runs it every 10 minutes, from the main
+checkout, never from a worktree it might delete. Each pass:
+
+1. `auto-*` worktrees. When the run is `completed`, or is older than its
+   role's time cap (proposed: worker 3 h, QA 2 h, reviewer and merger 1 h):
+   - If the tree is clean and every commit is on a remote branch
+     (`git rev-list <branch> --not --remotes` is empty), run
+     `orca-ide worktree rm`.
+   - Otherwise archive it, stop its agent with
+     `orca-ide terminal close --worktree …` to free RAM and stop spending,
+     keep the tree, and report it.
+2. Other worktrees are removed only when all three conditions hold:
+   - **Landed.** Any one of these proves it:
+     - a merged PR for the branch whose `headRefOid` equals the local tip
+       (`gh pr list --head <branch> --state merged --json headRefOid`);
+     - `git cherry origin/main <branch>` prints only `-` lines, which
+       covers cherry-picked integration;
+     - the patch-id of the whole branch diff (`git diff
+       $(git merge-base origin/main <branch>) <branch> | git patch-id
+       --stable`) equals the patch-id of a commit on `origin/main`, which
+       covers squash merges;
+     - the branch has no commits beyond `origin/main`.
+
+     `git branch --merged` is never used. Phase 0 checked this on a
+     scratch repo: after a squash merge, `--merged` and `git cherry` both
+     report the branch as unmerged, and only the combined patch-id
+     matches.
+   - **Clean.** `git status --porcelain` is empty. Ignored files outside a
+     rebuildable allowlist (`node_modules`, `dist`, `coverage`) also count
+     as dirty. `git worktree remove` deletes ignored files silently, and
+     worktree `tmp/` directories hold real notes.
+   - **Idle for more than N hours** (proposed N = 12). The newest
+     `lastOutputAt` of the worktree's terminals (`orca-ide terminal list`)
+     and the worktree's `lastActivityAt` (`orca-ide worktree list`) are
+     both older than N hours.
+
+   The reaper then runs `orca-ide worktree rm`, which kills the session.
+   It deletes the branch after that, because it has proven the branch
+   landed and Orca keeps branches it cannot prove are merged.
+3. It never deletes a dirty tree. `orca-ide worktree rm` without `--force`
+   refuses one anyway: phase 0 saw "Failed to delete worktree … ?? file"
+   for an untracked file and "… M README.md" for a modified one. The
+   reaper never passes `--force`. For a dirty worktree it writes an archive
+   and leaves the tree alone. The archive follows the 2026-09-21
+   precedent in AGENTS.md: `tmp/worktree-archive-<date>/<name>.patch` in
+   the main checkout, plus a `MANIFEST.txt` line with the base SHA and the
+   reason. The patch is taken through a temporary index, so the tree's own
+   index is untouched and untracked files are included:
+
+   ```sh
+   T=$(mktemp); cp "$(git rev-parse --git-dir)/index" "$T"
+   GIT_INDEX_FILE=$T git add -A
+   GIT_INDEX_FILE=$T git diff --cached --binary HEAD > <name>.patch
+   ```
+
+   A scratch repo in phase 0 restored the modified and untracked files
+   exactly with `git apply --binary`.
+4. It reports everything it will not remove. One issue, "Factory: reaper
+   report", is edited in place like the workpad. It lists each held
+   worktree with its owner, age, reason (dirty, unlanded commits, not
+   idle, over its time cap) and archive path. It carries `needs:pm` while
+   anything is listed. It gets a new comment, which notifies Theo, only
+   when a new item appears, plus one daily summary while the list is not
+   empty. Theo never adds `ready` to it, so it cannot dispatch. The reaper
+   says nothing about "not idle yet", because that is normal.
+5. It sweeps leftover SOAP accounts by name prefix and age.
+
+**Agent sleep (Orca's `experimentalAgentHibernation`), evaluated.** The
+setting is labelled "Agent sleep" in Settings → Experimental. It "stops idle
+background agent terminals after the configured idle window and resumes
+supported sessions when you open them again". Findings from the Orca
+1.4.205 bundle (`app.asar`):
+
+- A pane is a candidate when its agent status is `done`, it is not in the
+  foreground, and it has been idle for `agentHibernationIdleMs` (default
+  1,800,000 ms, 30 minutes). The check runs every 60 s.
+- omp is in the resumable set (`pi`, `omp`, `prime-agent`), and the runtime
+  advertises `agent-session.omp-resume-path.v1`.
+- The logic lives in the renderer bundle, so it probably works only while
+  the Orca app is running ([INFERENCE]).
+- It frees processes, not worktrees or disk.
+
+Recommendation: turn it on at 30 minutes. Idle agents mostly sit in Theo's
+and the coordinator's interactive worktrees, and factory runs are removed
+within 10 minutes of completing anyway. It is experimental and global, and
+it changes Theo's own sessions, so Theo switches it on himself. Phase 1 then
+checks that an omp session resumes with its history. Agent sleep is an
+addition to the reaper, not a replacement: it never removes a worktree.
 
 ### Local CI and statuses
 
@@ -322,6 +444,19 @@ The current shipping rules assume one integration owner who cherry-picks onto
   until it provisions its own.
 - The one-owner-per-character rule still holds, and per-run accounts satisfy
   it without locking.
+- Add a "Worktree lifecycle" section with the rules from
+  [Worktree lifecycle](#worktree-lifecycle):
+  - every worktree has one owner;
+  - create worktrees with `--parent-worktree active --comment "owner: …"`,
+    never `--no-parent`;
+  - the owner removes its worktree and branch once the work lands;
+  - commit and push before stopping;
+  - the reaper removes clean, landed worktrees idle for more than N hours,
+    and archives and reports anything dirty instead of deleting it;
+  - factory runs never create worktrees.
+
+  Keep the existing `orca-ide worktree rm` command line. The 2026-09-21
+  archive note becomes the precedent the reaper follows.
 
 ## Phases
 
@@ -481,8 +616,13 @@ through a separate agent. This probe waits for that report. Verified so far:
   a GitHub Project?
 - Should QA's live scenarios become a holdout set that workers cannot read?
   Where would it live so worktrees don't include it?
-- Leftover SOAP accounts from crashed runs: sweep by name prefix and age?
-  The reaper is the natural owner.
+- ~~Leftover SOAP accounts from crashed runs?~~ The reaper sweeps them by name
+  prefix and age.
+- Reaper thresholds: is N = 12 idle hours right for non-factory worktrees,
+  and are the proposed per-role time caps right? Theo sets both at cutover.
+- Does an idle omp TUI keep `lastOutputAt` still? If it repaints, the idle
+  signal needs another source, such as the agent status. Check in phase 1
+  before the reaper removes anything that is not `auto-*`.
 
 ## Idea register
 
@@ -517,7 +657,10 @@ sources are in the research doc.
 |---|---|---|
 | Orca Automations, one per role, with `gh` prechecks | adopted, confirmed in phase 0 | No code to write: cron/RRULE, precheck skip, worktree per run. omp starts with the prompt, runs overlap, and precheck skips cost no tokens |
 | Symphony-style Bun poller (tracker poll, per-state concurrency caps, retry/backoff, reconcile on restart) | fallback, not triggered | Use if Automations can't run omp, overlap runs, or cap concurrency. Phase 0 found none of these. Revisit if the reaper, time cap or per-role model choice becomes painful: a poller could run `omp -p --max-time --model --mode json` directly |
-| Reaper: remove completed or over-time automation worktrees with `orca-ide worktree rm` | adopted | Phase 0: the omp process and worktree outlive each run, and automations can't pass `--max-time` |
+| Reaper: owner of `auto-*` runs and backstop for all tuicraft worktrees (landed + clean + idle), archive and report instead of deleting dirty trees | adopted | Phase 0: the omp process and worktree outlive each run, and automations can't pass `--max-time`. Theo's hard requirement: no stale worktrees or idle agents. See [Worktree lifecycle](#worktree-lifecycle) |
+| Reaper as a precheck-only automation (precheck does the work, always exits 1) | rejected | It works, but it records a "skipped" run every 10 minutes and ties cleanup to precheck timeouts. A systemd user timer is plainer |
+| Worktree comment as the owner record | rejected | Agents rewrite comments at every checkpoint. Lineage (`parentWorktreeId`, `cliProvenance`) is set once when the worktree is created. Comments stay as a human label |
+| Orca Agent sleep (`experimentalAgentHibernation`, 30 min) | adopted, Theo switches it on | Frees RAM from idle `done` agents, and omp sessions are resumable. It is global and experimental, and does not remove worktrees, so it adds to the reaper rather than replacing it |
 | Global Orca `agentDefaultArgs`/`agentCmdOverrides` for omp flags (`--max-time`, `--model`) | rejected | They apply to every omp launch, including Theo's interactive worktrees |
 | Run Symphony's Elixir reference directly | rejected | Built around Codex app-server; Elixir runtime; engineering preview |
 | Orca orchestration (Runs, Tasks, Dispatch, supervised workers, decision gates) | deferred | Use if we need supervised runs or DAGs across agents |
@@ -564,7 +707,7 @@ sources are in the research doc.
 | Terminal recordings (VHS GIFs), Showboat-style demos | deferred | Richer proof than text snapshots |
 | Daily or weekly digest (Linear Pulse-like) | deferred | PM surface for phase 2 when Theo stops approving |
 | QA dedupe via parallel searches, filter agent, 3-day grace close, author 👎 veto (anthropics/claude-code) | partly adopted | Duplicate search is adopted. Grace-close and veto come in phase 3 |
-| Cleanup agent (dead code, stale branches, leftover accounts) | partly adopted | The reaper covers worktrees and leftover SOAP accounts. The rest is a periodic automation later |
+| Cleanup agent (dead code, stale branches, leftover accounts) | partly adopted | The reaper covers worktrees, their branches and leftover SOAP accounts. The rest is a periodic automation later |
 
 ### Limits and safety
 
