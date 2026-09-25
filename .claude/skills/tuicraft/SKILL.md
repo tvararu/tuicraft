@@ -19,6 +19,7 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 - Without `--json`, `start` prints `Daemon is already running.` or `CONNECTED` on success. `CONNECTED` confirms only that the daemon socket answered the probe. It does not verify the world session. Startup failure exits with status 1.
 - Without `--json`, `status` returns `CONNECTED` or `Daemon is not running.`
 - `stop` gracefully disconnects the session and terminates the daemon. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
+- `tuicraft logs` prints the raw JSONL session log. `tuicraft skill` prints this document. `tuicraft version` prints the version. `tuicraft setup` configures the account.
 
 ## JSON output
 
@@ -26,7 +27,7 @@ Use `--json` with these daemon-backed commands:
 
 - Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `loot`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
-- Movement and combat actions: `move`, `face`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
+- Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
 - Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
@@ -201,6 +202,7 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft cast <learned-spell-id> <observed-target-guid>
     tuicraft attack <observed-hostile-guid>
     tuicraft cancel-cast
+    tuicraft stop-attack
     tuicraft fight [--framing none|minimal|mechanics] <observed-hostile-guid>
     tuicraft fight <observed-hostile-guid> conserve mana and stay alive
     tuicraft tactics [--json]
@@ -223,7 +225,7 @@ Rules:
 - A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery (release, corpse query, reclaim-delay wait, one direct travel leg) before resuming.
 - Inspect `cycling --json` for `phase`, per-target `queue` status/cause, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_release_only_reconnect_required`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
 - `lastLoot.slotsTaken` records requested slots, `moneyTaken` records offered money, and before/after coinage is observed when known. None of these proves item storage. Check raw inventory slot/count changes before claiming a gain.
-- Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`.
+- Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`, in `data.state`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
@@ -378,14 +380,17 @@ all event objects in `events[]`, including `events: []` when empty.
 | RAID                  | Raid chat                                        |
 | RAID_LEADER           | Raid leader message                              |
 | RAID_WARNING          | Raid warning                                     |
-| WHISPER               | Incoming whisper                                 |
+| WHISPER_FROM          | Incoming whisper                                 |
 | WHISPER_TO            | Outgoing whisper confirmation                    |
 | CHANNEL               | Custom channel message                           |
 | EMOTE                 | Player emote                                     |
 | SYSTEM                | System messages and unimplemented packet notices |
+| ROLL                  | Random roll result                               |
+| SERVER_BROADCAST      | Server broadcast message                         |
+| NOTIFICATION          | Server notification                              |
+| MAIL                  | Mail notification                                |
 | ENTITY_APPEAR         | NPC/player/object appeared nearby (--json only)  |
 | ENTITY_DISAPPEAR      | Entity left range (--json only)                  |
-| ENTITY_UPDATE         | Entity field changed (--json only)               |
 | CONTROL               | Movement, facing, target, or control-state change |
 | FRIEND_ONLINE         | Friend came online                               |
 | FRIEND_OFFLINE        | Friend went offline                              |
@@ -398,10 +403,22 @@ all event objects in `events[]`, including `events: []` when empty.
 | GUILD_ROSTER_UPDATED  | Guild roster data received                       |
 | GUILD_COMMAND_RESULT  | Guild command error (permissions, not found)     |
 | GUILD_INVITE_RECEIVED | Incoming guild invitation prompt                 |
+| GUILD_*               | Other guild events (MOTD, joined, left, promotion, signed on/off) |
+| GROUP_*               | Group invite, list, leader change, kick, disband, command result |
+| PARTY_MEMBER_STATS    | Party member health and level                    |
+| DUEL_*                | Duel requested, countdown, complete, winner, bounds |
+| COMBAT                | Combat state change; payload in `data`           |
+| TACTICS               | Jev tactics loop event; payload in `data`        |
+| CYCLE                 | Encounter cycle snapshot; payload in `data`      |
+| RECOVERY              | Death and recovery event; payload in `data`      |
+| QUEST                 | Quest dialog or log event; payload in `data`     |
+| REWARDS               | Loot, inventory or reward event; payload in `data` |
 
 The `channel` field appears on CHANNEL events only.
 
-Entity events include `guid`, `objectType`, `name`, and type-specific fields like `level`, `health`, `maxHealth`, `x`, `y`, `z`.
+Entity events include `guid`, `objectType`, `name`, and type-specific fields like `level`, `health`, `maxHealth`, `x`, `y`, `z`. Field updates are not emitted as events.
+
+The six gameplay events (COMBAT, TACTICS, CYCLE, RECOVERY, QUEST, REWARDS) have the shape `{"type":"CYCLE","data":{...}}`; `data.type` names the specific event.
 
 ## Who Queries
 
@@ -516,6 +533,13 @@ Rules:
 | `entry` | Database template ID. |
 | `self` | `true` only for the observed player character entity, `false` otherwise. |
 | `distance` | 3D distance in yards from the player, rounded to 2 decimal places. `0` for self, `null` if off-map or player position is unestablished. |
+| `horizontalDistance` | XY distance in yards, rounded to 2 decimal places, or `null`. |
+| `bearingRadians` | Absolute angle from +X toward +Y in [0, 2π), for `face`; `null` when direction is undefined. |
+| `turnRadians` | Shortest signed turn from current facing in [-π, π); `null` when direction is undefined. |
+| `originSource` | `predicted`, `server`, `self_entity`, or `null`. |
+| `originUpdatedAt` | Update time of the control pose, or `null` for the fallback. |
+| `level`, `health`, `maxHealth` | Unit and player rows only. |
+| `target`, `unitFlags`, `npcFlags`, `factionTemplate` | Unit and player rows only. `target` is a hex GUID. |
 | `x` | World X coordinate in yards. |
 | `y` | World Y coordinate in yards. |
 | `z` | World Z coordinate in yards. |

@@ -6,10 +6,10 @@ WoW 3.3.5a chat client
 
 ```
 tuicraft
-tuicraft <message> [--json]
-tuicraft [-w <name> | -y | -g | -p] <message> [--json]
-tuicraft [--who [filter]] [--json]
-tuicraft setup [--account NAME] [--password PASS] [--character NAME]
+tuicraft send [-w <name> | -y | -g | -p] <message> [--wait N] [--json]
+tuicraft [-w <name> | -y | -g | -p] <message> [--wait N] [--json]
+tuicraft who [filter] [--json]
+tuicraft setup [--account NAME] [--password PASS] [--character NAME] [flags]
 tuicraft start [--json] | status [--json] | stop [--json]
 tuicraft read [--wait N] [--json]
 tuicraft tail [--json]
@@ -27,6 +27,8 @@ tuicraft abandon-quest <slot> | cancel-interaction
 tuicraft inventory [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
+tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
+tuicraft logs | skill | help | version
 ```
 
 All daemon-backed commands above accept optional `--json`, including mutating
@@ -65,8 +67,14 @@ manual casting by learned spell ID do not require these data paths or a Jev key.
 `tuicraft`
 : Interactive TUI with a readline prompt. Type slash commands or plain text.
 
-`tuicraft` _message_
-: Send a say message. Auto-starts the daemon if needed.
+`tuicraft send` [`-w` _name_ | `-y` | `-g` | `-p`] _message_ [`--wait` _N_] [`--json`]
+: Send a chat message. Say is the default. Auto-starts the daemon if needed.
+A message that starts with `/` runs as a slash command, for example
+`tuicraft send "/roll 50"`. The chat flags also work without `send`.
+`--wait` _N_ returns events received during the next _N_ seconds.
+
+`tuicraft who` [_filter_] [`--json`]
+: Who query. Optional name/class/level filter.
 
 `tuicraft setup` [*flags*]
 : Configure account credentials. With no flags, runs an interactive wizard.
@@ -185,7 +193,7 @@ decimal. `0` is self/none.
 :: Stop auto-attack.
 
 `tuicraft fight` [`--framing` _none_|_minimal_|_mechanics_] _guid_ [_instruction_...]
-::: Run Jev tactics to its terminal outcome. Default instruction is to defeat the selected target while
+:: Run Jev tactics to its terminal outcome. Default instruction is to defeat the selected target while
 keeping the character alive. The command returns after the encounter completes, blocks, fails, or is halted; use `halt` to stop a running fight. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
 `minimal` frames the game, class and observed level; `mechanics` adds non-refilling
 resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
@@ -240,7 +248,7 @@ recovery can report other causes. Inspect `stopDetail` instead of guessing.
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
 `status` (`queued`, `done`, or `skipped`) and skip `cause`, `startsUsed`,
 `stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
-snapshot the `CYCLE` event carries in `read`/`tail`.
+snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
 `lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
 record observed values when known. Confirm stored items through actual
@@ -289,6 +297,7 @@ This command takes no corpse GUID. The server finds the authenticated player's c
 :: Request resurrection from one observed creature whose NPC flags carry the healer bit (0x4000). Requires observed ghost state and rejects an unanswered duplicate request. Never auto-activates and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
 `tuicraft resurrect` `accept`|`decline`
+:: Answer the current unanswered resurrection offer once. It requires observed dead or ghost state. A known future offer delay blocks `accept`, not `decline`. `OK` is request intent; confirm observed `life=alive` after an accept.
 
 Guided corpse run:
 
@@ -404,7 +413,12 @@ Human mode prints `ERR`; JSON mode returns an error envelope.
 `tuicraft help`
 : Print usage summary.
 
+`tuicraft version`
+: Print the version and exit. Does not accept `--json`.
+
 ## Chat Flags
+
+These flags work with `send` or on their own.
 
 `-w` _name_ _message_
 : Whisper to a player.
@@ -418,9 +432,6 @@ Human mode prints `ERR`; JSON mode returns an error envelope.
 `-p` _message_
 : Party chat.
 
-`--who` [*filter*]
-: Who query. Optional name/class/level filter.
-
 ## Options
 
 `--json`
@@ -433,7 +444,7 @@ Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
 `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`,
 `inventory`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
-`target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
+`face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
 `goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
@@ -466,6 +477,12 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 
 `--port` _PORT_
 : Auth server port. Default: `3724`.
+
+`--language` _ID_
+: Chat language code. Default: `1` (Orcish). Use `7` for Alliance.
+
+`--timeout_minutes` _N_
+: Daemon idle timeout in minutes. Default: `30`.
 
 ## Interactive Commands
 
@@ -598,16 +615,16 @@ tuicraft setup --account XI --password pass --character Xi
 Send a message and read the response:
 
 ```sh
-tuicraft "hello world"
+tuicraft send "hello world"
 tuicraft read --wait 3
 ```
 
 Script integration:
 
 ```sh
-tuicraft "follow me"
+tuicraft send -p "ready"
 tuicraft read --wait 3 --json | jq .
-tuicraft --who mage --json
+tuicraft who mage --json
 ```
 
 ## Notes

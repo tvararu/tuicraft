@@ -123,7 +123,10 @@ tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
 tuicraft attack 0xabc      # auto-attack
+tuicraft cancel-cast        # interrupt the current cast
+tuicraft stop-attack       # stop auto-attack
 tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
+tuicraft tactics [--json]  # tactics loop state and terminal observation
 tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 3        # ground route
@@ -137,8 +140,13 @@ tuicraft resurrect accept # answer a current offer; decline is also supported
 tuicraft quests --json     # offered dialog, observed log and unanswered intent
 tuicraft talk 0xabc        # request conversation with an observed giver
 tuicraft query-quest 42    # request metadata, not permission to accept
+tuicraft select-option 0   # choose an offered gossip option; optional quoted code
 tuicraft select-quest 42   # choose only a currently offered quest
 tuicraft accept-quest      # request acceptance of current offered details
+tuicraft complete-quest 42 # request completion of an offered quest
+tuicraft request-reward    # request the current reward offer
+tuicraft choose-reward 0   # choose an offered reward (zero-based 0-5)
+tuicraft abandon-quest 0   # request abandonment of a log slot (zero-based 0-24)
 tuicraft cancel-interaction # request dialog close; wait for observed closure
 tuicraft inventory       # carried item stacks, free slots and coinage
 tuicraft loot            # current offer and unanswered requests
@@ -150,7 +158,9 @@ tuicraft halt              # stop motion, cast, attack, tactics, navigation, cyc
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
 tuicraft stop [--json]     # stop daemon
+tuicraft logs              # print the raw session log
 tuicraft skill             # print SKILL.md for AI agents
+tuicraft version           # print version
 ```
 
 The GUIDs in these examples are placeholders. Copy current creature GUIDs from
@@ -353,8 +363,8 @@ that the official game client does.
 | Feature           | Status |
 | ----------------- | ------ |
 | Bounded walk / face / target | ✅     |
-| Pathfinding / navigation     | ❌     |
-| Spells / auras    | ❌     |
+| Pathfinding / navigation     | Ground routes on map 530 |
+| Spells / auras    | Learned-spell casts, observed auras |
 | Combat log        | ❌     |
 | Loot              | Bounded creature offers |
 | Items / inventory | Observed carried state |
@@ -363,8 +373,8 @@ that the official game client does.
 
 | Feature              | Status |
 | -------------------- | ------ |
-| Quests               | ❌     |
-| NPC gossip           | ❌     |
+| Quests               | Offered dialogs and observed log |
+| NPC gossip           | Offered options |
 | Trainers             | ❌     |
 | Taxi                 | ❌     |
 | Instances / dungeons | ❌     |
