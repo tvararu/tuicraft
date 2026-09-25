@@ -42,8 +42,14 @@ Success means:
 - Each agent does its own live testing on its own game account. Accounts are
   created and torn down through the server's SOAP interface. Level and gear
   presets are available.
-- Only issues opened by `tvararu` are worked on at first. Public issues from
-  anyone else are ignored until a later phase.
+- Theo keeps the dispatch gate: an issue is worked on only once `tvararu`
+  has added its `ready` label (decided 2026-09-25, replacing "only issues
+  opened by `tvararu`"). The coordinator, also `OpenHubris`, may draft and
+  file issues; they wait for Theo's `ready` like any other. Public issues
+  from anyone else are ignored until a later phase.
+- A worker may, at its own discretion, fan out parallel omp subagents inside
+  its own run and worktree and land one PR (decided 2026-09-25). See
+  [Worker fan-out](#worker-fan-out).
 - Theo enabled squash and merge commits on 2026-09-25. Both default to the PR
   title and description.
 
@@ -59,8 +65,8 @@ Success means:
   works as an automation provider, with three gaps the factory must close
   itself: no per-run time cap, no worktree or process cleanup, and no setup
   script in automation worktrees (see [Phase 0 findings](#phase-0-findings)).
-- Dispatch needs a `ready` label added by Theo (option 2 below). This was
-  recommended but not explicitly confirmed.
+- Dispatch needs a `ready` label added by Theo (option 2 below). Confirmed
+  by Theo on 2026-09-25.
 
 ## Shape
 
@@ -81,8 +87,8 @@ flowchart LR
 
 | Identity | Role | Access |
 |---|---|---|
-| `tvararu` | PM. Files issues, adds `ready`, approves PRs in phase 1 | admin |
-| `OpenHubris` | All factory agents. Opens PRs, posts statuses, merges | write |
+| `tvararu` | PM. Files issues, adds `ready` (the dispatch gate), approves PRs in phase 1 | admin |
+| `OpenHubris` | All factory agents and the coordinator. Drafts and files issues, opens PRs, posts statuses, merges. Its own `ready` labels never dispatch | write |
 
 GitHub never lets a PR author approve their own PR. `OpenHubris` authors every
 factory PR, so in phase 1 "1 required approval" means Theo's approval without
@@ -90,10 +96,35 @@ extra configuration.
 
 ### Scope rule
 
-An issue is in scope when it is open, its author is `tvararu`, and it has the
-`ready` label. Everything else is ignored, including issues that factory QA
-files as `OpenHubris`: those get `needs:pm` and wait until Theo adds `ready`.
-This rule also acts as the human gate on work that agents find.
+An issue is in scope when it is open, has the `ready` or `agent:rework`
+label, and the most recent `labeled` event for `ready` in its timeline has
+actor `tvararu`. The author does not matter. Issues that the coordinator or
+QA files as `OpenHubris` get `needs:pm` and wait until Theo adds `ready`.
+If any agent adds `ready` itself, the latest actor is `OpenHubris` and the
+issue stays out of scope. `agent:rework` issues pass because the worker
+removes `ready` on claim, and removal leaves Theo's `labeled` event in the
+timeline. This rule is the human gate on all work, including work that
+agents find.
+
+One GraphQL call checks the scope rule and the blocked-by rule together, so
+it serves as the worker precheck (0.7 s; exits 1 when nothing is eligible):
+
+```sh
+gh api graphql \
+  -f q='repo:tvararu/tuicraft is:issue is:open label:ready,agent:rework' \
+  -f query='query($q:String!){search(type:ISSUE,query:$q,first:50){nodes{
+    ... on Issue{number blockedBy(first:20){nodes{state}}
+    timelineItems(itemTypes:LABELED_EVENT,last:50){nodes{
+      ... on LabeledEvent{label{name} actor{login}}}}}}}}' \
+  --jq '[.data.search.nodes[]
+    | select([.blockedBy.nodes[] | select(.state=="OPEN")] | length == 0)
+    | select([.timelineItems.nodes[] | select(.label.name=="ready")]
+             | last | .actor.login == "tvararu")
+    | .number] | if length > 0 then .[0] else error("none") end'
+```
+
+The WIP count is a second query. The claim step repeats the actor check
+before it swaps labels.
 
 ### States
 
@@ -117,15 +148,16 @@ Closed means done. PRs close their issue with `Fixes #N` in the body.
 Each role is one Orca Automation. `--precheck` is a cheap `gh` query that
 exits non-zero when there is nothing to do, so an empty poll costs no tokens.
 
-**Worker.** Trigger: every 5 minutes. The precheck passes when a `ready` or
-`agent:rework` issue with no open blocked-by dependency exists and fewer than
-`WIP` issues have `agent:working`. Runs of one automation overlap (phase 0),
-so the WIP count and the claim re-read are the only concurrency guards.
+**Worker.** Trigger: every 5 minutes. The precheck passes when an in-scope
+issue (see [Scope rule](#scope-rule)) with no open blocked-by dependency
+exists and fewer than `WIP` issues have `agent:working`. Runs of one
+automation overlap (phase 0), so the WIP count and the claim re-read are the
+only concurrency guards.
 
 1. Claim one issue, highest priority first, skipping any issue whose
-   `blockedBy` list has an open issue (Symphony's "not blocked" rule). Swap
-   `ready` for `agent:working`, then re-read the issue to detect a race with
-   another run.
+   `blockedBy` list has an open issue (Symphony's "not blocked" rule) or
+   whose latest `ready` was not added by `tvararu`. Swap `ready` for
+   `agent:working`, then re-read the issue to detect a race with another run.
 2. Start with `mise trust -y && mise bundle`: automation worktrees do not run
    the repo setup script (phase 0).
 3. Work in a fresh worktree per run (`--workspace-mode new-per-run`), on a
@@ -140,6 +172,26 @@ so the WIP count and the claim re-read are the only concurrency guards.
    (below). Set `agent:review`.
 7. Stop conditions: a per-run time cap enforced by the reaper (below), a cap
    on attempts per issue, and a `needs:pm` escalation instead of spinning.
+
+<a id="worker-fan-out"></a>**Worker fan-out.** A worker may run parallel omp
+subagents (the `task` tool) when an issue has independent slices. The result
+is still one PR for one issue.
+
+- Cap: at most 4 subagents per run, counted over the whole run, not only
+  those running at once. The cap keeps a single run inside its time and
+  token budget.
+- Prefer the `sonic` agent for mechanical slices such as renames, call-site
+  migration and doc updates.
+- Subagents work inside the run's own worktree. Never create extra Orca
+  worktrees (`orca-ide worktree create`): the reaper only sees
+  `auto-<name>-run-N-<ts>` worktrees, so anything else leaks.
+- A subagent that live-tests gets its own SOAP account and character, created
+  and deleted like the worker's. Two agents never share one character.
+- The worker owns integration: it merges the slices, runs `mise ci`, and
+  writes the proof.
+- Anything that could be reviewed on its own is not a subagent slice. The
+  worker files it as a sub-issue (with `needs:pm`, so Theo gates it) and
+  links it with blocked-by if the order matters.
 
 **Reviewer.** Trigger: every 10 minutes. The precheck passes when a PR's issue
 has `agent:review`.
@@ -224,8 +276,10 @@ Two cases need more than a transcript:
 - Per-run time cap on every role, enforced by the reaper. Orca launches
   `omp '<prompt>'` with no flags, so `--max-time` is not available.
 - A cap on attempts per issue, after which the issue gets `needs:pm`.
-- Bot-authored issues never dispatch on their own (scope rule). This stops QA
-  from feeding itself in a loop.
+- Only Theo's `ready` dispatches (scope rule), so issues that QA or the
+  coordinator file never dispatch on their own. This stops QA from feeding
+  itself in a loop.
+- At most 4 subagents per worker run.
 - Daily token budget: not yet enforced. Orca records no usage for omp runs
   (`usage.status: unavailable`, "This agent does not report usage to Orca
   yet"). See open questions.
@@ -450,10 +504,11 @@ sources are in the research doc.
 | Idea | Status | Why / when to revisit |
 |---|---|---|
 | 1. Any open `tvararu` issue dispatches immediately | rejected for now | Simplest, but Theo can't park ideas as issues |
-| 2. `ready` label added by Theo dispatches | adopted (pending Theo's confirmation) | Symphony's `Backlog → Todo`. Filing and dispatching are separate |
+| 2. `ready` label added by Theo dispatches | adopted (confirmed 2026-09-25) | Symphony's `Backlog → Todo`. Filing and dispatching are separate |
+| Scope by author (`tvararu` opened the issue) | rejected 2026-09-25 | Blocks the coordinator (`OpenHubris`) from drafting issues for Theo. Replaced by "the latest `ready` `labeled` event has actor `tvararu`", which keeps QA and agent issues from self-dispatching |
 | 3. Triage agent first writes acceptance criteria and a test plan, then Theo adds `ready` | deferred | Better definition of done for one more round trip. For now the worker writes criteria into its workpad. Natural fit for phase 3 |
-| Label-only scope (anyone's issue once `ready`) | deferred | Needed for public issues. `ready` needs triage rights, so outsiders can't set it |
-| Skip issues with an open blocked-by dependency in the precheck and claim | adopted | Symphony's "not blocked" eligibility rule. Theo can then ready a whole epic's sub-issues at once. `gh issue list --json blockedBy` supports it |
+| Label-only scope (anyone's issue once `ready`) | adopted 2026-09-25, restricted to Theo's `ready` | The author no longer matters, only who added `ready`. Phase 3 can widen the actor list without changing the rule's shape |
+| Skip issues with an open blocked-by dependency in the precheck and claim | adopted | Symphony's "not blocked" eligibility rule. Theo can then ready a whole epic's sub-issues at once. GraphQL `Issue.blockedBy` supports it (the precheck in [Scope rule](#scope-rule)) |
 | Theo only readies unblocked issues | rejected | Pushes dependency bookkeeping onto the PM, and one slip starts a worker on a blocked issue |
 
 ### Orchestration
@@ -466,15 +521,15 @@ sources are in the research doc.
 | Global Orca `agentDefaultArgs`/`agentCmdOverrides` for omp flags (`--max-time`, `--model`) | rejected | They apply to every omp launch, including Theo's interactive worktrees |
 | Run Symphony's Elixir reference directly | rejected | Built around Codex app-server; Elixir runtime; engineering preview |
 | Orca orchestration (Runs, Tasks, Dispatch, supervised workers, decision gates) | deferred | Use if we need supervised runs or DAGs across agents |
-| omp built-in task/worktree/agent features | deferred | Theo is unsure they fit. Keep one control plane (Orca) |
+| omp built-in task/worktree/agent features | partly adopted | Theo, 2026-09-25: a worker may fan out omp `task` subagents inside its own run and worktree, capped at 4 per run, `sonic` preferred for mechanical slices, one PR per issue. omp-created worktrees stay out: Orca is the one control plane and the reaper only sees Orca run worktrees |
 | Gas Town + Beads (Mayor, Polecats, Witness, Deacon, Refinery) | rejected | Heavy and token-hungry, est. $2-5k/month, author warns against serious use. The ideas to keep: a merge-queue role (adopted as the merger) and disposable sessions with durable task state (adopted: labels + workpad) |
 | Ralph loop (bash `while`, one item per iteration, fresh context, `progress.txt`, max iterations) | partly adopted | Fresh context per run and one item per run are adopted |
 | Anthropic long-running harness (feature JSON pass/fail, `init.sh` smoke test at session start) | partly adopted | Acceptance checklist in the workpad. Smoke-first is deferred |
-| Claude Code agent teams / subagents | rejected | "Significantly more tokens". Experimental |
+| Claude Code agent teams / subagents | rejected | "Significantly more tokens". Experimental. Bounded omp subagents inside a worker run are the adopted alternative |
 | Vibe Kanban, Conductor, Sculptor, Crystal, claude-squad, Terragon | rejected | Human-dispatched UIs that don't provide the loop. Several have shut down |
 | Hosted agents: Copilot coding agent, gh-aw, claude-code-action, Codex cloud, Cursor, Devin, Factory | rejected | They run in a cloud that can't reach the VM, omp or SOAP. Most require a human to merge. Copilot automations are private-repo only |
 | Hierarchical supervisors / heartbeat nudging | rejected | A poller that relaunches does the same job more cheaply |
-| Spec → design → tasks dependency waves (Kiro, spec-kit) | deferred | Useful when one issue should fan out into sub-issues |
+| Spec → design → tasks dependency waves (Kiro, spec-kit) | deferred | Useful when one issue should fan out into sub-issues. Workers already file separately reviewable slices as sub-issues with blocked-by links |
 | Map-style AGENTS.md (~100 lines) plus a doc-gardening agent | deferred | Keeps context cheap as the repo grows. A periodic automation later |
 
 ### Merging
@@ -517,7 +572,8 @@ sources are in the research doc.
 |---|---|---|
 | WIP cap via precheck count | adopted | Cheap and explicit |
 | Per-run time cap, attempt cap per issue, escalate to `needs:pm` | adopted | Symphony and Attractor stop conditions |
-| Bot-authored issues never dispatch on their own | adopted | Prevents runaway QA → worker loops. Same idea as gh-aw's "bot events trigger nothing" |
+| Only Theo's `ready` dispatches (latest `ready` labeled-event actor is `tvararu`) | adopted | Prevents runaway QA → worker loops even though agents can file issues and set labels. Same idea as gh-aw's "bot events trigger nothing" |
+| Subagent cap per worker run (4) | adopted | Bounds one run's time and tokens. Separately reviewable work becomes sub-issues instead |
 | Daily token/credit cap (gh-aw default ~$50/day) | deferred | Needs a data source. Orca reports no omp usage. omp's `--mode json` `usage.cost` and session files have it |
 | Factory-owned model credential for live Pi proof (spend-limited API key, or a factory-only Pi `/login`) | deferred (Theo decides) | Workers must not share Theo's refresh tokens. Decide together with harness milestone 3, before the first harness issue gets `ready` |
 | Loop detection / goal gates (StrongDM Attractor) | deferred | Add if workers spin |
