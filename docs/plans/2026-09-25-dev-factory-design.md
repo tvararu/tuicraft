@@ -679,7 +679,22 @@ Cutover progress (Theo's go, 2026-09-25):
     unchanged. A `[factory:qa]` launch ran `omp --max-time 2h [factory:qa] …`.
 - Theo on GitHub: the ruleset change in
   [GitHub configuration](#github-configuration).
-- Then: the AGENTS.md cutover, and `setup automations --apply --enable`.
+- Done: the runner clone and the reaper timer (every 10 minutes). The first
+  real pass removed nothing, and there is no report issue because nothing
+  is held.
+- Done: an end-to-end run. Two manual `factory-worker` runs
+  (`automations run`) each got a new worktree, and the `orca.yaml` setup
+  created `node_modules` before the agent started ("Waiting for setup to
+  finish before starting agent..."). Each started as
+  `omp --max-time 3h [factory:worker] …` through the wrapper, ran the
+  runner's precheck, got exit 1 ("no eligible issue"), and stopped without
+  touching anything ($0.15). The next reaper pass removed both worktrees,
+  their branches and their omp processes.
+- Done: the AGENTS.md cutover (PR-only shipping, factory flow, per-run
+  `mise test:live` accounts, worktree lifecycle). It is the last direct
+  push before the ruleset.
+- Remaining: Theo's ruleset change, then
+  `setup automations --apply --enable`.
 
 **Phase 2: remove Theo's approval.** Required approvals go to 0. Candidate
 additions: holdout scenarios, a reviewer on a different model. Exit criteria
