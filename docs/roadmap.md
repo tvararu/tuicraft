@@ -88,6 +88,12 @@ controls remain open. The spatial TUI and programmatic interface should share
 the underlying world state and action capabilities without requiring an LLM to
 interpret the rendered screen.
 
+The [Pi harness design](plans/2026-09-25-pi-harness-design.md) proposes the
+intended shape: tuicraft embeds the Pi agent runtime under Bun, owns the
+world session in-process, and renders live panels such as the map alongside
+the agent conversation. The CLI and daemon remain as a second shell over the
+same core.
+
 ## Proposed runtime boundaries
 
 These boundaries express the architecture we are aligning on. Exact interfaces,
