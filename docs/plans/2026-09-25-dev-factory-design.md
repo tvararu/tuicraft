@@ -570,6 +570,29 @@ blocks the direct pushes that current work depends on.
      possible.
 2. Phase 2: change required approvals from 1 to 0. Everything else stays.
 
+Applied by Theo on 2026-09-25, going straight to phase 2's approval
+setting so the first overnight run can land without him. Read back with
+`gh api repos/tvararu/tuicraft/rulesets/12936638`:
+
+- `pull_request`: `required_approving_review_count: 0`,
+  `allowed_merge_methods: ["rebase"]` and
+  `dismiss_stale_reviews_on_push: false`.
+- `required_status_checks`: `signoff/ci`, `factory/ci` and
+  `factory/review`, not strict.
+- No bypass actors.
+
+The factory matches this with `pmApproval = false` in
+`src/factory/config.ts`. The merger precheck stops requiring
+`reviewDecision == APPROVED` and prints `"approval":"not-required"`. A
+content-changing rebase then goes back to a reviewer (`agent:review`)
+instead of to Theo. To restore the gate, set `pmApproval = true` and ask
+Theo to set the approval count back to 1.
+
+Consequence: every PR, factory or not, now needs `factory/ci` and
+`factory/review`, so non-factory work goes through the factory reviewer
+too (AGENTS.md, Shipping). With no bypass actor, even Theo lands through a
+PR.
+
 History of the merge settings: on 2026-09-25 Theo first enabled squash and
 merge commits, then switched to a rebase-only trial (`allow_rebase_merge`
 only). Auto-merge remains enabled.
