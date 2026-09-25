@@ -33,7 +33,14 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format:fix` — fix formatting (`biome format --write`)
 - `mise lint` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
 - `mise lint:fix` — apply safe lint fixes and assist actions (`biome check --write`)
-- `mise ci` — `typecheck`, `test:coverage`, `format`, and `lint` (no `gh signoff`, no remote CI)
+- `mise ci` — `mise ci:checks` (`typecheck`, `test:coverage`, `format`,
+  `lint`), then `gh signoff ci` posts a green `signoff/ci` status for HEAD.
+  Signoff runs only after the checks pass and only for a HEAD that was clean
+  throughout and is pushed to its upstream; otherwise it prints a note and
+  exits 0. No remote CI
+- `mise ci --publish` — used by the hk `pre-push` hook: pushes HEAD to a
+  temporary `refs/signoff/<sha>` ref so the not-yet-pushed commit can be
+  signed off, deletes that ref, and fails the push if signoff fails
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts`); needs two dedicated test accounts
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML

@@ -171,6 +171,13 @@ runner and matches the repo's existing hook-based CI. Anyone with write access
 can post these statuses. Today that is only `tvararu` and `OpenHubris`, so the
 risk is accepted.
 
+`gh signoff` is an option for posting. `mise ci` already posts `signoff/ci`
+through it when HEAD is clean and pushed, and the pre-push hook posts it for
+the pushed HEAD. The extension only posts `success`, only for the local HEAD,
+and only under `signoff` or `signoff/<name>` contexts, so it cannot post
+`factory/*` or a failure state. Use `gh api` for those, and keep the two
+namespaces separate.
+
 ### Proof for the PM
 
 Each PR has a "Proof" section: the live commands the worker ran and their
