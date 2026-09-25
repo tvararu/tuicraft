@@ -20,7 +20,6 @@ const busy: string[] = [
   labels.reviewing,
   labels.merging,
   labels.landing,
-  labels.pm,
 ];
 const priorities = ["p1", "p2", "p3"];
 const sha = /^[0-9a-f]{40}$/;
@@ -52,16 +51,20 @@ export function byPriority(issues: Issue[]): Issue[] {
   return issues.toSorted((a, b) => rank(a) - rank(b) || a.number - b.number);
 }
 
+function free(issue: Issue): boolean {
+  if (issue.labels.some((label) => busy.includes(label))) return false;
+  return (
+    !issue.labels.includes(labels.pm) || issue.labels.includes(labels.ready)
+  );
+}
+
 export function decideWorker(issues: Issue[]): Decision {
   const working = issues.filter((issue) =>
     issue.labels.includes(labels.working),
   ).length;
   if (working >= wip) return { ok: false, why: `wip ${working}/${wip}` };
-  const free = issues.filter(
-    (issue) => !issue.labels.some((label) => busy.includes(label)),
-  );
   const [pick] = byPriority(
-    free.filter((issue) => inScope(issue) && unblocked(issue)),
+    issues.filter((issue) => free(issue) && inScope(issue) && unblocked(issue)),
   );
   return pick
     ? { ok: true, out: { issue: pick.number } }

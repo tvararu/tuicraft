@@ -103,11 +103,13 @@ An issue is in scope when it is open, has the `ready` or `agent:rework`
 label, and the most recent `labeled` event for `ready` in its timeline has
 actor `tvararu`. The author does not matter. Issues that the coordinator or
 QA files as `OpenHubris` get `needs:pm` and wait until Theo adds `ready`.
-If any agent adds `ready` itself, the latest actor is `OpenHubris` and the
-issue stays out of scope. `agent:rework` issues pass because the worker
-removes `ready` on claim, and removal leaves Theo's `labeled` event in the
-timeline. This rule is the human gate on all work, including work that
-agents find.
+Adding `ready` is the whole release step: Theo's `ready` overrides
+`needs:pm`, and the worker removes both on claim. `needs:pm` without Theo's
+current `ready` still never dispatches. If any agent adds `ready` itself,
+the latest actor is `OpenHubris` and the issue stays out of scope.
+`agent:rework` issues pass because the worker removes `ready` on claim, and
+removal leaves Theo's `labeled` event in the timeline. This rule is the
+human gate on all work, including work that agents find.
 
 One GraphQL call checks the scope rule and the blocked-by rule together, so
 it serves as the worker precheck (0.7 s; exits 1 when nothing is eligible):
@@ -143,7 +145,7 @@ work out the state again from GitHub after a crash.
 | `agent:rework` | Reviewer or merger wants changes | Reviewer, Merger | Worker on claim |
 | `agent:merging` | Reviewed, waiting for the merger | Reviewer | Merger |
 | `agent:landing` | The one merger run is landing this issue | Merger | Merger after landing |
-| `needs:pm` | Theo must decide something | Any role | Theo |
+| `needs:pm` | Theo must decide something | Any role | Theo, or Worker on claim after Theo's `ready` |
 | `qa:found` | Filed by QA | QA | nobody |
 
 Runs of one automation overlap (phase 0), so every role claims by swapping a
@@ -166,8 +168,9 @@ only concurrency guards.
 
 1. Claim one issue, highest priority first, skipping any issue whose
    `blockedBy` list has an open issue (Symphony's "not blocked" rule) or
-   whose latest `ready` was not added by `tvararu`. Swap `ready` for
-   `agent:working`, then re-read the issue to detect a race with another run.
+   whose latest `ready` was not added by `tvararu`. Swap `ready` (and
+   `needs:pm`, if present) for `agent:working`, then re-read the issue to
+   detect a race with another run.
 2. Setup: Orca runs the committed `orca.yaml` setup
    (`mise trust -y && mise bundle`) before the agent starts, because the
    factory automations have `setupDecision: run` (phase 0 finding 1).

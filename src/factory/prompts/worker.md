@@ -27,9 +27,10 @@ you leave (labels, workpad, PR), never your exit code or final reply.
    0 it prints `{"issue":N}`. That is your issue.
 3. `gh issue view N -R tvararu/tuicraft --json labels,title,body,comments`.
    It must have `ready` (fresh) or `agent:rework` (rework) and no other
-   `agent:*` label; otherwise stop without any change.
+   `agent:*` label; otherwise stop without any change. Theo adding `ready`
+   is the whole release step: a `needs:pm` alongside it is already answered.
 4. Claim: fresh:
-   `gh issue edit N -R tvararu/tuicraft --remove-label ready --add-label agent:working`;
+   `gh issue edit N -R tvararu/tuicraft --remove-label ready --remove-label needs:pm --add-label agent:working`;
    rework:
    `gh issue edit N -R tvararu/tuicraft --remove-label agent:rework --add-label agent:working`.
    Then post a claim marker naming this run's worktree branch:
