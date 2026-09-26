@@ -1380,14 +1380,14 @@ prints `Daemon is already running.`
 
 ## Testing
 
-`mise test` runs the unit suite. `mise test:live` runs `src/test/live.ts`
+`mise test` runs the unit suite. `mise test:live` runs `packages/cli/test-support/live.ts`
 against a real server with two game accounts, read from `WOW_ACCOUNT_1`,
 `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`, `WOW_PASSWORD_2` and
 `WOW_CHARACTER_2`. `WOW_HOST` (default `t1`), `WOW_PORT` (default `3724`) and
 `WOW_LANGUAGE` (default `1`) are optional. Use throwaway accounts: create
-account 1 with `bun src/factory/main.ts soap create fresh --gm 2` (GM level 2
+account 1 with `bun packages/factory/src/main.ts soap create fresh --gm 2` (GM level 2
 for the `.freeze` and `.tele` checks) and account 2 with
-`bun src/factory/main.ts soap create eversong10`, set the variables from the
+`bun packages/factory/src/main.ts soap create eversong10`, set the variables from the
 JSON each prints, and delete both with `soap delete <ACCOUNT>` afterwards.
 [AGENTS.md](../AGENTS.md) has the details.
 

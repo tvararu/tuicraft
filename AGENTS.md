@@ -28,13 +28,15 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise bundle` — install dependencies and git hooks (`bun install`, then `hk install --mise`)
 - `mise test` — run all tests (`bun test`)
 - `mise test:coverage` — tests with coverage reporting; no percentage gate
-- `mise typecheck` — type-check (`tsc --noEmit`)
-- `mise format` — check formatting (`biome format`)
+- `mise typecheck [package]` — type-check the whole repo and then each
+  package on its own (`tsc --noEmit`, then `tsc --noEmit -p packages/<p>`),
+  or only the named package
+- `mise format [path]` — check formatting (`biome format`, default `packages/`)
 - `mise format:fix` — fix formatting (`biome format --write`)
-- `mise lint` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
+- `mise lint [path]` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
 - `mise lint:fix` — apply safe lint fixes and assist actions (`biome check --write`)
 - `mise lint:docs` — check the docs agents read as current instructions
-  for dated history and dead references (`bun src/tools/stale-docs.ts`)
+  for dated history and dead references (`bun packages/devtools/src/stale-docs.ts`)
 - `mise ci` — `mise ci:checks` (`typecheck`, `test:coverage`, `format`,
   `lint`, `lint:docs`), then `gh signoff ci` posts a green `signoff/ci`
   status for HEAD.
@@ -44,12 +46,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise ci --publish` — used by the hk `pre-push` hook: pushes HEAD to a
   temporary `refs/signoff/<sha>` ref so the not-yet-pushed commit can be
   signed off, deletes that ref, and fails the push if signoff fails
-- `mise test:live` — live server tests (`bun test ./src/test/live.ts
-  ./src/test/live-quest.ts ./src/test/live-remote-motion.ts
-  ./src/test/live-vendor.ts`); needs two game accounts via `WOW_*` (see Testing)
+- `mise test:live` — live server tests (`bun test ./packages/cli/test-support/live.ts
+  ./packages/cli/test-support/live-quest.ts
+  ./packages/cli/test-support/live-remote-motion.ts
+  ./packages/cli/test-support/live-vendor.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
   commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
-- `bun src/factory/main.ts <precheck|status|landings|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
+- `bun packages/factory/src/main.ts <precheck|status|landings|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
   factory CLI (how it works: `docs/factory.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
@@ -93,7 +96,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - omp memory is on for this repo (`.omp/config.yml`: Mnemopi, shared bank
   `tuicraft`, no transcript auto-save, no LLM calls); factory runs turn it
-  off through `src/factory/omp-factory.yml`.
+  off through `packages/factory/src/omp-factory.yml`.
 - Automatic recall only fires on a close match, so call `recall` with your
   task's topic when you start. Recalled memory is background; AGENTS.md and
   the maintainer's instructions win when they conflict.
@@ -109,13 +112,16 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `noUnusedParameters`, all strict flags on (see tsconfig.json)
 - Never write comments, so never use `biome-ignore`; rule exceptions live as
   path overrides in `biome.json` (protocol bit flags, wire-order literals in
-  `src/wow/**`, the opcode table, test files and `src/test/**`)
+  `packages/core/src/wow/**`, the opcode table, test files and
+  `packages/*/test-support/**`)
 - Files are capped at 500 non-blank lines (`noExcessiveLinesPerFile`, tests
   included). Split by responsibility into sibling modules before a file grows
-  past it; shared test setup goes in `src/test/<name>-fixtures.ts`. Only the
+  past it; shared test setup goes in
+  `packages/<pkg>/test-support/<name>-fixtures.ts`. Only the
   central `opcodes.ts` table is exempt
 - Fire-and-forget promises end in `.catch(ignoreFailure)` from
-  `lib/ignore-failure`, not an empty callback
+  `"#lib/ignore-failure"` in core or `"@tuicraft/core/lib/ignore-failure"`
+  elsewhere, not an empty callback
 - Use Bun APIs over Node.js equivalents (`Bun.file` over `node:fs`, `WebSocket`
   built-in, etc.)
 - `node:os` (tmpdir/homedir), `node:fs/promises` (mkdir/appendFile) are fine — no
@@ -135,9 +141,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - **Always run `mise test:live` yourself after protocol or
   daemon changes.** Do not ask the user to run it. Run it on two throwaway
   accounts of your own, never on anyone else's character:
-  `bun src/factory/main.ts soap create fresh --gm 2` (account 1, GM level 2
+  `bun packages/factory/src/main.ts soap create fresh --gm 2` (account 1, GM level 2
   for the `.freeze` and `.tele` checks) and
-  `bun src/factory/main.ts soap create eversong10` (account 2). Set
+  `bun packages/factory/src/main.ts soap create eversong10` (account 2). Set
   `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
   `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, run it
   as `XDG_CONFIG_HOME=<account 1 .dir>/config mise test:live` (the suite
@@ -151,18 +157,18 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   `XDG_*` into your shell. The wrapper sets the account's own config,
   socket and session log, refuses to run if its daemon would log in another
   character, prints `tc-<ACCOUNT>: character <name>` on stderr and runs
-  `bun src/main.ts "$@"`. `soap delete` removes it with the account's
+  `bun packages/cli/src/main.ts "$@"`. `soap delete` removes it with the account's
   directories. `omp-factory` starts every omp in a tuicraft worktree other
   than the main checkout with per-run `XDG_*` directories (config and state
   in `factory-xdg/` in the worktree's git directory, runtime in
   `$XDG_RUNTIME_DIR/tuicraft-factory-<hash>`) that link everything in the
-  real ones except `tuicraft`, so plain `bun src/main.ts` there finds no
+  real ones except `tuicraft`, so plain `bun packages/cli/src/main.ts` there finds no
   config: `status` says the daemon is not running, and `start` or any
   daemon command fails with "No config found" after 30 seconds.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
-- `mise test src/file.test.ts` runs a single file (args pass through to `bun test`)
+- `mise test packages/core/src/lib/errors.test.ts` runs a single file (args pass through to `bun test`)
 - Use `jest.useFakeTimers()` / `advanceTimersByTime()` from `bun:test` for
   timer-dependent tests (wrap in `try/finally` with `jest.useRealTimers()`)
 - Prefer promise-based waiting over `Bun.sleep()` — await the event, not a
@@ -177,13 +183,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
-- Tests that spawn git use `git()` or `gitEnv()` from `src/test/git.ts`, which
+- Tests that spawn git use `git()` or `gitEnv()` from `packages/factory/test-support/git.ts`, which
   strip `GIT_*`: an inherited `GIT_DIR` makes `git init` write `core.worktree`
   into another repository's config
 - `mock.module()` leaks across test files in Bun, so `config/biome.grit` bans
   it. Use dependency injection: file locations come from a `Paths` value
   (`resolvePaths()` by default), and tests pass `pathsUnder(dir)` from
-  `src/test/temp-paths.ts`. Stdlib modules like `node:readline` are injected too
+  `packages/core/test-support/temp-paths.ts`. Stdlib modules like `node:readline` are injected too
 - `Bun.sleep(0)` yields one microtask tick (enough for `.then()` chains);
   `Bun.sleep(1)` yields one full event loop turn (needed for filesystem I/O like
   `unlink` to complete) — prefer the minimum needed in tests
@@ -206,8 +212,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 - Unreviewed work from the `vibe` branch lives in the tag `archive/vibe`
   (commit `5fbe7bf`); there is no `vibe` branch. `main` has reviewed
-  replacements for its pieces (`src/wow/navigation-native.ts` for the
-  `bun:ffi` namigator bridge, `src/wow/combat-actions-*`). Nobody reviewed
+  replacements for its pieces (`packages/core/src/wow/navigation-native.ts` for the
+  `bun:ffi` namigator bridge, `packages/core/src/wow/combat-actions-*`). Nobody reviewed
   the tag's code, and unreviewed code must not enter `main` disguised as
   progress. Read it freely for patterns (`git show archive/vibe:<path>`),
   never merge, rebase or cherry-pick it without the maintainer saying so,
@@ -252,15 +258,16 @@ The maintainer must never find stale worktrees or idle agents in Orca.
 
 - `../wow-chat-client` — Node.js WoW chat client, primary protocol reference
 - `../azerothcore-wotlk-playerbots` — AzerothCore server source (C++). Key files:
-  `src/server/game/Entities/Object/Updates/UpdateFields.h` (complete field index
-  for 3.3.5a build 12340), `src/server/game/Handlers/SpellHandler.cpp`
-  (CMSG_CAST_SPELL handling), `src/server/game/Handlers/GroupHandler.cpp`
+  `../azerothcore-wotlk-playerbots/src/server/game/Entities/Object/Updates/UpdateFields.h` (complete field index
+  for 3.3.5a build 12340), `../azerothcore-wotlk-playerbots/src/server/game/Handlers/SpellHandler.cpp`
+  (CMSG_CAST_SPELL handling), `../azerothcore-wotlk-playerbots/src/server/game/Handlers/GroupHandler.cpp`
   (SMSG_PARTY_MEMBER_STATS construction)
 - `../wowser` — browser-based WoW 3.3.5a client (ES2015/React/WebGL). Useful for
   cross-referencing opcodes, auth error codes, and realm parsing. Key files:
-  `src/lib/auth/` (challenge opcodes, reconnect), `src/lib/game/opcode.js` (40+
-  world opcodes), `src/lib/realms/handler.js` (realm list parsing),
-  `src/lib/crypto/srp.js` (SRP-6 reference — uses insecure Math.random, ours is
+  `../wowser/src/lib/auth/` (challenge opcodes, reconnect),
+  `../wowser/src/lib/game/opcode.js` (40+ world opcodes),
+  `../wowser/src/lib/realms/handler.js` (realm list parsing),
+  `../wowser/src/lib/crypto/srp.js` (SRP-6 reference — uses insecure Math.random, ours is
   better)
 - `../wow_messages` — auto-generated WoW protocol definitions in `.wowm` format
   (Rust crate source). Machine-readable spec for every opcode across Vanilla/TBC/
@@ -286,25 +293,43 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   LANG_COMMON=7 for Alliance) — server rejects LANG_UNIVERSAL (0) silently
 - Object literals evaluate in key order, and parsers read packets inside them
   (`{ guid: r.packedGuidBig(), counter: r.uint32LE() }`). Never sort or
-  reorder such keys; `useSortedKeys` is off for `src/wow/**` for this reason
+  reorder such keys; `useSortedKeys` is off for `packages/core/src/wow/**` for this reason
 
 ## WorldHandle
 
-- Shells (`src/cli`, `src/daemon`, `src/ui`, `src/tools`, `src/main.ts`)
-  import core only from `"wow"`, the explicit barrel `src/wow/index.ts`,
-  or from `"wow/session"` for `worldSession` and auth; biome's
-  `noRestrictedImports` rejects any other `wow/*` there. The barrel
-  exports no value that loads the session, so `"wow/session"` stays a lazy
-  `import()` in `src/main.ts`. Export a new core symbol from the barrel
-  before a shell uses it
-- `src/test/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
-  `src/daemon/start.test.ts` spreads it and overrides only `closed` and
+- The code is a Bun workspace (`packages/*`): `@tuicraft/core`
+  (`packages/core`: `packages/core/src/wow`, the runtime helpers in
+  `packages/core/src/lib` and shared test support in
+  `packages/core/test-support`), `@tuicraft/cli` (the CLI,
+  daemon and TUI), `@tuicraft/factory`, `@tuicraft/devtools` and
+  `@tuicraft/harness`. `bun install` (`mise bundle`) must run before
+  any cross-package import resolves.
+- Inside a package, import with its private `#` aliases from its
+  `package.json` `imports` (`"#wow/client"`, `"#daemon/server"`,
+  `"#test-support/must"`); relative imports are for siblings and non-code files.
+- Other packages import core only through its `exports`:
+  `"@tuicraft/core"` (the barrel, `packages/core/src/wow/index.ts`),
+  `"@tuicraft/core/session"` for `worldSession` and auth,
+  `"@tuicraft/core/lib/<module>"` for the listed helpers and, in tests
+  only, `"@tuicraft/core/test-support/<module>"`. Any other subpath
+  fails to resolve in Bun and tsc, and biome's `noRestrictedImports`
+  rejects it too. The barrel exports no value that loads the session,
+  so `"@tuicraft/core/session"` stays a lazy `import()` in
+  `packages/cli/src/main.ts`. Export a new core symbol from the barrel
+  (or add an `exports` entry) before another package uses it; a test
+  that needs a core internal imports it from
+  `"@tuicraft/core/test-support/internals"`.
+- Core imports nothing from another workspace package, and core runtime
+  code imports no test support. Only `packages/harness` may import
+  `@earendil-works/*`. biome enforces both.
+- `packages/core/test-support/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
+  `packages/cli/src/daemon/start.test.ts` spreads it and overrides only `closed` and
   `logout`, so add new WorldHandle methods to the shared mock only
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
 - `WorldHandle` `on*` hooks are multi-subscriber: each returns an
   unsubscribe function and all of them are backed by `conn.events`
-  (`src/wow/world-events.ts`, built on `lib/emitter`). Emit through
+  (`packages/core/src/wow/world-events.ts`, built on `#lib/emitter`). Emit through
   `conn.events.<name>.emit(...)`, never a setter. Every listener gets the
   event; a listener that throws during packet dispatch is reported through
   `onPacketError` with the dispatching opcode, and elsewhere the error is
@@ -323,7 +348,7 @@ The maintainer must never find stale worktrees or idle agents in Orca.
 
 ## Documentation
 
-- When adding user-visible features, update all four: `src/cli/help.ts`,
+- When adding user-visible features, update all four: `packages/cli/src/cli/help.ts`,
   `docs/manual.md`, `.claude/skills/tuicraft/SKILL.md`, and `README.md`
 - Docs state the current rule or state in the present tense. History
   belongs in commit messages and `docs/plans/`: don't narrate when, why or
@@ -332,7 +357,7 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   only in `tmp/`. Keep a date only where it is the fact a reader needs,
   such as when an evidence record was taken. `mise lint:docs` checks the
   common forms in the files agents read as current instructions (listed
-  in `src/tools/stale-docs.ts`)
+  in `packages/devtools/src/stale-docs.ts`)
 
 ## Commits
 
@@ -358,7 +383,7 @@ Shipping:
   `signoff/ci`, `factory/ci` and `factory/review` statuses (the `main`
   ruleset). The maintainer's approval is not required right now
   (`required_approving_review_count: 0`, and `maintainerApproval = false` in
-  `src/factory/config.ts`). If it is turned back on, only an approval by
+  `packages/factory/src/config.ts`). If it is turned back on, only an approval by
   `tvararu` on github.com counts: approvals clicked inside Orca are sent as
   `OpenHubris`, the PR author.
 - The dev factory works issues whose card the maintainer has moved to
@@ -371,7 +396,7 @@ Shipping:
   merger, so give it what their prompts need. File an issue with a
   `## Acceptance criteria` section. Push the work to a branch named
   `factory/<N>-<slug>`, and open a PR whose body has `Fixes #N` and a
-  `## Proof` section. Then run `bun src/factory/main.ts status N in-review`.
+  `## Proof` section. Then run `bun packages/factory/src/main.ts status N in-review`.
   The reviewer posts the statuses and the merger lands it. Never post
   `factory/*` statuses on your own PR.
 - Each PR lands as one squash commit. OpenHubris authors it because it
@@ -381,7 +406,7 @@ Shipping:
   why, before `Fixes #N` and any heading), then one trailer block:
   `Refs: #N` for each closed issue, `PR: #M`, and
   `Co-authored-by: Theodor Vararu <theo@vararu.org>` to credit the maintainer.
-  `bun src/factory/main.ts squash-message <M>` builds it and fails on a bad
+  `bun packages/factory/src/main.ts squash-message <M>` builds it and fails on a bad
   title or a missing why. Commits inside the PR may be as granular as
   helps; no history cleanup is needed.
 - The merger lands only a PR whose current head has green `factory/ci` and

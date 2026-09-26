@@ -1,12 +1,13 @@
 {
   "name": "tuicraft",
-  "version": "0.4.2",
-  "module": "src/main.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "bun src/main.ts",
-    "typecheck": "tsc --noEmit"
+    "start": "bun packages/cli/src/main.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/core && tsc --noEmit -p packages/cli && tsc --noEmit -p packages/factory && tsc --noEmit -p packages/devtools && tsc --noEmit -p packages/harness"
   },
   "devDependencies": {
     "@types/bun": "latest"

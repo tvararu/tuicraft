@@ -1,9 +1,9 @@
-import { createNavigation } from "wow/navigation";
+import { createNavigation } from "../../packages/core/src/wow/navigation";
 import {
   type NativeMap,
   type NativePoint,
   openNativeMap,
-} from "wow/navigation-native";
+} from "../../packages/core/src/wow/navigation-native";
 
 const LOW = 0.25;
 const HIGH = 1.6;

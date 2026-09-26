@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "@tuicraft/core": "workspace:*"
+  },
+  "exports": {},
+  "imports": {
+    "#cli/*": "./src/cli/*.ts",
+    "#daemon/*": "./src/daemon/*.ts",
+    "#lib/*": "./src/lib/*.ts",
+    "#test-support/*": "./test-support/*.ts",
+    "#tools/*": "./src/tools/*.ts",
+    "#ui/*": "./src/ui/*.ts"
+  },
+  "name": "@tuicraft/cli",
+  "private": true,
+  "type": "module",
+  "version": "0.4.2"
+}

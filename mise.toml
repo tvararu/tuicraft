@@ -20,9 +20,9 @@ hk install --mise
 [tasks.build]
 description = "Compile single binary"
 depends = ["bundle"]
-sources = ["src/**/*.ts", ".claude/skills/**/*.md"]
+sources = ["packages/core/src/**/*.ts", "packages/cli/src/**/*.ts", "packages/*/package.json", ".claude/skills/**/*.md"]
 outputs = ["dist/tuicraft"]
-run = "bun build --compile src/main.ts --outfile dist/tuicraft"
+run = "bun build --compile packages/cli/src/main.ts --outfile dist/tuicraft"
 
 [tasks."build:all"]
 description = "Cross-compile binaries for all platforms"
@@ -31,7 +31,7 @@ set -e
 for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
   suffix="${target#bun-}"
   echo "Building ${suffix}..."
-  bun build --compile --target="${target}" src/main.ts --outfile "dist/tuicraft-${suffix}"
+  bun build --compile --target="${target}" packages/cli/src/main.ts --outfile "dist/tuicraft-${suffix}"
 done
 echo "Done. Binaries in dist/"
 '''
@@ -44,7 +44,7 @@ run = "bun test"
 [tasks."test:live"]
 description = "Run tests against a live server"
 raw = true
-run = "bun test ./src/test/live.ts ./src/test/live-quest.ts ./src/test/live-remote-motion.ts ./src/test/live-vendor.ts"
+run = "bun test ./packages/cli/test-support/live.ts ./packages/cli/test-support/live-quest.ts ./packages/cli/test-support/live-remote-motion.ts ./packages/cli/test-support/live-vendor.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"
@@ -95,35 +95,40 @@ description = "Run local typecheck, coverage tests, format, lint and docs checks
 depends = ["typecheck", "test:coverage", "format", "lint", "lint:docs"]
 
 [tasks.typecheck]
-description = "Type-check with tsc"
-run = "bun run typecheck"
+description = "Type-check the whole repo and each package, or one package"
+usage = 'arg "[package]" help="core, cli, factory, devtools or harness; omit to check the repo and every package"'
+run = '[ -n "${usage_package:-}" ] && exec bun run tsc --noEmit -p "packages/${usage_package}"; bun run typecheck'
 
 [tasks.format]
 description = "Check formatting"
-run = "biome format src/"
+usage = 'arg "[path]" default="packages/" help="a package or file; defaults to every package"'
+run = 'biome format ${usage_path}'
 
 [tasks."format:fix"]
 description = "Fix formatting"
-run = "biome format --write src/"
+usage = 'arg "[path]" default="packages/" help="a package or file; defaults to every package"'
+run = 'biome format --write ${usage_path}'
 
 [tasks.lint]
 description = "Check lint rules and assist actions"
-run = "biome check --formatter-enabled=false --error-on-warnings src/"
+usage = 'arg "[path]" default="packages/" help="a package or file; defaults to every package"'
+run = 'biome check --formatter-enabled=false --error-on-warnings ${usage_path}'
 
 [tasks."lint:fix"]
 description = "Apply safe lint fixes and assist actions"
-run = "biome check --write src/"
+usage = 'arg "[path]" default="packages/" help="a package or file; defaults to every package"'
+run = 'biome check --write ${usage_path}'
 
 [tasks."lint:docs"]
 description = "Check current docs for dated history and dead references"
-run = "bun src/tools/stale-docs.ts"
+run = "bun packages/devtools/src/stale-docs.ts"
 
 [tasks."factory:pace"]
 description = "Show the factory pace, or set it to pause, default or max"
 usage = '''
 arg "[level]" help="pause, default or max; omit to show the live schedules"
 '''
-run = 'bun src/factory/main.ts pace ${usage_level:-}'
+run = 'bun packages/factory/src/main.ts pace ${usage_level:-}'
 
 [tasks.deploy]
 description = "Build and symlink to /usr/local/bin"
@@ -133,7 +138,7 @@ run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 [tasks."evidence:encounter"]
 description = "Distil an encounter record from the session log"
 raw = true
-run = "bun run src/tools/distil-encounter.ts"
+run = "bun run packages/devtools/src/distil-encounter.ts"
 
 [tasks."namigator:build"]
 description = "Build the patched libnamigator.so (vendor/namigator)"

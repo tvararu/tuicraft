@@ -11,7 +11,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in src/*.ts|*/src/*.ts) [ -f \"$fp\" ] || exit 0; mise exec -- biome check --write --linter-enabled=false \"$fp\";; esac"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in packages/*/src/*.ts|*/packages/*/src/*.ts|packages/*/test-support/*.ts|*/packages/*/test-support/*.ts) [ -f \"$fp\" ] || exit 0; mise exec -- biome check --write --linter-enabled=false \"$fp\";; esac"
           }
         ]
       },
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in src/*.ts|*/src/*.ts) tf=\"${fp%.ts}\"; tf=\"${tf%.test}.test.ts\"; [ -f \"$tf\" ] || exit 0; mise test \"$tf\" --bail;; esac"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in packages/*/src/*.ts|*/packages/*/src/*.ts|packages/*/test-support/*.ts|*/packages/*/test-support/*.ts) tf=\"${fp%.ts}\"; tf=\"${tf%.test}.test.ts\"; [ -f \"$tf\" ] || exit 0; mise test \"$tf\" --bail;; esac"
           }
         ]
       }

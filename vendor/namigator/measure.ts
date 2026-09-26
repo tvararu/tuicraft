@@ -1,4 +1,4 @@
-import { createNavigation } from "wow/navigation";
+import { createNavigation } from "../../packages/core/src/wow/navigation";
 
 const [libraryPath, originArg, ...rest] = process.argv.slice(2);
 const dataPath = process.env["NAV_DATA"];
