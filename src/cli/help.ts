@@ -59,7 +59,8 @@ USAGE
                             OK is request intent, not confirmed recovery
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim
                             Near a killer: plan an exit, flee after OK, then inspect observed life
-  tuicraft quests [--json]    Offered dialog, quest log, pending and unresolved mutations
+  tuicraft quests [--json]    Dialog, next verb, held log, pending/unresolved mutations,
+                            last error and reward
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization);
                             needed to correlate collected quest items
@@ -128,8 +129,9 @@ JSON OUTPUT
   Quest steps by quests --json .data.dialog.kind: gossip/list -> select-quest <id>;
   details -> accept-quest (unless already in the log); requestItems -> request-reward;
   offer -> choose-reward <i>.
-  Without --json, combat, tactics, cycling, recovery, inventory, experience and
-  loot print readable summaries.
+  Without --json, combat, tactics, cycling, recovery, quests, inventory, experience
+  and loot print readable summaries; QUEST lines in read name the quest, counts,
+  reward and error.
   Control actions print daemon request acceptance, not a server result.
   fight replies when the run ends with its outcome line, for example
   "completed: server_kill_credit, XP 60"; cycle says that it ended.
