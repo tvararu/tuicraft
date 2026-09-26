@@ -115,7 +115,7 @@ describe("queryNearby", () => {
     expect(rows.map((r) => r.entity.guid)).toEqual([3n, 4n, 5n, 8n, 9n]);
   });
 
-  test("default range keeps rows within 100 yd, unmeasured same-map and positionless rows", () => {
+  test("default range drops rows beyond 100 yd, off-map or without position", () => {
     const entities = [
       entity(2n, at(100, 0)),
       entity(3n, at(100.01, 0)),
@@ -123,7 +123,7 @@ describe("queryNearby", () => {
       entity(5n),
     ];
     const near = queryNearby(sources(pose(0, 0), entities));
-    expect(near.map((r) => r.entity.guid)).toEqual([2n, 5n]);
+    expect(near.map((r) => r.entity.guid)).toEqual([2n]);
     const all = queryNearby(sources(pose(0, 0), entities), { all: true });
     expect(all).toHaveLength(4);
   });

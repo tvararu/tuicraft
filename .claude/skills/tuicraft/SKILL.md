@@ -190,6 +190,8 @@ Use `nearby --json` for relative geometry. Each entity in the envelope's
 `bearingRadians` for `face`, and `turnRadians` from current facing.
 Angles are `null` when direction is unknown or XY displacement is zero.
 For non-self rows, off-map or missing positions give `null` distances and angles.
+Carried items and bags have no world position: `--all` lists them with `null`
+`x`/`y`/`z`/`mapId`, distances and angles.
 The self row uses the control pose when available, or the last self-entity position.
 Its 3D distance is zero even if neither position is known. Its XY
 distance is `null` only if neither position is known. `originSource`
@@ -678,7 +680,7 @@ Rules:
 
 - Output is ordered nearest first.
 - The `self` row is included at distance `0`.
-- By default, entities beyond 100 yards or on a different map are filtered out when player position is known.
+- By default, entities beyond 100 yards, on a different map, or without a world position (carried items and bags) are filtered out when player position is known.
 - 100 yards is the server's own visibility range, `DEFAULT_VISIBILITY_DISTANCE` in AzerothCore `src/server/game/Entities/Object/ObjectDefines.h:39`, not an arbitrary choice. That constant is documented as the continent value and `Map::GetVisibilityRange()` is configurable per map (e.g. 170 yards in instances, 250 yards in battlegrounds and arenas), so the default may not match an instance or battleground.
 - The server sends transports for the whole map at login regardless of distance, and never culls them. They are the bulk of what `--all` reveals. Use `--all` to see a zeppelin, boat or elevator before it is within visibility range.
 - Pass `--all` to output all tracked entities without distance or map filtering.
