@@ -24,6 +24,8 @@ is what a reader inspects.
 
 ## Milestones
 
+- [m1/](m1/README.md) — target selection and clearing: creature, player,
+  malformed and stale GUIDs
 - [m2/](m2/README.md) — a constrained Jev-controlled encounter
 - [m3/](m3/README.md) — movement as a tactical action
 - [m3a/](m3a/README.md) — reliable local navigation (live slices; funnel corner in [m3a/funnel-corner.md](m3a/funnel-corner.md))
