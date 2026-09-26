@@ -158,6 +158,7 @@ describe("TacticsLoop fault integration", () => {
       observe: () => frame,
       execute: () => {},
       halt: () => {},
+      defend: () => "none",
     });
     const events: TacticsEvent[] = [];
     const waiters: {

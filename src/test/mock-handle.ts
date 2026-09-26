@@ -80,6 +80,7 @@ export function createMockHandle(): MockHandle {
     runId: undefined,
     status: "idle",
     targetGuid: undefined,
+    timeouts: { consecutive: 0, limit: 3, total: 0 },
   };
   const cycle = new EncounterCycleRuntime({
     control: { face: () => {}, move: () => {}, snapshot: () => controlState },

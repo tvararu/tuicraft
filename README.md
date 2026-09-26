@@ -265,7 +265,9 @@ creature attacking the character is always fair game. `tactics --json` reports
 the relation as `lastOutcome.observation.targetRelation`. A structural lack of
 supported combat actions stops with a reason; cooldown and server-response waits
 do not. Inspect `tactics` for terminal observations. Jev may choose directional
-movement under a renewable lease (`wait` holds, `stop_moving` releases).
+movement under a renewable lease (`wait` holds, `stop_moving` releases). A slow
+Jev reply (over 5 s) is discarded and retried; 3 in a row stop the fight with
+`jev_timeout`, keeping auto-attack on a live attacker (`tactics.defense`).
 
 `cycle` takes an explicit GUID queue selected from `nearby --json`; it does
 not auto-acquire. It runs `fight` over the queue and requests loot after each

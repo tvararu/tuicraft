@@ -15,6 +15,7 @@ export const DEFAULT_FIGHT_INSTRUCTION =
 const DEFAULT_MAX_AGE_MS = 2000;
 const DEFAULT_INTERVAL_MS = 200;
 const DEFAULT_TIMEOUT_MS = 5000;
+export const MAX_CONSECUTIVE_TIMEOUTS = 3;
 
 export type TacticsContext = {
   targetGuid: bigint;
@@ -27,6 +28,8 @@ export type TacticsOutcome = {
   reason: string;
   observation?: Readonly<Record<string, unknown>>;
 };
+
+export type TacticsDefense = "auto_attack" | "uncontrolled_in_combat" | "none";
 
 export type TacticsFrame = {
   observation: Readonly<Record<string, unknown>>;
@@ -41,6 +44,7 @@ export type TacticsDeps = {
   observe: (context: TacticsContext) => TacticsFrame;
   execute: (actionId: string, context: TacticsContext) => void;
   halt: () => void;
+  defend: (context: TacticsContext) => TacticsDefense;
   select: JevSelect;
   now?: () => number;
   maxResultAgeMs?: number;
@@ -74,6 +78,8 @@ export type TacticsState = {
   lastDiscardReason: string | undefined;
   lastStopReason?: string;
   fault?: string;
+  timeouts: { consecutive: number; total: number; limit: number };
+  defense?: TacticsDefense;
 };
 
 export type TacticsEvent =
@@ -100,6 +106,7 @@ type Run = {
   apiKey: string;
   abort: AbortController;
   detach: () => void;
+  timeouts: number;
 };
 
 type Decision = {
@@ -127,6 +134,7 @@ export class TacticsLoop {
     lastDecision: undefined,
     lastOutcome: undefined,
     lastDiscardReason: undefined,
+    timeouts: noTimeouts(),
   };
 
   constructor(deps: TacticsDeps) {
@@ -152,22 +160,27 @@ export class TacticsLoop {
     try {
       await this.decide(run);
     } catch (error) {
-      this.fail(run, error);
+      this.fail(run, error, true);
     }
   }
 
   stop(reason: string): void {
+    this.end(reason, false);
+  }
+
+  private end(reason: string, defend: boolean): void {
     const run = this.run;
     if (!run) return;
     this.run = undefined;
     this.state.status = "idle";
     this.state.lastStopReason = reason;
-    const state = this.snapshot();
     run.detach();
     run.abort.abort();
     try {
-      this.deps.halt();
+      if (defend) this.state.defense = this.deps.defend(run.context);
+      else this.deps.halt();
     } finally {
+      const state = this.snapshot();
       this.emit({ type: "stopped", runId: run.runId, reason, state });
     }
   }
@@ -205,6 +218,7 @@ export class TacticsLoop {
       apiKey,
       abort: new AbortController(),
       detach: () => external?.removeEventListener("abort", onExternal),
+      timeouts: 0,
     };
     const onExternal = () => {
       if (this.live(run)) this.stop("aborted");
@@ -224,6 +238,7 @@ export class TacticsLoop {
       lastDecision: undefined,
       lastOutcome: undefined,
       lastDiscardReason: undefined,
+      timeouts: noTimeouts(),
       fault,
     };
     const guid = `0x${targetGuid.toString(16)}`;
@@ -248,18 +263,19 @@ export class TacticsLoop {
     return this.run === run && !run.abort.signal.aborted;
   }
 
-  private fail(run: Run, error: unknown): void {
+  private fail(run: Run, error: unknown, defend = false): void {
     if (!this.live(run)) return;
     const reason = messageOf(error);
     this.state.lastDiscardReason = reason;
     this.emit({ type: "transport", runId: run.runId, error: reason });
-    this.finish(run, { status: "failed", reason });
+    this.finish(run, { status: "failed", reason }, undefined, defend);
   }
 
   private finish(
     run: Run,
     outcome: TacticsOutcome,
     observation?: TacticsFrame["observation"],
+    defend = false,
   ): void {
     if (!this.live(run)) return;
     const recorded = structuredClone(
@@ -267,7 +283,7 @@ export class TacticsLoop {
     );
     this.state.lastOutcome = recorded;
     this.emit({ type: "outcome", runId: run.runId, ...recorded });
-    if (this.live(run)) this.stop(recorded.status);
+    if (this.live(run)) this.end(recorded.status, defend);
   }
 
   private async decide(run: Run): Promise<void> {
@@ -281,13 +297,34 @@ export class TacticsLoop {
       const candidates = withWait(frame.candidates);
       const sentAtMs = this.now();
       if (candidates.some((candidate) => candidate.id !== WAIT.id)) {
-        const result = await this.select(run, { ...frame, candidates });
-        this.commit({ run, result, candidates, sentAtMs });
+        const result = await this.attempt(run, { ...frame, candidates });
+        if (result) this.commit({ run, result, candidates, sentAtMs });
       }
       if (this.live(run)) {
         const delay = Math.max(0, this.minIntervalMs - (this.now() - sentAtMs));
         await pause(delay, run.abort.signal);
       }
+    }
+  }
+
+  private async attempt(
+    run: Run,
+    frame: TacticsFrame,
+  ): Promise<JevActionResult | undefined> {
+    try {
+      const result = await this.select(run, frame);
+      run.timeouts = 0;
+      this.state.timeouts.consecutive = 0;
+      return result;
+    } catch (error) {
+      if (!this.live(run) || messageOf(error) !== TIMEOUT) throw error;
+      run.timeouts += 1;
+      this.state.timeouts.consecutive = run.timeouts;
+      this.state.timeouts.total += 1;
+      if (run.timeouts >= MAX_CONSECUTIVE_TIMEOUTS) throw error;
+      this.state.lastDiscardReason = TIMEOUT;
+      this.emit({ type: "transport", runId: run.runId, error: TIMEOUT });
+      return undefined;
     }
   }
 
@@ -406,4 +443,8 @@ function withWait(candidates: readonly JevCandidate[]): JevCandidate[] {
   const list = candidates.map((candidate) => ({ ...candidate }));
   if (!offers(list, WAIT.id)) list.push({ ...WAIT });
   return list;
+}
+
+function noTimeouts(): TacticsState["timeouts"] {
+  return { consecutive: 0, total: 0, limit: MAX_CONSECUTIVE_TIMEOUTS };
 }
