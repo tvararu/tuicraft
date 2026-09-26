@@ -36,8 +36,9 @@ Blocked cards on the project board.
    any change. Read the issue with
    `gh issue view N -R tvararu/tuicraft --json title,body,comments`.
 4. Claim: `bun $F status N in-progress`. Then post a claim marker naming
-   this run's worktree branch:
-   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $(git branch --show-current) -->"`.
+   this run's worktree branch, with a sentence after it:
+   `run=$(git branch --show-current)`, then
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run --> Factory worker $run claimed this issue."`.
 5. Race check: `sleep 15`, then re-read the issue comments. Among the
    `<!-- factory:claim … -->` comments created in the last 15 minutes, the
    oldest wins. If it is not yours, you lost the race: delete your claim

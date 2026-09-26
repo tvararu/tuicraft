@@ -72,8 +72,8 @@ comment the problem on the issue and what the maintainer needs to do, run
 
 For the candidate:
 
-1. Claim: post a landing marker:
-   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:landing $run -->"`.
+1. Claim: post a landing marker with a sentence after it:
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:landing $run --> Factory merger $run is landing PR #M."`.
    Race check: `sleep 15`, then `bun $F landings`. It lists the live
    landing markers on all open In review issues, oldest first. If the
    oldest entry is not yours (another issue, or another run on N), delete

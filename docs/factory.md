@@ -80,6 +80,14 @@ Two more mark heads for the bounce count:
 - `<!-- factory:rebase <sha> -->`: the merger rebased the PR to this head
   and the patch changed, so it needs a fresh review but is not a bounce.
 
+GitHub hides these markers, and a comment that is only a marker renders
+as an empty "No description provided." So every factory comment puts
+visible text after its marker: the claims and the landing claim one
+sentence on the same line saying who is doing what, for example
+`<!-- factory:claim <run> --> Factory worker <run> claimed this issue.`
+The parsers match only the start of the body, so the text never changes
+what a marker means.
+
 ## Roles
 
 - **Worker.** Takes the oldest Ready card with no live claim, moves it to In

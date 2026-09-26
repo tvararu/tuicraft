@@ -38,8 +38,9 @@ dispatches work and answers Blocked cards on the project board.
    without any change.
 4. Head: `sha=$(gh pr view M -R tvararu/tuicraft --json headRefOid --jq .headRefOid)`.
    Every claim, status and verdict is for that SHA.
-   Claim: post a claim marker; it is the lock, no Status changes:
-   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run $sha -->"`.
+   Claim: post a claim marker with a sentence after it; it is the lock, no
+   Status changes:
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run $sha --> Factory reviewer $run is reviewing PR #M at ${sha:0:7}."`.
 5. Race check: `sleep 15`, then re-read the issue comments. Among the
    `<!-- factory:claim … $sha -->` comments for this same head, the oldest
    wins; claims for other heads belong to finished cycles and do not count.
