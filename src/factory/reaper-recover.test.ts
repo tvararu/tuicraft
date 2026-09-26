@@ -57,6 +57,7 @@ describe("a dead worker", () => {
   test("a retry after the move to Ready still deletes the run's claim", () => {
     const card = issue(253, "ready", {
       markers: [claim(live, 300, 1), claim(dead, 30, 2)],
+      statusAt: ago(5),
     });
     expect(planRecovery(worker, [card])).toEqual([
       { comment: 2, issue: 253, kind: "unclaim" },
@@ -86,6 +87,18 @@ describe("a dead worker", () => {
       statusAt: ago(1),
     });
     expect(planRecovery(worker, [card])).toEqual([]);
+  });
+
+  test("a move and a claim in the same second still recover the card", () => {
+    const own = claim(dead, 20, 1);
+    const card = issue(328, "in-progress", {
+      markers: [own],
+      statusAt: own.at,
+    });
+    expect(planRecovery(worker, [card])).toMatchObject([
+      { issue: 328, kind: "ready" },
+      { comment: 1, issue: 328, kind: "unclaim" },
+    ]);
   });
 
   test("a reviewer's later claim does not hide the worker's claim", () => {
