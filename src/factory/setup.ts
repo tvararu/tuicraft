@@ -1,3 +1,5 @@
+import { readlink } from "node:fs/promises";
+import { homedir } from "node:os";
 import {
   automationNames,
   labels,
@@ -247,12 +249,35 @@ async function execute(commands: string[][], apply: boolean): Promise<number> {
   return 0;
 }
 
-const usage = "usage: setup <labels|automations> [--apply] [--enable]";
+const wrapperLink = `${homedir()}/.local/bin/omp-factory`;
+export const wrapperTarget = `${runner}/src/factory/omp-factory`;
+
+export function wrapperCommand(
+  current: string | undefined,
+): string[] | undefined {
+  if (current === wrapperTarget) return undefined;
+  return ["ln", "-sfn", wrapperTarget, wrapperLink];
+}
+
+async function setupWrapper(apply: boolean): Promise<number> {
+  const current = await readlink(wrapperLink).catch(() => undefined);
+  const cmd = wrapperCommand(current);
+  console.log(
+    cmd
+      ? `link    ${wrapperLink} -> ${wrapperTarget}`
+      : `ok      ${wrapperLink}`,
+  );
+  return execute(cmd ? [cmd] : [], apply);
+}
+
+const targets = ["labels", "automations", "wrapper"].join("|");
+const usage = `usage: setup <${targets}> [--apply] [--enable]`;
 
 export function runSetup(args: string[]): Promise<number> {
   const [target, ...flags] = args;
   const apply = flags.includes("--apply");
   if (target === "labels") return setupLabels(apply);
+  if (target === "wrapper") return setupWrapper(apply);
   if (target === "automations")
     return setupAutomations(apply, flags.includes("--enable"));
   console.error(usage);

@@ -8,6 +8,8 @@ import {
   missingLabels,
   plan,
   type Spec,
+  wrapperCommand,
+  wrapperTarget,
 } from "factory/setup";
 
 function recorded(spec: Spec, over: Partial<Automation> = {}): Automation {
@@ -125,5 +127,19 @@ describe("command", () => {
     expect(edit).not.toContain("--enabled");
     expect(edit).not.toContain("--disabled");
     expect(command({ id: "abc", kind: "ok", spec: worker })).toBeUndefined();
+  });
+});
+
+describe("wrapperCommand", () => {
+  test("leaves a link that already points at the runner wrapper", () => {
+    expect(wrapperCommand(wrapperTarget)).toBeUndefined();
+  });
+
+  test("replaces a copy, a stale link, or nothing with the runner link", () => {
+    for (const current of [undefined, "/elsewhere/omp-factory"]) {
+      const cmd = wrapperCommand(current);
+      expect(cmd?.slice(0, 3)).toEqual(["ln", "-sfn", wrapperTarget]);
+      expect(cmd?.[3]).toEndWith("/.local/bin/omp-factory");
+    }
   });
 });

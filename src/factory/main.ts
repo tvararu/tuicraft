@@ -29,7 +29,8 @@ const usage = `usage: bun src/factory/main.ts <command>
   squash-message <pr>                     JSON subject and body to land
   soap <create|delete|sweep|list> ...    per-run game accounts on t1
   reap [--dry-run]                        worktree and account backstop
-  setup <labels|automations> [--apply]   create labels and automations`;
+  setup <labels|automations|wrapper> [--apply]
+                                          labels, automations, omp wrapper link`;
 
 const [name, ...rest] = process.argv.slice(2);
 const command = name ? commands[name] : undefined;
