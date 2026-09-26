@@ -547,9 +547,8 @@ received remote `MSG_MOVE_*` broadcasts and no accepted milestone used it. On
 - `ControlOwner` in `src/wow/control.ts` is `none`, `manual` or `jev`; there
   is no follow owner.
 
-There is no 3b record under `docs/evidence/`. The deleted design survives only
-in `tmp/worktree-archive-2026-09-21/gameplay-follow.patch`, which is on disk
-and pushed nowhere.
+There is no 3b record under `docs/evidence/`. The deleted design is gone: its
+only copy, an uncommitted worktree archive, was deleted on 2026-09-26.
 
 #### Next slices
 
