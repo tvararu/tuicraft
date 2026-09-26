@@ -460,7 +460,10 @@ canopy or a bridge overhead. A route still refuses a surface within 1.6 yards
 above the walked ground and a step of more than 1 yard between 0.5-yard
 samples (`ambiguous ground column at route`). A native path corner may sit up
 to 1.25 yards above the ground (the navmesh's climb plus one cell), but no
-other surface may be closer to it.
+other surface may be closer to it. A `goto` while a route is active stops the
+old route with a `movement_stopped` CONTROL event whose reason is
+`navigation_replaced`, then plans from the stopped pose. If that plan is
+refused, the character stays stopped.
 
 `tuicraft navigation` [`--json`]
 :: Print navigation state, including raw `blockedReason`, `refusal` and
