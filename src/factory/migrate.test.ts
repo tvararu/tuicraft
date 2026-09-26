@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { planMigration, statusForLabels } from "factory/migrate";
+import { labelNames, planMigration, statusForLabels } from "factory/migrate";
 
 describe("statusForLabels", () => {
   test("maps each legacy workflow label to its column", () => {
@@ -72,5 +72,30 @@ describe("planMigration", () => {
     expect(
       planMigration([{ card, labels: ["qa"], number: 10 }], ["qa"]),
     ).toEqual([]);
+  });
+});
+
+describe("labelNames", () => {
+  test("a repo with no labels lists none", () => {
+    expect(labelNames("")).toEqual([]);
+    expect(labelNames("\n")).toEqual([]);
+  });
+
+  test("reads the names gh label list prints as JSON", () => {
+    expect(labelNames('[{"name":"qa"},{"name":"ready"}]\n')).toEqual([
+      "qa",
+      "ready",
+    ]);
+  });
+
+  test("an empty listing plans no label deletions", () => {
+    const issues = [{ card: null, labels: ["ready"], number: 11 }];
+    expect(planMigration(issues, labelNames(""))).toEqual([
+      { issue: 11, item: null, kind: "status", status: "ready" },
+      { issue: 11, kind: "unlabel", labels: ["ready"] },
+    ]);
+    expect(
+      planMigration(issues, labelNames('[{"name":"ready"}]')),
+    ).toContainEqual({ kind: "delete-label", label: "ready" });
   });
 });

@@ -1,7 +1,7 @@
 import { setItemStatus, setStatus } from "factory/board";
 import type { BoardItem, OpenIssue } from "factory/board-items";
 import { type BoardStatus, repoSlug } from "factory/config";
-import { json, must } from "factory/exec";
+import { must } from "factory/exec";
 
 export const legacyLabels = [
   "ready",
@@ -67,6 +67,11 @@ export function planMigration(
   return steps;
 }
 
+export function labelNames(listed: string): string[] {
+  if (listed.trim() === "") return [];
+  return (JSON.parse(listed) as { name: string }[]).map(({ name }) => name);
+}
+
 function describeStep(step: MigrationStep): string {
   if (step.kind === "status") return `set #${step.issue} to ${step.status}`;
   if (step.kind === "unlabel")
@@ -100,7 +105,7 @@ export async function migrate(
       issue === null ? [] : [[issue, { item, status }] as const],
     ),
   );
-  const listed = await json<{ name: string }[]>([
+  const listed = await must([
     ...["gh", "label", "list", "-R", repoSlug],
     ...["--json", "name", "--limit", "500"],
   ]);
@@ -110,7 +115,7 @@ export async function migrate(
       labels,
       number,
     })),
-    listed.map(({ name }) => name),
+    labelNames(listed),
   );
   for (const step of steps) {
     console.error(
