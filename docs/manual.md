@@ -200,6 +200,15 @@ For `fight` and `cycle`, choose current non-self creature GUIDs from this JSON o
 ends when the duration ends. Repeating the same direction while manual movement
 is active renews the lease without a stop. A manual command takes over from
 Jev or cycle immediately instead of refreshing their movement.
+`move` needs navigation data. The daemon walks the ground a half yard at a time
+and keeps the character on the highest surface it can reach: a rise of at most
+0.25 yd (one navmesh cell) plus the navmesh's 50° walkable slope, or a drop of up to 13 yd (under the server's 13.48 yd fall-damage distance). If the first half yard cannot
+be walked, `move` sends nothing and fails with `ERR <reason>` (JSON: an error
+envelope): `obstructed`, `height_unresolved`, `too_steep` (rise or drop beyond
+those limits) or `ground_height_unavailable`. Without navigation data it fails with
+`missing_navigation`. `rooted` also means a dead
+character. A leg that stops later keeps the reason in `control` as
+`blockedReason`, with a `nextStep` hint. Manual moves do not check walls.
 
 `tuicraft face` _radians_
 :: Set facing. The value is a finite number in radians. Empty input is rejected.

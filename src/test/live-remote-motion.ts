@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readConfig } from "lib/config";
 import { appearBeside, waitUntil } from "test/live-helpers";
 import { must } from "test/must";
 import { authHandshake } from "wow/auth";
@@ -13,8 +14,16 @@ function config(n: 1 | 2) {
     language: Number.parseInt(Bun.env["WOW_LANGUAGE"] ?? "1", 10),
     password: Bun.env[`WOW_PASSWORD_${n}`] ?? "",
     port: Number.parseInt(Bun.env["WOW_PORT"] ?? "3724", 10),
+    ...navigation,
   };
 }
+
+const navigation = await readConfig()
+  .then((cfg) => ({
+    navigationDataDir: cfg.navigation_data_dir,
+    navigationLibrary: cfg.navigation_library,
+  }))
+  .catch(() => ({}));
 
 const config1 = config(1);
 const config2 = config(2);

@@ -10,6 +10,8 @@ export function nextStepFor(reason: string | undefined): string | null {
     return "Choose a different route. Inspect the ground before moving.";
   if (reason === "height_unresolved")
     return "Choose a different short heading or a known grounded waypoint. Do not retry this heading.";
+  if (reason === "too_steep")
+    return "The ground ahead rises or drops more than a character can walk. Turn along the slope or pick another heading.";
   if (reason?.includes("ambiguous ground column at start"))
     return "The current position has more than one floor. Move to open ground with one ground height before planning again.";
   if (reason?.includes("ambiguous ground column at route"))

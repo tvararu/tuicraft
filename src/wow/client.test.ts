@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
 import {
   clientPrivateKey,
   clientSeed,
@@ -12,6 +12,7 @@ import { startMockWorldServer } from "test/mock-world-server";
 import type { AuthResult } from "wow/auth";
 import { authHandshake } from "wow/auth";
 import { worldSession } from "wow/client";
+import * as navigation from "wow/navigation";
 import { ObjectType, UpdateFlag, UpdateType } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketWriter } from "wow/protocol/packet";
@@ -33,6 +34,30 @@ function fakeAuth(port: number): AuthResult {
     realmId: 1,
   };
 }
+
+const NAVIGATION = {
+  navigationDataDir: "fixture-navigation",
+  navigationLibrary: "fixture-native",
+};
+
+function flatNavigation() {
+  const create = navigation.createNavigation;
+  return jest
+    .spyOn(navigation, "createNavigation")
+    .mockImplementation((options) =>
+      create(options, () => ({
+        loadAdtAt() {},
+        findHeights: (x) => (x > 2 ? [8] : [3]),
+        findHeight: () => {
+          throw new Error("pathfind_find_height failed (UNKNOWN_HEIGHT)");
+        },
+        findPath: (from, to) => [from, to],
+        lineOfSight: () => true,
+        close() {},
+      })),
+    );
+}
+
 function observedObject(x: number, y: number, z: number): Uint8Array {
   const packet = new PacketWriter();
   packet.uint32LE(1);
@@ -170,10 +195,14 @@ describe("session lifecycle", () => {
   });
 
   test("manual reissue extends the same direction without stopping", async () => {
-    const server = await startMockWorldServer({ coalesceSelfCreate: true });
+    const nav = flatNavigation();
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
     try {
       const handle = await worldSession(
-        { ...base, host: "127.0.0.1", port: server.port },
+        { ...base, ...NAVIGATION, host: "127.0.0.1", port: server.port },
         fakeAuth(server.port),
       );
       try {
@@ -192,14 +221,19 @@ describe("session lifecycle", () => {
       }
     } finally {
       server.stop();
+      nav.mockRestore();
     }
   });
 
   test("manual move takes control from an active encounter cycle", async () => {
-    const server = await startMockWorldServer({ coalesceSelfCreate: true });
+    const nav = flatNavigation();
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
     try {
       const handle = await worldSession(
-        { ...base, host: "127.0.0.1", port: server.port },
+        { ...base, ...NAVIGATION, host: "127.0.0.1", port: server.port },
         fakeAuth(server.port),
       );
       try {
@@ -218,6 +252,7 @@ describe("session lifecycle", () => {
       }
     } finally {
       server.stop();
+      nav.mockRestore();
     }
   });
   test("face-guid turns toward a currently observed object and refuses a lost GUID", async () => {
@@ -254,13 +289,14 @@ describe("session lifecycle", () => {
   });
 
   test("walk-toward reports ungrounded destination without cancelling manual motion", async () => {
+    const nav = flatNavigation();
     const server = await startMockWorldServer({
       loginMapId: 530,
       coalesceSelfCreate: true,
     });
     try {
       const handle = await worldSession(
-        { ...base, host: "127.0.0.1", port: server.port },
+        { ...base, ...NAVIGATION, host: "127.0.0.1", port: server.port },
         fakeAuth(server.port),
       );
       try {
@@ -272,7 +308,7 @@ describe("session lifecycle", () => {
         expect(outcome).toMatchObject({
           status: "stopped",
           traveled: 0,
-          reason: "missing_navigation",
+          reason: "destination_not_grounded",
         });
         expect(handle.getControlState().moving).toBe(true);
       } finally {
@@ -281,6 +317,7 @@ describe("session lifecycle", () => {
       }
     } finally {
       server.stop();
+      nav.mockRestore();
     }
   });
 

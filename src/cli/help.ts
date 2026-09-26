@@ -21,6 +21,8 @@ USAGE
   tuicraft status [--json]   Show daemon socket status
   tuicraft control [--json]  Current pose estimate, last server pose, refusal guidance
   tuicraft move <dir> [ms]   Walk 1-10000ms (default 1000)
+                             ERR obstructed|height_unresolved|too_steep|ground_height_unavailable
+                             Needs navigation data, else ERR missing_navigation
   tuicraft face <radians>    Set facing in radians
   tuicraft face-guid <guid>  Face a currently observed GUID
   tuicraft walk-toward <yards> <guid>|<x> <y> <z>  Bounded direct leg (>0 to 20yd); JSON terminal outcome
