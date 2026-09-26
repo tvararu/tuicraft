@@ -74,8 +74,9 @@ export type {
 } from "wow/protocol/questgiver";
 export { FriendResult, FriendStatus } from "wow/protocol/social";
 export { CLASS_NAMES } from "wow/protocol/world";
+export type { QuestQuery } from "wow/quest-queries";
 export { type QuestLogSlot, questSlotStatus } from "wow/quest-slots";
-export type { QuestEvent, QuestQuery, QuestState } from "wow/quests";
+export type { QuestEvent, QuestState } from "wow/quests";
 export type { QuestDialog, QuestIntent } from "wow/quests-requests";
 export type { RecoveryEvent, RecoveryState } from "wow/recovery";
 export type { RemotePose } from "wow/remote-motion";

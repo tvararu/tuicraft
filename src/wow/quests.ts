@@ -9,10 +9,7 @@ import type {
   QuestUpdateAddItem,
   QuestUpdateAddKill,
 } from "wow/protocol/quest-log";
-import {
-  buildQuestQuery,
-  type QuestQueryResponse,
-} from "wow/protocol/quest-query";
+import type { QuestQueryResponse } from "wow/protocol/quest-query";
 import type {
   QuestgiverQuestComplete,
   QuestgiverStatus,
@@ -25,6 +22,7 @@ import {
   type QuestItemPush,
   settleItemPushes,
 } from "wow/quest-items";
+import { QuestQueries, type QuestQuery } from "wow/quest-queries";
 import {
   type QuestLog,
   questLogChanges,
@@ -53,15 +51,6 @@ import {
   talkRequest,
   unansweredError,
 } from "wow/quests-requests";
-
-export type QuestQuery =
-  | { questId: number; status: "unanswered"; sentAt: number }
-  | {
-      questId: number;
-      status: "known";
-      receivedAt: number;
-      data: QuestQueryResponse;
-    };
 
 export type QuestProgressUpdate =
   | { kind: "kill"; data: QuestUpdateAddKill }
@@ -126,7 +115,7 @@ export class QuestRuntime {
   private log: QuestLog;
   private logEntity: Entity | undefined;
   private readonly visibleQuestIds = new WeakMap<Entity, boolean>();
-  private readonly queries = new Map<number, QuestQuery>();
+  private readonly queries: QuestQueries;
   private lastIntent: QuestIntent | undefined;
   private unresolved: QuestState["unresolved"] = [];
   private expiry: ReturnType<typeof setTimeout> | undefined;
@@ -140,6 +129,7 @@ export class QuestRuntime {
 
   constructor(deps: QuestDeps) {
     this.deps = deps;
+    this.queries = new QuestQueries(deps);
     this.log = readQuestLog(deps.selfGuid(), deps.getEntity);
     this.logEntity = deps.getEntity(deps.selfGuid());
   }
@@ -159,7 +149,7 @@ export class QuestRuntime {
       dialog: this.dialog,
       giver: this.giver,
       log: this.log,
-      queries: [...this.queries.values()],
+      queries: [...this.queries.entries.values()],
       lastIntent: this.lastIntent,
       pending: this.pending,
       unresolved: this.unresolved,
@@ -180,13 +170,7 @@ export class QuestRuntime {
   query(questId: number): void {
     this.active();
     positiveId(questId);
-    this.deps.send(GameOpcode.CMSG_QUEST_QUERY, buildQuestQuery(questId));
-    if (this.queries.get(questId)?.status !== "known")
-      this.queries.set(questId, {
-        questId,
-        status: "unanswered",
-        sentAt: this.deps.now(),
-      });
+    this.queries.request(questId);
     this.emit("query", "request", questId);
   }
 
@@ -283,19 +267,7 @@ export class QuestRuntime {
       if (sameEntity) this.transitions(previous, next);
       this.emit("log", "quest_log");
     }
-    this.queryLogged();
-  }
-
-  private queryLogged(): void {
-    for (const { questId } of this.log.slots) {
-      if (!questId || this.queries.has(questId)) continue;
-      this.deps.send(GameOpcode.CMSG_QUEST_QUERY, buildQuestQuery(questId));
-      this.queries.set(questId, {
-        questId,
-        status: "unanswered",
-        sentAt: this.deps.now(),
-      });
-    }
+    this.queries.requestLogged(this.log);
   }
 
   resetInteraction(): void {
@@ -320,7 +292,7 @@ export class QuestRuntime {
     this.pending = undefined;
     this.unresolved = [];
     this.itemPushes = [];
-    this.queries.clear();
+    this.queries.entries.clear();
   }
 
   private readLog(): QuestLog {
@@ -335,7 +307,7 @@ export class QuestRuntime {
   private itemObjectives(): QuestItemObjective[] {
     return itemObjectives(
       this.log,
-      this.queries,
+      this.queries.entries,
       readInventory(this.deps.selfGuid(), this.deps.getEntity),
     );
   }
@@ -468,12 +440,7 @@ export class QuestRuntime {
 
   receiveQuery(data: QuestQueryResponse): void {
     if (this.disposed) return;
-    this.queries.set(data.questId, {
-      questId: data.questId,
-      status: "known",
-      receivedAt: this.deps.now(),
-      data,
-    });
+    this.queries.receive(data);
     this.emit("query", "packet", data.questId);
   }
 
