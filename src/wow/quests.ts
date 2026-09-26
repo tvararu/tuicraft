@@ -271,18 +271,31 @@ export class QuestRuntime {
     this.log = next;
     this.logEntity = entity;
     this.settleItems();
-    if (
+    const unchanged =
       sameEntity &&
       previous.slots.every((slot, i) => {
         const nextSlot = next.slots[i];
         if (nextSlot === undefined)
           throw new Error("quest slots length mismatch");
         return sameSlot(slot, nextSlot);
-      })
-    )
-      return;
-    if (sameEntity) this.transitions(previous, next);
-    this.emit("log", "quest_log");
+      });
+    if (!unchanged) {
+      if (sameEntity) this.transitions(previous, next);
+      this.emit("log", "quest_log");
+    }
+    this.queryLogged();
+  }
+
+  private queryLogged(): void {
+    for (const { questId } of this.log.slots) {
+      if (!questId || this.queries.has(questId)) continue;
+      this.deps.send(GameOpcode.CMSG_QUEST_QUERY, buildQuestQuery(questId));
+      this.queries.set(questId, {
+        questId,
+        status: "unanswered",
+        sentAt: this.deps.now(),
+      });
+    }
   }
 
   resetInteraction(): void {

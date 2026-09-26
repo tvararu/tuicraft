@@ -80,6 +80,32 @@ describe("quest 8326 captured from the live server", () => {
     });
   });
 
+  test("a quest already logged at login is queried once and its collars still count", () => {
+    const { bodies, carry, events, logQuest, packet, runtime, sent } =
+      questCapture(0xa12n);
+    logQuest(questId, 0);
+    logQuest(questId, 0, 1);
+    const queries = sent.flatMap((opcode, i) =>
+      opcode === GameOpcode.CMSG_QUEST_QUERY ? [bodies[i]] : [],
+    );
+    expect(queries).toEqual(["86200000"]);
+    expect(runtime.snapshot().items).toEqual([]);
+    packet(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, captured8326.query);
+    carry(stack, 27, collar, 1);
+    packet(
+      GameOpcode.SMSG_ITEM_PUSH_RESULT,
+      must(captured8326.collarPushes[0]),
+    );
+    expect(runtime.snapshot().items).toEqual([
+      { carried: 1, itemId: collar, questId, required: 8 },
+    ]);
+    expect(events.at(-1)).toMatchObject({
+      source: "inventory",
+      state: { lastProgress: { carried: 1, kind: "collect", questId } },
+      type: "progress",
+    });
+  });
+
   test("turn-in asks for the collars, offers rewards and notifies the reward", () => {
     const { carry, logQuest, packet, runtime, sent } = setup();
     carry(stack, 27, collar, 8);

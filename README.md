@@ -386,9 +386,10 @@ soon as `select-quest` opens their `details`, so check the log before
 `accept-quest`.
 `complete-quest`, `request-reward`, and `choose-reward` require the corresponding
 offered dialog. Reward indices and abandonment slots are zero-based.
-Collect objectives are not in the log counters: after `query-quest`, `quests`
-reports `items` (required vs carried) and correlates each item push with the
-observed bags as a `collect` progress event.
+Collect objectives are not in the log counters: the daemon queries every quest
+in the log, including after a relog, so `quests` reports `items` (required vs
+carried) and correlates each item push with the observed bags as a `collect`
+progress event.
 `OK` is intent only. Acceptance/progress/removal require observed log changes,
 and rewards require a server reward notification. Unanswered metadata is unknown,
 not missing. `cancel-interaction` requests closure and does not immediately unlock
