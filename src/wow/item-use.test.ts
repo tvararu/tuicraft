@@ -11,6 +11,7 @@ const RIBS = 0x4000_0000_000f_17a9n;
 const ribs: ItemTemplate = {
   entry: 2687,
   name: "Dry Pork Ribs",
+  quality: 1,
   itemClass: 0,
   subclass: 5,
   spells: [

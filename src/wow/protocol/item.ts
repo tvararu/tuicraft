@@ -3,7 +3,7 @@ import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 export const ItemSpellTrigger = { ON_USE: 0 } as const;
 
 const ITEM_SPELL_SLOTS = 5;
-const WORDS_BEFORE_STATS = 21;
+const WORDS_FROM_FLAGS_TO_STATS = 19;
 const WORDS_FROM_SCALING_TO_SPELLS = 2 + 2 * 3 + 7 + 3;
 
 export type ItemSpell = {
@@ -18,6 +18,7 @@ export type ItemSpell = {
 export type ItemTemplate = {
   entry: number;
   name: string;
+  quality: number;
   itemClass: number;
   subclass: number;
   spells: ItemSpell[];
@@ -51,7 +52,9 @@ export function parseItemQueryResponse(r: PacketReader): ItemQueryResponse {
   r.skip(4);
   const name = r.cString();
   for (let i = 0; i < 3; i++) r.cString();
-  r.skip(WORDS_BEFORE_STATS * 4);
+  r.skip(4);
+  const quality = r.uint32LE();
+  r.skip(WORDS_FROM_FLAGS_TO_STATS * 4);
   const stats = r.uint32LE();
   r.skip((stats * 2 + WORDS_FROM_SCALING_TO_SPELLS) * 4);
   const spells: ItemSpell[] = [];
@@ -66,7 +69,10 @@ export function parseItemQueryResponse(r: PacketReader): ItemQueryResponse {
     };
     if (spell.id !== 0) spells.push(spell);
   }
-  return { entry, template: { entry, name, itemClass, subclass, spells } };
+  return {
+    entry,
+    template: { entry, name, quality, itemClass, subclass, spells },
+  };
 }
 
 export function buildUseItem(request: ItemUseRequest): Uint8Array {

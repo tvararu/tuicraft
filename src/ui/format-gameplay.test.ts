@@ -8,9 +8,9 @@ import {
 } from "ui/format-gameplay";
 import type {
   CycleState,
-  InventoryState,
+  NamedInventoryState,
+  NamedRewardsState,
   RecoveryState,
-  RewardsState,
 } from "wow";
 
 const handle = createMockHandle();
@@ -33,14 +33,14 @@ function recovery(overrides: Partial<RecoveryState>): string {
   }).join("\n");
 }
 
-function inventory(overrides: Partial<InventoryState>): string {
+function inventory(overrides: Partial<NamedInventoryState>): string {
   return formatInventoryState({
     ...handle.getInventoryState(),
     ...overrides,
   }).join("\n");
 }
 
-function rewards(overrides: Partial<RewardsState>): string {
+function rewards(overrides: Partial<NamedRewardsState>): string {
   return formatRewardsState({
     ...handle.getRewardsState(),
     ...overrides,
@@ -221,7 +221,7 @@ describe("formatRewardsState", () => {
     );
   });
 
-  test("labels offered slots that allow direct pickup", () => {
+  test("names answered offers and labels slots that allow pickup", () => {
     const item = {
       displayId: 0,
       randomPropertyId: 0,
@@ -232,8 +232,24 @@ describe("formatRewardsState", () => {
         guid: TARGET,
         invalidatedReason: undefined,
         items: [
-          { ...item, count: 2, itemId: 27_668, slot: 0, slotType: 0 },
-          { ...item, count: 1, itemId: 20_772, slot: 1, slotType: 2 },
+          {
+            ...item,
+            count: 2,
+            itemId: 27_668,
+            name: "Lynx Meat",
+            quality: 1,
+            slot: 0,
+            slotType: 0,
+          },
+          {
+            ...item,
+            count: 1,
+            itemId: 20_772,
+            name: null,
+            quality: null,
+            slot: 1,
+            slotType: 2,
+          },
         ],
         lootType: 1,
         money: 10,
@@ -242,7 +258,9 @@ describe("formatRewardsState", () => {
       },
     });
     expect(output).toContain("Offer: 10 copper");
-    expect(output).toContain("Slot 0: item 27668 x2 (pickup allowed)");
+    expect(output).toContain(
+      "Slot 0: item 27668 Lynx Meat x2 (pickup allowed)",
+    );
     expect(output).toContain("Slot 1: item 20772 x1 (no direct pickup)");
   });
 
@@ -270,7 +288,17 @@ describe("formatRewardsState", () => {
 });
 
 describe("formatInventoryState", () => {
-  test("shows item counts and keeps unknown values unknown", () => {
+  test("names answered items and keeps unanswered ones by entry", () => {
+    const unanswered = {
+      contained: undefined,
+      durability: undefined,
+      flags: undefined,
+      maxDurability: undefined,
+      name: null,
+      owner: undefined,
+      quality: null,
+      randomPropertyId: undefined,
+    };
     const output = inventory({
       coinage: undefined,
       freeSlots: undefined,
@@ -286,7 +314,9 @@ describe("formatInventoryState", () => {
             flags: undefined,
             guid: 1n,
             maxDurability: undefined,
+            name: "Lynx Meat",
             owner: undefined,
+            quality: 1,
             randomPropertyId: undefined,
           },
           region: "bag_item",
@@ -294,13 +324,22 @@ describe("formatInventoryState", () => {
           status: "occupied",
         },
         { bag: 20, region: "bag_item", slot: 17, status: "unknown" },
+        {
+          bag: 20,
+          guid: 2n,
+          item: { ...unanswered, count: 1, entry: 4775, guid: 2n },
+          region: "bag_item",
+          slot: 18,
+          status: "occupied",
+        },
       ],
       status: "partial",
     });
     expect(output).toContain("Inventory: partial (carried)");
     expect(output).toContain("Coinage: unknown");
     expect(output).toContain("Free slots: unknown");
-    expect(output).toContain("Item 27668 x12 at bag 20 slot 16");
+    expect(output).toContain("Item 27668 Lynx Meat x12 at bag 20 slot 16");
+    expect(output).toContain("Item 4775 x1 at bag 20 slot 18");
     expect(output).toContain("Unknown slots: 1");
   });
 });
