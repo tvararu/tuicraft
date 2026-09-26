@@ -147,6 +147,6 @@ raw = true
 run = "bun run packages/devtools/src/distil-encounter.ts"
 
 [tasks."namigator:build"]
-description = "Build the patched libnamigator.so (vendor/namigator)"
+description = "Build and install the patched libnamigator.so (vendor/namigator)"
 raw = true
-run = "vendor/namigator/build.sh"
+run = "bun packages/factory/src/namigator-library.ts"

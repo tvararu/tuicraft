@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { serializeConfig } from "@tuicraft/core/lib/config";
 import {
   accountAgeHours,
   accountName,
@@ -7,6 +10,7 @@ import {
   envelope,
   factoryAccount,
   hasTriple,
+  navConfig,
   newNames,
   newPassword,
   parseEnv,
@@ -161,5 +165,51 @@ describe("parseEnv", () => {
       TUICRAFT_SOAP_URL: "http://t1:7878/",
       TUICRAFT_SOAP_USER: "TCFACTORY",
     });
+  });
+});
+
+describe("navConfig", () => {
+  const patched = "/store/0123456789abcdef/libnamigator.so";
+
+  test("uses the patched library and copies only the data paths", async () => {
+    const dir = await mkdtemp(`${tmpdir()}/soap-nav-`);
+    try {
+      const path = `${dir}/config.toml`;
+      await writeFile(
+        path,
+        serializeConfig({
+          account: "ME",
+          character: "Me",
+          host: "t1",
+          language: 1,
+          navigation_data_dir: "/data/nav",
+          navigation_library: "/home/me/old/libnamigator.so",
+          password: "secret",
+          port: 3724,
+          spell_data_dir: "/data/spells",
+          timeout_minutes: 30,
+        }),
+      );
+      expect(await navConfig(path, async () => patched)).toEqual({
+        navigation_data_dir: "/data/nav",
+        navigation_library: patched,
+        spell_data_dir: "/data/spells",
+      });
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  test("sets the patched library without a maintainer config", async () => {
+    expect(
+      await navConfig("/missing/config.toml", async () => patched),
+    ).toEqual({ navigation_library: patched });
+  });
+
+  test("refuses when the patched library is missing", async () => {
+    const missing = () => Promise.reject(new Error("run mise namigator:build"));
+    await expect(navConfig("/missing/config.toml", missing)).rejects.toThrow(
+      "run mise namigator:build",
+    );
   });
 });

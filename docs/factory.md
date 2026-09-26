@@ -70,7 +70,11 @@ git, `mise` and `systemctl --user` find their usual config, state and
 sockets, while plain `bun packages/cli/src/main.ts` finds no config and cannot reach the
 default daemon socket. The main checkout and other repositories keep the
 default directories. Live characters come from
-`bun packages/factory/src/main.ts soap create <preset>`, which also writes
+`bun packages/factory/src/main.ts soap create <preset>`. Its config sets
+`navigation_library` to the repository's patched build that
+`mise namigator:build` installs, and create refuses when that build is
+missing; the spell and navigation data paths come from
+`~/.config/tuicraft/config.toml`. Create also writes
 `tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
 `tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config
 or running daemon names another character, prints the character on

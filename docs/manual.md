@@ -63,9 +63,10 @@ Add optional data paths to the existing account config:
 - `navigation_data_dir`: the compatible Namigator data root.
 - `navigation_library`: the compatible Namigator shared library.
   `mise namigator:build` builds one from upstream Namigator with the
-  default patches in `vendor/namigator/` and prints its path under
-  `tmp/namigator/`. `NAMIGATOR_ADT_EDGES=1` also applies the opt-in
-  ADT-edge patch, which changes some heights that already succeed.
+  patches in `vendor/namigator/`, installs it under
+  `~/.local/share/tuicraft/namigator/<key>/libnamigator.so`, where the key
+  names the upstream commit and patch set, and prints that path. It skips
+  the build when that file already exists.
 
 The current ground planner supports Expansion01/map 530. Unsupported or
 ambiguous geometry fails explicitly.
@@ -1396,7 +1397,9 @@ prints `Daemon is already running.`
 against a real server with two game accounts, read from `WOW_ACCOUNT_1`,
 `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`, `WOW_PASSWORD_2` and
 `WOW_CHARACTER_2`. `WOW_HOST` (default `t1`), `WOW_PORT` (default `3724`) and
-`WOW_LANGUAGE` (default `1`) are optional. Use throwaway accounts: create
+`WOW_LANGUAGE` (default `1`) are optional. Use throwaway accounts. `soap
+create` points each at the patched library from `mise namigator:build` and
+refuses when it is missing. Create
 account 1 with `bun packages/factory/src/main.ts soap create fresh --gm 2` (GM level 2
 for the `.freeze` and `.tele` checks) and account 2 with
 `bun packages/factory/src/main.ts soap create eversong10`, set the variables from the

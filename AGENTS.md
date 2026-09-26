@@ -52,7 +52,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   ./packages/cli/test-support/live-remote-motion.ts
   ./packages/cli/test-support/live-vendor.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
-  commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
+  commit plus the patches in `vendor/namigator/` (in `tmp/namigator/`) and
+  install it at `~/.local/share/tuicraft/namigator/<key>/libnamigator.so`,
+  keyed by `UPSTREAM`, `build.sh` and the patches; it skips the build when
+  that file exists. `soap create` needs it
 - `bun packages/factory/src/main.ts <precheck|status|landings|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
   factory CLI (how it works: `docs/factory.md`).
   Automations and the reaper run it from the runner clone,
@@ -142,7 +145,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   tests or restructure code solely to reach a percentage.
 - **Always run `mise test:live` yourself after protocol or
   daemon changes.** Do not ask the user to run it. Run it on two throwaway
-  accounts of your own, never on anyone else's character:
+  accounts of your own, never on anyone else's character. Run
+  `mise namigator:build` first when the patch set changed; `soap create`
+  refuses without it:
   `bun packages/factory/src/main.ts soap create fresh --gm 2` (account 1, GM level 2
   for the `.freeze` and `.tele` checks) and
   `bun packages/factory/src/main.ts soap create eversong10` (account 2). Set

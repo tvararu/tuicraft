@@ -6,6 +6,7 @@ import {
   serializeConfig,
 } from "@tuicraft/core/lib/config";
 import { factoryConfigDir, factoryStateDir } from "#factory/config";
+import { requirePatchedLibrary } from "#factory/namigator-library";
 import {
   copyConfirmed,
   type Names,
@@ -51,12 +52,8 @@ const lockPollMs = 100;
 const lockTries = 400;
 const pinfoTries = 20;
 const pinfoPollMs = 250;
-const navFields = [
-  "spell_data_dir",
-  "navigation_data_dir",
-  "navigation_library",
-] as const;
-type Nav = Pick<Config, (typeof navFields)[number]>;
+const copiedFields = ["spell_data_dir", "navigation_data_dir"] as const;
+type Nav = Pick<Config, (typeof copiedFields)[number] | "navigation_library">;
 const envLine = /^([A-Z0-9_]+)=(.*)$/;
 const quoted = /^(["'])(.*)\1$/;
 const resultTag = /<result>([\s\S]*?)<\/result>/;
@@ -268,12 +265,15 @@ async function presetTemplate(preset: Preset): Promise<string> {
   return templateFor(preset, await soapEnv());
 }
 
-async function navConfig(): Promise<Nav> {
-  const file = Bun.file(`${homedir()}/.config/tuicraft/config.toml`);
-  const nav: Nav = {};
+export async function navConfig(
+  configPath = `${homedir()}/.config/tuicraft/config.toml`,
+  library: () => Promise<string> = requirePatchedLibrary,
+): Promise<Nav> {
+  const nav: Nav = { navigation_library: await library() };
+  const file = Bun.file(configPath);
   if (!(await file.exists())) return nav;
   const base = parseConfig(await file.text());
-  for (const key of navFields) if (base[key]) nav[key] = base[key];
+  for (const key of copiedFields) if (base[key]) nav[key] = base[key];
   return nav;
 }
 
