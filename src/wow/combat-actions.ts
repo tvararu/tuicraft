@@ -22,6 +22,7 @@ import {
   unsupportedSpell,
 } from "wow/combat-actions-spells";
 import { targetReason, targetRelation } from "wow/combat-actions-target";
+import { ProgressWatch } from "wow/combat-progress";
 import type { ControlRuntime } from "wow/control";
 import { type EntityLookup, isUnit } from "wow/entity-store";
 import type { FactionTemplateCatalog } from "wow/faction-template";
@@ -52,6 +53,7 @@ export class CombatActions {
   private startedAt = 0;
   private deadAt: number | undefined;
   private unreachableAt: number | undefined;
+  private readonly progress = new ProgressWatch();
 
   constructor(deps: ActionDeps) {
     this.deps = deps;
@@ -64,6 +66,7 @@ export class CombatActions {
     this.startedAt = this.deps.now();
     this.deadAt = undefined;
     this.unreachableAt = undefined;
+    this.progress.reset();
     this.deps.control.halt();
     this.deps.combat.halt();
     this.deps.control.setMode("jev");
@@ -322,7 +325,10 @@ export class CombatActions {
       !["rooted", "disable_move"].includes(control.blockedReason)
     )
       return { status: "blocked", reason: control.blockedReason };
-    return this.reachOutcome(context, state, spells, now);
+    return (
+      this.reachOutcome(context, state, spells, now) ??
+      this.progress.observe(state, now)
+    );
   }
 
   private observedOutcome(
