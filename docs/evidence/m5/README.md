@@ -65,6 +65,56 @@ tuicraft CLI verbs; no GM commands, no scripts. Operator journal:
   NPCs too: Marsilla Dawnstar (npcflag 2) returned an empty gossip in the
   probe run, so CMSG_QUESTGIVER_HELLO was not needed.
 
+## Quest 8326: a collect quest
+
+Record: [quest-8326-positive-2026-09-26.json](quest-8326-positive-2026-09-26.json),
+outcome `positive`. Same character and binary as the cancel run below
+(Fgklhbgejpp, 0xa12, level 2 after playing 8325 with the same verbs).
+Quest 8326 "Unfortunate Measures": collect 8 Lynx Collars (20797) from
+Springpaw Lynx (15372) and Springpaw Cub (15366); prerequisite 8325;
+Magistrix Erona starts and ends it. The AzerothCore DB gives 50 copper,
+a choice of 20994/20993/20992 and a 100% quest drop from both beasts.
+
+1. **Metadata.** `query-quest 8326` → `queries` known, `requiredItems`
+   20797×8, money 50, next quest 8327.
+2. **Acceptance.** `talk` → gossip 8326 icon 2 (flags 524424, auto-accept).
+   `select-quest 8326` → dialog `details`, QUEST `accepted` (quest_log);
+   slot 0 = 8326, flags 0, counters `[0,0,0,0]`; `items` =
+   `{questId 8326, itemId 20797, required 8, carried 0}`.
+3. **Objective progress.** Five kills (Smite pull, then `fight`), each
+   looted with `open-loot`, `take-loot`, `release-loot`; the server's
+   loot-AoE pushed a second collar on `open-loot` for kills 3–5. Each of
+   the 8 SMSG_ITEM_PUSH_RESULT packets (bag 255, slot 27 then
+   0xFFFFFFFF for merges, count 1, total 1…8) produced, in the same read,
+   a QUEST `progress` event with source `inventory` whose `lastProgress`
+   is `collect` with `carried` equal to the push total, and
+   `inventory --json` showed the stack at 255/27 grow 1, 2, 4, 6, 8
+   (snapshots taken after both pushes of a double kill). `itemPushes` was
+   empty at every snapshot: the server sends the item field updates
+   before each push.
+4. **What the server does not send.** The packet dump holds no
+   SMSG_QUESTUPDATE_ADD_ITEM, SMSG_QUESTUPDATE_ADD_KILL or
+   SMSG_QUESTUPDATE_COMPLETE, and the quest-log counters stayed
+   `[0,0,0,0]` throughout. AzerothCore defines `SendQuestUpdateAddItem`
+   but never calls it, so collect progress exists only as item pushes and
+   bag fields.
+5. **Completion.** In the collar-8 read: QUEST `completed` (quest_log),
+   slot 0 flags 0 → 1.
+6. **Turn-in.** `talk` → 8326 icon 4. `select-quest 8326` → dialog
+   `requestItems` (20797×8), unlike 8325. `request-reward` → `offer`:
+   50 copper, 250 XP, choices 20994/20993/20992. `choose-reward 0`.
+7. **Reward notification.** QUEST `rewarded` (packet:
+   SMSG_QUESTGIVER_QUEST_COMPLETE) `lastReward` questId 8326, experience
+   250, money 50; REWARDS `item_push` 20994 at 255/27; COMBAT `xp` 250.
+8. **Actual changes.** `inventory --json`: coinage 30 → 80, the 8 collars
+   at 255/27 gone and 20994×1 in their slot. `experience --json`: xp
+   343 → 593 at level 2.
+
+The server then offered the follow-up 8327, an auto-accept quest that
+entered the log already complete; it was left there.
+`src/wow/quest-8326-capture.test.ts` replays the captured query, dialog,
+push and reward packets.
+
 ## Cancel with an unresolved request
 
 Record: [cancel-barrier-2026-09-26.json](cancel-barrier-2026-09-26.json),
