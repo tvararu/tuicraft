@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  LESSER_HEALING_POTION_RESPONSE,
+  UNKNOWN_ITEM_999999_RESPONSE,
+} from "test/item-query-fixtures";
+import {
   buildItemQuery,
   buildUseItem,
   parseItemQueryResponse,
@@ -59,6 +63,7 @@ describe("item template query", () => {
         entry: 2687,
         itemClass: 0,
         name: "Dry Pork Ribs",
+        quality: 1001,
         spells: [
           {
             category: 11,
@@ -72,6 +77,34 @@ describe("item template query", () => {
         subclass: 5,
       },
     });
+  });
+
+  test("reads name, quality and the on-use spell from a captured response", () => {
+    expect(
+      parseItemQueryResponse(new PacketReader(LESSER_HEALING_POTION_RESPONSE)),
+    ).toEqual({
+      entry: 858,
+      template: {
+        entry: 858,
+        itemClass: 0,
+        name: "Lesser Healing Potion",
+        quality: 1,
+        spells: [
+          {
+            category: 4,
+            categoryCooldownMs: 60_000,
+            charges: -1,
+            cooldownMs: 0,
+            id: 440,
+            trigger: 0,
+          },
+        ],
+        subclass: 1,
+      },
+    });
+    expect(
+      parseItemQueryResponse(new PacketReader(UNKNOWN_ITEM_999999_RESPONSE)),
+    ).toEqual({ entry: 999_999, template: undefined });
   });
 
   test("reports an unknown entry from the high bit", () => {

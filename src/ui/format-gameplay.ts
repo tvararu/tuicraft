@@ -6,9 +6,9 @@ import type {
   CycleState,
   CycleTargetRecord,
   ExperienceState,
-  InventoryState,
+  NamedInventoryState,
+  NamedRewardsState,
   RecoveryState,
-  RewardsState,
 } from "wow";
 
 function show(value: string | number | undefined): string {
@@ -91,7 +91,7 @@ export function formatRecoveryState(
   return lines;
 }
 
-export function formatInventoryState(state: InventoryState): string[] {
+export function formatInventoryState(state: NamedInventoryState): string[] {
   const lines = [
     `Inventory: ${state.status} (carried)`,
     `Coinage: ${show(state.coinage)}`,
@@ -99,9 +99,10 @@ export function formatInventoryState(state: InventoryState): string[] {
   ];
   for (const slot of state.slots) {
     if (slot.status !== "occupied") continue;
-    const { entry, count } = slot.item;
+    const { entry, name, count } = slot.item;
+    const label = name === null ? "" : ` ${name}`;
     lines.push(
-      `Item ${show(entry)} x${show(count)} at bag ${slot.bag} slot ${slot.slot}`,
+      `Item ${show(entry)}${label} x${show(count)} at bag ${slot.bag} slot ${slot.slot}`,
     );
   }
   const unknown = state.slots.filter((slot) => slot.status === "unknown");
@@ -123,7 +124,7 @@ const OPEN_FAILURES: Record<string, string> = {
   self_unavailable: "you died or left the world",
 };
 
-function formatLootErrors(state: RewardsState): string[] {
+function formatLootErrors(state: NamedRewardsState): string[] {
   const lines: string[] = [];
   const inventory = state.lastInventoryError;
   if (inventory) {
@@ -142,15 +143,17 @@ function formatLootErrors(state: RewardsState): string[] {
   return lines;
 }
 
-export function formatRewardsState(state: RewardsState): string[] {
+export function formatRewardsState(state: NamedRewardsState): string[] {
   const { loot, pending } = state;
   const lines = [`Loot: ${loot.phase}`];
   if (loot.phase === "open" || loot.phase === "closing") {
     lines.push(`Offer: ${loot.money} copper`);
-    for (const item of loot.items)
+    for (const { slot, itemId, name, count, slotType } of loot.items) {
+      const label = name === null ? "" : ` ${name}`;
       lines.push(
-        `Slot ${item.slot}: item ${item.itemId} x${item.count} (${pickup(item.slotType)})`,
+        `Slot ${slot}: item ${itemId}${label} x${count} (${pickup(slotType)})`,
       );
+    }
   }
   if (pending) lines.push(`Request: ${pending.action} ${pending.status}`);
   lines.push(`Carried coinage: ${show(state.inventory.coinage)}`);

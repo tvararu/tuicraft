@@ -13,6 +13,7 @@ import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import { labelInventory, labelRewards } from "wow/item-labels";
 import { observeNavigation } from "wow/navigation-observation";
 import { type NearbyQuery, queryNearby } from "wow/nearby";
 import { PartyStore } from "wow/party-store";
@@ -97,6 +98,7 @@ export function createMockHandle(): MockHandle {
       stop: () => {},
     },
   });
+  const unanswered = () => ({ name: null, quality: null });
 
   const events = createWorldEvents();
   let closeResolve: () => void;
@@ -138,7 +140,9 @@ export function createMockHandle(): MockHandle {
     })),
     getFriends: jest.fn((): FriendEntry[] => []),
     getIgnored: jest.fn((): IgnoreEntry[] => []),
-    getInventoryState: jest.fn(() => rewards.snapshot().inventory),
+    getInventoryState: jest.fn(() =>
+      labelInventory(rewards.snapshot().inventory, unanswered),
+    ),
     getLastChatMode: jest.fn(() => lastChatMode),
     getNavigationState: jest.fn(() => ({
       active: false,
@@ -153,7 +157,9 @@ export function createMockHandle(): MockHandle {
     getQuestState: jest.fn(() => quests.snapshot()),
     getRecoveryState: jest.fn(() => recovery.snapshot()),
     getRemotePoses: jest.fn((): RemotePose[] => []),
-    getRewardsState: jest.fn(() => rewards.snapshot()),
+    getRewardsState: jest.fn(() =>
+      labelRewards(rewards.snapshot(), unanswered),
+    ),
     getSpellbook: jest.fn(async () => []),
     getTacticsState: jest.fn(() => tacticsState),
     goTo: jest.fn(),

@@ -1,5 +1,6 @@
 import type { WorldHandle } from "wow/client";
 import { readExperience } from "wow/experience";
+import { labelInventory, labelRewards } from "wow/item-labels";
 import { useItem } from "wow/item-use";
 import { questCycleObjective } from "wow/quest-cycle";
 import type { Runtimes } from "wow/runtime";
@@ -142,7 +143,9 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
   const { rewards, items, combat, cycle, tactics } = rt;
   return {
     getInventoryState() {
-      return rewards.snapshot().inventory;
+      return labelInventory(rewards.snapshot().inventory, (entry) =>
+        items.label(entry),
+      );
     },
     getExperienceState() {
       return readExperience(
@@ -152,7 +155,7 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
       );
     },
     getRewardsState() {
-      return rewards.snapshot();
+      return labelRewards(rewards.snapshot(), (entry) => items.label(entry));
     },
     openLoot(guid) {
       rt.override();

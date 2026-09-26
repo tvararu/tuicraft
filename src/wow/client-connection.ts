@@ -178,9 +178,13 @@ export function createWorldConn(): WorldConn {
     }
     conn.recovery?.observeEntity(event);
     conn.rewards?.observeEntity(event);
+    conn.itemTemplates?.observeEntity(event);
     conn.cycle?.observeEntity(event);
     conn.events.entity.emit(event);
   });
+  conn.events.rewards.subscribe((event) =>
+    conn.itemTemplates?.observeRewards(event),
+  );
   conn.friendStore.onEvent((event) => conn.events.friend.emit(event));
   conn.ignoreStore.onEvent((event) => conn.events.ignore.emit(event));
   conn.guildStore.onEvent((event) => conn.events.guild.emit(event));
