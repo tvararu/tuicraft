@@ -8,7 +8,7 @@ export type {
   WalkTarget,
   WorldHandle,
 } from "wow/client";
-export type { CombatEvent, CombatState } from "wow/combat";
+export type { CombatEvent, CombatState, CombatUnit } from "wow/combat";
 export type {
   ControlEvent,
   ControlPose,

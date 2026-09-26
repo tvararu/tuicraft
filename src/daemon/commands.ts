@@ -13,6 +13,11 @@ import {
   formatWhoResultsJson,
   jsonSafe,
 } from "ui/format";
+import {
+  formatCombatState,
+  formatFightOutcome,
+  formatTacticsState,
+} from "ui/format-combat";
 import { formatControlState, formatControlStateObj } from "ui/format-control";
 import {
   formatCycleState,
@@ -189,7 +194,7 @@ const HANDLERS: Handlers = {
   choose_reward: (cmd, { handle, socket }) =>
     reply(socket, () => handle.chooseQuestReward(cmd.index), ok),
   combat: (_cmd, { handle, socket }) =>
-    reply(socket, () => handle.getCombatState(), pretty),
+    reply(socket, () => handle.getCombatState(), formatCombatState),
   combat_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getCombatState(), json),
   complete_quest: (cmd, { handle, socket }) =>
@@ -243,8 +248,18 @@ const HANDLERS: Handlers = {
   fight: (cmd, { handle, socket, abort }) =>
     reply(
       socket,
-      () => handle.startTactics(cmd.guid, cmd.instruction, abort, cmd.framing),
-      ok,
+      async () => {
+        const run = handle.startTactics(
+          cmd.guid,
+          cmd.instruction,
+          abort,
+          cmd.framing,
+        );
+        const { runId } = handle.getTacticsState();
+        await run;
+        return { runId, state: handle.getTacticsState() };
+      },
+      ({ runId, state }) => [`OK ${formatFightOutcome(state, runId)}`],
     ),
   friends: (_cmd, { handle, socket }) =>
     send(socket, formatFriendList(handle.getFriends()).split("\n")),
@@ -406,7 +421,7 @@ const HANDLERS: Handlers = {
   stop_attack: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.stopAttack(), ok),
   tactics: (_cmd, { handle, socket }) =>
-    reply(socket, () => handle.getTacticsState(), pretty),
+    reply(socket, () => handle.getTacticsState(), formatTacticsState),
   tactics_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getTacticsState(), json),
   tail_wait: (cmd, ctx) => tailWait(ctx, cmd.ms, asText),

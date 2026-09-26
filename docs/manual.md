@@ -228,6 +228,11 @@ does not disengage combat.
 
 `tuicraft combat` [`--json`]
 :: Print combat state. With `--json`, `data` is an object. GUIDs are hex. Predicted poses keep `source=predicted`.
+Without `--json` it prints a summary: self name, level, health and power,
+whether auto-attack is on and at which GUID, the selected target, active self
+aura spell IDs, cooldowns, the last XP award, the last cast or attack result,
+and the learned spell count with how many lack spell metadata. Unresolved
+spells resolve once `spells` or `fight` loads the spell data.
 
 `tuicraft spells` [`--json`]
 :: Print the learned spellbook joined to client metadata. With `--json`, `data` is an array of spell objects.
@@ -302,6 +307,12 @@ terminal observation when one was available, including blocks before inference.
 `lastRequest` is not populated without a real Jev request. `timeouts` holds the
 run's `consecutive` and `total` Jev timeouts and the stop `limit` (3); `defense`
 is set only when a Jev failure stopped the run.
+Without `--json` it prints a short summary: status, run ID, target (name, GUID,
+level, health), outcome status and reason, stop reason, self health and power
+at the end, last XP award, last cast or attack result, the count of
+unavailable actions, Jev timeouts when any occurred, and the defense taken. The
+summary reads the terminal observation, or the last Jev request when a failure
+carries none. Use `--json` for the full state.
 
 `tuicraft cycle` _guid..._ [`--instruction` _text_] [`--max` _N_] [`--json`]
 :: Run the fight-loot-next-target loop over an explicit GUID queue: `fight`
@@ -943,6 +954,8 @@ server-accepted pose.
 Without `--json`, control commands and inspections print daemon `ERR` lines
 and exit with status 1. With `--json`, they print one error envelope on stdout
 and exit with status 1. Human control actions print daemon request acceptance,
-not a server result. `fight` and `cycle` reply when the run ends and print
-that it ended; `tactics` or `cycling` holds the outcome. `cycling`,
-`recovery`, `inventory`, `experience`, and `loot` print readable summaries.
+not a server result. `fight` replies when the run ends and prints its outcome
+line, for example `completed: server_kill_credit, XP 60`. `cycle` replies when
+the run ends and prints that it ended; `cycling` holds the outcome. `combat`,
+`tactics`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` print
+readable summaries.

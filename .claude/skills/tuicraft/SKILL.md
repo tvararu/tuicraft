@@ -87,12 +87,14 @@ It prints one envelope per event and nothing for empty polls:
 `start --json` returns `data.socket: "responsive"` and `data.started: true|false`.
 These values describe the daemon socket, not world-session health.
 
-Without `--json`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` show human
-summaries. Use `--json` for all fields and automated parsing. A human action
-acknowledgment means that the daemon accepted a request. It does not confirm
-that the server completed the action. `fight` and `cycle` reply when the
-run ends, and human mode says that it ended; read `tactics` or `cycling` for
-the outcome.
+Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `inventory`,
+`experience`, and `loot` show short human summaries. Use `--json` for all
+fields and automated parsing. A human action acknowledgment means that the
+daemon accepted a request. It does not confirm that the server completed the
+action. `fight` replies when the run ends and human mode prints its outcome,
+such as `completed: server_kill_credit, XP 60` or `failed: self_dead`; `cycle`
+says that it ended, so read `cycling` for the outcome. `--json` replies are
+unchanged.
 
 ## Direct control
 

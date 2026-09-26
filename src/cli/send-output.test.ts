@@ -334,4 +334,14 @@ describe("formatHumanIntent", () => {
       "The cycle run ended. Check tuicraft cycling for its outcome.",
     ]);
   });
+
+  test("prints the fight outcome and keeps the JSON envelope unchanged", () => {
+    const reply = ["OK completed: server_kill_credit, XP 60"];
+    expect(formatHumanIntent("fight", reply)).toEqual([
+      "completed: server_kill_credit, XP 60",
+    ]);
+    expect(decodeReply("fight", "intent", reply)).toEqual(
+      decodeReply("fight", "intent", ["OK"]),
+    );
+  });
 });
