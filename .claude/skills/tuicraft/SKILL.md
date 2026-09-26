@@ -439,7 +439,7 @@ IPC: USE.
 Rules:
 
 - `nearby --json` shows `npcFlags`; 0x10 is a trainer (0x20 a class trainer). Stand within interaction range. Choosing the trainer option after `talk` ("I require priest training.") opens the same offer.
-- `trainer` lists each offered spell: `Spell 589 Shadow Word: Pain (Rank 1): too_low, 95 copper, level 4`. States: `available` (learn now), `too_low` (character level below `requiredLevel`), `unavailable` (missing lower rank or skill), `known`. States come from the server's list; re-run `open-trainer` after levelling.
+- `trainer` lists each offered spell: `Spell 589 Shadow Word: Pain (Rank 1): too_low, 95 copper, level 4`. States: `available` (learn now), `too_low` (character level below `requiredLevel`), `no_profession_slot` (first rank of a new primary profession while every profession slot is taken), `unavailable` (missing lower rank or skill), `known`. States come from the server's list; re-run `open-trainer` after levelling.
 - `train <spell-id>` works only for `available` spells. `OK` is intent; `trainer` then shows `Last: train 1243 for 9 copper: confirmed, learned 1243, -9 copper (coinage 100 -> 91)`. Confirmation needs the server's success reply, a newly learned spell in the spellbook, and coinage down by the cost.
 - Refusals are named: `not_enough_money`, `not_enough_skill`, `unavailable`; silence ends `unanswered` after 5 s. Jev can use a learned spell once it is in `spells`.
 

@@ -891,10 +891,12 @@ trainer request, the last settled one, and carried coinage. Each spell row is
 spell ID, name and rank from the build-12340 spell data (omitted without
 `spell_data_dir`), state, cost in copper after reputation discount, and
 required level. The state is `available`, `too_low` (character level below
-the required level), `unavailable` (another requirement, such as a lower rank
-or skill, is missing) or `known`. States come from the server's list; a spell
-learned since then shows as `known`, and anything else changes only with a
-new list. In `--json`, `data` holds `offer` (`guid`, `trainerType`,
+the required level), `no_profession_slot` (the first rank of a new primary
+profession while every profession slot is taken), `unavailable` (another
+requirement, such as a lower rank or skill, is missing) or `known`. States
+come from the server's list and the character's free profession slots; a
+spell learned since then shows as `known`, and anything else changes only
+with a new list. In `--json`, `data` holds `offer` (`guid`, `trainerType`,
 `greeting`, `spells` with `spellId`, `name`, `rank`, `state`, `usable`,
 `cost`, `requiredLevel`, `requiredSkill`, `requiredSkillValue`,
 `requiredSpells`), `pending`, `lastOutcome` (`action`, `status`, `reason`,
@@ -914,8 +916,9 @@ spellbook (`spells`, `combat --json` `learned`), and coinage has fallen by the
 cost. Server refusals are named: `unavailable`, `not_enough_money` or
 `not_enough_skill`. With no answer after 5 seconds the outcome is
 `unanswered`. Local refusals print `ERR`: `No listed trainer`,
-`Spell is not offered by this trainer`, `Spell is too_low` (or `unavailable`,
-`known`) and `Previous trainer request remains unanswered`.
+`Spell is not offered by this trainer`, `Spell is too_low` (or
+`no_profession_slot`, `unavailable`, `known`) and
+`Previous trainer request remains unanswered`.
 
 `tuicraft vendor` [`--json`]
 :: Print the listed vendor's goods, the unanswered vendor request, the last

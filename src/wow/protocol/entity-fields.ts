@@ -163,6 +163,7 @@ export const PLAYER_FIELDS = {
   CURRENCYTOKEN_SLOT_1: { offset: UNIT_END + 0x01_9c, size: 64, type: "u64" },
   XP: { offset: UNIT_END + 0x01_e6, size: 1, type: "u32" },
   NEXT_LEVEL_XP: { offset: UNIT_END + 0x01_e7, size: 1, type: "u32" },
+  CHARACTER_POINTS2: { offset: UNIT_END + 0x03_69, size: 1, type: "u32" },
   COINAGE: { offset: UNIT_END + 0x03_fe, size: 1, type: "u32" },
 } as const satisfies Record<string, FieldDef>;
 

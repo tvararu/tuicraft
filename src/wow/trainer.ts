@@ -1,8 +1,8 @@
 import { Emitter, type Unsubscribe } from "lib/emitter";
 import { type EntityLookup, fieldOf, isUnit } from "wow/entity-store";
 import { readInventory } from "wow/inventory";
-import { readLife } from "wow/player-state";
-import { UNIT_FIELDS } from "wow/protocol/entity-fields";
+import { readLife, readSelfField } from "wow/player-state";
+import { PLAYER_FIELDS, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildTrainerBuySpell,
@@ -28,6 +28,7 @@ const NPC_FLAG_TRAINER = 0x10;
 export type TrainerSpellState =
   | "available"
   | "too_low"
+  | "no_profession_slot"
   | "unavailable"
   | "known";
 export type TrainerSpell = TrainerOfferedSpell & { state: TrainerSpellState };
@@ -80,13 +81,21 @@ export type TrainerEvent = {
   state: TrainerState;
 };
 
+type Learner = {
+  level: number | undefined;
+  professionPoints: number | undefined;
+  learned: readonly number[];
+};
+
 function stateOf(
   spell: TrainerOfferedSpell,
-  level: number | undefined,
-  learned: readonly number[],
+  { level, professionPoints, learned }: Learner,
 ): TrainerSpellState {
   if (spell.usable === 2 || learned.includes(spell.spellId)) return "known";
-  if (spell.usable === 0) return "available";
+  if (spell.usable === 0)
+    return professionPoints !== undefined && professionPoints < spell.firstRank
+      ? "no_profession_slot"
+      : "available";
   return level !== undefined && level < spell.requiredLevel
     ? "too_low"
     : "unavailable";
@@ -111,19 +120,18 @@ export class TrainerRuntime {
   }
 
   snapshot(): TrainerState {
-    const level = this.level();
-    const learned = this.deps.learned();
+    const learner = this.learner();
     return {
       offer: this.offer && {
         ...this.offer,
         spells: this.offer.spells.map((spell) => ({
           ...spell,
-          state: stateOf(spell, level, learned),
+          state: stateOf(spell, learner),
         })),
       },
       pending: this.pending ? { ...this.pending } : undefined,
       lastOutcome: this.lastOutcome ? { ...this.lastOutcome } : undefined,
-      level,
+      level: learner.level,
       coinage: this.coinage(),
     };
   }
@@ -143,7 +151,7 @@ export class TrainerRuntime {
     if (!offer) throw new Error("No listed trainer");
     const spell = offer.spells.find((s) => s.spellId === spellId);
     if (!spell) throw new Error("Spell is not offered by this trainer");
-    const state = stateOf(spell, this.level(), this.deps.learned());
+    const state = stateOf(spell, this.learner());
     if (state !== "available") throw new Error(`Spell is ${state}`);
     this.deps.send(
       GameOpcode.CMSG_TRAINER_BUY_SPELL,
@@ -258,6 +266,19 @@ export class TrainerRuntime {
       throw new Error("Training requires authoritative alive state");
     if (this.pending)
       throw new Error("Previous trainer request remains unanswered");
+  }
+
+  private learner(): Learner {
+    const self = this.deps.selfGuid();
+    return {
+      level: this.level(),
+      professionPoints: readSelfField(
+        self,
+        this.deps.getEntity(self),
+        PLAYER_FIELDS.CHARACTER_POINTS2.offset,
+      ),
+      learned: this.deps.learned(),
+    };
   }
 
   private level(): number | undefined {
