@@ -76,7 +76,7 @@ USAGE
                             last error (invalid errors name the reason in reasonName) and reward
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization);
-                            needed to correlate collected quest items
+                            quests in the log are queried automatically
   tuicraft select-option <id> [code]  Choose an offered gossip option
                             Quote one code argument; omitted differs from empty
   tuicraft select-quest <id>  Choose a quest from the offered menu

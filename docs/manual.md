@@ -443,9 +443,10 @@ stored at turn-in. Before each take the loop compares the item with the
 observed free bag slots, counting the slots already filled from the same
 window, and with its stack size from the item query: an item that fits into a
 stack already carried needs no slot. Items that a logged quest requires are
-taken first; quests count when their query is known (`cycle --quest` queries
-its quest, `query-quest` any other). Any other item that would need the last
-free slot stays in the corpse, and `lastLoot.slotsLeft` lists its loot slot.
+taken first; quests count when their query is known (the daemon queries every
+quest in the log itself, `query-quest` any other). Any other item that would
+need the last free slot stays in the corpse, and `lastLoot.slotsLeft` lists
+its loot slot.
 A quest item that would need it closes the loot window and stops the loop
 with `inventory_reserve_reached`; `stopDetail` has `itemId`, `lootSlot`,
 `freeSlots` and `reserve`. Free a slot with `destroy` or `sell`, then
@@ -703,7 +704,7 @@ errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error e
 :: Print the current offered dialog/giver, observed quest log, metadata queries, pending intent, unresolved intents (each with `reason` `cancelled`, `closed`, `reset` or `no_reply`), errors, progress, and reward facts.
 A sent acceptance request is not an accepted quest. Acceptance and removal require authoritative same-lifetime quest-log observations.
 Log counters are server quest words, not inferred inventory counts. Unknown quest IDs stay unknown.
-Item objectives never appear in the log counters (AzerothCore sends no SMSG_QUESTUPDATE_ADD_ITEM). `items` lists each required item of a logged quest whose query is known, with the carried count read from the bags. Each item push for such an item waits in `itemPushes` until the bags hold its server total, then emits a QUEST `progress` event (source `inventory`) whose `lastProgress` is `{kind: "collect", questId, itemId, required, carried, pushed, totalCount, bag, slot}`. Query the quest first; pushes for unknown objectives are not correlated.
+Item objectives never appear in the log counters (AzerothCore sends no SMSG_QUESTUPDATE_ADD_ITEM). `items` lists each required item of a logged quest whose query is known, with the carried count read from the bags. The daemon sends a quest query for every quest that appears in the log, including quests already there at login, so the requirements survive a restart or relog without `query-quest`. Each item push for such an item waits in `itemPushes` until the bags hold its server total, then emits a QUEST `progress` event (source `inventory`) whose `lastProgress` is `{kind: "collect", questId, itemId, required, carried, pushed, totalCount, bag, slot}`. Pushes that arrive before the query answer are not correlated; the carried count still includes them.
 A query with no reply remains unanswered, not missing. Metadata never authorizes quest mutation.
 Without `--json` it prints a summary: the dialog kind, giver GUID and quest,
 its gossip options (`Option <id>: <text>`), offered quests

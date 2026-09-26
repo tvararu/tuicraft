@@ -1,7 +1,7 @@
 import type { InventoryState } from "wow/inventory";
 import type { ItemPushResult } from "wow/protocol/loot";
+import type { QuestQuery } from "wow/quest-queries";
 import type { QuestLog } from "wow/quest-slots";
-import type { QuestQuery } from "wow/quests";
 
 export type QuestItemObjective = {
   questId: number;
