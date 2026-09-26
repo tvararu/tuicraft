@@ -438,7 +438,10 @@ unanswered loot take (`loot_denied:timeout`), or an unrecovered death
 `corpse_unreachable`, among other recovery causes). A recovered death does
 not stop the loop. The loop waits for the
 server release acknowledgement after close before recording loot; an
-unconfirmed close stops instead of reporting a gain. Inspect `cycling` for
+unconfirmed close stops instead of reporting a gain. A stop such as
+`loot_inventory_full` leaves the loot window open, so you can free space and
+`take-loot` the item; the next corpse a cycle loots first releases a window
+that is still open. Inspect `cycling` for
 the stop cause, detail, and per-target queue status.
 `stopCause` is not a closed list: `loot_denied:*` includes a reason, and
 recovery can report other causes. Inspect `stopDetail` instead of guessing.
@@ -782,7 +785,7 @@ Only a matching successful full loot response creates an actionable offer.
 `tuicraft take-loot` _slot_
 :: Request an offered loot slot. The protocol slot is a decimal integer from 0 through 255, not a guessed list position.
 Only offered allow/owner slots are actionable. A single take or money request can be unanswered at a time.
-Inventory-full and other inventory errors remain visible. They do not prove that a particular take request resolved.
+The server refuses a take it cannot store, for example with full bags, only with an inventory error. That error settles the unanswered take and stays visible; the item stays in the offer, so free space (for example with `destroy`) and take the same slot again from the open window.
 When a slot removal or money clearance leaves the window with no items and no money, tuicraft sends the release itself, as the real client does.
 `loot.phase` becomes `closing`, then `closed` on the server's release notification. Taking a subset leaves the window open.
 

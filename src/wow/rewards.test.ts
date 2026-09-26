@@ -283,7 +283,7 @@ describe("authoritative loot runtime", () => {
     expect(f.runtime.snapshot().inventory.coinage).toBe(19);
   });
 
-  test("inventory-full is an observed error and does not remove an item or resolve an unkeyed take", () => {
+  test("inventory-full answers the take: the item stays offered and can be taken again", () => {
     const f = fixture();
     f.runtime.open(2n);
     f.runtime.receiveLootResponse(
@@ -300,19 +300,22 @@ describe("authoritative loot runtime", () => {
       inventoryFull: true,
       packet: { result: 50 },
     });
-    expect(state.pending).toMatchObject({
-      action: "take",
-      slot: 4,
-      status: "unanswered",
-    });
+    expect(state.pending).toBeUndefined();
     if (state.loot.phase === "open")
       expect(state.loot.items.map((item) => item.slot)).toEqual([4, 7, 8]);
-    expect(() => f.runtime.take(7)).toThrow();
-    expect(f.runtime.close().loot.phase).toBe("closing");
-    f.runtime.receiveLootRelease(
-      parseLootReleaseResponse(new PacketReader(bytes("0200000000000000 01"))),
+    f.runtime.take(4);
+    expect(f.sent.at(-1)).toEqual({ opcode: 0x1_08, body: bytes("04") });
+    expect(f.runtime.snapshot().pending).toMatchObject({
+      action: "take",
+      slot: 4,
+    });
+    f.runtime.receiveLootRemoved(
+      parseLootRemoved(new PacketReader(bytes("04"))),
     );
-    expect(f.runtime.snapshot().loot.phase).toBe("closed");
+    expect(f.runtime.snapshot()).toMatchObject({
+      loot: { phase: "open", items: [{ slot: 7 }, { slot: 8 }] },
+      pending: undefined,
+    });
   });
 
   test("matching release is a barrier even when a pending slot disappears or status is unsuccessful", () => {

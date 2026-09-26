@@ -25,6 +25,8 @@ type Corpse = "lootable" | "empty" | CycleStop;
 type Taken = { ok: true; taken: boolean } | CycleStop;
 
 export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
+  const released = await releaseLeftover(run);
+  if (!released.ok) return released;
   const opened = await openLoot(run, guid);
   if (!opened.ok) return opened;
   if (!opened.state) return { ok: true, record: undefined };
@@ -52,6 +54,13 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
     coinageAfter: run.rewards.snapshot().inventory.coinage,
   };
   return { ok: true, record };
+}
+
+async function releaseLeftover(
+  run: LootRun,
+): Promise<{ ok: true } | CycleStop> {
+  if (run.rewards.snapshot().loot.phase !== "open") return { ok: true };
+  return await closeLoot(run);
 }
 
 async function awaitCorpse(run: LootRun, guid: bigint): Promise<Corpse> {

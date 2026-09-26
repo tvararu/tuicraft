@@ -367,6 +367,7 @@ export class RewardsRuntime {
         packet.result === InventoryResult.BAG_FULL3,
       observedAt: this.deps.now(),
     };
+    if (this.pending?.action === "take") this.pending = undefined;
     this.emit("inventory_error");
   }
 

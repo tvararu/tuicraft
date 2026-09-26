@@ -74,6 +74,7 @@ export function fakeLoot(config: {
   openFailure?: string;
   deferClose?: boolean;
   deferTake?: boolean;
+  leftoverWindow?: boolean;
   corpse?: FakeCorpseLoot;
 }) {
   const corpse = config.corpse ?? { dead: true, lootable: true };
@@ -82,7 +83,9 @@ export function fakeLoot(config: {
   const takenSlots: number[] = [];
   let moneyRequested = false;
   let coinage = config.coinageBefore;
-  let phase: "closed" | "opening" | "open" | "closing" = "closed";
+  let phase: "closed" | "opening" | "open" | "closing" = config.leftoverWindow
+    ? "open"
+    : "closed";
   let windowMoney = config.money ?? 0;
   const remainingItems = new Set(offeredSlots);
   let lastLootError: RewardsState["lastLootError"];
@@ -173,6 +176,8 @@ export function fakeLoot(config: {
     },
     open(_guid: bigint): RewardsState {
       attempted.resolve();
+      if (phase !== "closed")
+        throw new Error("Previous loot window has not closed");
       if (!corpse.dead) throw new Error(NOT_DEAD);
       if (!corpse.lootable) throw new Error(NOT_LOOTABLE);
       phase = "opening";
