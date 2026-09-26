@@ -479,6 +479,8 @@ Only a matching successful full loot response creates an actionable offer.
 :: Request an offered loot slot. The protocol slot is a decimal integer from 0 through 255, not a guessed list position.
 Only offered allow/owner slots are actionable. A single take or money request can be unanswered at a time.
 Inventory-full and other inventory errors remain visible. They do not prove that a particular take request resolved.
+When a slot removal or money clearance leaves the window with no items and no money, tuicraft sends the release itself, as the real client does.
+`loot.phase` becomes `closing`, then `closed` on the server's release notification. Taking a subset leaves the window open.
 
 `tuicraft take-money`
 :: Request money from the current offer. Confirm actual coinage changes separately from notices and window money clearance.
@@ -486,6 +488,7 @@ Inventory-full and other inventory errors remain visible. They do not prove that
 `tuicraft release-loot`
 :: Request closure of an open window, including one with an unanswered take. Replacement waits for the matching successful release notification.
 It does not close an unanswered opening and does not establish an inventory gain.
+On a window that is already closing or closed, including one released automatically after the last take, it sends nothing and returns OK.
 
 A release notification during opening can precede its full response. It records `lastRelease` but leaves `loot.phase=opening` and `pending.status=unanswered`.
 If the server sends only that release, the opening remains unanswered. This includes ordinary out-of-range opening rejection.
