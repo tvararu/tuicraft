@@ -289,6 +289,7 @@ Rules:
 - JSON escapes prevent code text, including line breaks, from injecting another IPC command. Do not send raw unencoded code text.
 - Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` is not permission to retry.
 - `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
+- Auto-accept quests enter the log on `select-quest` while their details stay open. Check the log first: `accept-quest` fails with `quest_already_in_log` for a quest already there.
 - Log flags/counters are server quest facts, not inferred inventory item counts. Initial/recreated log state does not fabricate acceptance.
 - Unanswered query metadata stays unknown, not missing. Querying does not select a quest or permit mutation.
 - Reward indices are zero-based, at most 5, and must exist in the current offer. Use 0 when there are no selectable choices.

@@ -218,7 +218,7 @@ export class QuestRuntime {
 
   accept(): void {
     this.active();
-    this.send(acceptRequest(this.dialog));
+    this.send(acceptRequest(this.dialog, this.readLog()));
   }
 
   complete(questId: number): void {
