@@ -11,8 +11,7 @@ import {
   formatPrompt,
   formatWhoResults,
 } from "ui/format";
-import type { WorldHandle } from "wow/client";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType, type WorldHandle } from "wow";
 
 export type TuiState = {
   handle: WorldHandle;

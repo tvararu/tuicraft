@@ -1,5 +1,5 @@
 import { formatGuid } from "ui/format";
-import type { ControlEvent, ControlPose, ControlState } from "wow/control";
+import type { ControlEvent, ControlPose, ControlState } from "wow";
 
 function formatPoseObj(pose: ControlPose): Record<string, unknown> {
   return {

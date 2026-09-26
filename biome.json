@@ -203,6 +203,42 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/wow/index.ts", "src/wow/session.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/cli/**",
+        "src/daemon/**",
+        "src/ui/**",
+        "src/tools/**",
+        "src/main.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["wow/**", "**/wow/**", "!wow/session"],
+                    "message": "Shells import core only from \"wow\" (src/wow/index.ts) or the session entry \"wow/session\"."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

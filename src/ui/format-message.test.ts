@@ -5,7 +5,7 @@ import {
   formatMessageObj,
   formatPrompt,
 } from "ui/format";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType } from "wow";
 
 describe("formatMessage", () => {
   test("whisper from", () => {

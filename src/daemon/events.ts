@@ -15,13 +15,17 @@ import {
   jsonSafe,
 } from "ui/format";
 import { formatControlEvent, formatControlEventObj } from "ui/format-control";
-import type { ChatMessage, DuelEvent, GroupEvent } from "wow/client";
-import type { ControlEvent } from "wow/control";
-import type { EntityEvent } from "wow/entity-store";
-import type { FriendEvent } from "wow/friend-store";
-import type { GuildEvent } from "wow/guild-store";
-import type { IgnoreEvent } from "wow/ignore-store";
-import { formatGuildCommandError } from "wow/protocol/guild";
+import {
+  type ChatMessage,
+  type ControlEvent,
+  type DuelEvent,
+  type EntityEvent,
+  type FriendEvent,
+  formatGuildCommandError,
+  type GroupEvent,
+  type GuildEvent,
+  type IgnoreEvent,
+} from "wow";
 
 function unhandled(event: never): never {
   throw new Error(`Unhandled event type: ${(event as { type: string }).type}`);

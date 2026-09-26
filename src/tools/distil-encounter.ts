@@ -1,5 +1,5 @@
 import { resolvePaths } from "lib/paths";
-import type { TacticsEvent } from "wow/tactics";
+import type { TacticsEvent } from "wow";
 
 type Stamped = { at: number; event: TacticsEvent };
 type Json = Record<string, unknown>;

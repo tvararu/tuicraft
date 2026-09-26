@@ -15,7 +15,7 @@ import {
   parseResurrect,
   parseWalkToward,
 } from "cli/tokens";
-import { parseFramingVariant } from "wow/framing";
+import { parseFramingVariant } from "wow";
 
 export function take<T>(parsed: Parsed<T>): T {
   if (!parsed.ok) throw new Error(parsed.reason);

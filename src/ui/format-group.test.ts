@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { formatGroupEvent } from "ui/format";
-import { PartyOperation, PartyResult } from "wow/protocol/opcodes";
+import { PartyOperation, PartyResult } from "wow";
 
 describe("formatGroupEvent", () => {
   test("invite success", () => {

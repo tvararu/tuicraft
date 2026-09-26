@@ -2,9 +2,7 @@ import { describe, expect, type jest, test } from "bun:test";
 import { sendToSocket } from "cli/ipc";
 import { useIpcServer } from "test/commands-fixtures";
 import { must } from "test/must";
-import type { UnitEntity } from "wow/entity-store";
-import { ObjectType } from "wow/protocol/entity-fields";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType, ObjectType, type UnitEntity } from "wow";
 
 describe("IPC round-trip", () => {
   const ipc = useIpcServer();

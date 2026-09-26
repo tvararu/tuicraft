@@ -8,9 +8,7 @@ import {
 } from "cli/args-chat";
 import { parseGameplay, take } from "cli/args-gameplay";
 import { parseBare, parseUnsigned } from "cli/tokens";
-import type { WalkTarget } from "wow/client";
-import type { MovementDirection } from "wow/control";
-import type { FramingVariant } from "wow/framing";
+import type { FramingVariant, MovementDirection, WalkTarget } from "wow";
 
 export type CliAction =
   | { mode: "interactive" }

@@ -1,15 +1,27 @@
 import type { LogEntry } from "lib/session-log";
 import { stripColorCodes } from "lib/strip-colors";
-import type { ChatMessage, ChatMode, GroupEvent, WhoResult } from "wow/client";
-import type { Entity, EntityEvent, UnitEntity } from "wow/entity-store";
-import type { FriendEntry, FriendEvent } from "wow/friend-store";
-import type { GuildRoster } from "wow/guild-store";
-import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
-import { ObjectType } from "wow/protocol/entity-fields";
-import { GuildMemberStatus } from "wow/protocol/guild";
-import { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
-import { FriendResult, FriendStatus } from "wow/protocol/social";
-import { CLASS_NAMES } from "wow/protocol/world";
+import {
+  type ChatMessage,
+  type ChatMode,
+  ChatType,
+  CLASS_NAMES,
+  type Entity,
+  type EntityEvent,
+  type FriendEntry,
+  type FriendEvent,
+  FriendResult,
+  FriendStatus,
+  type GroupEvent,
+  GuildMemberStatus,
+  type GuildRoster,
+  type IgnoreEntry,
+  type IgnoreEvent,
+  ObjectType,
+  PartyOperation,
+  PartyResult,
+  type UnitEntity,
+  type WhoResult,
+} from "wow";
 
 const CHAT_TYPE_LABELS: Record<number, string> = {
   [ChatType.SYSTEM]: "system",

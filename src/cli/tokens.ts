@@ -1,8 +1,11 @@
 import { messageOf } from "lib/errors";
-import type { WalkTarget } from "wow/client";
-import type { MovementDirection } from "wow/control";
-import { type FramingVariant, parseFramingVariant } from "wow/framing";
-import { DEFAULT_FIGHT_INSTRUCTION } from "wow/tactics";
+import {
+  DEFAULT_FIGHT_INSTRUCTION,
+  type FramingVariant,
+  type MovementDirection,
+  parseFramingVariant,
+  type WalkTarget,
+} from "wow";
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; reason: string };
 

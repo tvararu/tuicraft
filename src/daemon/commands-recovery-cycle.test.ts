@@ -7,7 +7,7 @@ import type { SessionLog } from "lib/session-log";
 import { attachControl, createMockSocket } from "test/commands-fixtures";
 import { createMockHandle } from "test/mock-handle";
 import { must } from "test/must";
-import type { CycleState } from "wow/encounter-cycle";
+import type { CycleState } from "wow";
 
 describe("recovery IPC boundary", () => {
   test("requires exact recovery action syntax", () => {

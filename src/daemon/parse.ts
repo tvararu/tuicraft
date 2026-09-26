@@ -2,9 +2,7 @@ import { parseGameplay } from "daemon/parse-gameplay";
 import { fromSlashCommand } from "daemon/parse-slash";
 import { parseSocial } from "daemon/parse-social";
 import { parseCommand } from "ui/commands";
-import type { WalkTarget } from "wow/client";
-import type { MovementDirection } from "wow/control";
-import type { FramingVariant } from "wow/framing";
+import type { FramingVariant, MovementDirection, WalkTarget } from "wow";
 
 export type IpcCommand =
   | { type: "chat"; message: string }

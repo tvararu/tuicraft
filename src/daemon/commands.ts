@@ -29,8 +29,7 @@ import {
   formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
-import type { ChatMode, WorldHandle } from "wow/client";
-import type { ControlState } from "wow/control";
+import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
 

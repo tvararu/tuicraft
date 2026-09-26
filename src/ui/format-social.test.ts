@@ -10,9 +10,7 @@ import {
   formatIgnoreList,
   formatIgnoreListJson,
 } from "ui/format";
-import type { FriendEntry } from "wow/friend-store";
-import type { IgnoreEntry } from "wow/ignore-store";
-import { FriendStatus } from "wow/protocol/social";
+import { type FriendEntry, FriendStatus, type IgnoreEntry } from "wow";
 
 describe("formatFriendList", () => {
   test("empty list returns no-friends message", () => {

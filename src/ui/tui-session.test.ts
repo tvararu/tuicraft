@@ -3,7 +3,7 @@ import { PassThrough } from "node:stream";
 import { createMockHandle } from "test/mock-handle";
 import { flush, writeLine } from "test/tui-fixtures";
 import { startTui } from "ui/tui";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType } from "wow";
 
 describe("startTui", () => {
   test("incoming message writes formatted output", async () => {
