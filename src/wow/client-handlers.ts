@@ -3,6 +3,7 @@ import {
   registerLootHandlers,
   registerQuestHandlers,
   registerRecoveryHandlers,
+  registerTrainerHandlers,
 } from "wow/gameplay-handlers";
 import { registerMovementHandlers } from "wow/movement-handlers";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
@@ -145,6 +146,7 @@ export function registerGameHandlers(conn: WorldConn): void {
   registerQuestHandlers(conn);
   registerLootHandlers(conn);
   registerRecoveryHandlers(conn);
+  registerTrainerHandlers(conn);
 }
 
 export function registerWorldHandlers(conn: WorldConn): void {

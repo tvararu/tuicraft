@@ -24,6 +24,7 @@ import {
   ignoreMethods,
   socialMethods,
 } from "wow/client-social";
+import { type NamedTrainerState, trainerMethods } from "wow/client-trainer";
 import type { CombatEvent, CombatState } from "wow/combat";
 import type {
   ControlEvent,
@@ -52,6 +53,7 @@ import type { RewardsEvent } from "wow/rewards";
 import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
+import type { TrainerEvent } from "wow/trainer";
 import type { WorldConn } from "wow/world-conn";
 
 export type ClientConfig = {
@@ -287,6 +289,10 @@ export type WorldHandle = {
   stopCycle: () => void;
   getCycleState: () => CycleState;
   onCycleEvent: (cb: (event: CycleEvent) => void) => Unsubscribe;
+  getTrainerState: () => Promise<NamedTrainerState>;
+  openTrainer: (guid: bigint) => void;
+  trainSpell: (spellId: number) => void;
+  onTrainerEvent: (cb: (event: TrainerEvent) => void) => Unsubscribe;
 };
 
 type SessionHandle = {
@@ -316,6 +322,7 @@ function createHandle(session: SessionHandle): WorldHandle {
     ...questRewardMethods(rt),
     ...rewardsMethods(conn, rt),
     ...cycleMethods(conn, rt),
+    ...trainerMethods(conn, rt),
   };
   return handle;
 }

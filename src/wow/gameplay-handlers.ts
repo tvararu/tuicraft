@@ -57,6 +57,11 @@ import {
   parseSpellStart,
   parseSupersededSpell,
 } from "wow/protocol/spell";
+import {
+  parseTrainerBuyFailed,
+  parseTrainerBuySucceeded,
+  parseTrainerList,
+} from "wow/protocol/trainer";
 import type { QuestDialog } from "wow/quests-requests";
 import type { WorldConn } from "wow/world-conn";
 
@@ -165,9 +170,6 @@ export function registerQuestHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, (r) =>
     conn.quests?.receiveQuery(parseQuestQueryResponse(r)),
   );
-  on(GameOpcode.SMSG_TRAINER_LIST, (r) =>
-    conn.quests?.receiveWindow(r.uint64LE(), "trainer"),
-  );
   on(GameOpcode.SMSG_LIST_INVENTORY, (r) =>
     conn.quests?.receiveWindow(r.uint64LE(), "vendor"),
   );
@@ -258,6 +260,22 @@ export function registerLootHandlers(conn: WorldConn): void {
   });
   on(GameOpcode.SMSG_ITEM_QUERY_SINGLE_RESPONSE, (r) =>
     conn.itemTemplates?.receive(parseItemQueryResponse(r)),
+  );
+}
+
+export function registerTrainerHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_TRAINER_LIST, (r) => {
+    const list = parseTrainerList(r);
+    conn.quests?.receiveWindow(list.guid, "trainer");
+    conn.trainer?.receiveList(list);
+  });
+  on(GameOpcode.SMSG_TRAINER_BUY_SUCCEEDED, (r) =>
+    conn.trainer?.receiveSucceeded(parseTrainerBuySucceeded(r)),
+  );
+  on(GameOpcode.SMSG_TRAINER_BUY_FAILED, (r) =>
+    conn.trainer?.receiveFailed(parseTrainerBuyFailed(r)),
   );
 }
 

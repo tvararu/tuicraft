@@ -117,6 +117,9 @@ export type CliAction =
   | { mode: "take_money"; json?: true }
   | { mode: "release_loot"; json?: true }
   | { mode: "use"; bag: number; slot: number; json?: true }
+  | { mode: "trainer"; json: boolean }
+  | { mode: "open_trainer"; guid: bigint; json?: true }
+  | { mode: "train"; spellId: number; json?: true }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -178,6 +181,9 @@ const SUBCOMMANDS = new Set([
   "release-loot",
   "use",
   "group",
+  "trainer",
+  "open-trainer",
+  "train",
 ]);
 
 const FIXED = new Map<string, CliAction>([
@@ -221,6 +227,7 @@ const INSPECTIONS = [
   "experience",
   "loot",
   "group",
+  "trainer",
 ] as const;
 
 function isInspection(cmd: string): cmd is (typeof INSPECTIONS)[number] {
@@ -238,7 +245,10 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     take(parseBare(rest, cmd));
     return strict;
   }
-  if (isInspection(cmd)) return { json: hasFlag(rest, "--json"), mode: cmd };
+  if (isInspection(cmd))
+    return hasFlag(rest, "--json")
+      ? { json: true, mode: cmd }
+      : { json: false, mode: cmd };
   switch (cmd) {
     case "read":
       return parseRead(args);

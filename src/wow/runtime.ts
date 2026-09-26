@@ -25,6 +25,7 @@ import { RecoveryRuntime } from "wow/recovery";
 import { RewardsRuntime } from "wow/rewards";
 import { loadSpellCatalog } from "wow/spell-catalog";
 import { TacticsLoop } from "wow/tactics";
+import { TrainerRuntime } from "wow/trainer";
 import type { WorldConn } from "wow/world-conn";
 import { selfGuid, sendPacket } from "wow/world-handlers";
 
@@ -37,6 +38,7 @@ export type Runtimes = {
   rewards: RewardsRuntime;
   items: ItemTemplates;
   cycle: EncounterCycleRuntime;
+  trainer: TrainerRuntime;
   prepareCatalog: () => Promise<void>;
   navigation: () => Navigation;
   observedTarget: (guid: bigint) => NavPoint;
@@ -62,6 +64,7 @@ type RuntimeParts = {
   rewards: RewardsRuntime;
   items: ItemTemplates;
   cycle: EncounterCycleRuntime;
+  trainer: TrainerRuntime;
 };
 
 function createControl(
@@ -166,14 +169,26 @@ function createTactics(
 }
 
 function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
-  const { control, combat, recovery, quests, rewards, cycle, tactics } = parts;
+  const {
+    control,
+    combat,
+    recovery,
+    quests,
+    rewards,
+    cycle,
+    tactics,
+    trainer,
+  } = parts;
   const { events } = conn;
   const detach = [
     control.onEvent((event) => {
       events.control.emit(event);
       cycle.observeControl(event);
     }),
-    combat.onEvent((event) => events.combat.emit(event)),
+    combat.onEvent((event) => {
+      events.combat.emit(event);
+      if (event.type === "learned") trainer.observe();
+    }),
     tactics.onEvent((event) => events.tactics.emit(event)),
     recovery.onEvent((event) => {
       if (
@@ -192,6 +207,7 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
       cycle.observeRewards(event);
     }),
     cycle.onEvent((event) => events.cycle.emit(event)),
+    trainer.onEvent((event) => events.trainer.emit(event)),
   ];
   return () => {
     for (const off of detach) off();
@@ -221,7 +237,16 @@ function disposeParts(
   lazy: LazyState,
   options: { sendStop: boolean; halt: () => void; unwire: Unsubscribe },
 ): void {
-  const { control, combat, tactics, recovery, quests, rewards, cycle } = parts;
+  const {
+    control,
+    combat,
+    tactics,
+    recovery,
+    quests,
+    rewards,
+    cycle,
+    trainer,
+  } = parts;
   options.unwire();
   if (options.sendStop) options.halt();
   lazy.disposed = true;
@@ -233,6 +258,7 @@ function disposeParts(
   combat.dispose();
   parts.items.dispose();
   cycle.dispose();
+  trainer.dispose();
   lazy.navigation?.close();
 }
 
@@ -276,7 +302,7 @@ function createCombat(
   runtimeDeps: RuntimeDeps,
   lazy: LazyState,
   control: ControlRuntime,
-): { combat: CombatRuntime; actions: CombatActions } {
+): { combat: CombatRuntime; actions: CombatActions; trainer: TrainerRuntime } {
   const combat = new CombatRuntime({
     ...runtimeDeps,
     selectedGuid: () => control.snapshot().target,
@@ -291,7 +317,21 @@ function createCombat(
     factions: () => lazy.factions,
     now: () => Date.now(),
   });
-  return { combat, actions };
+  const trainer = new TrainerRuntime({
+    ...runtimeDeps,
+    learned: () => combat.snapshot().learned,
+  });
+  conn.trainer = trainer;
+  return { combat, actions, trainer };
+}
+
+function runtimeDepsFor(conn: WorldConn): RuntimeDeps {
+  return {
+    send: (opcode, body) => sendPacket(conn, opcode, body ?? new Uint8Array()),
+    now: () => Date.now(),
+    selfGuid: () => selfGuid(conn),
+    getEntity: (guid) => conn.entityStore.get(guid),
+  };
 }
 
 export function createRuntimes(
@@ -303,13 +343,13 @@ export function createRuntimes(
   conn.control = createControl(conn, getNavigation);
 
   const control = conn.control;
-  const runtimeDeps: RuntimeDeps = {
-    send: (opcode, body) => sendPacket(conn, opcode, body ?? new Uint8Array()),
-    now: () => Date.now(),
-    selfGuid: () => selfGuid(conn),
-    getEntity: (guid) => conn.entityStore.get(guid),
-  };
-  const { combat, actions } = createCombat(conn, runtimeDeps, lazy, control);
+  const runtimeDeps = runtimeDepsFor(conn);
+  const { combat, actions, trainer } = createCombat(
+    conn,
+    runtimeDeps,
+    lazy,
+    control,
+  );
   const prepareCatalog = (): Promise<void> => loadCatalog(config, lazy, combat);
   function rawHalt(reason = "halt"): void {
     if (lazy.disposed) return;
@@ -335,6 +375,7 @@ export function createRuntimes(
     combat,
     tactics,
     ...createSupportRuntimes(conn, runtimeDeps, { control, tactics }),
+    trainer,
   };
   const unwire = wireEvents(conn, parts);
   const { cycle } = parts;

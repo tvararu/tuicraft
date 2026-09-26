@@ -8,8 +8,8 @@ import { QUEST_REPLY_TIMEOUT_MS } from "wow/quests-requests";
 const setup = () => questCapture(0x9fbn);
 
 describe("an unanswered quest request is bounded", () => {
-  test("a trainer list answers the training option and the next giver talks", () => {
-    const { bodies, events, packet, runtime } = setup();
+  test("a trainer list answers the training option, opens the offer and the next giver talks", () => {
+    const { bodies, events, packet, runtime, trainer } = setup();
     runtime.talk(ARENA_GUID);
     packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured215.arenaGossip);
     runtime.selectOption(0);
@@ -18,21 +18,32 @@ describe("an unanswered quest request is bounded", () => {
     expect(runtime.snapshot()).toMatchObject({
       dialog: undefined,
       giver: undefined,
-      lastError: {
-        guid: ARENA_GUID,
-        kind: "unsupported_window",
-        window: "trainer",
-      },
+      lastError: undefined,
       pending: undefined,
       unresolved: [],
     });
-    expect(events.at(-1)).toMatchObject({
-      detail: "unsupported_window:trainer",
-      type: "window",
-    });
+    expect(events.at(-1)).toMatchObject({ detail: "trainer", type: "window" });
+    expect(trainer.snapshot().offer?.guid).toBe(ARENA_GUID);
     runtime.talk(ERONA_GUID);
     packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured215.eronaGossip);
     expect(runtime.snapshot().dialog?.kind).toBe("gossip");
+  });
+
+  test("a vendor list answers the option as an unsupported window", () => {
+    const { events, packet, runtime } = setup();
+    runtime.talk(ARENA_GUID);
+    packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured215.arenaGossip);
+    runtime.selectOption(0);
+    packet(GameOpcode.SMSG_LIST_INVENTORY, "ee4900b43b0030f100");
+    expect(runtime.snapshot()).toMatchObject({
+      lastError: {
+        guid: ARENA_GUID,
+        kind: "unsupported_window",
+        window: "vendor",
+      },
+      pending: undefined,
+    });
+    expect(events.at(-1)?.detail).toBe("unsupported_window:vendor");
   });
 
   test("another giver's trainer list does not answer the pending request", () => {

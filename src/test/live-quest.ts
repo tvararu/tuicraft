@@ -96,7 +96,7 @@ describe("quest dialog", () => {
     }
   }, 60_000);
 
-  test("a trainer window answers the option and the next giver talks", async () => {
+  test("a trainer list answers the option, opens the offer and the next giver talks", async () => {
     const handle = await worldSession(config1, await authHandshake(config1));
     try {
       await reachErona(handle);
@@ -117,11 +117,8 @@ describe("quest dialog", () => {
       );
       handle.selectGossipOption(training.optionIndex);
       await waitUntil(() => handle.getQuestState().pending === undefined);
-      expect(handle.getQuestState().lastError).toMatchObject({
-        guid: arena.guid,
-        kind: "unsupported_window",
-        window: "trainer",
-      });
+      expect(handle.getQuestState().lastError).toBeUndefined();
+      expect((await handle.getTrainerState()).offer?.guid).toBe(arena.guid);
       const erona = await reachErona(handle);
       handle.talk(erona.guid);
       await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");

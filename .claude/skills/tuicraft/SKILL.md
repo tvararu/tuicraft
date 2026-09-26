@@ -47,10 +47,10 @@ Without separate directories the second `start` finds the first daemon and repor
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
-- Recovery, quest, loot, and item actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`.
+- Recovery, quest, loot, item, and trainer actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`, `open-trainer`, `train`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
 `logs` prints the raw session log. `skill` prints the raw reference document.
@@ -109,7 +109,7 @@ It prints one envelope per event and nothing for empty polls:
 These values describe the daemon socket, not world-session health.
 
 Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `inventory`,
-`experience`, and `loot` show short human summaries. Use `--json` for all
+`experience`, `loot`, and `trainer` show short human summaries. Use `--json` for all
 fields and automated parsing. A human action acknowledgment means that the
 daemon accepted a request. It does not confirm that the server completed the
 action. `fight` replies when the run ends and human mode prints its outcome,
@@ -339,7 +339,7 @@ Rules:
 - JSON escapes prevent code text, including line breaks, from injecting another IPC command. Do not send raw unencoded code text.
 - Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` names the pending action and GUID; it is not permission to retry. Wait for the reply, or for the 5 s bound, or run `cancel-interaction`.
 - An unanswered request expires after 5 s: QUEST `expired no_reply`, `unresolved` gains it with `reason: "no_reply"`, and the next verb works. A late reply after that is stale; `talk` again.
-- Choosing a trainer, vendor, bank or flight-master option answers with QUEST `window unsupported_window:<kind>` and `lastError.kind` `unsupported_window`. tuicraft cannot use those windows; move on to the next giver.
+- Choosing a trainer option answers with QUEST `window trainer` and opens the offer in `trainer`. Choosing a vendor, bank or flight-master option answers with QUEST `window unsupported_window:<kind>` and `lastError.kind` `unsupported_window`. tuicraft cannot use those windows; move on to the next giver.
 - `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
 - Auto-accept quests enter the log on `select-quest` while their details stay open. Check the log first: `accept-quest` fails with `quest_already_in_log` for a quest already there.
 - Advance by `quests --json` `.data.dialog.kind`: `gossip`/`list` → `select-quest <id>` (or `select-option <id>`); `details` → `accept-quest`; `requestItems` → `request-reward`; `offer` → `choose-reward <index>` (0 without choices).
@@ -407,6 +407,21 @@ IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONE
 - Eat and drink out of combat; potions work in combat. Sending the use stops a running `fight` or `cycle` (manual override; a refused `use` does not) and otherwise leaves movement and auto-attack alone. Moving stands you up and ends food and drink.
 
 IPC: USE.
+
+## Class trainers: list and learn spells
+
+    tuicraft open-trainer <observed-trainer-guid>
+    tuicraft trainer [--json]
+    tuicraft train <spell-id>
+
+Rules:
+
+- `nearby --json` shows `npcFlags`; 0x10 is a trainer (0x20 a class trainer). Stand within interaction range. Choosing the trainer option after `talk` ("I require priest training.") opens the same offer.
+- `trainer` lists each offered spell: `Spell 589 Shadow Word: Pain (Rank 1): too_low, 95 copper, level 4`. States: `available` (learn now), `too_low` (character level below `requiredLevel`), `unavailable` (missing lower rank or skill), `known`. States come from the server's list; re-run `open-trainer` after levelling.
+- `train <spell-id>` works only for `available` spells. `OK` is intent; `trainer` then shows `Last: train 1243 for 9 copper: confirmed, learned 1243, -9 copper (coinage 100 -> 91)`. Confirmation needs the server's success reply, a newly learned spell in the spellbook, and coinage down by the cost.
+- Refusals are named: `not_enough_money`, `not_enough_skill`, `unavailable`; silence ends `unanswered` after 5 s. Jev can use a learned spell once it is in `spells`.
+
+IPC: TRAINER, TRAINER_JSON, OPEN_TRAINER, TRAIN.
 
 ## Sending Messages
 

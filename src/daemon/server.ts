@@ -137,6 +137,8 @@ const PREEMPTED_BY_HALT = new Set<IpcCommand["type"]>([
   "take_money",
   "release_loot",
   "use",
+  "open_trainer",
+  "train",
   "read_wait",
   "read_wait_json",
   "tail_wait",
@@ -231,18 +233,10 @@ function onSocketData(ctx: ServerCtx, socket: IpcSocket, data: Buffer): void {
   drainQueue(ctx, socket);
 }
 
-export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
-  const { handle, sock, log, onActivity, onStop } = args;
-  const events = new RingBuffer<EventEntry>(1000);
-  handle.onMessage((msg) => onChatMessage(msg, events, log));
-  handle.onGroupEvent((event) => onGroupEvent(event, events, log));
-  handle.onEntityEvent((event) => onEntityEvent(event, events, log));
-  handle.onFriendEvent((event) => onFriendEvent(event, events, log));
-  handle.onIgnoreEvent((event) => onIgnoreEvent(event, events, log));
-  handle.onGuildEvent((event) => onGuildEvent(event, events, log));
-  handle.onDuelEvent((event) => onDuelEvent(event, events, log));
-  handle.onControlEvent((event) => onControlEvent(event, events, log));
-  const sink = { events, log };
+function subscribeDomainEvents(
+  handle: WorldHandle,
+  sink: { events: RingBuffer<EventEntry>; log: SessionLog },
+): void {
   handle.onCombatEvent((event) =>
     onDomainEvent("combat", event, sink, formatCombatEventText),
   );
@@ -257,6 +251,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onRewardsEvent((event) =>
     onDomainEvent("rewards", event, sink, formatRewardsEventText),
   );
+  handle.onTrainerEvent((event) => onDomainEvent("trainer", event, sink));
   handle.onPacketError((opcode, err) =>
     onDomainEvent(
       "packet",
@@ -264,6 +259,20 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
       sink,
     ),
   );
+}
+
+export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
+  const { handle, sock, log, onActivity, onStop } = args;
+  const events = new RingBuffer<EventEntry>(1000);
+  handle.onMessage((msg) => onChatMessage(msg, events, log));
+  handle.onGroupEvent((event) => onGroupEvent(event, events, log));
+  handle.onEntityEvent((event) => onEntityEvent(event, events, log));
+  handle.onFriendEvent((event) => onFriendEvent(event, events, log));
+  handle.onIgnoreEvent((event) => onIgnoreEvent(event, events, log));
+  handle.onGuildEvent((event) => onGuildEvent(event, events, log));
+  handle.onDuelEvent((event) => onDuelEvent(event, events, log));
+  handle.onControlEvent((event) => onControlEvent(event, events, log));
+  subscribeDomainEvents(handle, { events, log });
 
   let cleaned = false;
   function cleanup(): void {
