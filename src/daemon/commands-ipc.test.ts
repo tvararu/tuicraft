@@ -11,7 +11,7 @@ import {
 } from "test/commands-fixtures";
 import { createMockHandle } from "test/mock-handle";
 import { must } from "test/must";
-import type { ControlEvent } from "wow/control";
+import type { ControlEvent } from "wow";
 
 describe("IPC round-trip", () => {
   const ipc = useIpcServer();

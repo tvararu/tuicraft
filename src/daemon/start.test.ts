@@ -6,8 +6,7 @@ import { serializeConfig } from "lib/config";
 import { createMockHandle } from "test/mock-handle";
 import { must } from "test/must";
 import { pathsUnder } from "test/temp-paths";
-import type { AuthResult } from "wow/auth";
-import type { WorldHandle } from "wow/client";
+import type { AuthResult, WorldHandle } from "wow";
 
 const tmpDir = `./tmp/daemon-start-${Date.now()}`;
 const paths = pathsUnder(tmpDir);

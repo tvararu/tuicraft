@@ -3,11 +3,11 @@ import type {
   CycleLootRecord,
   CycleState,
   CycleTargetRecord,
-} from "wow/encounter-cycle";
-import type { ExperienceState } from "wow/experience";
-import type { InventoryState } from "wow/inventory";
-import type { RecoveryState } from "wow/recovery";
-import type { RewardsState } from "wow/rewards";
+  ExperienceState,
+  InventoryState,
+  RecoveryState,
+  RewardsState,
+} from "wow";
 
 function show(value: string | number | undefined): string {
   return value === undefined ? "unknown" : String(value);

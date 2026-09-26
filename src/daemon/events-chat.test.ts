@@ -4,7 +4,7 @@ import { onChatMessage } from "daemon/events";
 import { RingBuffer } from "lib/ring-buffer";
 import type { SessionLog } from "lib/session-log";
 import { must } from "test/must";
-import { ChatType } from "wow/protocol/opcodes";
+import { ChatType } from "wow";
 
 describe("onChatMessage", () => {
   test("pushes formatted message to ring buffer", () => {

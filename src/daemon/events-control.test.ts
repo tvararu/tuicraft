@@ -4,7 +4,7 @@ import { onControlEvent } from "daemon/events";
 import { RingBuffer } from "lib/ring-buffer";
 import type { SessionLog } from "lib/session-log";
 import { must } from "test/must";
-import type { ControlState } from "wow/control";
+import type { ControlState } from "wow";
 
 function sampleState(overrides: Partial<ControlState> = {}): ControlState {
   return {

@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { makeGameObjectEntity, makeUnitEntity } from "test/format-fixtures";
 import { formatEntityEvent, formatEntityEventObj } from "ui/format";
-import type { Entity } from "wow/entity-store";
-import { ObjectType } from "wow/protocol/entity-fields";
+import { type Entity, ObjectType } from "wow";
 
 describe("formatEntityEvent", () => {
   test("formats unit appear with name and level", () => {

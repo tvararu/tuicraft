@@ -8,12 +8,12 @@ import {
 } from "test/commands-fixtures";
 import { createMockHandle } from "test/mock-handle";
 import { must } from "test/must";
-import type {
-  BaseEntity,
-  GameObjectEntity,
-  UnitEntity,
-} from "wow/entity-store";
-import { ObjectType } from "wow/protocol/entity-fields";
+import {
+  type BaseEntity,
+  type GameObjectEntity,
+  ObjectType,
+  type UnitEntity,
+} from "wow";
 
 describe("dispatchCommand", () => {
   test("nearby returns formatted entity list", async () => {

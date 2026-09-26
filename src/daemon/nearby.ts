@@ -1,15 +1,17 @@
 import { formatGuid } from "ui/format";
-import type { WorldHandle } from "wow/client";
-import type { ControlPose } from "wow/control";
-import type {
-  Entity,
-  GameObjectEntity,
-  Position,
-  UnitEntity,
-} from "wow/entity-store";
-import { bearing, distance2d, normalizeAngle } from "wow/geometry";
-import { ObjectType } from "wow/protocol/entity-fields";
-import type { RemotePose } from "wow/remote-motion";
+import {
+  bearing,
+  type ControlPose,
+  distance2d,
+  type Entity,
+  type GameObjectEntity,
+  normalizeAngle,
+  ObjectType,
+  type Position,
+  type RemotePose,
+  type UnitEntity,
+  type WorldHandle,
+} from "wow";
 
 function objectTypeName(type: ObjectType): string {
   switch (type) {

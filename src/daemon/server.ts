@@ -23,9 +23,8 @@ import { ignoreFailure } from "lib/ignore-failure";
 import { type Paths, resolvePaths } from "lib/paths";
 import { RingBuffer } from "lib/ring-buffer";
 import { SessionLog } from "lib/session-log";
-import { type authHandshake, authWithRetry } from "wow/auth";
-import type { WorldHandle } from "wow/client";
-import { worldSession } from "wow/client";
+import type { WorldHandle } from "wow";
+import { type authHandshake, authWithRetry, worldSession } from "wow/session";
 
 type Queued = { line: string; cmd: IpcCommand | undefined };
 

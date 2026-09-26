@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { must } from "test/must";
 import { formatGuildRoster, formatGuildRosterJson } from "ui/format";
-import type { GuildMember, GuildRoster } from "wow/guild-store";
-import { GuildMemberStatus } from "wow/protocol/guild";
+import { type GuildMember, GuildMemberStatus, type GuildRoster } from "wow";
 
 function makeMember(overrides: Partial<GuildMember> = {}): GuildMember {
   return {

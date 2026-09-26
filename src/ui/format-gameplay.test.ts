@@ -6,10 +6,12 @@ import {
   formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
-import type { CycleState } from "wow/encounter-cycle";
-import type { InventoryState } from "wow/inventory";
-import type { RecoveryState } from "wow/recovery";
-import type { RewardsState } from "wow/rewards";
+import type {
+  CycleState,
+  InventoryState,
+  RecoveryState,
+  RewardsState,
+} from "wow";
 
 const handle = createMockHandle();
 const TARGET = 0xf130003f220576e9n;

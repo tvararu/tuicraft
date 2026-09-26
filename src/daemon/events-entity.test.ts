@@ -4,8 +4,7 @@ import { onEntityEvent } from "daemon/events";
 import { RingBuffer } from "lib/ring-buffer";
 import type { SessionLog } from "lib/session-log";
 import { must } from "test/must";
-import type { UnitEntity } from "wow/entity-store";
-import { ObjectType } from "wow/protocol/entity-fields";
+import { ObjectType, type UnitEntity } from "wow";
 
 describe("onEntityEvent", () => {
   test("pushes appear event to ring buffer with text and json", () => {

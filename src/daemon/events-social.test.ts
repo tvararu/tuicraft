@@ -4,7 +4,7 @@ import { onFriendEvent, onIgnoreEvent } from "daemon/events";
 import { RingBuffer } from "lib/ring-buffer";
 import type { SessionLog } from "lib/session-log";
 import { must } from "test/must";
-import { FriendStatus } from "wow/protocol/social";
+import { FriendStatus } from "wow";
 
 describe("onFriendEvent", () => {
   test("pushes friend-online event to ring buffer", () => {

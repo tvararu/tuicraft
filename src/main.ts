@@ -152,8 +152,7 @@ async function printSendReply(
 type ActionOf<M extends CliAction["mode"]> = Extract<CliAction, { mode: M }>;
 
 async function runInteractive(): Promise<void> {
-  const { authWithRetry } = await import("wow/auth");
-  const { worldSession } = await import("wow/client");
+  const { authWithRetry, worldSession } = await import("wow/session");
   const { readConfig, clientConfig } = await import("lib/config");
   if (!(await Bun.file(resolvePaths().configPath).exists())) {
     if (!process.stdin.isTTY) {
