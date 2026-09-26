@@ -63,12 +63,33 @@ test("help text includes all subcommands", () => {
 });
 
 test("help text includes all chat flags", () => {
-  for (const flag of ["-w", "-y", "-g", "-p"]) expect(text).toContain(flag);
+  for (const flag of ["-s", "-w", "-y", "-g", "-p"])
+    expect(text).toContain(flag);
 });
 
 test("help text includes all global flags", () => {
-  for (const flag of ["--version", "--json", "--wait", "--daemon"])
+  for (const flag of [
+    "--version",
+    "--json",
+    "--wait",
+    "--daemon",
+    "--framing",
+    "--instruction",
+    "--max",
+    "--resume",
+  ])
     expect(text).toContain(flag);
+});
+
+test("help text includes daemon environment variables", () => {
+  for (const name of [
+    "TYPESAFE_API_KEY",
+    "JEV_ENDPOINT_URL",
+    "TYPESAFE_ENDPOINT_URL",
+    "JEV_FAULT",
+    "WOW_JEV_FRAMING",
+  ])
+    expect(text).toContain(name);
 });
 
 test("help text includes interactive group commands", () => {

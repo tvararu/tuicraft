@@ -19,7 +19,8 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 - Without `--json`, `start` prints `Daemon is already running.` or `CONNECTED` on success. `CONNECTED` confirms only that the daemon socket answered the probe. It does not verify the world session. Startup failure exits with status 1.
 - Without `--json`, `status` returns `CONNECTED` or `Daemon is not running.`
 - `stop` gracefully disconnects the session and terminates the daemon. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
-- `tuicraft logs` prints the raw JSONL session log. `tuicraft skill` prints this document. `tuicraft version` prints the version. `tuicraft setup` configures the account.
+- `tuicraft logs` prints the raw JSONL session log. `tuicraft skill` prints this document. `tuicraft version` (`-v`, `--version`) prints the version. `tuicraft help` (`-h`, `--help`) prints usage. `tuicraft` with no arguments starts the interactive TUI, which is for humans.
+- `tuicraft setup` configures the account. With no flags it runs an interactive wizard; non-interactively pass `--account NAME --password PASS --character NAME` and optionally `--host` (default `t1`), `--port` (`3724`), `--language` (`1`, Orcish; `7` for Alliance) and `--timeout_minutes` (`30`).
 
 ## JSON output
 
@@ -171,7 +172,12 @@ identifies `predicted`, `server`, or fallback `self_entity`;
 Other entities use last observed positions. The result does
 not verify a route. Move in bounded legs and read a new observation.
 
-IPC verbs on the daemon socket:
+IPC verbs on the daemon socket. The socket is `$XDG_RUNTIME_DIR/tuicraft/sock` when `XDG_RUNTIME_DIR` is set, else `${TMPDIR:-/tmp}/tuicraft-<uid>/sock`. The `nc` examples below use:
+
+    SOCK=${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/tuicraft/sock}
+    SOCK=${SOCK:-${TMPDIR:-/tmp}/tuicraft-$(id -u)/sock}
+
+Verbs:
 
     CONTROL
     CONTROL_JSON
@@ -215,14 +221,14 @@ These commands inspect or act. They do not invent a spell rotation.
 Rules:
 
 - `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none.
-- `fight` requires a GUID. Optional `--framing` accepts `none`, `minimal`, or `mechanics` (default `none` or `WOW_JEV_FRAMING`). Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
+- `fight` requires a GUID. Optional `--framing` (or `--framing=`) accepts `none`, `minimal`, or `mechanics`; the default is `WOW_JEV_FRAMING` from the CLI's environment, else `none`. A raw `FIGHT` socket command ignores `WOW_JEV_FRAMING`. Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
 - Use a current observed PvE opponent, not a GUID copied from an example or an old spawn position.
 - The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Unknown and nonzero forms disable supported spells, not necessarily melee.
 - `unverified_hostile_relation` refuses a fight unless faction data or current attack evidence verifies hostility. Do not infer hostility from a creature name.
 - `no_supported_combat_actions` blocks when there is no supported spell and no current melee or attack progress. Cooldowns and pending server responses remain waits; supported melee and facing remain available.
 - For a blocked kit, inspect `tactics.lastOutcome.observation.unavailable`. A missing `lastRequest` means no Jev request was made; terminal observations are separate evidence.
 - Jev may choose directional movement during a fight under a renewable lease (`wait` holds, `stop_moving` releases, standing-required spells halt first). The observation carries target separation and facing.
-- Choose current creature GUIDs from `nearby --json` (`data[]`) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; `cycle` has no `--framing`. `--max N` caps tactics-loop starts (positive integer, default 10).
+- Choose current creature GUIDs from `nearby --json` (`data[]`) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; its spaced form takes every following word up to the next `--max`/`--instruction`/`--resume`, so put GUIDs first (or use `--instruction=text`). `cycle` has no `--framing`. `--max N` (or `--max=N`) caps tactics-loop starts (positive integer, default 10).
 - A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery: release, one corpse query, up to 40 `face` + `move forward` legs (heading from the pose each leg; a leg that gains less than 1 yd toward the corpse, for example one stopped at once by `height_unresolved`, retries at offsets of +/-0.3, 0.6, 0.9, 1.2, 1.5 rad) until the ghost is about 30 yd from the corpse, the reclaim-delay wait, `reclaim-corpse`, and a confirmed `alive`. Then the cycle stops with `reclaimed` (`stopDetail` has `pose`, `range`, `legs`), or `resurrected` after an accepted offer; the rest of the queue stays `queued`. Check the killer's position and health before starting a new cycle. The leg bound stops with `corpse_out_of_range`; exhausted offsets stop with `corpse_unreachable`.
 - After a kill the cycle awaits the corpse death update. No lootable flag (or a despawn) records `loot: "none"` on that queue entry and the loop continues; `loot: "looted"` marks an opened corpse. No death update within the settle time stops with `target_death_unconfirmed`.
 - Inspect `cycling --json` for `phase`, per-target `queue` status/cause/loot, `instruction`, `startsUsed`, `resumes`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `reclaimed`, `resurrected`, `target_death_unconfirmed`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_release_only_reconnect_required`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
@@ -234,7 +240,7 @@ Rules:
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
 - `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded. With `--json`, the error is an envelope on stdout.
 - `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column`, choose a destination with one ground height. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
-- Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
+- Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. `JEV_ENDPOINT_URL` (fallback `TYPESAFE_ENDPOINT_URL`) overrides the Jev endpoint. `JEV_FAULT` (`delay:<ms>`, `http:<status>`, `transport`) injects test faults and shows as `fault` in `tactics --json`; never set it for real play. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables and the environment variables.
 
 IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLE_RESUME, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
 
@@ -343,22 +349,26 @@ IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONE
 ## Sending Messages
 
     tuicraft send "message"               # say (nearby players)
+    tuicraft send -s "message"            # say, explicit
     tuicraft send -y "message"            # yell (wider range)
     tuicraft send -p "message"            # party chat
     tuicraft send -g "message"            # guild chat
     tuicraft send -w PlayerName "message" # whisper to player
 
-Slash commands work too:
+`-w`, `-y`, `-g` and `-p` also work without `send` (`tuicraft -p "message"`).
 
-    tuicraft send "/raid message"         # raid chat
+Slash commands work too. `/r`, `/raid`, `/<N>` channel messages, `/quit`,
+`/tuicraft` and unknown commands are said as plain text through `send`, slash
+included; they only work in the TUI:
+
+    tuicraft send "/yell message"         # long forms: /say /yell /whisper /guild /party /emote
     tuicraft send "/e waves hello"        # text emote
     tuicraft send "/dnd busy right now"   # toggle DND status
     tuicraft send "/afk grabbing coffee"  # toggle AFK status
     tuicraft send "/roll"                  # roll 1-100
     tuicraft send "/roll 50"               # roll 1-50
     tuicraft send "/roll 10 20"            # roll 10-20
-    tuicraft send "/1 message"            # channel 1
-    tuicraft send "/2 message"            # channel 2
+    tuicraft send "/who mage"             # who search
 
 ## Reading Events
 
@@ -455,16 +465,16 @@ duel requests.
 
 ## Friends List
 
-    tuicraft send "/friends"                # show friends list
+    tuicraft send "/friends"                # show friends list (/f also works)
     tuicraft send "/friend add PlayerName"  # add friend
     tuicraft send "/friend remove PlayerName" # remove friend
 
 IPC verbs:
 
-    echo "FRIENDS" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "FRIENDS_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "ADD_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "DEL_FRIEND PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "FRIENDS" | nc -U "$SOCK"
+    echo "FRIENDS_JSON" | nc -U "$SOCK"
+    echo "ADD_FRIEND PlayerName" | nc -U "$SOCK"
+    echo "DEL_FRIEND PlayerName" | nc -U "$SOCK"
 
 ## Ignore List
 
@@ -476,10 +486,10 @@ Messages from ignored players are filtered from chat display and daemon read out
 
 IPC verbs:
 
-    echo "IGNORED" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "IGNORED_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "ADD_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "DEL_IGNORE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "IGNORED" | nc -U "$SOCK"
+    echo "IGNORED_JSON" | nc -U "$SOCK"
+    echo "ADD_IGNORE PlayerName" | nc -U "$SOCK"
+    echo "DEL_IGNORE PlayerName" | nc -U "$SOCK"
 
 ## Guild Roster
 
@@ -489,8 +499,8 @@ Displays MOTD, guild info, and all members sorted by online status. Shows rank, 
 
 IPC verbs:
 
-    echo "GUILD_ROSTER" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GUILD_ROSTER_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "GUILD_ROSTER" | nc -U "$SOCK"
+    echo "GUILD_ROSTER_JSON" | nc -U "$SOCK"
 
 ## Guild Management
 
@@ -506,15 +516,19 @@ IPC verbs:
 
 IPC verbs:
 
-    echo "GINVITE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GKICK PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GLEAVE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GPROMOTE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GDEMOTE PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GLEADER PlayerName" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GMOTD New MOTD" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GACCEPT" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "GDECLINE" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "GINVITE PlayerName" | nc -U "$SOCK"
+    echo "GKICK PlayerName" | nc -U "$SOCK"
+    echo "GLEAVE" | nc -U "$SOCK"
+    echo "GPROMOTE PlayerName" | nc -U "$SOCK"
+    echo "GDEMOTE PlayerName" | nc -U "$SOCK"
+    echo "GLEADER PlayerName" | nc -U "$SOCK"
+    echo "GMOTD New MOTD" | nc -U "$SOCK"
+    echo "GACCEPT" | nc -U "$SOCK"
+    echo "GDECLINE" | nc -U "$SOCK"
+
+`MAIL` (and `/mail`) answers `UNIMPLEMENTED Mail reading`. The full socket verb
+list, including chat, group and event verbs, is in `docs/manual.md` (Socket
+Protocol).
 
 ## Nearby entities
 
@@ -560,10 +574,10 @@ TUI: `/tuicraft entities on|off` toggles entity event display.
 
 IPC:
 
-    echo "NEARBY" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "NEARBY all" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "NEARBY_JSON" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
-    echo "NEARBY_JSON all" | nc -U $TMPDIR/tuicraft-$(id -u)/sock
+    echo "NEARBY" | nc -U "$SOCK"
+    echo "NEARBY all" | nc -U "$SOCK"
+    echo "NEARBY_JSON" | nc -U "$SOCK"
+    echo "NEARBY_JSON all" | nc -U "$SOCK"
 
 ## Openclaw Integration
 
