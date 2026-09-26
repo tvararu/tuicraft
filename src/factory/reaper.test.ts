@@ -111,10 +111,17 @@ describe("idleFor", () => {
 
 describe("run state", () => {
   test("completed and failed runs are done, dispatched and unknown are not", () => {
-    expect(runDone({ status: "completed", workspaceId: "x" })).toBe(true);
-    expect(runDone({ status: "failed", workspaceId: "x" })).toBe(true);
-    expect(runDone({ status: "dispatched", workspaceId: "x" })).toBe(false);
-    expect(runDone(undefined)).toBe(false);
+    expect(runDone({ status: "completed", workspaceId: "x" }, 0)).toBe(true);
+    expect(runDone({ status: "failed", workspaceId: "x" }, 0)).toBe(true);
+    expect(runDone({ status: "dispatched", workspaceId: "x" }, 5)).toBe(false);
+    expect(runDone(undefined, 5)).toBe(false);
+  });
+
+  test("a dispatch_failed run is done once its terminals go quiet", () => {
+    const failed = { status: "dispatch_failed", workspaceId: "x" };
+    expect(runDone(failed, 0)).toBe(false);
+    expect(runDone(failed, 9 / 60)).toBe(false);
+    expect(runDone(failed, 10 / 60)).toBe(true);
   });
 
   test("age prefers dispatchedAt, accepts ISO strings, falls back to creation", () => {

@@ -6,6 +6,7 @@ import {
   mainCheckout,
   type Role,
   roleCapHours,
+  stalledRunQuietHours,
 } from "factory/config";
 import { json, must, run } from "factory/exec";
 import { landed, landFacts } from "factory/reaper-land";
@@ -128,7 +129,12 @@ function runOf(wt: Worktree, runs: AutoRun[]): AutoRun | undefined {
   return runs.find((r) => r.workspaceId === wt.id || r.workspaceId === wt.path);
 }
 
-export function runDone(autoRun: AutoRun | undefined): boolean {
+export function runDone(
+  autoRun: AutoRun | undefined,
+  quietHours: number,
+): boolean {
+  if (autoRun?.status === "dispatch_failed")
+    return quietHours >= stalledRunQuietHours;
   return autoRun?.status === "completed" || autoRun?.status === "failed";
 }
 
@@ -286,7 +292,7 @@ async function decideAuto(
 ): Promise<Decision> {
   const autoRun = runOf(wt, inv.runs);
   const ageHours = runAge(autoRun, wt, now);
-  const done = runDone(autoRun);
+  const done = runDone(autoRun, idleFor(wt, inv.terminals, now));
   const over = overCap(ageHours, owner.role);
   const status = done || over ? await statusOf(wt) : [];
   const clean = isClean(status, true);
