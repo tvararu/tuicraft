@@ -246,9 +246,16 @@ The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). A 
 Unknown or nonzero forms make spells unsupported, not melee automatically.
 `no_supported_combat_actions` is a structural block when no supported spell
 and no current melee or attack progress are available. Cooldowns and pending
-server responses remain waits. An unverified hostile relation refuses `fight`
-unless faction data or current attack evidence establishes hostility. Inspect
-`tactics.lastOutcome.observation.unavailable` for spell reasons.
+server responses remain waits. `fight` classifies the target from
+`FactionTemplate.dbc` in both directions: friendly if either side is friendly,
+hostile if either side is hostile, otherwise neutral, and unknown without
+faction data. Hostile and neutral creatures are engaged. A friendly creature is
+refused with `target_friendly`, a player with `target_not_pve_creature`, and an
+unknown relation with `unverified_hostile_relation`, unless the creature is
+currently attacking the character. `tactics --json` reports the classification
+as `lastOutcome.observation.targetRelation`: `hostile`, `neutral`, `friendly`
+or `unknown`. Inspect `tactics.lastOutcome.observation.unavailable` for spell
+reasons.
 Jev may choose directional movement during a fight under a renewable lease:
 `wait` holds the current direction, `stop_moving` releases it, and choosing a
 standing-required spell releases the lease before casting. The observation
