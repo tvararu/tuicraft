@@ -7,6 +7,7 @@ import {
   decideQa,
   decideReviewer,
   decideWorker,
+  heldPicks,
 } from "factory/precheck";
 import { ago, issue, marker, now, pr } from "test/factory-fixtures";
 
@@ -88,6 +89,20 @@ describe("worker", () => {
     expect(pickWork([{ ...stale, statusAt: ago(5 * 60) }]).ok).toBe(true);
     const beforeRework = { ...claimed, statusAt: ago(2) };
     expect(pickWork([beforeRework]).ok).toBe(true);
+  });
+
+  test("a pick this machine made in the last 3 minutes holds the card and counts toward the cap", () => {
+    const picks = { 1: now - 60_000, 2: now - 4 * 60_000 };
+    const held = heldPicks(picks, now);
+    expect(held).toEqual([1]);
+    const ready = [issue(1, "ready"), issue(2, "ready")];
+    expect(decideWorker(ready, 2, now, held)).toEqual({
+      ok: true,
+      out: { issue: 2, mode: "fresh", reason: "fresh" },
+    });
+    expect(
+      decideWorker([...ready, issue(3, "in-progress")], 2, now, held),
+    ).toEqual({ ok: false, why: "wip 2/2" });
   });
 
   test("respects the wip cap on In progress cards", () => {

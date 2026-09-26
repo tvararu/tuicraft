@@ -280,11 +280,11 @@ code:
 
 | Knob | `default` | `max` |
 |---|---|---|
-| `work` schedule | `*/3` | `*/2` |
+| `work` schedule | `*/3` | every minute |
 | Worker WIP cap | 3 | 6 |
 | `review` schedule | `*/3` | every minute |
 | Reviews in flight (`agent:reviewing`) cap | 3 | 6 |
-| `merge` schedule | `*/10` | `*/3` |
+| `merge` schedule | `*/10` | every minute |
 | `qa` schedule | `*/30` | `*/15` |
 | Reaper timer | 1 min | 1 min |
 
