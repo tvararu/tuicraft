@@ -24,6 +24,7 @@ export type ResurrectRequest = {
   sickness: number;
   delayMs: number | undefined;
 };
+export type SpiritHealerConfirm = { guid: bigint };
 
 function guidRequest(guid: bigint): PacketWriter {
   const w = new PacketWriter();
@@ -82,4 +83,8 @@ export function parseResurrectRequest(r: PacketReader): ResurrectRequest {
   const sickness = r.uint8();
   const delayMs = r.remaining >= 4 ? r.uint32LE() : undefined;
   return { guid, name, reserved, sickness, delayMs };
+}
+
+export function parseSpiritHealerConfirm(r: PacketReader): SpiritHealerConfirm {
+  return { guid: r.uint64LE() };
 }
