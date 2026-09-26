@@ -339,13 +339,14 @@ export function onControlEvent(
 export function onDomainEvent<E extends { type: string }>(
   tag: string,
   event: E,
-  events: RingBuffer<EventEntry>,
-  log: SessionLog,
+  sink: { events: RingBuffer<EventEntry>; log: SessionLog },
+  text: (event: E) => string | undefined = (e) => `[${tag}] ${e.type}`,
 ): void {
+  const { events, log } = sink;
   const obj: Record<string, unknown> = {
     data: jsonSafe(event),
     type: tag.toUpperCase(),
   };
-  events.push({ json: JSON.stringify(obj), text: `[${tag}] ${event.type}` });
+  events.push({ json: JSON.stringify(obj), text: text(event) });
   log.append(obj as LogEntry).catch(ignoreFailure);
 }

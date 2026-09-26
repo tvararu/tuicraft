@@ -816,6 +816,12 @@ Human-readable (default):
 [ignore] Spammer removed from ignore list
 [monster yell] Darkwraith: For the Scourge!
 [monster emote] Darkwraith goes into a frenzy!
+[combat] +40 XP (kill 0xf130003d2307401f)
+[combat] Smite (591) failed: out of range
+[rewards] loot opened: 12 copper, slot 0 item 4775 x1
+[rewards] share of loot: 6 copper
+[rewards] received item 6889 x2 (now 5)
+[tactics] outcome completed: server_kill_credit
 ```
 
 Creature chat has its own labels and JSON event types: `MONSTER_SAY`
@@ -824,6 +830,15 @@ Creature chat has its own labels and JSON event types: `MONSTER_SAY`
 (`[monster emote]`), `RAID_BOSS_EMOTE` (`[boss emote]`) and
 `RAID_BOSS_WHISPER` (`[boss whisper]`). In both emote types the `%s`
 placeholder is replaced by the creature's name, in human and JSON output.
+
+Human gameplay lines carry their key fact: XP amount and source, the failed or
+interrupted spell (by name once spell data is loaded) with the server's failure
+reason, current self auras, money looted or a party share, the pushed item and
+count, and the offer when a loot window opens. Per-step tactics lines
+(`activated`, `request`, `result`, `applied`) and predicted movement steps
+(`movement_started`, `facing_changed`, and a stop by lease or direction change)
+are left out of human `read`/`tail`; `--json` keeps every event unchanged, and
+COMBAT cast events add `spellName` when spell data is loaded.
 
 With `--json`, every finite command prints exactly one JSON object and a
 newline on stdout. It has exactly five top-level fields:

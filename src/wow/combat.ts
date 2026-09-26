@@ -131,6 +131,7 @@ export type CombatEvent = {
   type: CombatEventType;
   state: CombatState;
   reason?: string;
+  spellName?: string;
 };
 
 export type CombatDeps = {
@@ -509,6 +510,12 @@ export class CombatRuntime {
   private emit(type: CombatEventType, reason?: string): void {
     const event: CombatEvent = { type, state: this.snapshot() };
     if (reason !== undefined) event.reason = reason;
+    const spellId = event.state.lastOutcome?.spellId;
+    const spellName =
+      type.startsWith("cast_") && spellId !== undefined
+        ? this.deps.catalog?.get(spellId)?.name
+        : undefined;
+    if (spellName !== undefined) event.spellName = spellName;
     this.events.emit(event);
   }
 }

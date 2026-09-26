@@ -61,8 +61,16 @@ export function formatControlState(state: ControlState): string {
   return `${header}\n${formatPoseLine("current pose", state.pose)}\n${formatPoseLine("last server pose", state.serverPose)}\ntarget observed=${observed} requested=${requested}${nextStep ? `\nnext step: ${nextStep}` : ""}`;
 }
 
-export function formatControlEvent(event: ControlEvent): string {
+const STEP_STOPS = ["lease", "direction_change"];
+
+export function formatControlEvent(event: ControlEvent): string | undefined {
   const origin = event.state.pose?.source ?? "unknown";
+  const step =
+    event.type === "movement_started" ||
+    event.type === "facing_changed" ||
+    (event.type === "movement_stopped" &&
+      STEP_STOPS.includes(event.reason ?? ""));
+  if (step && origin === "predicted") return undefined;
   const reason = event.reason ? ` ${event.reason}` : "";
   return `[control] ${event.type} ${origin}${reason}`;
 }
