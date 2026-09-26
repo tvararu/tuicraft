@@ -156,6 +156,30 @@ test("a target re-entering range resets the unreachable persistence threshold", 
   }
 });
 
+test("closing on an out-of-range target restarts the unreachable bound", () => {
+  let time = 1000;
+  const { actions, combat } = setup(() => time);
+  const definition = jest.spyOn(combat, "definition").mockReturnValue(spell());
+  const at = (ms: number, x: number) => {
+    time = ms;
+    combat.observePosition(2n, { mapId: 530, x, y: 0, z: 0, orientation: 0 });
+    return actions.observe(context).outcome;
+  };
+  try {
+    expect(at(1000, 50)).toBeUndefined();
+    expect(at(4000, 48.5)).toBeUndefined();
+    expect(at(8000, 47)).toBeUndefined();
+    expect(at(12_000, 46.5)).toBeUndefined();
+    expect(at(12_999, 47.5)).toBeUndefined();
+    expect(at(13_000, 46.5)).toEqual({
+      status: "blocked",
+      reason: "target_unreachable",
+    });
+  } finally {
+    definition.mockRestore();
+  }
+});
+
 test("facing remains recoverable and does not stop as unreachable", () => {
   let time = 1000;
   const { actions, combat, control } = setup(() => time);

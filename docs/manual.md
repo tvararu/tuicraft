@@ -338,6 +338,12 @@ so far; an unobserved separation never counts. Casting, shielding, healing,
 waiting and facing are not progress on their own; a target that leashes back to
 full health does not reset the bound. In `cycle`, the target is skipped with
 cause `no_progress` and the loop continues.
+A target out of melee and out of range of every supported spell blocks with
+`target_unreachable` after 5 s in which the separation never closes at least
+1 yd below its closest value since it went out of reach, so a character that
+keeps walking in is not stopped on the way. An unobserved separation never
+counts, and coming back into range resets the bound. In `cycle`, the target is
+skipped with cause `target_unreachable`.
 Jev may choose directional movement during a fight under a renewable lease:
 `wait` holds the current direction, `stop_moving` releases it, and choosing a
 standing-required spell releases the lease before casting. The observation
