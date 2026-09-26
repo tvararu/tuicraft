@@ -141,3 +141,146 @@ The new route started from the stopped pose. Its first `remaining`,
 the new destination. The run then read `remaining` 10.67 and 3.66, then
 `active: false, remaining: 0`. The relogin pose was
 (8744.349609375, -6687.06005859375, 69.95060729980469), `source: "server"`.
+
+## Slice 5: unreachable and lost destinations (issue #130), 2026-09-26
+
+Transcript: [unreachable-lost-transcript.txt](unreachable-lost-transcript.txt).
+It includes the GM commands used to set the scene. They came from the second
+own SOAP character, Fgklhanhcei, on account FAC6AB70D7248 (GM level 2).
+This branch also carries the #136 fix: `goto <guid>` samples a creature's
+current position, and an idle creature is no longer refused as stale.
+
+### Unreachable, nothing walked, nothing retried
+
+From (8749.18, -6688.34, 69.49), open ground south of the Fairbreeze inn:
+
+- `goto 8667.46 -6773.76` returned
+  `unreachable: pathfind_find_path failed (UNKNOWN_PATH)`. The ground column
+  there is a unique `[94.0002]`, about 24 yards above the start. The native
+  mesh has no path to it.
+- `goto 8727.46 -6683.76` returned
+  `unreachable: end snapped off the requested ground position`. The native
+  path ends at (8727.381, -6683.760), 0.08 yards from the requested point.
+  That point sits just outside the eroded mesh edge beside an obstacle.
+
+Both left `navigation --json` at `active: false, refusal: "unreachable"`
+with the next step "The navigation mesh cannot reach this destination.
+Choose another destination; do not retry this one." Five seconds later the
+state was unchanged. The pose still had its login `updatedAt`
+(1790382989719) and `moving: false`, and the only CONTROL events were the
+two `control_error` events.
+
+### Creature lost mid-route, not replanned
+
+The GM summoned the eversong character to (8787.43, -6733.45, 58.70), next
+to the Springpaw Stalkers. Its route in:
+
+1. `nearby --json` listed Springpaw Stalker `0xf130003d2305552c` at
+   58.47 yards.
+2. `goto 0xf130003d2305552c` returned `intent`. `navigation --json` read
+   `active: true`, `target: "0xf130003d2305552c"`,
+   `destination {x: 8822.03, y: -6784.36, z: 43.29}` and `remaining` 61.55.
+   That destination is the stalker's current position on its wander path,
+   with the ground height under it.
+3. After about 1.5 s, `remaining` read 51.04.
+4. The GM targeted the stalker and ran `.npc tame`. The server despawns the
+   tamed world creature (`Player::CreatePet` calls `DespawnOrUnsummon`), so
+   the client received `ENTITY_DISAPPEAR` for `0xf130003d2305552c`.
+5. `navigation --json` then read `active: false`,
+   `blockedReason: "target_lost"`, `refusal: "stop"` and `remaining` 50.00,
+   with the next step "The destination creature is no longer observed.
+   Choose a currently observed target; the route was not retried."
+
+The CONTROL events were `facing_changed`, `movement_started`,
+`control_changed`, `movement_stopped` (`target_lost`) and `control_changed`
+(`target_lost`). Five seconds later the pose was still predicted
+(8793.92, -6743.01, 53.13) with `moving: false`, and the navigation state
+was identical, so nothing had replanned. After relogin, the server pose was
+(8793.921875, -6743.00634765625, 53.13190841674805).
+
+### Creature leaves the character's view (rework, 2026-09-26)
+
+Transcript: [unreachable-lost-rework-transcript.txt](unreachable-lost-rework-transcript.txt).
+Run on fresh own SOAP characters: Fgklheeaodi (eversong10, account
+FAC6AB7440E38) navigating, and Fgklheeaopg (GM 2, account FAC6AB7440EF6).
+The daemon ran this branch's code.
+
+**Phase-out stops the route.** From (8787.80, -6732.96):
+
+1. `nearby --json` listed Springpaw Stalker `0xf130003d23078f6a` at
+   63.03 yards.
+2. `goto 0xf130003d23078f6a` started with `remaining` 62.43,
+   `target: "0xf130003d23078f6a"`, and `remaining` was 51.92 after about
+   1.5 s.
+3. The GM, with the stalker selected, ran `.modify phase 2`. This changes
+   the creature's phase in memory only; it writes no world data. The stalker
+   left the navigator's view.
+4. The route stopped with `movement_stopped` (`target_lost`),
+   `blockedReason: "target_lost"`, `refusal: "stop"` and `remaining`
+   51.42. Five seconds later the state and the predicted pose
+   (8793.37, -6742.47, 53.46) were unchanged. Nothing replanned.
+
+**How the loss reached the client.** A throwaway probe traced
+`EntityStore.destroy` for the same stalker while the GM toggled its phase.
+The call came from `handleDestroyObject`, so a phase change arrives as
+`SMSG_DESTROY_OBJECT`, like the despawn above. It is not an out-of-range
+block. The probe's third command restored the stalker to phase 1.
+
+**First out-of-range attempt.** The review suggested `.npc move` to carry a
+creature out of range. I did not use it: `HandleNpcMoveCommand` writes the
+creature's spawn position to the world database
+(`WORLD_UPD_CREATURE_POSITION`, `cs_npc.cpp:914-921`), and the agent rules
+forbid server-data edits. I then had Velan Brightoak `.npc follow` the GM
+away, but the character walked 89.4 yards and arrived before the gap passed
+the visibility range. The follow was stopped with Velan 3.7 yards from his
+spawn point.
+
+### Creature leaves range through the out-of-range update (second rework)
+
+Transcript:
+[unreachable-lost-out-of-range-transcript.txt](unreachable-lost-out-of-range-transcript.txt).
+This run used new own accounts: Fgklhhjhiio (eversong10, 0xaad, account
+FAC6AB779788E) navigating, and Fgklhhjhilh (GM 2, account FAC6AB77978B7).
+The daemon ran this branch.
+
+Setup, all in memory:
+
+- The GM summoned the navigator to (8789.13, -6735.92, 56.61).
+- The GM selected the navigator and ran `.modify speed 0.2`.
+  `HandleModifyASpeedCommand` sets the speed in memory only. The daemon
+  applied the `SMSG_FORCE_RUN_SPEED_CHANGE`: `control --json` read `speed`
+  1.4 before the run, and `remaining` fell about 1.4 yards per second.
+- The GM took Springpaw Stalker `0xf130003d23028af3` on `.npc follow`.
+
+The daemon ran with a throwaway preload that logs the caller of every
+`EntityStore.destroy` to `tmp/`.
+
+1. `goto 0xf130003d23028af3` returned `intent`. `navigation --json` read
+   `active: true`, `target: "0xf130003d23028af3"`, `remaining` 79.75 and
+   `destination (8794.18, -6815.51, 53.30)`, the stalker's position at the
+   time.
+2. The GM walked south and the stalker followed. `remaining` fell from
+   78.35 to 72.45 over about five seconds.
+3. The stalker left the navigator's visibility range. The client received
+   `ENTITY_DISAPPEAR` for `0xf130003d23028af3`. The destroy trace shows it
+   came through the out-of-range update entry:
+   `destroy 0xf130003d23028af3 at applyEntry (world-handlers-entity.ts:46)
+   <- at handleUpdateObject (world-handlers-entity.ts:30)`. Line 46 is the
+   `outOfRange` case.
+4. The route stopped with `movement_stopped` (`target_lost`).
+   `navigation --json` read `active: false`, `blockedReason: "target_lost"`,
+   `refusal: "stop"` and `remaining` 71.26.
+5. Five seconds later the navigation state was identical and the pose was
+   predicted (8789.67, -6744.40, 55.35) with `moving: false`. Nothing
+   replanned.
+
+Afterwards the GM ran `.npc follow stop`, restored the navigator with
+`.modify speed 1` (`speed` read 7 again) and ran `.gm off`. After relogin
+the server pose was (8789.6708984375, -6744.39990234375, 55.35465621948242),
+equal to the stopped pose. These accounts were deleted after the run and not
+reused.
+
+The mock-world test in `src/wow/gameplay-lifecycle.test.ts` encodes the same
+path. It injects an `SMSG_UPDATE_OBJECT` out-of-range block during an active
+`goto <guid>` and expects `target_lost`. The test fails if the
+`observeDisappear` hook is removed.

@@ -47,6 +47,7 @@ describe("requestLine", () => {
     [["walk-toward", "20", "0xa"]],
     [["goto", "1.5", "-2", "3"]],
     [["goto", "1.5", "-2"]],
+    [["goto", "0xa"]],
     [["fight", "--framing", "mechanics", "0xa", "stay", "alive"]],
     [["cycle", "0xa", "--instruction", "hold", "aggro"]],
     [["cycle", "--resume", "--max", "3", "--instruction", "hold", "aggro"]],

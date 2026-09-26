@@ -8,7 +8,12 @@ import {
 } from "cli/args-chat";
 import { parseGameplay, take } from "cli/args-gameplay";
 import { parseBare, parseUnsigned } from "cli/tokens";
-import type { FramingVariant, MovementDirection, WalkTarget } from "wow";
+import type {
+  FramingVariant,
+  GotoTarget,
+  MovementDirection,
+  WalkTarget,
+} from "wow";
 
 export type CliAction =
   | { mode: "interactive" }
@@ -79,7 +84,7 @@ export type CliAction =
       json?: true;
     }
   | { mode: "cycling"; json: boolean }
-  | { mode: "goto"; x: number; y: number; z?: number; json?: true }
+  | { mode: "goto"; target: GotoTarget; json?: true }
   | { mode: "navigation"; json: boolean }
   | { mode: "recovery"; json: boolean }
   | { mode: "query_corpse"; json?: true }

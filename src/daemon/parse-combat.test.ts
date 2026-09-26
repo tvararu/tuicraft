@@ -71,15 +71,21 @@ describe("parseIpcCommand", () => {
       type: "cycling_json",
     });
     expect(parseIpcCommand("GOTO 1 2 3")).toEqual({
+      target: { kind: "point", x: 1, y: 2, z: 3 },
       type: "goto",
-      x: 1,
-      y: 2,
-      z: 3,
     });
     expect(parseIpcCommand("CAST")?.type).toBe("invalid");
     expect(parseIpcCommand("CAST 0 0x1")?.type).toBe("invalid");
-    expect(parseIpcCommand("GOTO 1 2")).toEqual({ type: "goto", x: 1, y: 2 });
-    expect(parseIpcCommand("GOTO 1")?.type).toBe("invalid");
+    expect(parseIpcCommand("GOTO 1 2")).toEqual({
+      target: { kind: "point", x: 1, y: 2 },
+      type: "goto",
+    });
+    expect(parseIpcCommand("GOTO 0xa")).toEqual({
+      target: { guid: 10n, kind: "guid" },
+      type: "goto",
+    });
+    expect(parseIpcCommand("GOTO 0")?.type).toBe("invalid");
+    expect(parseIpcCommand("GOTO 1.5")?.type).toBe("invalid");
     expect(parseIpcCommand("GOTO 1 2 3 4")?.type).toBe("invalid");
     expect(parseIpcCommand("GOTO 1 NaN")?.type).toBe("invalid");
     expect(parseIpcCommand("GOTO 1 2 Infinity")?.type).toBe("invalid");

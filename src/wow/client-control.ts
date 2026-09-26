@@ -1,4 +1,4 @@
-import type { WalkTarget, WorldHandle } from "wow/client";
+import type { GotoTarget, WalkTarget, WorldHandle } from "wow/client";
 import type { ControlPose, MovementDirection, WalkOutcome } from "wow/control";
 import { bearing } from "wow/geometry";
 import {
@@ -116,23 +116,35 @@ function planDestination(
   return { route, resolved: { x, y, z: end.z } };
 }
 
-function navigateTo(rt: Runtimes, destination: NavDestination): void {
+function pointOf(target: GotoTarget): NavDestination | undefined {
+  if (target.kind === "guid") return undefined;
+  const { x, y, z } = target;
+  if (![x, y, z ?? 0].every(Number.isFinite))
+    throw new Error("stop: invalid_destination");
+  return z === undefined ? { x, y } : { x, y, z };
+}
+
+function navigateTo(rt: Runtimes, target: GotoTarget): void {
   rt.override(
     rt.control.navigationState().active ? "navigation_replaced" : undefined,
   );
-  const { x, y, z } = destination;
-  if (![x, y, z ?? 0].every(Number.isFinite))
-    throw new Error("stop: invalid_destination");
+  let destination = pointOf(target);
   const pose = rt.control.snapshot().pose;
   if (!pose) throw new Error("stop: no_pose");
   const navigation = rt.navigation();
+  const guid = target.kind === "guid" ? target.guid : undefined;
   try {
+    if (guid !== undefined) {
+      const { x, y } = rt.observedTarget(guid);
+      destination = { x, y };
+    }
+    if (destination === undefined) throw new Error("invalid_destination");
     const { route, resolved } = planDestination(navigation, pose, destination);
-    rt.control.navigate(route, resolved);
+    rt.control.navigate(route, resolved, guid);
   } catch (error) {
     const raw = error instanceof Error ? error.message : "navigation_failed";
     const refusal = classifyNavigationRefusal(raw);
-    rt.control.navigationError(destination, raw, refusal);
+    rt.control.navigationError(destination, raw, refusal, guid);
     throw new Error(`${refusal}: ${raw}`, { cause: error });
   }
 }
@@ -172,8 +184,8 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
       rt.recovery.clearSpiritHealer("halt");
       rt.halt();
     },
-    goTo(x: number, y: number, z?: number) {
-      navigateTo(rt, z === undefined ? { x, y } : { x, y, z });
+    goTo(target) {
+      navigateTo(rt, target);
     },
     getNavigationState() {
       return control.navigationState();

@@ -1,4 +1,5 @@
 import type { NavigationState } from "wow/control";
+import { classifyNavigationRefusal } from "wow/navigation";
 
 export type NavigationObservation = NavigationState & {
   nextStep: string | null;
@@ -15,6 +16,10 @@ export function nextStepFor(reason: string | undefined): string | null {
     return "The route crosses ground with more than one floor. Choose a different destination or an open-ground waypoint.";
   if (reason?.includes("ambiguous ground column"))
     return "Choose a destination with one ground height. Do not guess Z.";
+  if (reason === "target_lost")
+    return "The destination creature is no longer observed. Choose a currently observed target; the route was not retried.";
+  if (reason && classifyNavigationRefusal(reason) === "unreachable")
+    return "The navigation mesh cannot reach this destination. Choose another destination; do not retry this one.";
   return null;
 }
 

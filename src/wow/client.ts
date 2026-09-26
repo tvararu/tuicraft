@@ -147,6 +147,9 @@ export type ChatMode =
 export type WalkTarget =
   | { kind: "guid"; guid: bigint }
   | { kind: "point"; x: number; y: number; z: number };
+export type GotoTarget =
+  | { kind: "guid"; guid: bigint }
+  | { kind: "point"; x: number; y: number; z?: number };
 
 export type WorldHandle = {
   closed: Promise<void>;
@@ -233,7 +236,7 @@ export type WorldHandle = {
     framing?: FramingVariant,
   ) => Promise<void>;
   getTacticsState: () => TacticsState;
-  goTo: (x: number, y: number, z?: number) => void;
+  goTo: (target: GotoTarget) => void;
   getNavigationState: () => NavigationState;
   observeNavigation: () => NavigationObservation;
   onCombatEvent: (cb: (event: CombatEvent) => void) => Unsubscribe;

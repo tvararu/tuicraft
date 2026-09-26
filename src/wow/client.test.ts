@@ -383,9 +383,9 @@ describe("session lifecycle", () => {
         { ...base, host: "127.0.0.1", port: worldServer.port },
         fakeAuth(worldServer.port),
       );
-      expect(() => handle.goTo(Number.NaN, 0, 0)).toThrow(
-        "stop: invalid_destination",
-      );
+      expect(() =>
+        handle.goTo({ kind: "point", x: Number.NaN, y: 0, z: 0 }),
+      ).toThrow("stop: invalid_destination");
 
       handle.close();
       await handle.closed;

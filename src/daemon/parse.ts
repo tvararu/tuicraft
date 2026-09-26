@@ -2,7 +2,12 @@ import { parseGameplay } from "daemon/parse-gameplay";
 import { fromSlashCommand } from "daemon/parse-slash";
 import { parseSocial } from "daemon/parse-social";
 import { parseCommand } from "ui/commands";
-import type { FramingVariant, MovementDirection, WalkTarget } from "wow";
+import type {
+  FramingVariant,
+  GotoTarget,
+  MovementDirection,
+  WalkTarget,
+} from "wow";
 
 export type IpcCommand =
   | { type: "chat"; message: string }
@@ -70,7 +75,7 @@ export type IpcCommand =
   | { type: "cycle_resume"; instruction?: string; maxStarts?: number }
   | { type: "cycling" }
   | { type: "cycling_json" }
-  | { type: "goto"; x: number; y: number; z?: number }
+  | { type: "goto"; target: GotoTarget }
   | { type: "navigation" }
   | { type: "navigation_json" }
   | { type: "recovery" }

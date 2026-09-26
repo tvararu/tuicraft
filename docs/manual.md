@@ -446,7 +446,7 @@ resumes, each target outcome,
 server kill XP when observed, `no loot` for a kill without loot, requested loot, observed coinage changes, and
 the stop reason. A request for money or an item slot does not prove a gain.
 
-`tuicraft goto` _x_ _y_ [_z_]
+`tuicraft goto` _x_ _y_ [_z_] | _guid_
 :: Request a ground route. Missing navigation data fails with `ERR`.
 Without _z_, the destination height comes from the native ground column at
 _x_ _y_; a column with more than one floor refuses with
@@ -465,6 +465,12 @@ old route with a `movement_stopped` CONTROL event whose reason is
 `navigation_replaced`, then plans from the stopped pose. If that plan is
 refused, the character stays stopped.
 
+With a _guid_, the route goes once to the ground under that observed
+creature's current position; `navigation --json` carries it as `target`. The
+route does not follow the creature. If the creature disappears from the
+entity store while the route is active, for example by leaving visibility
+range, the route stops with `blockedReason=target_lost` and is not replanned.
+
 `tuicraft navigation` [`--json`]
 :: Print navigation state, including raw `blockedReason`, `refusal` and
 `nextStep`. For `obstructed`, choose another route and inspect the ground.
@@ -475,6 +481,10 @@ with one ground height; do not guess Z. `ambiguous ground column at start`
 means the character stands where the column has more than one floor, such as
 inside a building; move to open ground first. `at route` means the route
 crosses such ground; choose another destination or waypoint. Both stop.
+`refusal=unreachable` means the navigation mesh cannot connect the start to
+the destination: native `UNKNOWN_PATH`, a path that ends away from the
+requested point, or a path that omits it. Choose another destination; the
+daemon never retries it.
 `nextStep` is advice, not a verified detour or an automatic retry.
 
 `tuicraft recovery` [`--json`]
