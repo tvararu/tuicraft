@@ -277,6 +277,8 @@ export function registerLootHandlers(conn: WorldConn): void {
     conn.rewards?.receiveInventoryFailure(packet);
     conn.combat?.applyInventoryFailure(packet);
     conn.vendor?.receiveInventoryFailure(packet);
+    conn.quests?.receiveInventoryFailure(packet);
+    conn.destroy?.receiveInventoryFailure(packet);
   });
   on(GameOpcode.SMSG_ITEM_QUERY_SINGLE_RESPONSE, (r) =>
     conn.itemTemplates?.receive(parseItemQueryResponse(r)),

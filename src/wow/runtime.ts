@@ -4,6 +4,7 @@ import { CombatRuntime } from "wow/combat";
 import { CombatActions } from "wow/combat-actions";
 import { defendTarget } from "wow/combat-defense";
 import { ControlRuntime } from "wow/control";
+import { ItemDestroyRuntime } from "wow/destroy";
 import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import type { EntityLookup } from "wow/entity-store";
 import {
@@ -44,6 +45,7 @@ export type Runtimes = {
   trainer: TrainerRuntime;
   vendor: VendorRuntime;
   defense: SelfDefense;
+  destroy: ItemDestroyRuntime;
   prepareCatalog: () => Promise<void>;
   navigation: () => Navigation;
   observedTarget: (guid: bigint) => NavPoint;
@@ -72,6 +74,7 @@ type RuntimeParts = {
   trainer: TrainerRuntime;
   vendor: VendorRuntime;
   defense: SelfDefense;
+  destroy: ItemDestroyRuntime;
 };
 
 function createControl(
@@ -186,6 +189,7 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
     tactics,
     trainer,
     vendor,
+    destroy,
   } = parts;
   const { events } = conn;
   const detach = [
@@ -221,6 +225,7 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
     combat.onEvent((event) => {
       if (event.type === "attacked") parts.defense.tick();
     }),
+    destroy.onEvent((event) => events.destroy.emit(event)),
   ];
   return () => {
     for (const off of detach) off();
@@ -260,6 +265,7 @@ function disposeParts(
     cycle,
     trainer,
     vendor,
+    destroy,
   } = parts;
   options.unwire();
   parts.defense.dispose();
@@ -275,6 +281,7 @@ function disposeParts(
   cycle.dispose();
   trainer.dispose();
   vendor.dispose();
+  destroy.dispose();
   lazy.navigation?.close();
 }
 
@@ -291,7 +298,7 @@ function createSupportRuntimes(
   parts: Pick<RuntimeParts, "control" | "tactics">,
 ): Pick<
   RuntimeParts,
-  "recovery" | "quests" | "rewards" | "items" | "cycle" | "vendor"
+  "recovery" | "quests" | "rewards" | "items" | "cycle" | "vendor" | "destroy"
 > {
   const { control, tactics } = parts;
   const recovery = new RecoveryRuntime({
@@ -315,7 +322,9 @@ function createSupportRuntimes(
   conn.cycle = cycle;
   const vendor = new VendorRuntime(runtimeDeps);
   conn.vendor = vendor;
-  return { recovery, quests, rewards, items, cycle, vendor };
+  const destroy = new ItemDestroyRuntime(runtimeDeps);
+  conn.destroy = destroy;
+  return { recovery, quests, rewards, items, cycle, vendor, destroy };
 }
 
 function createCombat(

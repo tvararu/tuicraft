@@ -207,11 +207,12 @@ export function parseSpellId(tokens: string[]): Parsed<{ spellId: number }> {
   return parsed.ok ? ok({ spellId: parsed.value }) : parsed;
 }
 
-export function parseSell(
+export function parseItemStack(
   tokens: string[],
+  verb: string,
 ): Parsed<{ bag: number; slot: number; count?: number }> {
   const [rawBag, rawSlot, rawCount] = tokens;
-  if (tokens.length < 2 || tokens.length > 3) return fail("invalid sell");
+  if (tokens.length < 2 || tokens.length > 3) return fail(`invalid ${verb}`);
   const bag = rawBag === undefined ? undefined : parseUnsigned(rawBag, 0, 255);
   const slot =
     rawSlot === undefined ? undefined : parseUnsigned(rawSlot, 0, 255);
@@ -220,7 +221,7 @@ export function parseSell(
   if (rawCount === undefined) return ok({ bag, slot });
   const count = parseUnsigned(rawCount, 1, MAX_UINT32);
   return count === undefined
-    ? fail("invalid sell count")
+    ? fail(`invalid ${verb} count`)
     : ok({ bag, count, slot });
 }
 

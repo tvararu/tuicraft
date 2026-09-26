@@ -146,6 +146,7 @@ export function createMockHandle(): MockHandle {
     completeQuest: jest.fn(),
     declineGuildInvite: jest.fn(),
     declineInvite: jest.fn(),
+    destroyItem: jest.fn(),
     disarmDefense: jest.fn(() => defense.disarm("command")),
     face: jest.fn(),
     faceGuid: jest.fn(),
@@ -154,6 +155,10 @@ export function createMockHandle(): MockHandle {
     getControlState: jest.fn((): ControlState => controlState),
     getCycleState: jest.fn(() => cycle.snapshot()),
     getDefenseState: jest.fn(() => defense.snapshot()),
+    getDestroyState: jest.fn(() => ({
+      lastOutcome: undefined,
+      pending: undefined,
+    })),
     getExperienceState: jest.fn(() => ({
       lastLevelUp: undefined,
       lastXp: undefined,
@@ -226,6 +231,9 @@ export function createMockHandle(): MockHandle {
     },
     onDefenseEvent(cb) {
       return events.defense.subscribe(cb);
+    },
+    onDestroyEvent(cb) {
+      return events.destroy.subscribe(cb);
     },
     onDuelEvent(cb) {
       return events.duel.subscribe(cb);

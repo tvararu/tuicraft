@@ -124,6 +124,12 @@ describe("loot IPC boundary", () => {
       slot: 255,
       type: "take_loot",
     });
+    expect(parseIpcCommand("DESTROY 255 30 2")).toEqual({
+      bag: 255,
+      count: 2,
+      slot: 30,
+      type: "destroy",
+    });
     for (const line of [
       "OPEN_LOOT 0",
       "OPEN_LOOT 18446744073709551616",
@@ -135,6 +141,9 @@ describe("loot IPC boundary", () => {
       "LOOT_ROLL 0xa 0",
       "LOOT_ROLL 0 0 need",
       "LOOT_ROLL 0xa 0 greedy",
+      "DESTROY 255",
+      "DESTROY 255 -1",
+      "DESTROY 255 1 0",
     ])
       expect(parseIpcCommand(line)?.type).toBe("invalid");
   });

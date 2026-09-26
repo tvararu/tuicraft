@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { bytes } from "test/hex";
-import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import {
+  DESTROY_TWO_OF_STACK,
+  DESTROY_WHOLE_STACK,
+  INVENTORY_FULL_ON_REWARD,
+} from "test/inventory-fixtures";
+import {
+  buildDestroyItem,
+  inventoryResultName,
+  parseInventoryChangeFailure,
+} from "wow/protocol/inventory";
 import { PacketReader } from "wow/protocol/packet";
 
 const guid = 0x0102030405060708n;
@@ -72,5 +81,30 @@ describe("parseInventoryChangeFailure", () => {
         ),
       ),
     ).toMatchObject({ result: 89, detail: { kind: "limit", category: 123 } });
+  });
+});
+
+describe("CMSG_DESTROYITEM", () => {
+  test("matches wow_messages and the captured client packets", () => {
+    expect(buildDestroyItem(255, 36, 0)).toEqual(DESTROY_WHOLE_STACK);
+    expect(buildDestroyItem(255, 29, 2)).toEqual(DESTROY_TWO_OF_STACK);
+    expect(buildDestroyItem(19, 3, 5)).toEqual(bytes("13 03 05 000000"));
+  });
+
+  test("reads the captured full-bags answer to a quest reward", () => {
+    const failure = parseInventoryChangeFailure(
+      new PacketReader(INVENTORY_FULL_ON_REWARD),
+    );
+    expect(failure).toMatchObject({ kind: "error", result: 50 });
+    expect(inventoryResultName(failure.result)).toBe("inventory_full");
+  });
+});
+
+describe("inventoryResultName", () => {
+  test("names AzerothCore results and keeps unknown codes readable", () => {
+    expect(inventoryResultName(50)).toBe("inventory_full");
+    expect(inventoryResultName(24)).toBe("cant_drop_soulbound");
+    expect(inventoryResultName(23)).toBe("item_not_found");
+    expect(inventoryResultName(250)).toBe("inventory_result_250");
   });
 });

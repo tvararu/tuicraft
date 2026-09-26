@@ -125,6 +125,7 @@ export type IpcCommand =
   | { type: "buy"; slot: number; count: number }
   | { type: "repair" }
   | { type: "loot_roll"; guid: bigint; slot: number; vote: RollVote }
+  | { type: "destroy"; bag: number; slot: number; count?: number }
   | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }

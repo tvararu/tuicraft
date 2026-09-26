@@ -104,6 +104,10 @@ describe("loot arguments", () => {
       ["loot-roll", "0xa", "-1", "need"],
       ["loot-roll", "0xa", "0", "win"],
       ["loot-roll", "0xa", "0", "need", "extra"],
+      ["destroy", "255"],
+      ["destroy", "256", "1"],
+      ["destroy", "255", "1", "0"],
+      ["destroy", "255", "1", "2", "3"],
     ])
       expect(() => parseArgs(args)).toThrow();
   });
@@ -199,6 +203,11 @@ describe("daemon JSON arguments", () => {
     [
       ["loot-roll", "0xa", "3", "greed"],
       { guid: 10n, mode: "loot_roll", slot: 3, vote: "greed" },
+    ],
+    [["destroy", "255", "30"], { bag: 255, mode: "destroy", slot: 30 }],
+    [
+      ["destroy", "19", "0", "5"],
+      { bag: 19, count: 5, mode: "destroy", slot: 0 },
     ],
   ] satisfies [string[], CliAction][];
 

@@ -192,6 +192,16 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
     onRewardsEvent(cb) {
       return conn.events.rewards.subscribe(cb);
     },
+    destroyItem(bag, slot, count) {
+      rt.override();
+      rt.destroy.destroy(bag, slot, count);
+    },
+    getDestroyState() {
+      return rt.destroy.snapshot();
+    },
+    onDestroyEvent(cb) {
+      return conn.events.destroy.subscribe(cb);
+    },
   } satisfies Partial<WorldHandle>;
 }
 

@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { must } from "test/must";
-import { EntityStore } from "wow/entity-store";
-import { registerQuestHandlers } from "wow/gameplay-handlers";
+import {
+  dialog,
+  giver,
+  menu,
+  packet,
+  questId,
+  self,
+  setup,
+  show,
+} from "test/quest-fixtures";
+import type { EntityStore } from "wow/entity-store";
 import {
   ObjectType,
   PLAYER_FIELDS,
@@ -9,107 +18,7 @@ import {
 } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
-import { OpcodeDispatch } from "wow/protocol/world";
 import { readQuestLog } from "wow/quest-slots";
-import { type QuestEvent, QuestRuntime } from "wow/quests";
-import type { WorldConn } from "wow/world-conn";
-
-const self = 1n;
-const giver = 2n;
-const questId = 42;
-
-function setup() {
-  const entities = new EntityStore();
-  entities.create(self, ObjectType.PLAYER, { createComplete: true });
-  const sent: { opcode: number; body: Uint8Array | undefined }[] = [];
-  const events: QuestEvent[] = [];
-  let failSend = false;
-  const runtime = new QuestRuntime({
-    selfGuid: () => self,
-    getEntity: (guid) => entities.get(guid),
-    now: () => 1000,
-    send: (opcode, body) => {
-      if (failSend) throw new Error("socket_closed");
-      sent.push({ opcode, body });
-    },
-  });
-  runtime.onEvent((event) => events.push(event));
-  runtime.observeSelfCreate(must(entities.get(self)));
-  runtime.observeQuestLog();
-  return {
-    runtime,
-    entities,
-    sent,
-    events,
-    fail: () => {
-      failSend = true;
-    },
-  };
-}
-
-function packet(runtime: QuestRuntime, opcode: number, data: Uint8Array): void {
-  const dispatch = new OpcodeDispatch();
-  registerQuestHandlers({ dispatch, quests: runtime } as unknown as WorldConn);
-  dispatch.handle(opcode, new PacketReader(data));
-}
-
-function menu(guid = giver, id = questId): Uint8Array {
-  const w = new PacketWriter();
-  w.uint64LE(guid);
-  w.uint32LE(17);
-  w.uint32LE(1);
-  w.uint32LE(1);
-  w.uint32LE(5);
-  w.uint8(0);
-  w.uint8(0);
-  w.uint32LE(0);
-  w.cString("Continue");
-  w.cString("");
-  w.uint32LE(1);
-  w.uint32LE(id);
-  w.uint32LE(2);
-  w.uint32LE(1);
-  w.uint32LE(0);
-  w.uint8(0);
-  w.cString("Quest");
-  return w.finish();
-}
-
-function rewards(w: PacketWriter, offer: boolean, choices: number): void {
-  w.uint32LE(choices);
-  for (let i = 0; i < choices; i++) {
-    w.uint32LE(100 + i);
-    w.uint32LE(1);
-    w.uint32LE(200 + i);
-  }
-  w.uint32LE(0);
-  for (let i = 0; i < 4; i++) w.uint32LE(0);
-  if (offer) w.uint32LE(0);
-  for (let i = 0; i < 21; i++) w.uint32LE(0);
-}
-
-function dialog(
-  kind: "details" | "offer",
-  guid = giver,
-  id = questId,
-  choices = 0,
-): Uint8Array {
-  const w = new PacketWriter();
-  w.uint64LE(guid);
-  if (kind === "details") w.uint64LE(0n);
-  w.uint32LE(id);
-  w.cString("Quest");
-  w.cString("Text");
-  if (kind === "details") w.cString("Objectives");
-  w.uint8(1);
-  w.uint32LE(0);
-  w.uint32LE(0);
-  if (kind === "details") w.uint8(0);
-  else w.uint32LE(0);
-  rewards(w, kind === "offer", choices);
-  if (kind === "details") w.uint32LE(0);
-  return w.finish();
-}
 
 function requestItems(canComplete: boolean): Uint8Array {
   const w = new PacketWriter();
@@ -145,17 +54,6 @@ function setSlot(
   const fields = must(entities.get(self)).rawFields;
   for (const [i, value] of [id, state, low, high, 0].entries())
     fields.set(PLAYER_FIELDS.QUEST_LOG.offset + slot * 5 + i, value);
-}
-
-function show(runtime: QuestRuntime, kind: "details" | "offer"): void {
-  runtime.talk(giver);
-  packet(
-    runtime,
-    kind === "details"
-      ? GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS
-      : GameOpcode.SMSG_QUESTGIVER_OFFER_REWARD,
-    dialog(kind),
-  );
 }
 
 describe("quest interaction authority", () => {

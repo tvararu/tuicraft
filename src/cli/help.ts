@@ -108,6 +108,8 @@ USAGE
   tuicraft loot-roll <guid> <slot> need|greed|pass  Answer a pending group loot roll
                             guid: roll or corpse GUID from loot --json rolls.pending
                             OK is intent; loot shows votes and the winner
+  tuicraft destroy <bag> <slot> [count]  Destroy a carried stack (whole stack by default)
+                            Confirmed from the observed slot; inventory shows the outcome
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)
