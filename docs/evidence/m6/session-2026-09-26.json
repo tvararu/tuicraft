@@ -1,0 +1,830 @@
+{
+  "cycles": [
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384250578,
+      "targets": [
+        {
+          "guid": "0xf130003d2306ba89",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790384261600,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384339563,
+      "targets": [
+        {
+          "guid": "0xf130003d2307505e",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790384343602,
+      "stopCause": "halt",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "resumed",
+      "recoveries": [],
+      "startedAt": 1790384348044,
+      "targets": [
+        {
+          "guid": "0xf130003d2307505e",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "none"
+        }
+      ],
+      "stoppedAt": 1790384356003,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384370191,
+      "targets": [
+        {
+          "guid": "0xf130003d2207501f",
+          "status": "skipped",
+          "cause": "unverified_hostile_relation",
+          "outcome": "unverified_hostile_relation"
+        }
+      ],
+      "stoppedAt": 1790384370191,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 2,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384472531,
+      "targets": [
+        {
+          "guid": "0xf130003d23074fbe",
+          "status": "skipped",
+          "cause": "server_action_rejected:bad_facing",
+          "outcome": "server_action_rejected:bad_facing"
+        },
+        {
+          "guid": "0xf130003d23074e27",
+          "status": "skipped",
+          "cause": "target_unreachable",
+          "outcome": "target_unreachable"
+        }
+      ],
+      "stoppedAt": 1790384485353,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 4,
+      "startsUsed": 2
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384496185,
+      "targets": [
+        {
+          "guid": "0xf130003d23074e27",
+          "status": "skipped",
+          "cause": "height_unresolved",
+          "outcome": "height_unresolved"
+        },
+        {
+          "guid": "0xf130003d23074fbe",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790384517044,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 4,
+      "startsUsed": 2
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384623776,
+      "targets": [
+        {
+          "guid": "0xf130003f22024f40",
+          "status": "queued"
+        },
+        {
+          "guid": "0xf130003f220740e4",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790384628820,
+      "stopCause": "halt",
+      "maxStarts": 4,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "resumed",
+      "recoveries": [],
+      "startedAt": 1790384633165,
+      "targets": [
+        {
+          "guid": "0xf130003f22024f40",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        },
+        {
+          "guid": "0xf130003f220740e4",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790384657272,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 4,
+      "startsUsed": 2
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384670885,
+      "targets": [
+        {
+          "guid": "0xf130003d1d074138",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        },
+        {
+          "guid": "0xf130003f220196da",
+          "status": "skipped",
+          "cause": "obstructed",
+          "outcome": "obstructed"
+        }
+      ],
+      "stoppedAt": 1790384692436,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 4,
+      "startsUsed": 2
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [
+        {
+          "at": 1790384821651,
+          "detail": {
+            "pose": {
+              "mapId": 530,
+              "x": 8777.134006605718,
+              "y": -6200.307678124267,
+              "z": 8.197342872619629,
+              "orientation": 1.4057302477821452,
+              "source": "predicted",
+              "updatedAt": 1790384821617
+            },
+            "range": 35.064600574604086,
+            "legs": 17
+          },
+          "outcome": "reclaimed"
+        }
+      ],
+      "startedAt": 1790384775014,
+      "targets": [
+        {
+          "guid": "0xf130003f22074167",
+          "status": "skipped",
+          "cause": "target_unreachable",
+          "outcome": "target_unreachable"
+        }
+      ],
+      "stoppedAt": 1790384826748,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384869125,
+      "targets": [
+        {
+          "guid": "0xf130003f22074155",
+          "status": "skipped",
+          "cause": "obstructed",
+          "outcome": "obstructed"
+        },
+        {
+          "guid": "0xf130003f22074167",
+          "status": "skipped",
+          "cause": "server_action_rejected:47",
+          "outcome": "server_action_rejected:47"
+        }
+      ],
+      "stoppedAt": 1790384873582,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 4,
+      "startsUsed": 2
+    },
+    {
+      "instruction": "keep health above half; heal before attacking again if needed",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790384875243,
+      "targets": [
+        {
+          "guid": "0xf130003f22074155",
+          "status": "skipped",
+          "cause": "target_unreachable",
+          "outcome": "target_unreachable"
+        }
+      ],
+      "stoppedAt": 1790384882319,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [
+        {
+          "at": 1790384976443,
+          "detail": {
+            "pose": {
+              "mapId": 530,
+              "x": 8787.557394803569,
+              "y": -6184.845342334117,
+              "z": 7.621503829956055,
+              "orientation": 1.3901034291008898,
+              "source": "predicted",
+              "updatedAt": 1790384962558
+            },
+            "range": 31.104939363712205,
+            "legs": 18
+          },
+          "outcome": "reclaimed"
+        }
+      ],
+      "startedAt": 1790384914358,
+      "targets": [
+        {
+          "guid": "0xf130003f220196da",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790384989092,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "keep the character alive above all: shield first and heal early",
+      "kind": "started",
+      "recoveries": [
+        {
+          "at": 1790385199046,
+          "detail": {
+            "pose": {
+              "mapId": 530,
+              "x": 8790.516952635946,
+              "y": -6218.207454173622,
+              "z": 10.66935920715332,
+              "orientation": 1.370805140935543,
+              "source": "predicted",
+              "updatedAt": 1790385121582
+            },
+            "range": 30.11532895723984,
+            "legs": 16
+          },
+          "outcome": "reclaimed"
+        }
+      ],
+      "startedAt": 1790385076955,
+      "targets": [
+        {
+          "guid": "0xf130003f2207598f",
+          "status": "skipped",
+          "cause": "target_unreachable",
+          "outcome": "target_unreachable"
+        }
+      ],
+      "stoppedAt": 1790385235751,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 2,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790385331810,
+      "targets": [
+        {
+          "guid": "0xf130003f2207598f",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790385341902,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "keep health above half; heal before attacking again if needed",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790385349650,
+      "targets": [
+        {
+          "guid": "0xf130003f220759db",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790385354694,
+      "stopCause": "halt",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "resumed",
+      "recoveries": [],
+      "startedAt": 1790385356237,
+      "targets": [
+        {
+          "guid": "0xf130003f220759db",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790385366452,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [
+        {
+          "at": 1790385613956,
+          "detail": {
+            "pose": {
+              "mapId": 530,
+              "x": 8776.182874919448,
+              "y": -6232.8456898195545,
+              "z": 9.398898124694824,
+              "orientation": 1.395511189270585,
+              "source": "predicted",
+              "updatedAt": 1790385535410
+            },
+            "range": 29.312396969984263,
+            "legs": 16
+          },
+          "outcome": "reclaimed"
+        }
+      ],
+      "startedAt": 1790385491923,
+      "targets": [
+        {
+          "guid": "0xf130003f22075e5e",
+          "status": "skipped",
+          "cause": "target_unreachable",
+          "outcome": "target_unreachable"
+        }
+      ],
+      "stoppedAt": 1790385621790,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790385695079,
+      "targets": [
+        {
+          "guid": "0xf130003d2302126f",
+          "status": "skipped",
+          "cause": "server_action_rejected:134",
+          "outcome": "server_action_rejected:134"
+        }
+      ],
+      "stoppedAt": 1790385701819,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790385704200,
+      "targets": [
+        {
+          "guid": "0xf130003d2302126f",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790385709564,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "keep health above half; heal before attacking again if needed",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790385714502,
+      "targets": [
+        {
+          "guid": "0xf130003d23068551",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790386014728,
+      "stopCause": "manual_override",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386014728,
+      "targets": [
+        {
+          "guid": "0xf130003d23068551",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386026382,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386035775,
+      "targets": [
+        {
+          "guid": "0xf130003d2301b90c",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386055170,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386072295,
+      "targets": [
+        {
+          "guid": "0xf130003d23057694",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386082204,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "keep health above half; heal before attacking again if needed",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386091200,
+      "targets": [
+        {
+          "guid": "0xf130003d23068332",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386154361,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386161051,
+      "targets": [
+        {
+          "guid": "0xf130003d2306835a",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386170621,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "keep the character alive above all: shield first and heal early",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386412720,
+      "targets": [
+        {
+          "guid": "0xf130003d1507515b",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790386421342,
+      "stopCause": "corpse_unreachable",
+      "stopDetail": {
+        "pose": {
+          "mapId": 530,
+          "x": 8696.075354281016,
+          "y": -6663.740003242283,
+          "z": 75.12203216552734,
+          "orientation": 0.9994232268643115,
+          "source": "predicted",
+          "updatedAt": 1790386420841
+        },
+        "range": 562.693858540369,
+        "legs": 14
+      },
+      "maxStarts": 2,
+      "startsUsed": 0
+    },
+    {
+      "instruction": "defeat the target while keeping the character alive",
+      "kind": "resumed",
+      "recoveries": [],
+      "startedAt": 1790386426692,
+      "targets": [
+        {
+          "guid": "0xf130003d1507515b",
+          "status": "queued"
+        }
+      ],
+      "stoppedAt": 1790386432247,
+      "stopCause": "corpse_unreachable",
+      "stopDetail": {
+        "pose": {
+          "mapId": 530,
+          "x": 8696.075354281016,
+          "y": -6663.740003242283,
+          "z": 75.12203216552734,
+          "orientation": 0.9994232268643115,
+          "source": "predicted",
+          "updatedAt": 1790386431746
+        },
+        "range": 562.693858540369,
+        "legs": 11
+      },
+      "maxStarts": 2,
+      "startsUsed": 0
+    },
+    {
+      "instruction": "conserve mana; use melee and wands when possible",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386619402,
+      "targets": [
+        {
+          "guid": "0xf130003d230754cf",
+          "status": "skipped",
+          "cause": "server_action_rejected:134",
+          "outcome": "server_action_rejected:134"
+        }
+      ],
+      "stoppedAt": 1790386624865,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    },
+    {
+      "instruction": "finish the target fast, spend mana freely",
+      "kind": "started",
+      "recoveries": [],
+      "startedAt": 1790386629839,
+      "targets": [
+        {
+          "guid": "0xf130003d230754cf",
+          "status": "done",
+          "outcome": "server_kill_credit",
+          "loot": "looted"
+        }
+      ],
+      "stoppedAt": 1790386638307,
+      "stopCause": "queue_exhausted",
+      "maxStarts": 3,
+      "startsUsed": 1
+    }
+  ],
+  "entries": 9138,
+  "window": {
+    "durationMs": 2387729,
+    "from": 1790384250578,
+    "to": 1790386638307
+  },
+  "blocked": {
+    "cycleStops": [
+      {
+        "at": 1790386421342,
+        "cause": "corpse_unreachable",
+        "detail": {
+          "pose": {
+            "mapId": 530,
+            "x": 8696.075354281016,
+            "y": -6663.740003242283,
+            "z": 75.12203216552734,
+            "orientation": 0.9994232268643115,
+            "source": "predicted",
+            "updatedAt": 1790386420841
+          },
+          "range": 562.693858540369,
+          "legs": 14
+        }
+      },
+      {
+        "at": 1790386432247,
+        "cause": "corpse_unreachable",
+        "detail": {
+          "pose": {
+            "mapId": 530,
+            "x": 8696.075354281016,
+            "y": -6663.740003242283,
+            "z": 75.12203216552734,
+            "orientation": 0.9994232268643115,
+            "source": "predicted",
+            "updatedAt": 1790386431746
+          },
+          "range": 562.693858540369,
+          "legs": 11
+        }
+      }
+    ],
+    "skipsByCause": {
+      "unverified_hostile_relation": 1,
+      "server_action_rejected:bad_facing": 1,
+      "target_unreachable": 5,
+      "height_unresolved": 1,
+      "obstructed": 2,
+      "server_action_rejected:47": 1,
+      "server_action_rejected:134": 2
+    },
+    "targetsSkipped": 13
+  },
+  "completions": {
+    "serverKillCredit": 16,
+    "targetsDone": 16
+  },
+  "fights": {
+    "byReason": {
+      "server_kill_credit": 16,
+      "unverified_hostile_relation": 1,
+      "server_action_rejected:bad_facing": 1,
+      "target_unreachable": 5,
+      "height_unresolved": 1,
+      "obstructed": 2,
+      "server_action_rejected:47": 1,
+      "server_action_rejected:134": 2
+    },
+    "byStatus": {
+      "completed": 16,
+      "failed": 1,
+      "blocked": 12
+    },
+    "started": 33
+  },
+  "interventions": [
+    {
+      "at": 1790384343602,
+      "kind": "halt",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790384348044,
+      "kind": "resume",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790384348044,
+      "detail": "finish the target fast, spend mana freely",
+      "kind": "instruction_change",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790384628820,
+      "kind": "halt",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790384633165,
+      "kind": "resume",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790384633165,
+      "detail": "conserve mana; use melee and wands when possible",
+      "kind": "instruction_change",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790385354694,
+      "kind": "halt",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790385356237,
+      "kind": "resume",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790385356237,
+      "detail": "defeat the target while keeping the character alive",
+      "kind": "instruction_change",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790386014728,
+      "kind": "manual_override",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790386426692,
+      "kind": "resume",
+      "scope": "cycle"
+    },
+    {
+      "at": 1790386426692,
+      "detail": "defeat the target while keeping the character alive",
+      "kind": "instruction_change",
+      "scope": "cycle"
+    }
+  ],
+  "recoveries": {
+    "byOutcome": {
+      "reclaimed": 4
+    },
+    "deaths": 5,
+    "recovered": 4
+  },
+  "staleActions": {
+    "byReason": {
+      "unavailable": 8
+    },
+    "discarded": 8
+  },
+  "latency": {
+    "activeMs": 645410,
+    "appliedDecisions": 407,
+    "appliedWaits": 2203,
+    "decisionRatePerSec": 3.237,
+    "decisionRequests": 2089,
+    "loopRatePerSec": 4.106,
+    "meanRequestMs": 238.968,
+    "p95RequestMs": 280.626,
+    "requests": 2650
+  }
+}

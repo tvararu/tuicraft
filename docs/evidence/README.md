@@ -29,3 +29,5 @@ is what a reader inspects.
 - [m3a/](m3a/funnel-corner.md) — reliable local navigation (funnel corner)
 - [m4/](m4/README.md) — repeatable encounter cycles
 - [m5/](m5/README.md) — the first quest (8325) end to end
+- [m6/](m6/README.md) — a first sustained supervised session, recorded with
+  `tuicraft record --since <epoch-ms>`
