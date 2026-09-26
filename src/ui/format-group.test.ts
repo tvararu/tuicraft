@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatGroupEvent } from "ui/format";
+import { formatGroupEvent } from "ui/format-group";
 import { PartyOperation, PartyResult } from "wow";
 
 describe("formatGroupEvent", () => {
@@ -148,13 +148,37 @@ describe("formatGroupEvent", () => {
     );
   });
 
-  test("group_list returns undefined", () => {
-    expect(
-      formatGroupEvent({
-        leader: "",
-        members: [],
-        type: "group_list",
-      }),
-    ).toBeUndefined();
+  const member = (name: string) => ({
+    guidHigh: 0,
+    guidLow: 1,
+    name,
+    online: true,
+  });
+  const list = (
+    change: { added?: string[]; formed?: boolean; removed?: string[] },
+    names: string[],
+  ) =>
+    formatGroupEvent({
+      change: { added: [], formed: false, removed: [], ...change },
+      leader: "Xia",
+      loot: null,
+      members: names.map(member),
+      type: "group_list",
+    });
+
+  test("group_list without a membership change prints nothing", () => {
+    expect(list({}, ["Xia"])).toBeUndefined();
+  });
+
+  test("group_list names a joined group and member changes", () => {
+    expect(list({ formed: true }, ["Xia"])).toBe(
+      "[group] Joined a group led by Xia: Xia",
+    );
+    expect(list({ added: ["Bob"], removed: ["Cid"] }, ["Xia", "Bob"])).toBe(
+      "[group] Bob joined the group\n[group] Cid left the group",
+    );
+    expect(list({ removed: ["Xia"] }, [])).toBe(
+      "[group] Xia left the group\n[group] You are no longer in a group",
+    );
   });
 });

@@ -14,6 +14,7 @@ USAGE
   tuicraft send "/cmd ..."    Run a slash command through the daemon; /r, /raid,
                             /<N>, /quit, /tuicraft and unknown ones are said as text
   tuicraft who [filter]       Who query
+  tuicraft group [--json]    Party leader, loot rule, members' health and level
   tuicraft read [--wait N] [--json]  Read buffered events (XP, loot, cast failures)
   tuicraft tail [--json]      Continuous event stream
   tuicraft start [--json]    Start background daemon and connect

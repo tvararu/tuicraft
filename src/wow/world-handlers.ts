@@ -98,6 +98,7 @@ export function handleGroupSetLeaderMsg(
   r: PacketReader,
 ): void {
   const { name } = parseGroupSetLeader(r);
+  conn.party.applyLeader(name);
   conn.events.group.emit({ type: "leader_changed", name });
 }
 
@@ -123,20 +124,25 @@ export function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
       leaderName = m.name;
     }
   }
+  const change = conn.party.applyList(list, leaderName);
   conn.events.group.emit({
     type: "group_list",
     members: list.members,
     leader: leaderName,
+    change,
+    loot: conn.party.snapshot().loot,
   });
 }
 
 export function handleGroupDestroyed(conn: WorldConn): void {
   conn.partyMembers.clear();
+  conn.party.clear();
   conn.events.group.emit({ type: "group_destroyed" });
 }
 
 export function handleGroupUninvite(conn: WorldConn): void {
   conn.partyMembers.clear();
+  conn.party.clear();
   conn.events.group.emit({ type: "kicked" });
 }
 
@@ -150,6 +156,11 @@ export function handlePartyMemberStatsMsg(
   isFull = false,
 ): void {
   const stats = parsePartyMemberStats(r, isFull);
+  conn.party.applyStats(
+    joinGuid(stats.guidLow, stats.guidHigh),
+    stats,
+    Date.now(),
+  );
   conn.events.group.emit({
     type: "member_stats",
     guidLow: stats.guidLow,

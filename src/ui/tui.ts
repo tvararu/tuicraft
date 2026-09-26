@@ -4,13 +4,13 @@ import {
   formatEntityEvent,
   formatError,
   formatFriendList,
-  formatGroupEvent,
   formatGuildRoster,
   formatIgnoreList,
   formatPrompt,
   formatWhoResults,
 } from "ui/format";
 import { formatMessage } from "ui/format-chat";
+import { formatGroupEvent } from "ui/format-group";
 import { ChatType, type WorldHandle } from "wow";
 
 export type TuiState = {

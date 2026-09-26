@@ -1,4 +1,5 @@
 import type { WorldHandle } from "wow/client";
+import { isUnit } from "wow/entity-store";
 import type { GuildRoster } from "wow/guild-store";
 import {
   buildJoinChannel,
@@ -73,6 +74,14 @@ function declinePending(conn: WorldConn): void {
 
 export function groupMethods(conn: WorldConn) {
   return {
+    getPartyState() {
+      return conn.party.snapshot((guid) => {
+        const entity = conn.entityStore.get(guid);
+        if (!isUnit(entity) || entity.maxHealth === 0) return;
+        const { health, maxHealth, level } = entity;
+        return { health, level, maxHealth };
+      }, Date.now());
+    },
     invite(name) {
       sendPacket(conn, GameOpcode.CMSG_GROUP_INVITE, buildGroupInvite(name));
     },

@@ -42,6 +42,12 @@ export {
   nextStepFor,
 } from "wow/navigation-observation";
 export type { NearbyQuery, NearbyRow } from "wow/nearby";
+export type {
+  PartyChange,
+  PartyLoot,
+  PartyMember,
+  PartyState,
+} from "wow/party-store";
 export type { WhoResult } from "wow/protocol/chat";
 export { ObjectType } from "wow/protocol/entity-fields";
 export {

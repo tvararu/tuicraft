@@ -26,6 +26,7 @@ import {
   formatRecoveryState,
   formatRewardsState,
 } from "ui/format-gameplay";
+import { formatPartyState } from "ui/format-party";
 import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
@@ -275,6 +276,10 @@ const HANDLERS: Handlers = {
     send(socket, [formatFriendListJson(handle.getFriends())]),
   goto: (cmd, { handle, socket }) =>
     reply(socket, () => handle.goTo(cmd.x, cmd.y, cmd.z), ok),
+  group: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getPartyState(), formatPartyState),
+  group_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getPartyState(), json),
   guild: (cmd, { handle, socket }) => {
     handle.sendGuild(cmd.message);
     return acknowledge(socket);

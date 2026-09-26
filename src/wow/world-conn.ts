@@ -9,6 +9,7 @@ import type { FriendStore } from "wow/friend-store";
 import type { GuildStore } from "wow/guild-store";
 import type { IgnoreStore } from "wow/ignore-store";
 import type { ItemTemplates } from "wow/item-use";
+import type { PartyStore } from "wow/party-store";
 import type { ChatMessage as RawChatMessage } from "wow/protocol/chat";
 import type { AccumulatorBuffer, OpcodeDispatch } from "wow/protocol/world";
 import type { QuestRuntime } from "wow/quests";
@@ -35,6 +36,7 @@ export type WorldConn = {
   selfGuidLow: number;
   selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
+  party: PartyStore;
   entityStore: EntityStore;
   remoteMotion: RemoteMotion;
   creatureNameCache: Map<number, string>;

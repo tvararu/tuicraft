@@ -370,7 +370,9 @@ describe("startTui", () => {
       write: (s) => void output.push(s),
     });
     handle.triggerGroupEvent({
+      change: { added: [], formed: false, removed: [] },
       leader: "",
+      loot: null,
       members: [],
       type: "group_list",
     });

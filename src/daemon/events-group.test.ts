@@ -6,7 +6,7 @@ import type { SessionLog } from "lib/session-log";
 import { must } from "test/must";
 
 describe("onGroupEvent", () => {
-  test("pushes group_list with undefined text to ring buffer", () => {
+  test("pushes a joined group_list with its change and loot rule", () => {
     const events = new RingBuffer<EventEntry>(10);
     const log: SessionLog = {
       append: jest.fn(() => Promise.resolve()),
@@ -14,7 +14,13 @@ describe("onGroupEvent", () => {
 
     onGroupEvent(
       {
+        change: { added: [], formed: true, removed: [] },
         leader: "Alice",
+        loot: {
+          masterLooter: null,
+          method: "group_loot",
+          threshold: "uncommon",
+        },
         members: [{ guidHigh: 0, guidLow: 1, name: "Alice", online: true }],
         type: "group_list",
       },
@@ -24,8 +30,16 @@ describe("onGroupEvent", () => {
 
     const drained = events.drain();
     expect(drained).toHaveLength(1);
-    expect(must(drained[0]).text).toBeUndefined();
-    expect(JSON.parse(must(drained[0]).json)).toMatchObject({
+    expect(must(drained[0]).text).toBe(
+      "[group] Joined a group led by Alice: Alice",
+    );
+    expect(JSON.parse(must(drained[0]).json)).toEqual({
+      added: [],
+      formed: true,
+      leader: "Alice",
+      loot: { masterLooter: null, method: "group_loot", threshold: "uncommon" },
+      members: [{ name: "Alice", online: true }],
+      removed: [],
       type: "GROUP_LIST",
     });
   });
