@@ -71,7 +71,7 @@ USAGE
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim
                             Near a killer: plan an exit, flee after OK, then inspect observed life
   tuicraft quests [--json]    Dialog, next verb, held log, pending/unresolved mutations,
-                            last error and reward
+                            last error (invalid errors name the reason in reasonName) and reward
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization);
                             needed to correlate collected quest items
@@ -79,7 +79,8 @@ USAGE
                             Quote one code argument; omitted differs from empty
   tuicraft select-quest <id>  Choose a quest from the offered menu
   tuicraft accept-quest      Request acceptance of offered details
-                            Auto-accept quests are logged on select; accept then fails
+                            Auto-accept quests are logged on select; quests marks them (auto-accept)
+                            and accept then fails with quest_already_in_log <id>, sending nothing
   tuicraft complete-quest <id>  Send the turn-in request select-quest sends; re-sends requestItems
   tuicraft request-reward    Continue a requestItems dialog to the reward offer
   tuicraft choose-reward <index>  Choose offered reward (zero-based 0-5)

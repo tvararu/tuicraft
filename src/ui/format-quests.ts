@@ -39,6 +39,8 @@ function nextStep(state: QuestState, dialog: QuestDialog): string {
   const { questId, activateAccept } = dialog.data;
   if (state.log.slots.some((slot) => slot.questId === questId))
     return "already in the quest log; tuicraft cancel-interaction closes the dialog";
+  if (dialog.data.autoAccept)
+    return "auto-accept; the server logs it without accept-quest, check quests again";
   if (!activateAccept) return "accept not offered; tuicraft cancel-interaction";
   return `tuicraft ${NEXT_STEP.details}`;
 }
@@ -93,7 +95,7 @@ function dialogLines(state: QuestState, dialog: QuestDialog): string[] {
       break;
     case "details":
       lines.push(
-        `Dialog: details ${giver}, quest ${named(state, dialog.data.questId)}`,
+        `Dialog: details ${giver}, quest ${named(state, dialog.data.questId)}${dialog.data.autoAccept ? " (auto-accept)" : ""}`,
       );
       lines.push(...rewards(dialog.data.rewards));
       break;

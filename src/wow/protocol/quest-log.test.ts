@@ -54,6 +54,7 @@ describe("quest log notifications", () => {
   test("keeps failure reason distinct from quest identity and preserves unknown reasons", () => {
     expect(parseQuestInvalid(new PacketReader(bytes("01000080")))).toEqual({
       reason: 0x80_00_00_01,
+      reasonName: "invalid_reason_2147483649",
     });
     expect(
       parseQuestFailed(new PacketReader(bytes("2a000000 32000000"))),

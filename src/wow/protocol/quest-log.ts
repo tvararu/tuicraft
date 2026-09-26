@@ -15,7 +15,7 @@ export type QuestUpdateAddItem =
 
 export type QuestUpdateComplete = { questId: number };
 
-export type QuestInvalid = { reason: number };
+export type QuestInvalid = { reason: number; reasonName: string };
 
 export type QuestFailed = { questId: number; reason: number };
 
@@ -57,8 +57,28 @@ export function parseQuestUpdateComplete(r: PacketReader): QuestUpdateComplete {
   return { questId: r.uint32LE() };
 }
 
+const INVALID_REASON_NAMES: Record<number, string> = {
+  0: "requirements_not_met",
+  1: "level_too_low",
+  6: "wrong_race",
+  7: "already_completed",
+  12: "only_one_timed_quest",
+  13: "already_on_quest",
+  16: "expansion_required",
+  18: "already_on_quest",
+  21: "missing_required_items",
+  23: "not_enough_money",
+  26: "daily_quest_limit_reached",
+  27: "tired_time_reached",
+  29: "daily_quest_completed_today",
+};
+
 export function parseQuestInvalid(r: PacketReader): QuestInvalid {
-  return { reason: r.uint32LE() };
+  const reason = r.uint32LE();
+  return {
+    reason,
+    reasonName: INVALID_REASON_NAMES[reason] ?? `invalid_reason_${reason}`,
+  };
 }
 
 export function parseQuestFailed(r: PacketReader): QuestFailed {

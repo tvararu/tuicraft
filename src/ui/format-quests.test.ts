@@ -219,9 +219,10 @@ describe("text quests", () => {
   });
 });
 
-test("an auto-accepted quest's details point at closing, not accepting", () => {
+test("an auto-accept quest's details are marked and point at closing, not accepting", () => {
   const details = {
     activateAccept: 1,
+    autoAccept: false,
     details: "",
     dividerGuid: 0n,
     emotes: [],
@@ -234,19 +235,33 @@ test("an auto-accepted quest's details point at closing, not accepting", () => {
     title: "Reclaiming Sunstrider Isle",
     unknown: 0,
   };
-  const next = (held: QuestState["log"], activateAccept: number) =>
+  const lines = (
+    held: QuestState["log"],
+    activateAccept: number,
+    autoAccept = false,
+  ) =>
     formatQuestState(
       state({
-        dialog: { data: { ...details, activateAccept }, kind: "details" },
+        dialog: {
+          data: { ...details, activateAccept, autoAccept },
+          kind: "details",
+        },
         log: held,
       }),
-    )[1];
-  expect(next(log(), 1)).toBe("Next: tuicraft accept-quest");
-  expect(next(log(slot(0, 8325)), 1)).toBe(
+    );
+  expect(lines(log(), 1)[1]).toBe("Next: tuicraft accept-quest");
+  expect(lines(log(slot(0, 8325)), 1)[1]).toBe(
     "Next: already in the quest log; tuicraft cancel-interaction closes the dialog",
   );
-  expect(next(log(), 0)).toBe(
+  expect(lines(log(), 0)[1]).toBe(
     "Next: accept not offered; tuicraft cancel-interaction",
+  );
+  expect(lines(log(), 1, true).slice(0, 2)).toEqual([
+    "Dialog: details from 0xf130003bae004980, quest 8325 Reclaiming Sunstrider Isle (auto-accept)",
+    "Next: auto-accept; the server logs it without accept-quest, check quests again",
+  ]);
+  expect(lines(log(slot(0, 8325)), 1, true)[1]).toBe(
+    "Next: already in the quest log; tuicraft cancel-interaction closes the dialog",
   );
 });
 

@@ -366,8 +366,10 @@ Quest actions use the current server-offered dialog and giver. Inspect `quests`
 between actions instead of assuming that a sent request changed the quest log.
 Use `select-option <id> [code]` for offered gossip, or `select-quest <id>` for an
 offered quest. Quote a code as one shell argument. Empty code differs from no code.
-Auto-accept quests enter the log on `select-quest`; `accept-quest` then fails
-with `quest_already_in_log`.
+Auto-accept quests enter the log on `select-quest`; `quests` marks their details
+`(auto-accept)` (`--json`: `dialog.data.autoAccept`), and `accept-quest` then
+fails with `quest_already_in_log <id>` without sending anything. A server refusal
+in `lastError` carries `reasonName` (for example `already_on_quest`).
 The IPC representation uses JSON to preserve spaces without command injection.
 Advance each step by `quests --json` `.data.dialog.kind`: `gossip`/`list` →
 `select-quest <id>`; `details` → `accept-quest`; `requestItems` →
