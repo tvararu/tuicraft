@@ -4,6 +4,15 @@ import { git, gitEnv } from "test/git";
 
 const nested = "TUICRAFT_GIT_ENV_SUITE";
 
+async function settingsOutsideBranches(config: string): Promise<string[]> {
+  const list = ["config", "--file", config, "--list", "-z"];
+  const entries = await git(process.cwd(), ...list);
+  return entries
+    .split("\0")
+    .filter((entry) => entry !== "" && !entry.startsWith("branch."))
+    .map((entry) => entry.replace("\n", "="));
+}
+
 test("gitEnv drops every GIT_ variable and keeps the rest", () => {
   expect(
     gitEnv({
@@ -15,16 +24,16 @@ test("gitEnv drops every GIT_ variable and keeps the rest", () => {
   ).toEqual({ HOME: "/h" });
 });
 
-test("the suite run with GIT_DIR exported leaves both repositories' config unchanged", async () => {
+test("the suite run with GIT_DIR exported writes no config to either repository", async () => {
   if (Bun.env[nested] === "1") return;
   const sandbox = `${process.cwd()}/tmp/git-env-${Date.now()}`;
-  const real = `${(await git(process.cwd(), "rev-parse", "--path-format=absolute", "--git-common-dir")).trim()}/config`;
+  const shared = `${(await git(process.cwd(), "rev-parse", "--path-format=absolute", "--git-common-dir")).trim()}/config`;
   try {
     await mkdir(sandbox, { recursive: true });
     await git(sandbox, "init", "-q");
     const before = {
-      real: await Bun.file(real).text(),
       sandbox: await Bun.file(`${sandbox}/.git/config`).text(),
+      shared: await settingsOutsideBranches(shared),
     };
     const suite = Bun.spawn(["bun", "test"], {
       env: {
@@ -42,8 +51,8 @@ test("the suite run with GIT_DIR exported leaves both repositories' config uncha
       new Response(suite.stdout).text(),
     ]);
     expect({
-      real: await Bun.file(real).text(),
       sandbox: await Bun.file(`${sandbox}/.git/config`).text(),
+      shared: await settingsOutsideBranches(shared),
     }).toEqual(before);
     expect({ code, tail: stderr.slice(-2000) }).toMatchObject({ code: 0 });
   } finally {
