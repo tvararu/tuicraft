@@ -6,8 +6,8 @@ priest, map 530). Quest 8325 "Reclaiming Sunstrider Isle": kill 8 Mana
 Wyrms (15274) for Magistrix Erona (15278, guid 0xf130003bae004980). The
 AzerothCore DB lists Erona as its starter and ender, with rewards of 30
 copper, 100 XP and a choice of item 20997 or 20998. Every step used
-tuicraft CLI verbs; no GM commands, no scripts. Operator journal:
-`tmp/m5-final/journal.md` (gitignored, not committed).
+tuicraft CLI verbs; no GM commands, no scripts. The operator journal is
+not committed.
 
 ## Records
 

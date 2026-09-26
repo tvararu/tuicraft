@@ -121,19 +121,19 @@ Two more mark heads for the bounce count:
   Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
   reaper deletes it once the hold clears.
 
-## Cutover from labels
+## Legacy labels
 
-The factory used workflow labels before the board. The first reaper run
-after the board change landed puts every open issue on the board with its
-Status mapped from its labels, first match wins: `agent:working` → In
-progress; `needs:pm` without `ready` → Blocked; `agent:review`,
-`agent:reviewing`, `agent:merging` or `agent:landing` → In review;
-`agent:rework` or `ready` → Ready. An issue with no other label (none,
-or only `qa:found` or `p1`) keeps its Status, or goes to Backlog if it is
-not on the board yet. It then removes the legacy labels from every issue
-(never `qa`, which is not one of them), deletes them from the repo, and
-closes the open `Reaper: … held` issues with a comment. Later runs find
-nothing to migrate.
+Each reaper run closes any open `Reaper: … held` issue with a comment,
+then reconciles every other open issue with the board from its legacy
+workflow labels, first match wins: `agent:working` → In progress;
+`needs:pm` without `ready` → Blocked; `agent:review`, `agent:reviewing`,
+`agent:merging` or `agent:landing` → In review; `agent:rework` or `ready`
+→ Ready. An issue with none of these keeps its Status, or goes to Backlog
+if it is not on the board. It then removes the legacy labels (these plus
+`qa:found` and `p1`, never `qa`) from every issue and deletes them from
+the repo. With no legacy labels or held issues left, a run only adds
+issues missing from the board to Backlog.
+
 
 ## Landing
 

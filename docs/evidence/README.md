@@ -19,8 +19,8 @@ not comparable without them.
 including execution. It is not the reciprocal of a request latency, and the two
 must never be presented as the same measurement.
 
-Raw session-log slices stay in `tmp/` as backing detail. The committed record
-is what a reader inspects.
+Raw session-log slices are scratch and are not committed, so the committed
+record must stand on its own: it is what a reader inspects.
 
 ## Milestones
 

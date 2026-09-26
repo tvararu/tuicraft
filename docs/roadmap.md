@@ -1,8 +1,8 @@
 # Roadmap: a programmable, AI-playable WoW client
 
-Date: 2026-09-20. Condensed 2026-09-24. Audited 2026-09-26 against `main` at
-`90c148a`, the committed records in [docs/evidence/](evidence/) and git
-history ([#110](https://github.com/tvararu/tuicraft/issues/110)).
+Audited 2026-09-26 against `main` at `90c148a`, the committed records in
+[docs/evidence/](evidence/) and git history
+([#110](https://github.com/tvararu/tuicraft/issues/110)).
 
 ## Status
 
@@ -16,8 +16,8 @@ milestone section and in the linked records.
 | [2. A constrained Jev-controlled encounter](#2-a-constrained-jev-controlled-encounter) | Partly met: two exit criteria unmet | Accepted with two gaps, `609f814` |
 | [3. Movement as a tactical action](#3-movement-as-a-tactical-action) | Partly met: two exit criteria unmet | Accepted with two gaps, `001882d` |
 | [3a. Reliable local navigation](#3a-reliable-local-navigation) | Partly met: one route walked, refusals and a clean halt recorded; repeated traversal, redirection, unreachable reporting, ground-derived destinations, the funnel corner and bounded replanning missing | None |
-| [3b. Remote movement and character following](#3b-remote-movement-and-character-following) | Not started; follow was deleted in `05ee035` | None |
-| [4. Repeatable encounter cycles](#4-repeatable-encounter-cycles) | Evidence recorded as met, awaiting the maintainer's acceptance | `7da1f02` ("Accept M4 exit evidence"); its roadmap text was hedged to "met" in `13ca530` |
+| [3b. Remote movement and character following](#3b-remote-movement-and-character-following) | Not started; there is no `follow` command | None |
+| [4. Repeatable encounter cycles](#4-repeatable-encounter-cycles) | Evidence recorded as met, awaiting the maintainer's acceptance | `7da1f02` ("Accept M4 exit evidence"), which records the evidence as met and is not an acceptance |
 | [5. A selected questing loop](#5-a-selected-questing-loop) | Not started; quest protocol code is on `main`, with no live record | None |
 | [6. Sustained supervised play](#6-sustained-supervised-play) | Not started | None |
 
@@ -262,8 +262,8 @@ evidence that the two-account suite passes.
   facing, requested versus observed target, target clearing, same-socket
   READ_WAIT cancellation, relogin pose within about `0.000081` yards) is
   described in the roadmap at `1e73c0b`, with an independent review recorded
-  there. Its command records were written to `tmp/xiara-m1*.json`, which is
-  gitignored, so by this document's own rule they satisfy nothing.
+  there. It has no committed record, so by this document's own rule it
+  satisfies nothing.
 - Later committed records cover the movement, stop and confirmation strands:
   [m3/lease-expiry-and-cli-refresh-caveat.json](evidence/m3/lease-expiry-and-cli-refresh-caveat.json),
   [m3/position-confirmation.json](evidence/m3/position-confirmation.json)
@@ -340,13 +340,11 @@ the records and their analysis are in [docs/evidence/m2/](evidence/m2/README.md)
 **Unmet: demonstrate behaviour change from instructions.** Encounters 04 and 05
 are one unreplicated pair; the whole difference is one Mind Blast and one
 shield choice. Closing it needs two or three more pairs at comparable level
-against comparable creatures. The instruction texts are in the two records;
-the file that pinned them, `src/wow/standing-instructions.ts`, was deleted in
-the 2026-09-24 review.
+against comparable creatures. The instruction texts are in the two records.
 
 **Unmet: planner verification on the funnel corner.** A 62-yard direct
 corridor was verified with wrong-floor and obstructed rejections. The 20-yard
-funnel corner was not reached. This criterion moved to milestone 3a.
+funnel corner was not reached. This criterion is tracked under milestone 3a.
 
 Neither gap is to be read as satisfied. A later reader deciding whether to
 trust the milestone should treat both as open.
@@ -355,8 +353,8 @@ trust the milestone should treat both as open.
 
 Jev gains directional movement in its per-decision vocabulary during an
 encounter. Movement is held under a renewable lease, and ground safety outranks
-the lease. Route planning to a destination (3a), and remote movement reception
-with character following (3b), were split out on 2026-09-21. The design is
+the lease. Route planning to a destination is milestone 3a, and remote
+movement reception with character following is 3b. The design is
 [2026-09-21-m3-tactical-movement-design.md](plans/2026-09-21-m3-tactical-movement-design.md).
 
 The contract later milestones consume: a movement choice issues
@@ -532,9 +530,7 @@ and gate map/transfer lifetime. Prove these boundaries before live player follow
 
 #### Status: not started
 
-The earlier `follow` command was deleted in `05ee035` because no handler
-received remote `MSG_MOVE_*` broadcasts and no accepted milestone used it. On
-`main`:
+There is no `follow` command. On `main`:
 
 - No handler for other players' `MSG_MOVE_*` broadcasts
   (`src/wow/movement-handlers.ts` registers teleport, root, knockback and
@@ -547,8 +543,7 @@ received remote `MSG_MOVE_*` broadcasts and no accepted milestone used it. On
 - `ControlOwner` in `src/wow/control.ts` is `none`, `manual` or `jev`; there
   is no follow owner.
 
-There is no 3b record under `docs/evidence/`. The deleted design is gone: its
-only copy, an uncommitted worktree archive, was deleted on 2026-09-26.
+There is no 3b record under `docs/evidence/` and no 3b design.
 
 #### Next slices
 
@@ -626,17 +621,16 @@ cycles needed no developer repair.
   current-offer resurrection. The spirit-healer select went unanswered in ten
   sessions ([recovery-blocked-2026-09-24.json](evidence/m4/recovery-blocked-2026-09-24.json)).
   Release-only opening denial still needs an ordinary reconnect.
-- Caveat found on 2026-09-25: `parseInitialSpells` trusted the server's
+- Caveat: before `d2d5d27`, `parseInitialSpells` trusted the server's
   cooldown count, read past the end of the packet and left the spellbook
   empty without an error. Some of the 20 `no_supported_combat_actions` skips
-  in the 2026-09-23 run window may come from this defect. `d2d5d27` fixes the
-  parser. The post-fix `cycle --max 2` on `41077d1` (two kills, two loot
-  windows) is recorded only in `tmp/review-2026-09-24/fix.md`, which is
-  gitignored.
-- Landed after the records, with no committed live record: in-cycle corpse
-  runs (`1fbe0f2`, `723be6b`) and loot-open waits (`41077d1`, `f5386e9`). A
-  death inside `cycle` still ends the run with `reclaimed` rather than
-  continuing the queue (`src/wow/encounter-cycle.ts`).
+  in the 2026-09-23 run window may come from this defect. The post-fix
+  `cycle --max 2` on `41077d1` (two kills, two loot windows) has no
+  committed record.
+- No committed live record covers in-cycle corpse runs (`1fbe0f2`,
+  `723be6b`) or loot-open waits (`41077d1`, `f5386e9`). A death inside
+  `cycle` still ends the run with `reclaimed` rather than continuing the
+  queue (`src/wow/encounter-cycle.ts`).
 
 ### 5. A selected questing loop
 
@@ -662,15 +656,15 @@ notification and actual inventory/experience changes.
 
 #### Status: not started; quest protocol code on main
 
-The quest runtime landed in `7d05721` and was split in the 2026-09-24 review
-(`f1def23`, `641bfe9`, `44c7f18`). On `main`: gossip hello and option select,
-questgiver query, accept, complete, request-reward, choose-reward, cancel and
-abandon, gated on the offered dialog (`src/wow/quests.ts`,
-`src/wow/quests-requests.ts`); quest-log slots with CREATE-time visibility
-(`src/wow/quest-slots.ts`); `SMSG_QUESTUPDATE_ADD_KILL`, `ADD_ITEM` and
-`COMPLETE` handling; carried inventory and coinage (`src/wow/inventory.ts`);
-and the matching CLI verbs (`src/cli/help.ts`). Gossip codes pass through IPC
-as string or null (`src/daemon/commands-quest-loot.test.ts`).
+On `main` (`7d05721`, `f1def23`, `641bfe9`, `44c7f18`): gossip hello and
+option select, questgiver query, accept, complete, request-reward,
+choose-reward, cancel and abandon, gated on the offered dialog
+(`src/wow/quests.ts`, `src/wow/quests-requests.ts`); quest-log slots with
+CREATE-time visibility (`src/wow/quest-slots.ts`);
+`SMSG_QUESTUPDATE_ADD_KILL`, `ADD_ITEM` and `COMPLETE` handling; carried
+inventory and coinage (`src/wow/inventory.ts`); and the matching CLI verbs
+(`src/cli/help.ts`). Gossip codes pass through IPC as string or null
+(`src/daemon/commands-quest-loot.test.ts`).
 
 None of it has a live record, and there is no `docs/evidence/m5/`. Not on
 `main`: `CMSG_QUESTGIVER_HELLO` and `CMSG_QUESTGIVER_STATUS_QUERY` are never
@@ -790,9 +784,10 @@ and concrete live-verifiable acceptance criteria.
 
 ## Other context
 
-Build-12340 spell tables were extracted with client MPQ patch precedence and
-recorded in `tmp/gameplay-data/provenance.json` (gitignored). The matching
-Expansion01 navigation data and native library are present; their presence
+Tuicraft reads build-12340 spell tables, extracted from the client MPQs with
+patch precedence, from `spell_data_dir`, and Expansion01 navigation data from
+`navigation_data_dir` (see the
+[gameplay configuration](manual.md#gameplay-configuration)). Their presence
 alone does not prove navigation.
 
 The unmerged `vibe` work (tag `archive/vibe`) contains movement, namigator

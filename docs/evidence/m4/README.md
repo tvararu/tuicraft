@@ -18,8 +18,8 @@ blocked branches reported as blocked, never inferred.
   Corpse query round-trips (125/125), life observations (181), and
   ground-refusal stops (370 obstructed, 300 height_unresolved) all
   exercised. Fights, reclaim, resurrection accept, and corpse arrival
-  unexercised — reported, not inferred. Raw detail: daemon session log
-  (40710 lines) plus operator journal `tmp/m4-live/README.md` (gitignored).
+  unexercised — reported, not inferred. Raw detail: the daemon session log
+  (40710 lines) and an operator journal, neither committed.
 - [encounter-cycles-positive-2026-09-23.json](encounter-cycles-positive-2026-09-23.json) —
   outcome `positive-partial`. Seven server kill credits with xp (distinct
   targets, ts>=1790118690822), six loot windows all opened->released with
@@ -30,10 +30,9 @@ blocked branches reported as blocked, never inferred.
   Requested-vs-observed split explicit: server granted takes the loop
   refused to record on unconfirmed close. Money 0 in all six opens, so
   coinage proof unmet; denied/full/empty and current-offer resurrection
-  unexercised. Raw source: append-only daemon session log (window-scoped
-  timestamps; log totals drift as the daemon appends) crossed with
-  operator journal `tmp/m4-live/README.md` (gitignored, read from the
-  main-checkout disk copy — absent from a fresh worktree).
+  unexercised. Raw source: the append-only daemon session log
+  (window-scoped timestamps; log totals drift as the daemon appends)
+  crossed with an operator journal that is not committed.
 - [encounter-cycles-paired-2026-09-24.json](encounter-cycles-paired-2026-09-24.json) —
   outcome `positive-partial`. One `cycle --max 2` run
   (startedAt 1790161478424, `queue_exhausted` at 1790161509957, log
