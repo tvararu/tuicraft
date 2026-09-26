@@ -814,7 +814,16 @@ Human-readable (default):
 [friends] Arthas is now online (Level 80 Death Knight)
 [ignore] Spammer added to ignore list
 [ignore] Spammer removed from ignore list
+[monster yell] Darkwraith: For the Scourge!
+[monster emote] Darkwraith goes into a frenzy!
 ```
+
+Creature chat has its own labels and JSON event types: `MONSTER_SAY`
+(`[monster say]`), `MONSTER_YELL` (`[monster yell]`), `MONSTER_WHISPER`
+(`[monster whisper]`), `MONSTER_PARTY` (`[monster party]`), `MONSTER_EMOTE`
+(`[monster emote]`), `RAID_BOSS_EMOTE` (`[boss emote]`) and
+`RAID_BOSS_WHISPER` (`[boss whisper]`). In both emote types the `%s`
+placeholder is replaced by the creature's name, in human and JSON output.
 
 With `--json`, every finite command prints exactly one JSON object and a
 newline on stdout. It has exactly five top-level fields:

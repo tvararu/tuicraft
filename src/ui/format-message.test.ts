@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { formatPrompt } from "ui/format";
 import {
   formatMessage,
   formatMessageJson,
   formatMessageObj,
-  formatPrompt,
-} from "ui/format";
+} from "ui/format-chat";
 import { ChatType } from "wow";
 
 describe("formatMessage", () => {
