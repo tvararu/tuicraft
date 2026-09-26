@@ -136,6 +136,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `Bun.listen` server-side `socket.end()` doesn't reliably trigger client
   `close` — detect the protocol terminator in `data` handler instead
 - Use unique socket paths per test (counter + timestamp) to avoid cleanup races
+- Tests that spawn git use `git()` or `gitEnv()` from `src/test/git.ts`, which
+  strip `GIT_*`: an inherited `GIT_DIR` makes `git init` write `core.worktree`
+  into another repository's config
 - `mock.module()` leaks across test files in Bun, so `config/biome.grit` bans
   it. Use dependency injection: file locations come from a `Paths` value
   (`resolvePaths()` by default), and tests pass `pathsUnder(dir)` from
