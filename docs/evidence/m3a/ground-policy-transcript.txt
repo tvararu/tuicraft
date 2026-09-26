@@ -1,0 +1,112 @@
+$ tuicraft status  # 01:26:17 [code=main lib=installed]
+Daemon is not running.
+$ tuicraft start  # 01:26:18 [code=main lib=installed]
+CONNECTED
+$ tuicraft control --json  # 01:26:21 [code=main lib=installed]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385978176,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385978176,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft goto 10313.599609375 -6369.2900390625 30.193817138671875 --json  # 01:26:24 [code=main lib=installed]
+{"command":"goto","data":null,"error":{"message":"pick_destination: ambiguous ground column","stage":"command"},"events":[],"kind":"error"}
+(exit 1)
+$ tuicraft navigation --json  # 01:26:25 [code=main lib=installed]
+{"command":"navigation","data":{"active":false,"destination":{"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+$ tuicraft control --json  # 01:26:25 [code=main lib=installed]
+{"command":"control","data":{"blockedReason":"ambiguous ground column","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a destination with one ground height. Do not guess Z.","owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385978176,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385978176,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ /proc libnamigator check  # 01:26:25 [code=main lib=installed]
+pid 2146059
+79428e283000-79428e2ac000 r--p 00000000 08:02 6915760                    /home/deity/wow-data/libnamigator.so
+/home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/main-tree/src/main.ts --daemon 
+$ tuicraft stop  # 01:26:29 [code=main lib=installed]
+OK
+$ tuicraft start  # 01:26:30 [code=branch lib=installed]
+CONNECTED
+$ tuicraft control --json  # 01:26:33 [code=branch lib=installed]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385990666,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385990666,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft goto 10313.599609375 -6369.2900390625 30.193817138671875 --json  # 01:26:34 [code=branch lib=installed]
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+$ /proc libnamigator check  # 01:26:34 [code=branch lib=installed]
+pid 2146566
+7128f4001000-7128f402a000 r--p 00000000 08:02 6915760                    /home/deity/wow-data/libnamigator.so
+/home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/src/main.ts --daemon 
+$ tuicraft navigation --json  # 01:26:35 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"remaining":26.733331922020554,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:37 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"remaining":16.226331922020563,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:38 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"remaining":5.712331922020567,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:40 [code=branch lib=installed]
+{"command":"navigation","data":{"active":false,"destination":{"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft control --json  # 01:26:43 [code=branch lib=installed]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.819842099192575,"source":"predicted","updatedAt":1790385999505,"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790385990666,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft stop  # 01:26:43 [code=branch lib=installed]
+OK
+$ tuicraft start  # 01:26:44 [code=branch lib=installed]
+CONNECTED
+$ tuicraft control --json  # 01:26:47 [code=branch lib=installed]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.8198421001434326,"source":"server","updatedAt":1790386004372,"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":-2.8198421001434326,"source":"server","updatedAt":1790386004372,"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft goto 10349.599609375 -6357.2900390625 33.4025993347168 --json  # 01:26:51 [code=branch lib=installed]
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+$ /proc libnamigator check  # 01:26:51 [code=branch lib=installed]
+pid 2147375
+775cdcaff000-775cdcb28000 r--p 00000000 08:02 6915760                    /home/deity/wow-data/libnamigator.so
+/home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/src/main.ts --daemon 
+$ tuicraft navigation --json  # 01:26:53 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"remaining":26.740331922020555,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:55 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"remaining":16.226331922020563,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:56 [code=branch lib=installed]
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"remaining":5.705331922020569,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:26:58 [code=branch lib=installed]
+{"command":"navigation","data":{"active":false,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft control --json  # 01:26:58 [code=branch lib=installed]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.3217505543972182,"source":"predicted","updatedAt":1790386017338,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":-2.8198421001434326,"source":"server","updatedAt":1790386004372,"x":10313.599609375,"y":-6369.2900390625,"z":30.193817138671875},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft stop  # 01:27:03 [code=branch lib=installed]
+OK
+$ (config edit) navigation_library -> PATCHED  # 01:27:04
+navigation_library = "/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so"
+$ tuicraft start  # 01:27:04 [code=main lib=patched]
+CONNECTED
+$ tuicraft control --json  # 01:27:07 [code=main lib=patched]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386024750,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386024750,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft goto 10367.599609375 -6339.2900390625 32.02139663696289 --json  # 01:27:08 [code=main lib=patched]
+{"command":"goto","data":null,"error":{"message":"stop: path corner disagrees with connected ground","stage":"command"},"events":[],"kind":"error"}
+(exit 1)
+$ tuicraft navigation --json  # 01:27:09 [code=main lib=patched]
+{"command":"navigation","data":{"active":false,"destination":{"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"owner":"none","blockedReason":"path corner disagrees with connected ground","refusal":"stop","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft control --json  # 01:27:09 [code=main lib=patched]
+{"command":"control","data":{"blockedReason":"path corner disagrees with connected ground","direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386024750,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386024750,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ /proc libnamigator check  # 01:27:09 [code=main lib=patched]
+pid 2148596
+70acbcae7000-70acbcafa000 r--p 00000000 08:02 589613                     /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so
+/home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/main-tree/src/main.ts --daemon 
+$ tuicraft stop  # 01:27:13 [code=main lib=patched]
+OK
+$ tuicraft start  # 01:27:14 [code=branch lib=patched]
+CONNECTED
+$ tuicraft control --json  # 01:27:17 [code=branch lib=patched]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386034502,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386034502,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft goto 10367.599609375 -6339.2900390625 32.02139663696289 --json  # 01:27:17 [code=branch lib=patched]
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+$ /proc libnamigator check  # 01:27:17 [code=branch lib=patched]
+pid 2149126
+7fc0460ed000-7fc046100000 r--p 00000000 08:02 589613                     /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so
+/home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/src/main.ts --daemon 
+$ tuicraft navigation --json  # 01:27:19 [code=branch lib=patched]
+{"command":"navigation","data":{"active":true,"destination":{"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"remaining":15.451305559859748,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:27:21 [code=branch lib=patched]
+{"command":"navigation","data":{"active":true,"destination":{"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"remaining":4.237305559859756,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft navigation --json  # 01:27:22 [code=branch lib=patched]
+{"command":"navigation","data":{"active":false,"destination":{"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft control --json  # 01:27:22 [code=branch lib=patched]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.6551765694880901,"source":"predicted","updatedAt":1790386041641,"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":0.32175055146217346,"source":"server","updatedAt":1790386034502,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft stop  # 01:27:22 [code=branch lib=patched]
+OK
+$ tuicraft start  # 01:27:23 [code=branch lib=patched]
+CONNECTED
+$ tuicraft control --json  # 01:27:26 [code=branch lib=patched]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.65517657995224,"source":"server","updatedAt":1790386043859,"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"requestedTarget":null,"selfGuid":"0xa1f","serverPose":{"mapId":530,"orientation":0.65517657995224,"source":"server","updatedAt":1790386043859,"x":10367.599609375,"y":-6339.2900390625,"z":32.02139663696289},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tuicraft stop  # 01:27:30 [code=branch lib=patched]
+OK
+$ (config edit) navigation_library -> INSTALLED  # 01:27:30
+navigation_library = "/home/deity/wow-data/libnamigator.so"
+$ tuicraft status  # 01:27:30 [code=branch lib=installed]
+Daemon is not running.
