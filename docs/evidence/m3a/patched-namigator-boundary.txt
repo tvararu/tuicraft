@@ -1,0 +1,74 @@
+# 01:53:07 config: navigation_library = "/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/libnm-v1.so"
+
+$ tuicraft status  # 01:53:07 [lib=v1]
+Daemon is not running.
+
+$ tuicraft start  # 01:53:09 [lib=v1]
+CONNECTED
+
+$ tuicraft control --json  # 01:53:12 [lib=v1]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387589613,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa32","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387589613,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 10367.599609375 -6333.2900390625 31.585554122924805 --json  # 01:53:16 [lib=v1]
+{"command":"goto","data":null,"error":{"message":"stop: pathfind_find_height failed (UNKNOWN_HEIGHT)","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:53:18 [lib=v1]
+{"command":"navigation","data":{"active":false,"destination":{"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"owner":"none","blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","refusal":"stop","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:53:18 [lib=v1]
+{"command":"control","data":{"blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387589613,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa32","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387589613,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ /proc libnamigator check  # 01:53:18 [lib=v1]
+
+$ /proc libnm check (supplement)  # 01:53:18 [lib=v1]
+pid 2249314
+71b3be2f1000-71b3be304000 r--p 00000000 08:02 593837                     /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/libnm-v1.so
+
+$ tuicraft stop  # 01:53:22 [lib=v1]
+OK
+
+# 01:53:24 config: navigation_library = "/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so"
+
+$ tuicraft start  # 01:53:24 [lib=v2]
+CONNECTED
+
+$ tuicraft control --json  # 01:53:27 [lib=v2]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387604443,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xa32","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387604443,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 10367.599609375 -6333.2900390625 31.585554122924805 --json  # 01:53:30 [lib=v2]
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+$ /proc libnamigator check  # 01:53:30 [lib=v2]
+pid 2250018
+7db11d8ec000-7db11d8ff000 r--p 00000000 08:02 589542                     /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so
+
+$ tuicraft navigation --json  # 01:53:32 [lib=v2]
+{"command":"navigation","data":{"active":true,"destination":{"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"remaining":22.741852891489934,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:53:34 [lib=v2]
+{"command":"navigation","data":{"active":true,"destination":{"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"remaining":12.227852891489938,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:53:35 [lib=v2]
+{"command":"navigation","data":{"active":true,"destination":{"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"remaining":0.9998528914899438,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:53:37 [lib=v2]
+{"command":"navigation","data":{"active":false,"destination":{"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:53:37 [lib=v2]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.046514541769221186,"source":"predicted","updatedAt":1790387615740,"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"requestedTarget":null,"selfGuid":"0xa32","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790387604443,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 01:53:44 [lib=v2]
+OK
+
+$ tuicraft start  # 01:53:46 [lib=v2]
+CONNECTED
+
+$ tuicraft control --json  # 01:53:49 [lib=v2]
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.046514540910720825,"source":"server","updatedAt":1790387626398,"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"requestedTarget":null,"selfGuid":"0xa32","serverPose":{"mapId":530,"orientation":0.046514540910720825,"source":"server","updatedAt":1790387626398,"x":10367.599609375,"y":-6333.2900390625,"z":31.585554122924805},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 01:53:49 [lib=v2]
+OK
+
+$ tuicraft status  # 01:53:50 [lib=v2]
+Daemon is not running.
+
