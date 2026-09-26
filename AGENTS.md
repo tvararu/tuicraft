@@ -184,14 +184,16 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Branches and archives
 
-- The `vibe` branch is **reference only and must never be merged**. The
-  maintainer's ruling, 2026-09-21: Fable created it around June 2026, it was
-  never reviewed, and unreviewed code must not enter `main` disguised as
-  progress. Keep it, never delete it, read it freely for implementation
-  patterns (protocol serialisation, the `bun:ffi` namigator bridge, movement
-  maths). Its acceptance and live-verification journals are **not** roadmap
-  evidence, because nobody reviewed them. Never merge, rebase or cherry-pick
-  it without the maintainer saying so.
+- The old `vibe` branch is archived as the tag `archive/vibe` (commit
+  `5fbe7bf`). The maintainer retired the branch on 2026-09-26: `main` now has
+  reviewed replacements for its pieces (`src/wow/navigation-native.ts` for
+  the `bun:ffi` namigator bridge, `src/wow/combat-actions-*`). The ruling of
+  2026-09-21 still holds for the tag: Fable created the work around June
+  2026, nobody reviewed it, and unreviewed code must not enter `main`
+  disguised as progress. Read it freely for patterns
+  (`git show archive/vibe:<path>`), never merge, rebase or cherry-pick it
+  without the maintainer saying so, and never treat its journals as roadmap
+  evidence.
 - `main` has a GitHub `required_linear_history` rule and allows only
   squash merges (since 2026-09-26), so **merge commits are rejected at push
   time**. Local merges, hooks and `mise ci` all pass first, and the push
