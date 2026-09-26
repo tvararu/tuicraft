@@ -310,13 +310,14 @@ with `corpse_out_of_range`, and exhausted offsets stop with
 `corpse_unreachable`.
 After a kill the loop waits for the server update that shows the corpse at
 zero health. A corpse without the lootable flag, or one that despawns first,
-is recorded as `loot: "none"` on its queue entry and the loop continues.
+is recorded as `loot: "none"` on its queue entry and the loop continues,
+as is one that despawns while its loot is opening.
 If no death update arrives within the loot settle time, the loop stops with
 `target_death_unconfirmed`.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
 (`loot_denied:*`, `loot_inventory_full`,
-`loot_release_only_reconnect_required`, `loot_release_unconfirmed`), an
+`loot_denied:release_only`, `loot_release_unconfirmed`), an
 unanswered loot take (`loot_denied:timeout`), or an unrecovered death
 (`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
 `corpse_unreachable`, among other recovery causes). A recovered death does
@@ -512,11 +513,10 @@ When a slot removal or money clearance leaves the window with no items and no mo
 It does not close an unanswered opening and does not establish an inventory gain.
 On a window that is already closing or closed, including one released automatically after the last take, it sends nothing and returns OK.
 
-A release notification during opening can precede its full response. It records `lastRelease` but leaves `loot.phase=opening` and `pending.status=unanswered`.
-If the server sends only that release, the opening remains unanswered. This includes ordinary out-of-range opening rejection.
-There is no inferred denial, timeout unlock, replacement open, or automatic retry.
-If no full response follows, explicitly reconnect using `tuicraft stop`, then `tuicraft inventory --json`.
-The ordinary reconnect creates a new runtime. It does not prove what happened to the previous request.
+A release notification during opening can precede its full response. It records `lastRelease` and leaves `loot.phase=opening` for up to 3 seconds.
+If no full response follows in that time, as with an out-of-range rejection, the open fails: `loot.phase` returns to `closed`, `pending` clears, and `lastOpenFailure` records the GUID and `reason: "release_only"`.
+An opening whose corpse despawns or leaves view fails the same way with `loot_source_unavailable`, and one interrupted by your own death or a world change with `self_unavailable`.
+Human `loot` prints `Last open failed:` with the reason. The next `open-loot` clears it and needs no reconnect. There is no automatic retry.
 
 Loot mutations use the manual override path. Readonly inventory/loot inspections do not change control ownership.
 All acknowledgements are intent only. Action and inspection errors exit with status 1.

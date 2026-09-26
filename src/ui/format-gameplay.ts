@@ -104,6 +104,12 @@ function pickup(slotType: number): string {
     : "no direct pickup";
 }
 
+const OPEN_FAILURES: Record<string, string> = {
+  loot_source_unavailable: "the corpse despawned or left view",
+  release_only: "the server answered with a release only",
+  self_unavailable: "you died or left the world",
+};
+
 function formatLootErrors(state: RewardsState): string[] {
   const lines: string[] = [];
   const inventory = state.lastInventoryError;
@@ -115,6 +121,11 @@ function formatLootErrors(state: RewardsState): string[] {
   }
   if (state.lastLootError)
     lines.push(`Last loot error code: ${state.lastLootError.error}`);
+  const failure = state.lastOpenFailure;
+  if (failure)
+    lines.push(
+      `Last open failed: ${OPEN_FAILURES[failure.reason] ?? failure.reason} (0x${failure.guid.toString(16)})`,
+    );
   return lines;
 }
 

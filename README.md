@@ -347,11 +347,10 @@ Like the real client, tuicraft releases the window itself once a take leaves it
 with no items and no money; `release-loot` is only needed after a partial loot,
 and on a window that is already closing or closed it sends nothing.
 
-A release-only notification during opening leaves the open request unanswered.
-It can precede a later full response and is not proof of denial or closure.
-If no full response follows, explicitly reconnect with `tuicraft stop`, then
-`tuicraft inventory --json`. This is an ordinary reconnect, not timeout-based
-retry support. `release-loot` cannot close an unanswered opening.
+A release-only notification during opening can precede a later full response.
+If none follows within 3 seconds, or the corpse despawns first, the open fails:
+`loot` goes back to `closed`, says why in `Last open failed:` (`lastOpenFailure`
+in `--json`), and the next corpse can be opened without a reconnect.
 
 ## Roadmap
 

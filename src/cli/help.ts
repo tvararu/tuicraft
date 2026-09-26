@@ -77,7 +77,7 @@ USAGE
                             Taking the last item and money releases it automatically
                             OK/slot removal is not stored gain
                             Item-push slot 0xFFFFFFFF means stacking, not a bag slot
-                            Release-only opening stays unanswered; reconnect explicitly
+                            Opening fails closed after a release-only reply (3 s) or a gone corpse
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)

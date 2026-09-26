@@ -71,7 +71,7 @@ export function fakeLoot(config: {
   openError?: number;
   takeError?: string;
   inventoryFull?: boolean;
-  releaseOnly?: boolean;
+  openFailure?: string;
   deferClose?: boolean;
   deferTake?: boolean;
   corpse?: FakeCorpseLoot;
@@ -89,6 +89,7 @@ export function fakeLoot(config: {
   let lastInventoryError: RewardsState["lastInventoryError"];
   const listeners = new Emitter<[RewardsEvent]>();
   let lastRelease: RewardsState["lastRelease"];
+  let lastOpenFailure: RewardsState["lastOpenFailure"];
   const closeRequested = Promise.withResolvers<void>();
 
   function lootWindow(): RewardsState["loot"] {
@@ -138,6 +139,7 @@ export function fakeLoot(config: {
       lastItemPush: undefined,
       lastLootError,
       lastMoneyNotice: undefined,
+      lastOpenFailure,
       lastRelease,
       loot,
       pending: undefined,
@@ -174,8 +176,15 @@ export function fakeLoot(config: {
       if (!corpse.lootable) throw new Error(NOT_LOOTABLE);
       phase = "opening";
       queueMicrotask(() => {
-        if (config.releaseOnly) {
+        if (config.openFailure !== undefined) {
           emit("loot_release_observed");
+          phase = "closed";
+          lastOpenFailure = {
+            guid: 2n,
+            observedAt: 0,
+            reason: config.openFailure,
+          };
+          emit("loot_open_failed");
           return;
         }
         if (config.openError !== undefined) {

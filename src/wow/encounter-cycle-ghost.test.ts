@@ -220,6 +220,7 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
         issues: [],
       },
       lastLootError: undefined,
+      lastOpenFailure: undefined,
       lastInventoryError: undefined,
       lastItemPush: undefined,
       lastMoneyNotice: undefined,
