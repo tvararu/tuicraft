@@ -292,12 +292,19 @@ reclaim radius and away from a killer standing on it. A leg that gains less
 than 1 yd toward the corpse, for example one stopped at once by
 `height_unresolved`, retries at heading offsets of +/-0.3, 0.6, 0.9, 1.2 and
 1.5 rad; a leg that gains ground returns to the direct heading. After the reclaim delay the loop sends
-`reclaim-corpse`, waits for `alive`, and stops with `reclaimed`
-(`stopDetail` holds `pose`, `range` and `legs`). An accepted resurrection
-offer stops with `resurrected`. The remaining queue stays `queued`, because
-life returns at partial health near the killer; check `nearby` before
-starting a new cycle. The leg bound stops with `corpse_out_of_range`, and
-exhausted offsets stop with `corpse_unreachable`.
+`reclaim-corpse`, waits for `alive`, records `lastRecovery`
+(`outcome: "reclaimed"`, `detail` with `pose`, `range` and `legs`, and
+`at`), emits a `recovered` CYCLE event, and continues with the next queued
+target. An accepted resurrection offer records `outcome: "resurrected"` and
+continues the same way. The target that was being fought is recorded
+`skipped` with cause `died`; it is not fought again. Life returns at partial
+health, possibly near the killer, and the next fight starts from there. A
+cycle started or resumed while dead or a ghost recovers first. A death on the
+last target is still recovered before `queue_exhausted`. A loot failure after
+the character died keeps the target `done`, records the loot cause on it, and
+recovers instead of stopping. The leg bound stops
+with `corpse_out_of_range`, and exhausted offsets stop with
+`corpse_unreachable`.
 After a kill the loop waits for the server update that shows the corpse at
 zero health. A corpse without the lootable flag, or one that despawns first,
 is recorded as `loot: "none"` on its queue entry and the loop continues.
@@ -309,7 +316,8 @@ The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 `loot_release_only_reconnect_required`, `loot_release_unconfirmed`), an
 unanswered loot take (`loot_denied:timeout`), or an unrecovered death
 (`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
-`corpse_unreachable`, among other recovery causes). The loop waits for the
+`corpse_unreachable`, among other recovery causes). A recovered death does
+not stop the loop. The loop waits for the
 server release acknowledgement after close before recording loot; an
 unconfirmed close stops instead of reporting a gain. Inspect `cycling` for
 the stop cause, detail, and per-target queue status.
@@ -325,7 +333,10 @@ remaining target; without it the previous instruction stays. `--max` sets
 the starts cap for the resumed run, which counts from zero; without it the
 previous cap stays. Resume works after any stop cause, not only `halt`, and
 emits a `resumed` CYCLE event. It fails with `cycle_active` while a cycle
-runs and with `cycle_nothing_to_resume` when no queued target remains.
+runs and with `cycle_nothing_to_resume` when no queued target remains,
+except while the character is dead or a ghost: then it recovers first (for
+example after a recovery on the last target stopped with
+`corpse_unreachable`) and stops with `queue_exhausted`.
 Nothing is repaired between the stop and the resume; check `nearby` and
 `recovery` first if the stop was not a `halt`.
 
@@ -334,7 +345,7 @@ Nothing is repaired between the stop and the resume; check `nearby` and
 `status` (`queued`, `done`, or `skipped`), skip `cause`, and `loot`
 (`looted` or `none`, set after a kill), `instruction`, `startsUsed`,
 `resumes`,
-`stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
+`stopCause`, `stopDetail`, `startedAt`, `lastLoot`, and `lastRecovery`. This is the same
 snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
 `lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
