@@ -82,8 +82,14 @@ elif [[ -n $role ]]; then
   isolate "$(git rev-parse --absolute-git-dir 2>/dev/null || printf '%s/tmp' "$PWD")"
 fi
 
+extension=()
+status_extension=${ORCA_OMP_STATUS_EXTENSION:-}
+if [[ -n $status_extension && -f $status_extension ]]; then
+  extension=(--extension "$status_extension")
+fi
+
 if [[ -z $role ]]; then
-  exec "$omp" "$@"
+  exec "$omp" "${extension[@]}" "$@"
 fi
 
 case $role in
@@ -100,7 +106,7 @@ fi
 prefix=${role^^}
 model_var="${prefix}_MODEL"
 thinking_var="${prefix}_THINKING"
-flags=(--max-time "$cap")
+flags=(--max-time "$cap" "${extension[@]}")
 flags+=(--config "$(dirname "$self")/omp-factory.yml")
 if [[ -n ${!model_var:-} ]]; then
   flags+=(--model "${!model_var}")
