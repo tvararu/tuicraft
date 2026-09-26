@@ -157,6 +157,27 @@ describe("reviewer", () => {
         out: { issue: 1, pr: 10 },
       });
   });
+
+  test("a card with a live landing marker waits for the merger", () => {
+    const landing = (minutes: number) =>
+      issue(1, "in-review", {
+        markers: [
+          marker(
+            "<!-- factory:landing OpenHubris/auto-merge-run-1 -->",
+            minutes,
+          ),
+        ],
+        prs: [unreviewed()],
+      });
+    expect(pickReview([landing(5)])).toEqual({
+      ok: false,
+      why: "no PR awaiting review",
+    });
+    expect(pickReview([landing(90)])).toEqual({
+      ok: true,
+      out: { issue: 1, pr: 100 },
+    });
+  });
 });
 
 describe("merger", () => {

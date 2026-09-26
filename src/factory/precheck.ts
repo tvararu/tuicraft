@@ -69,8 +69,11 @@ export function decideReviewer(
   cap: number,
   now: number,
 ): Decision {
+  const landing = liveLandings(issues, now).map((l) => l.issue);
   const pairs = oldestFirst(
-    issues.filter((i) => i.status === "in-review"),
+    issues.filter(
+      (i) => i.status === "in-review" && !landing.includes(i.number),
+    ),
   ).flatMap((issue) => {
     const pr = issue.prs.find(reviewable);
     return pr

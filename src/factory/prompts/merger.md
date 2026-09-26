@@ -43,10 +43,12 @@ Blocked cards on the project board.
 2. `bun $F precheck merger`. Before deciding, it bounces every In review
    card whose PR head moved after a passing review: it comments "head
    changed since review" and leaves the card In review, so the reviewer
-   checks the new head. On the third moved head it moves the card to
-   Blocked with a comment. Exit 1 means nothing to land: stop now. On exit
-   0 it prints `{"approval":"required"|"not-required","issue":N,"pr":M}`,
-   the candidate.
+   checks the new head. The third moved head since the card's last move to
+   In review moves it to Blocked with a comment. A head the merger rebased
+   itself (a `factory:rebase` comment, step 6) is not a bounce. Exit 1
+   means nothing to land: stop now. On exit 0 it prints
+   `{"approval":"required"|"not-required","issue":N,"pr":M}`, the
+   candidate.
 3. If `bun $F landings` prints a non-empty array, another merger run is
    active: stop without any change.
 
@@ -108,13 +110,15 @@ For the candidate:
    bypass it).
 6. If the content check found a change: post `factory/ci` success on `$new`
    and comment both `same-patch` ranges and `git range-diff` on the PR.
+   Then mark the head as your own rebase, so the precheck does not count it
+   as a moved head:
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:rebase $new --> Rebased PR #M onto main; the patch changed, so the new head needs a fresh review."`
    Delete your landing marker, and do not merge it. With approval
    `"required"`: comment on the issue asking the maintainer to re-approve
    the PR and move the card back to In review, and run
    `bun $F status N blocked`. With approval `"not-required"`: leave the card
    In review. The new head lacks `factory/review`, so a reviewer checks the
-   rebased code afresh, and the precheck counts it as a moved head. Then
-   move on.
+   rebased code afresh. Then move on.
 7. Statuses on the new head, when `$new` differs from `$old`:
    `gh api repos/tvararu/tuicraft/statuses/$new -f state=success -f context=factory/ci -f description="mise ci passed after rebase"`
    and

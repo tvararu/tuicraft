@@ -361,9 +361,11 @@ Shipping:
   helps; no history cleanup is needed.
 - The merger lands only a PR whose current head has green `factory/ci` and
   `factory/review`. `precheck merger` comments on an In review issue whose
-  head moved after review, and moves it to Blocked on its third moved head.
-  After a rebase, a PR whose zero-context patch (`same-patch`) still
-  matches the reviewed head keeps its review; CI reruns on the new head.
+  head moved after a passing review, and moves it to Blocked on the third
+  moved head since the card last entered In review; the merger's own
+  rebases do not count. After a rebase, a PR whose zero-context patch
+  (`same-patch`) still matches the reviewed head keeps its review; CI
+  reruns on the new head.
 - Stacked PRs: when an issue needs another open PR's code, link the child
   issue as blocked by the parent's issue, base the child PR on the parent's
   branch so its diff shows only the child, and put

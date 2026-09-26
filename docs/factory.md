@@ -61,7 +61,13 @@ Comments on the issue are the per-run locks:
   for 1 h.
 - `<!-- factory:landing <run> -->`: the merger's landing claim. Live for
   1 h; `bun src/factory/main.ts landings` lists the live ones, oldest first,
-  and the oldest wins.
+  and the oldest wins. A reviewer does not pick up a card while it is live.
+
+Two more mark heads for the bounce count:
+
+- `<!-- factory:bounce <sha> -->`: the merger precheck bounced this head.
+- `<!-- factory:rebase <sha> -->`: the merger rebased the PR to this head
+  and the patch changed, so it needs a fresh review but is not a bounce.
 
 ## Roles
 
@@ -82,13 +88,15 @@ Comments on the issue are the per-run locks:
   per head SHA.
 - **Merger.** The precheck first bounces In review cards whose head moved
   after a passing review: it comments "head changed since review" and the
-  card stays In review, so the reviewer checks the new head. The third moved
-  head moves the card to Blocked with a comment. It then lands one PR at a
-  time: rebase onto `main`, `same-patch` against the reviewed head (differs:
-  back to review), `mise ci`, push, then
-  `gh pr merge --squash --match-head-commit`. A conflict or failing CI sends
-  the card back to Ready with a comment. On merge GitHub moves the card to
-  Done.
+  card stays In review, so the reviewer checks the new head. The third
+  moved head since the card's last move to In review moves it to Blocked
+  with a comment; once the maintainer moves it back, the count starts
+  again, and a head already bounced is never bounced twice. The merger's
+  own rebases are not bounces. It then lands one PR at a time: rebase onto
+  `main`, `same-patch` against the reviewed head (differs: back to review),
+  `mise ci`, push, then `gh pr merge --squash --match-head-commit`. A
+  conflict or failing CI sends the card back to Ready with a comment. On
+  merge GitHub moves the card to Done.
 - **QA.** Runs when `main` moves. Maps new commits to PRs and issues via
   trailers, smoke-tests and plays, and files problems as OpenHubris issues
   without labels; auto-add puts them in Backlog.
