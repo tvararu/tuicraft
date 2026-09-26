@@ -14,6 +14,7 @@ import {
   parseOptionId,
   parseQuestId,
   parseResurrect,
+  parseSpellId,
   parseWalkToward,
   tokenize,
 } from "cli/tokens";
@@ -34,6 +35,7 @@ const INSPECTIONS = new Map<string, IpcCommand>(
       "experience",
       "loot",
       "group",
+      "trainer",
     ] as const
   ).flatMap((view): [string, IpcCommand][] => [
     [view.toUpperCase(), { type: view }],
@@ -94,7 +96,8 @@ type GuidIpcType =
   | "attack"
   | "spirit_healer"
   | "talk"
-  | "open_loot";
+  | "open_loot"
+  | "open_trainer";
 
 const GUID_VERBS = new Map<string, { nonzero: boolean; type: GuidIpcType }>([
   ["FACE_GUID", { nonzero: true, type: "face_guid" }],
@@ -103,6 +106,7 @@ const GUID_VERBS = new Map<string, { nonzero: boolean; type: GuidIpcType }>([
   ["SPIRIT_HEALER", { nonzero: true, type: "spirit_healer" }],
   ["TALK", { nonzero: true, type: "talk" }],
   ["OPEN_LOOT", { nonzero: true, type: "open_loot" }],
+  ["OPEN_TRAINER", { nonzero: true, type: "open_trainer" }],
 ]);
 
 const QUEST_VERBS = new Map<
@@ -141,6 +145,8 @@ function parseIndexed(verb: string, tokens: string[]): IpcCommand | undefined {
       );
     case "USE":
       return from(parseItemSlot(tokens), (at) => ({ ...at, type: "use" }));
+    case "TRAIN":
+      return from(parseSpellId(tokens), (v) => ({ type: "train", ...v }));
     default:
       return;
   }

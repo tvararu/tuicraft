@@ -91,6 +91,10 @@ USAGE
                             Opening fails closed after a release-only reply (3 s) or a gone corpse
   tuicraft use <bag> <slot> [--json]  Use a carried item (food, drink, potion) from inventory --json
                             Refuses empty slots and items with no use spell; check combat
+  tuicraft trainer [--json]  Trainer offer: spell, rank, cost, level, state; last training outcome
+  tuicraft open-trainer <guid>  Request an observed trainer's spell list
+  tuicraft train <spell-id>  Learn an available offered spell
+                            Confirmed by the server, the learned spell and the coinage drop
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)
@@ -132,9 +136,9 @@ JSON OUTPUT
   Quest steps by quests --json .data.dialog.kind: gossip/list -> select-quest <id>;
   details -> accept-quest (unless already in the log); requestItems -> request-reward;
   offer -> choose-reward <i>.
-  Without --json, combat, tactics, cycling, recovery, quests, inventory, experience
-  and loot print readable summaries; QUEST lines in read name the quest, counts,
-  reward and error.
+  Without --json, combat, tactics, cycling, recovery, quests, inventory, experience,
+  loot and trainer print readable summaries; QUEST lines in read name the quest,
+  counts, reward and error.
   Control actions print daemon request acceptance, not a server result.
   fight replies when the run ends with its outcome line, for example
   "completed: server_kill_credit, XP 60"; cycle says that it ended.

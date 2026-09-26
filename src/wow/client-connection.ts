@@ -1,7 +1,7 @@
 import type { AuthResult } from "wow/auth";
 import type { ClientConfig } from "wow/client";
 import { Arc4 } from "wow/crypto/arc4";
-import { EntityStore, isUnit } from "wow/entity-store";
+import { type EntityEvent, EntityStore, isUnit } from "wow/entity-store";
 import { FriendStore } from "wow/friend-store";
 import { GuildStore } from "wow/guild-store";
 import { IgnoreStore } from "wow/ignore-store";
@@ -133,6 +133,20 @@ export function startPingLoop(
   }, intervalMs);
 }
 
+function routeEntityEvent(conn: WorldConn, event: EntityEvent): void {
+  if (event.type === "disappear") {
+    conn.remoteMotion.forget(event.guid);
+    conn.combat?.forget(event.guid);
+    conn.control?.observeDisappear(event.guid);
+  }
+  conn.recovery?.observeEntity(event);
+  conn.rewards?.observeEntity(event);
+  conn.itemTemplates?.observeEntity(event);
+  conn.cycle?.observeEntity(event);
+  conn.trainer?.observe();
+  conn.events.entity.emit(event);
+}
+
 export function createWorldConn(): WorldConn {
   const conn: WorldConn = {
     dispatch: new OpcodeDispatch(),
@@ -170,18 +184,7 @@ export function createWorldConn(): WorldConn {
     duelArbiter: 0n,
     events: createWorldEvents((error) => reportListenerError(conn, error)),
   };
-  conn.entityStore.onEvent((event) => {
-    if (event.type === "disappear") {
-      conn.remoteMotion.forget(event.guid);
-      conn.combat?.forget(event.guid);
-      conn.control?.observeDisappear(event.guid);
-    }
-    conn.recovery?.observeEntity(event);
-    conn.rewards?.observeEntity(event);
-    conn.itemTemplates?.observeEntity(event);
-    conn.cycle?.observeEntity(event);
-    conn.events.entity.emit(event);
-  });
+  conn.entityStore.onEvent((event) => routeEntityEvent(conn, event));
   conn.events.rewards.subscribe((event) =>
     conn.itemTemplates?.observeRewards(event),
   );

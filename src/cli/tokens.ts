@@ -200,6 +200,11 @@ export function parseResurrect(tokens: string[]): Parsed<{ accept: boolean }> {
   return ok({ accept: decision === "accept" });
 }
 
+export function parseSpellId(tokens: string[]): Parsed<{ spellId: number }> {
+  const parsed = parseBoundedArg(tokens, 1, MAX_UINT32, "invalid spell id");
+  return parsed.ok ? ok({ spellId: parsed.value }) : parsed;
+}
+
 export function parseOptionId(raw: string | undefined): number | undefined {
   return raw === undefined ? undefined : parseUnsigned(raw, 0, MAX_UINT32);
 }

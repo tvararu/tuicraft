@@ -264,9 +264,12 @@ describe("quest read lines", () => {
     expect(event({ detail: "no_reply", type: "expired" })).toBe(
       "[quest] expired no_reply",
     );
-    expect(
-      event({ detail: "unsupported_window:trainer", type: "window" }),
-    ).toBe("[quest] window unsupported_window:trainer");
+    expect(event({ detail: "trainer", type: "window" })).toBe(
+      "[quest] window trainer",
+    );
+    expect(event({ detail: "unsupported_window:vendor", type: "window" })).toBe(
+      "[quest] window unsupported_window:vendor",
+    );
   });
 
   test("name the quest and its facts", () => {

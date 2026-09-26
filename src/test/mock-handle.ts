@@ -162,6 +162,13 @@ export function createMockHandle(): MockHandle {
     ),
     getSpellbook: jest.fn(async () => []),
     getTacticsState: jest.fn(() => tacticsState),
+    getTrainerState: jest.fn(async () => ({
+      coinage: undefined,
+      lastOutcome: undefined,
+      level: undefined,
+      offer: undefined,
+      pending: undefined,
+    })),
     goTo: jest.fn(),
     guildDemote: jest.fn(),
     guildInvite: jest.fn(),
@@ -229,7 +236,11 @@ export function createMockHandle(): MockHandle {
     onTacticsEvent(cb) {
       return events.tactics.subscribe(cb);
     },
+    onTrainerEvent(cb) {
+      return events.trainer.subscribe(cb);
+    },
     openLoot: jest.fn(),
+    openTrainer: jest.fn(),
     queryCorpse: jest.fn(),
     queryNearby: jest.fn((query?: NearbyQuery) =>
       queryNearby(
@@ -292,6 +303,7 @@ export function createMockHandle(): MockHandle {
     takeLoot: jest.fn(),
     takeLootMoney: jest.fn(),
     talk: jest.fn(),
+    trainSpell: jest.fn(),
     triggerCombatEvent(event) {
       events.combat.emit(event);
     },

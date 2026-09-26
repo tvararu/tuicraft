@@ -27,6 +27,7 @@ tuicraft complete-quest <id> | request-reward | choose-reward <index>
 tuicraft abandon-quest <slot> | cancel-interaction
 tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot | use <bag> <slot>
+tuicraft trainer [--json] | open-trainer <guid> | train <spell-id>
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
 tuicraft logs | record [--since MS] | skill | help | version
@@ -256,7 +257,7 @@ HALT on one IPC socket interrupts pending work and drops older queued
 RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
-HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE commands as well.
+HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE and OPEN_TRAINER/TRAIN commands as well.
 Metadata queries and inventory/loot inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
 An enemy already attacking can continue after `halt`; stopping client actions
 does not disengage combat.
@@ -639,7 +640,7 @@ The quest remains until an authoritative log observation removes it. Removal alo
 Wait for observed close or a confirmed world reset before another mutation. Late menu/error packets do not unlock a pending cancel.
 
 All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending; another verb fails with `quest_reply_unanswered: <action> <guid> unanswered for <s>s; it expires as no_reply after 5s, or run cancel-interaction`.
-A request the server has not answered within 5 s expires: QUEST `expired no_reply`, and it moves to `unresolved` with `reason` `no_reply`. A trainer, vendor, bank or flight-master window from the same giver answers a `talk` or `select-option` with QUEST `window unsupported_window:<kind>` and `lastError` `{kind: "unsupported_window", window, guid}`; tuicraft does not handle those windows. An expired request is not a failure or a success; the quest log or a reward packet can still settle it, and a reply that arrives after expiry is a stale dialog.
+A request the server has not answered within 5 s expires: QUEST `expired no_reply`, and it moves to `unresolved` with `reason` `no_reply`. A trainer list from the same giver answers a `talk` or `select-option` with QUEST `window trainer` and opens the offer in `trainer`. A vendor, bank or flight-master window answers it with QUEST `window unsupported_window:<kind>` and `lastError` `{kind: "unsupported_window", window, guid}`; tuicraft does not handle those windows. An expired request is not a failure or a success; the quest log or a reward packet can still settle it, and a reply that arrives after expiry is a stale dialog.
 `OK` is request intent only. It does not establish acceptance, completion, reward, abandonment, or cancellation success.
 Quest action and inspection errors exit with status 1. Human mode prints `ERR`;
 JSON mode returns an error envelope. Do not retry an unanswered interaction automatically.
@@ -701,6 +702,39 @@ An opening whose corpse despawns or leaves view fails the same way with `loot_so
 Human `loot` prints `Last open failed:` with the reason. The next `open-loot` clears it and needs no reconnect. There is no automatic retry.
 
 Loot mutations use the manual override path. Readonly inventory/loot inspections do not change control ownership.
+
+`tuicraft trainer` [`--json`]
+:: Print the trainer offer the server sent (SMSG_TRAINER_LIST), the unanswered
+trainer request, the last settled one, and carried coinage. Each spell row is
+`Spell 1243 Power Word: Fortitude (Rank 1): available, 9 copper, level 1`:
+spell ID, name and rank from the build-12340 spell data (omitted without
+`spell_data_dir`), state, cost in copper after reputation discount, and
+required level. The state is `available`, `too_low` (character level below
+the required level), `unavailable` (another requirement, such as a lower rank
+or skill, is missing) or `known`. States come from the server's list; a spell
+learned since then shows as `known`, and anything else changes only with a
+new list. In `--json`, `data` holds `offer` (`guid`, `trainerType`,
+`greeting`, `spells` with `spellId`, `name`, `rank`, `state`, `usable`,
+`cost`, `requiredLevel`, `requiredSkill`, `requiredSkillValue`,
+`requiredSpells`), `pending`, `lastOutcome` (`action`, `status`, `reason`,
+`request`, `learnedSpells`, `coinageAfter`, `moneyDelta`), `level` and
+`coinage`.
+
+`tuicraft open-trainer` _guid_
+:: Ask an observed creature with the trainer NPC flag for its spells
+(CMSG_TRAINER_LIST). Choosing a trainer option after `talk` (for example
+"I require priest training.") sends the same list, and it opens the same offer.
+
+`tuicraft train` _spell-id_
+:: Learn an offered spell whose state is `available`
+(CMSG_TRAINER_BUY_SPELL). The outcome is confirmed only when the server
+answers SMSG_TRAINER_BUY_SUCCEEDED, a newly learned spell appears in the
+spellbook (`spells`, `combat --json` `learned`), and coinage has fallen by the
+cost. Server refusals are named: `unavailable`, `not_enough_money` or
+`not_enough_skill`. With no answer after 5 seconds the outcome is
+`unanswered`. Local refusals print `ERR`: `No listed trainer`,
+`Spell is not offered by this trainer`, `Spell is too_low` (or `unavailable`,
+`known`) and `Previous trainer request remains unanswered`.
 All acknowledgements are intent only. Action and inspection errors exit with status 1.
 Human mode prints `ERR`; JSON mode returns an error envelope.
 
@@ -790,13 +824,14 @@ continuous JSONL: parse one envelope per line. See [Output Format](#output-forma
 
 Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
 `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`,
-`inventory`, `experience`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
+`inventory`, `experience`, `loot`, `trainer`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
 `goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
-`cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, and `use`.
+`cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`,
+`use`, `open-trainer`, and `train`.
 `logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
 `help`, `version`, interactive mode, and internal daemon mode.
 
@@ -1143,5 +1178,5 @@ and exit with status 1. Human control actions print daemon request acceptance,
 not a server result. `fight` replies when the run ends and prints its outcome
 line, for example `completed: server_kill_credit, XP 60`. `cycle` replies when
 the run ends and prints that it ended; `cycling` holds the outcome. `combat`,
-`tactics`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` print
-readable summaries.
+`tactics`, `cycling`, `recovery`, `inventory`, `experience`, `loot`, and
+`trainer` print readable summaries.

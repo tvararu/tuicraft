@@ -12,6 +12,7 @@ import type { RecoveryEvent } from "wow/recovery";
 import type { RemoteMotionEvent } from "wow/remote-motion";
 import type { RewardsEvent } from "wow/rewards";
 import type { TacticsEvent } from "wow/tactics";
+import type { TrainerEvent } from "wow/trainer";
 
 export type WorldEvents = {
   message: Emitter<[ChatMessage]>;
@@ -30,6 +31,7 @@ export type WorldEvents = {
   rewards: Emitter<[RewardsEvent]>;
   cycle: Emitter<[CycleEvent]>;
   remoteMotion: Emitter<[RemoteMotionEvent]>;
+  trainer: Emitter<[TrainerEvent]>;
 };
 
 export function createWorldEvents(
@@ -52,6 +54,7 @@ export function createWorldEvents(
     rewards: new Emitter(report),
     cycle: new Emitter(report),
     remoteMotion: new Emitter(report),
+    trainer: new Emitter(report),
   };
 }
 

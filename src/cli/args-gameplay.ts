@@ -14,6 +14,7 @@ import {
   parseOptionId,
   parseQuestId,
   parseResurrect,
+  parseSpellId,
   parseWalkToward,
 } from "cli/tokens";
 import { parseFramingVariant } from "wow";
@@ -103,6 +104,13 @@ function parseInteraction(cmd: string, rest: string[]): CliAction | undefined {
     case "use":
       return { mode: "use", ...take(parseItemSlot(rest)) };
     default:
-      return undefined;
+      return parseTrainerVerb(cmd, rest);
   }
+}
+
+function parseTrainerVerb(cmd: string, rest: string[]): CliAction | undefined {
+  if (cmd === "open-trainer")
+    return { mode: "open_trainer", ...take(parseGuidArg(rest, true)) };
+  if (cmd === "train") return { mode: "train", ...take(parseSpellId(rest)) };
+  return undefined;
 }
