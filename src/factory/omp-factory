@@ -37,6 +37,18 @@ case $role in
   *) cap=1h ;;
 esac
 
+case $role in
+  worker) short=work ;;
+  reviewer) short=review ;;
+  merger) short=merge ;;
+  *) short=$role ;;
+esac
+
+if [[ ${PWD##*/} =~ ^auto-.+-run-([0-9]+)- ]] && command -v orca-ide >/dev/null; then
+  orca-ide worktree set --worktree "path:$PWD" \
+    --display-name "$short-${BASH_REMATCH[1]}" >/dev/null 2>&1 || true
+fi
+
 roles_env="${HOME}/.config/tuicraft-factory/roles.env"
 if [[ -f $roles_env ]]; then
   source "$roles_env"

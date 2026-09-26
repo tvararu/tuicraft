@@ -1,5 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { basename } from "node:path";
 import {
   bot,
   idleHours,
@@ -96,8 +97,12 @@ export function roleOf(automation: string): Role {
   );
 }
 
+export function dirName(wt: Worktree): string {
+  return basename(wt.path);
+}
+
 export function ownerOf(wt: Worktree, all: Worktree[]): Owner {
-  const automation = wt.displayName.match(autoName)?.[1];
+  const automation = dirName(wt).match(autoName)?.[1];
   if (automation)
     return { automation, kind: "reaper", role: roleOf(automation) };
   if (!wt.cliProvenance) return { kind: "owner", name: "maintainer" };
@@ -263,7 +268,7 @@ async function statusOf(wt: Worktree): Promise<string[]> {
 }
 
 function runBranch(wt: Worktree): string {
-  return `${bot}/${wt.displayName}`;
+  return `${bot}/${dirName(wt)}`;
 }
 
 async function runRefs(wt: Worktree): Promise<string[]> {
@@ -333,7 +338,7 @@ async function writeArchive(
   reason: Reason,
 ): Promise<string> {
   const dir = `${mainCheckout}/tmp/worktree-archive-${day(Date.now())}`;
-  const name = wt.displayName;
+  const name = dirName(wt);
   const index = `${tmpdir()}/reaper-${name}-${process.pid}.index`;
   const gitDir = await git(["rev-parse", "--absolute-git-dir"], wt.path);
   await mkdir(dir, { recursive: true });
@@ -388,7 +393,7 @@ async function remove({ wt, opts }: Ctx, owner: Owner): Promise<void> {
   ]);
   if (res.code !== 0)
     return void console.error(
-      `reap: rm ${wt.displayName} failed: ${res.stdout}${res.stderr}`,
+      `reap: rm ${dirName(wt)} failed: ${res.stdout}${res.stderr}`,
     );
   if (await branchExists(branch)) await git(["branch", "-D", branch]);
 }
@@ -399,7 +404,7 @@ async function holdTree(ctx: Ctx, d: Decision, action: Hold): Promise<Held> {
   let path: string | null = null;
   if (action.archive)
     path = opts.dryRun
-      ? `${mainCheckout}/tmp/worktree-archive-${day(ctx.now)}/${wt.displayName}.patch`
+      ? `${mainCheckout}/tmp/worktree-archive-${day(ctx.now)}/${dirName(wt)}.patch`
       : await writeArchive(wt, d.status, action.reason);
   if (action.close && hasTerminals && !opts.dryRun)
     await run([
@@ -415,8 +420,9 @@ async function holdTree(ctx: Ctx, d: Decision, action: Hold): Promise<Held> {
   return {
     ageHours,
     archive: path,
-    name: wt.displayName,
+    name: dirName(wt),
     owner: ownerName(d.owner),
+    path: wt.path,
     reason: action.reason,
   };
 }
@@ -431,7 +437,7 @@ async function handle(ctx: Ctx): Promise<Held | null> {
   if (d.action.kind === "skip") detail = d.action.why;
   if (d.action.kind === "hold") detail = d.action.reason;
   console.error(
-    `reap: ${ctx.wt.displayName} owner=${ownerName(owner)} ${d.action.kind} ${detail}`.trim(),
+    `reap: ${dirName(ctx.wt)} owner=${ownerName(owner)} ${d.action.kind} ${detail}`.trim(),
   );
   if (d.action.kind === "remove") await remove(ctx, owner);
   return d.action.kind === "hold" ? holdTree(ctx, d, d.action) : null;
@@ -443,7 +449,7 @@ async function reap(opts: ReapOptions): Promise<Held[]> {
   await git(["fetch", "--quiet", "origin", "main"]);
   const held: Held[] = [];
   for (const wt of inv.worktrees.filter(
-    (w) => !opts.only || opts.only(w.displayName),
+    (w) => !opts.only || opts.only(dirName(w)),
   )) {
     const item = await handle({ inv, now, opts, wt });
     if (item) held.push(item);

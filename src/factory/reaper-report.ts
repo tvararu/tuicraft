@@ -6,6 +6,7 @@ import { strayFix } from "factory/repo-guard";
 export type Reason = "dirty" | "unlanded-commits" | "over-cap-dirty";
 export type Held = {
   name: string;
+  path: string;
   owner: string;
   ageHours: number;
   reason: Reason;
@@ -29,7 +30,7 @@ export function reportTitle(h: Held): string {
 }
 
 function fixFor(h: Held): string {
-  const rm = `\`orca-ide worktree rm --worktree name:${h.name} --force\``;
+  const rm = `\`orca-ide worktree rm --worktree path:${h.path} --force\``;
   if (h.reason === "unlanded-commits")
     return `The branch has commits that are not on \`main\`. Land them through a PR, or, if they are not wanted, remove the worktree with ${rm} and delete the branch.`;
   const restore = h.archive

@@ -18,6 +18,7 @@ describe("planReport", () => {
     archive: "/x/alpha.patch",
     name: "alpha",
     owner: "maintainer",
+    path: "/w/alpha",
     reason: "dirty",
   };
   const b: Held = {
@@ -25,6 +26,7 @@ describe("planReport", () => {
     archive: null,
     name: "beta",
     owner: "reaper:worker",
+    path: "/w/beta",
     reason: "unlanded-commits",
   };
   const issueFor = (h: Held, number: number): ReportIssue => ({

@@ -324,6 +324,13 @@ session at 0.7-1.1 GB RSS, plus about 140 MB for each omp broker process.
 | Created by Theo in the Orca app | Theo | No `cliProvenance` ([INFERENCE]; check on Theo's first new worktree in phase 1) | Theo decides |
 | Main checkout (`~/code/tuicraft`) | Theo | `isMainWorktree` | Never |
 
+Orca names a run's directory `auto-<automation>-run-<N>-<timestamp>`, and
+Orca's sidebar clips that to `auto-factory-qa-run-`. So `omp-factory` sets the
+run's display name to `<short role>-<N>` (`work-12`, `review-109`,
+`merge-27`, `qa-32`) as it starts the agent. The reaper therefore reads a
+run's identity, its run branch `OpenHubris/<directory>` and its archive
+name from the directory, never from the display name.
+
 Lineage is the record, and the reaper reads only lineage. A worktree comment
 is a status line that agents rewrite at every checkpoint, so it only labels
 the card for humans. Agents create worktrees with
@@ -742,7 +749,9 @@ Cutover progress (Theo's go, 2026-09-25):
   Orca, disabled; a second `setup automations` run reports every one `ok`.
   The reaper units are installed in `~/.config/systemd/user/`, and a dry run
   under `systemd-run --user` with the unit's `PATH` succeeded. The wrapper
-  is installed as `~/.local/bin/omp-factory`.
+  is installed as `~/.local/bin/omp-factory`, a symlink to the runner
+  clone's `src/factory/omp-factory` so it follows `main` (it was a copy
+  until 2026-09-26).
 - Landed on `main` 2026-09-25 (`d6f34cc`, pushed by this worktree with
   Theo's go). The runner clone and the timer followed; see below.
 - Done (2026-09-25): the Orca host settings. Theo's Mac app edits only its

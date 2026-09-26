@@ -49,13 +49,24 @@ const coord = wt({
 describe("ownerOf", () => {
   test("auto run worktrees belong to the reaper with the automation's role", () => {
     const run = wt({
-      displayName: "auto-factory-reviewer-run-4-20260925T1200",
+      path: "/ws/auto-factory-reviewer-run-4-20260925T1200",
     });
     expect(ownerOf(run, [])).toEqual({
       automation: "factory-reviewer",
       kind: "reaper",
       role: "reviewer",
     });
+  });
+
+  test("a run renamed in Orca is still found by its directory", () => {
+    const run = wt({
+      displayName: "review-4",
+      path: "/ws/auto-factory-reviewer-run-4-20260925T1200",
+    });
+    expect(ownerOf(run, []).kind).toBe("reaper");
+    expect(
+      ownerOf(wt({ displayName: "auto-factory-qa-run-1-x" }), []).kind,
+    ).toBe("owner");
   });
 
   test("cli-created worktrees belong to their parent", () => {
@@ -78,7 +89,7 @@ describe("ownerOf", () => {
   });
 
   test("a name that only starts with auto- is not a run", () => {
-    expect(ownerOf(wt({ displayName: "auto-save" }), []).kind).toBe("owner");
+    expect(ownerOf(wt({ path: "/ws/auto-save" }), []).kind).toBe("owner");
   });
 });
 
