@@ -26,6 +26,7 @@ import {
   type Reason,
   reaperDrafts,
 } from "factory/reaper-report";
+import { supersededBy } from "factory/reaper-supersede";
 import { strayMessage, strayWorktree } from "factory/repo-guard";
 import { syncPrompts } from "factory/setup";
 import { sweep } from "factory/soap";
@@ -61,7 +62,10 @@ export type Hold = {
   archive: boolean;
   close: boolean;
 };
-export type Action = { kind: "skip"; why: string } | { kind: "remove" } | Hold;
+export type Action =
+  | { kind: "skip"; why: string }
+  | { kind: "remove"; why?: string }
+  | Hold;
 export type AutoState = {
   done: boolean;
   over: boolean;
@@ -306,6 +310,10 @@ async function refLanded(wt: Worktree, ref: string): Promise<boolean> {
   return landed(await landFacts(tip, ref === "HEAD" ? null : ref));
 }
 
+async function refGone(wt: Worktree, ref: string): Promise<string | null> {
+  return (await refLanded(wt, ref)) ? "" : supersededBy(ref, wt.path);
+}
+
 async function decideAuto(
   { wt, inv, now }: Ctx,
   owner: Owner & { kind: "reaper" },
@@ -319,12 +327,18 @@ async function decideAuto(
   const open = (done || over) && clean ? await unpushed(wt) : null;
   const pushed = open !== null && open.length === 0;
   let merged = false;
+  let why = "";
   if (open !== null && !pushed) {
-    const each = await Promise.all(open.map((ref) => refLanded(wt, ref)));
-    merged = each.every(Boolean);
+    const each = await Promise.all(open.map((ref) => refGone(wt, ref)));
+    merged = each.every((w) => w !== null);
+    why = each.filter(Boolean).join("; ");
   }
+  const action = autoAction({ clean, done, merged, over, pushed });
   return {
-    action: autoAction({ clean, done, merged, over, pushed }),
+    action:
+      action.kind === "remove" && why
+        ? { kind: "remove", why: `superseded: ${why}` }
+        : action,
     ageHours,
     death: deathOf(autoRun, { done, over, role: owner.role }),
     owner,
@@ -464,9 +478,8 @@ async function handle(ctx: Ctx): Promise<Held | null> {
     owner.kind === "reaper"
       ? await decideAuto(ctx, owner)
       : await decideOther(ctx, owner);
-  let detail = "";
-  if (d.action.kind === "skip") detail = d.action.why;
-  if (d.action.kind === "hold") detail = d.action.reason;
+  const detail =
+    d.action.kind === "hold" ? d.action.reason : (d.action.why ?? "");
   console.error(
     `reap: ${ctx.wt.displayName} owner=${ownerName(owner)} ${d.action.kind} ${detail}`.trim(),
   );

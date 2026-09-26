@@ -164,6 +164,12 @@ what a marker means.
   `dispatch_failed` and its terminals and worktree have been quiet for
   2 minutes: Orca's dispatcher gives up on any run still working after
   300 s, and a working omp agent redraws its status line every second.
+  A run's unpushed commits on a `factory/<N>-…` branch count as superseded,
+  so the run is removed like a landed one and the log says why, when that
+  branch's PR is merged or closed, or when the branch on GitHub has an open
+  PR and a tip that is not an ancestor of the run's HEAD: a later run or
+  the merger rebased and force-pushed it. Commits with no PR, or whose
+  branch is missing on GitHub or behind the run's HEAD, are still held.
   Dirty trees are archived to `tmp/worktree-archive-<date>/`. Each hold is
   one draft card in Blocked, `Reaper: <worktree> held (<reason>)`, saying
   what to do; the reaper deletes it once the hold clears.
