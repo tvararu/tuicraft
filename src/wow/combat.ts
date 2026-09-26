@@ -291,8 +291,12 @@ export class CombatRuntime {
     this.emit("outcome");
   }
 
-  halt(): void {
+  interruptCast(): void {
     if (this.casts.hasUncancelled()) this.cancelCast();
+  }
+
+  halt(): void {
+    this.interruptCast();
     if (this.attacking || this.pendingAttack !== undefined) this.stopAttack();
   }
 

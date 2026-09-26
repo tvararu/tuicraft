@@ -65,7 +65,7 @@ test("stopAndDefend ends the run through defense instead of halting", async () =
   const f = fixture({ select: () => result.promise });
   const running = f.tactics.start(context);
   await f.requested;
-  f.tactics.stopAndDefend("manual_override");
+  expect(f.tactics.stopAndDefend("manual_override")).toBe(true);
   await running;
   expect(f).toMatchObject({ defenses: 1, halts: 0 });
   expect(f.tactics.snapshot()).toMatchObject({
@@ -73,7 +73,7 @@ test("stopAndDefend ends the run through defense instead of halting", async () =
     lastStopReason: "manual_override",
     defense: "auto_attack",
   });
-  f.tactics.stopAndDefend("manual_override");
+  expect(f.tactics.stopAndDefend("manual_override")).toBe(false);
   expect(f.defenses).toBe(1);
   result.resolve(judgment());
 });
