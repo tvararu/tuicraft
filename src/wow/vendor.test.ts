@@ -250,7 +250,7 @@ describe("buying", () => {
       action: "buy",
       status: "confirmed",
       moneyDelta: -23,
-      request: { itemId: 159, price: 23 },
+      request: { itemId: 159, minPrice: 23, maxPrice: 23 },
     });
   });
 
@@ -270,7 +270,7 @@ describe("buying", () => {
     expect(f.runtime.snapshot().lastOutcome).toMatchObject({
       status: "refused",
       reason: "not_enough_money",
-      request: { price: 57_000 },
+      request: { minPrice: 57_000, maxPrice: 57_002 },
     });
     f.runtime.buy(2);
     f.runtime.receiveInventoryFailure({
