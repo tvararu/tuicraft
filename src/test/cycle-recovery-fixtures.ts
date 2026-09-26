@@ -158,6 +158,7 @@ export function fakeRecovery(config: {
         : undefined,
       selfGuid: 1n,
       spiritHealerCleared: undefined,
+      spiritHealerConfirm: undefined,
     };
   }
 

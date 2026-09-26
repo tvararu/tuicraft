@@ -10,6 +10,7 @@ import {
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
   parseResurrectRequest,
+  parseSpiritHealerConfirm,
 } from "wow/protocol/death";
 import { parseLevelUpInfo } from "wow/protocol/experience";
 import { parseGossipMessage } from "wow/protocol/gossip";
@@ -261,5 +262,8 @@ export function registerRecoveryHandlers(conn: WorldConn): void {
   );
   on(GameOpcode.SMSG_RESURRECT_REQUEST, (r) =>
     conn.recovery?.receiveResurrectRequest(parseResurrectRequest(r)),
+  );
+  on(GameOpcode.SMSG_SPIRIT_HEALER_CONFIRM, (r) =>
+    conn.recovery?.receiveSpiritHealerConfirm(parseSpiritHealerConfirm(r)),
   );
 }

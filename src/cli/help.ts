@@ -50,6 +50,7 @@ USAGE
   tuicraft query-corpse       Request current corpse information
   tuicraft reclaim-corpse     Request guarded corpse reclaim
   tuicraft spirit-healer <guid>  Request resurrection from an observed healer-flagged creature; an unanswered request blocks retries for 10 s or until halt
+                            Gossip option 0 is only confirmed (recovery spiritHealerConfirm); answer with spirit-healer
   tuicraft resurrect accept|decline  Answer the current offer (shown by recovery)
                             OK is request intent, not confirmed recovery
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim

@@ -113,6 +113,14 @@ describe("formatCycleState", () => {
 });
 
 describe("formatRecoveryState", () => {
+  test("shows an observed spirit-healer confirmation", () => {
+    const output = recovery({
+      life: "ghost",
+      spiritHealerConfirm: { guid: 0xf13000195b0009f1n, receivedAt: 1 },
+    });
+    expect(output).toContain("Spirit healer confirm: 0xf13000195b0009f1");
+  });
+
   test("shows blockers without reading a pending request as resurrection", () => {
     const output = recovery({
       corpse: {
