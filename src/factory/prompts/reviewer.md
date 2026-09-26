@@ -17,6 +17,9 @@ which also authored the PR. `tvararu` (Theo) is the PM.
   only from `tvararu` on github.com. Use `gh pr review --comment` only.
 - Never sign or comment as Theo.
 - Never push, never edit the PR branch, never merge.
+- Never run `mise test:live` and never create game accounts: the
+  implementer owns live proof. You judge whether the Proof section is
+  present, current for this head's code, and convincing.
 - Never create Orca worktrees. Never remove this worktree: the reaper does.
 - End with a clean tree on this run's own branch, and stop.
 
@@ -29,20 +32,23 @@ which also authored the PR. `tvararu` (Theo) is the PM.
 3. `gh issue view N -R tvararu/tuicraft --json labels`: it must have
    `agent:review` and no other `agent:*` label; otherwise stop without any
    change.
-4. Claim: `gh issue edit N -R tvararu/tuicraft --remove-label agent:review --add-label agent:reviewing`,
+4. Head: `sha=$(gh pr view M -R tvararu/tuicraft --json headRefOid --jq .headRefOid)`.
+   Every claim, status and verdict is for that SHA.
+   Claim: `gh issue edit N -R tvararu/tuicraft --remove-label agent:review --add-label agent:reviewing`,
    then post a claim marker:
-   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run -->"`.
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run $sha -->"`.
 5. Race check: `sleep 15`, then re-read the issue comments. Among the
-   `<!-- factory:claim … -->` comments created in the last 15 minutes, the
-   oldest wins. If it is not yours, delete your claim comment
+   `<!-- factory:claim … $sha -->` comments for this same head, the oldest
+   wins; claims for other heads belong to finished cycles and do not count.
+   If it is not yours, delete your claim comment
    (`gh api -X DELETE repos/tvararu/tuicraft/issues/comments/<id>`) and stop
    without any other change. If `agent:reviewing` is gone, stop the same way.
 6. `orca-ide worktree set --worktree active --issue N --workspace-status in-review --comment "reviewing PR #M"`
 
 ## 2. Gather
 
-- `gh pr view M -R tvararu/tuicraft --json headRefName,headRefOid,baseRefName,body,commits,files`
-  Record the head SHA as `sha`. Every status and verdict is for that SHA.
+- `gh pr view M -R tvararu/tuicraft --json title,headRefName,headRefOid,baseRefName,body,commits,files`
+  The head must still be `$sha`.
 - The issue body, the workpad (the comment starting
   `<!-- factory:workpad -->`) with its acceptance criteria, and earlier
   review comments on the PR. A PR that no factory worker opened has no
@@ -50,9 +56,25 @@ which also authored the PR. `tvararu` (Theo) is the PM.
   `## Acceptance criteria` section instead. If neither exists, that is a
   rework reason.
 - Check out the head in this worktree:
-  `git fetch origin main <headRefName> && git switch --detach $sha`.
+  `git fetch origin main <baseRefName> <headRefName> && git switch --detach $sha`.
   If the PR branch moves while you review, stop and leave the label for the
-  next run: swap `agent:reviewing` back to `agent:review`.
+  next run: delete your claim comment and swap `agent:reviewing` back to
+  `agent:review`.
+- Stacked PR: its base is the parent's branch, not `main`. Review only the
+  diff against `origin/<baseRefName>`. The PR body must have a
+  `Stacked-on: #<parent PR> <parent tip>` line, and the issue must be
+  blocked by the parent's issue; otherwise that is a rework reason.
+- Rebase-only check: list earlier heads of this PR that passed review:
+  ```sh
+  gh api graphql -F n=M -f query='query($n:Int!){repository(owner:"tvararu",name:"tuicraft"){pullRequest(number:$n){timelineItems(itemTypes:HEAD_REF_FORCE_PUSHED_EVENT,last:20){nodes{... on HeadRefForcePushedEvent{beforeCommit{oid status{context(name:"factory/review"){state}}}}}}}}}' \
+    --jq '.data.repository.pullRequest.timelineItems.nodes[].beforeCommit | select(.status.context.state == "SUCCESS") | .oid'
+  ```
+  For each such head `p` (fetch it with `git fetch origin $p` if needed),
+  run `bun $F same-patch $(git merge-base $p origin/<baseRefName>)..$p $(git merge-base $sha origin/<baseRefName>)..$sha`.
+  Exit 0 means only context moved since `p` was reviewed: the review of
+  `p` still holds. Run step 3 and, if CI passes, give the pass verdict with
+  "rebase only: zero-context patch matches reviewed `<p>`" and skip
+  step 4.
 
 ## 3. CI
 
@@ -72,31 +94,32 @@ Judge the outcome against the issue first, then the code.
   Test Plan sections are non-negotiable.
 - TUI or harness work has `tmux capture-pane` text captures of the screen.
 - Refactor-only work names its invariant and shows `mise ci` and
-  `mise test:live` output on the head. Reject any behaviour change the issue
-  did not ask for.
+  `mise test:live` output from the implementer on the head's code. Reject
+  any behaviour change the issue did not ask for.
 - The diff follows AGENTS.md (style, no comments, colocated tests for real
   behaviour, docs for user-visible features) and has no unrelated changes.
-- Commit hygiene: `git log --format='%h %s%n%b' origin/main..$sha`. Every
-  commit is a Conventional Commit, its subject is 50 characters or fewer and
-  capitalised after the prefix, and its body says why. No fixup, WIP, "address
-  review" or "fix typo" commits. Each commit makes sense on its own and
-  builds: `git switch -c scratch-review $sha && git rebase -x "mise typecheck" origin/main`,
-  then `git switch --detach $sha && git branch -D scratch-review`.
-  A history failure is a rework reason like a code failure. Do not require
-  `Refs:` or `PR:` trailers: the merger adds them when it lands the PR.
+- The PR lands as one squash commit, so its commit history does not
+  matter; its title and body do. `bun $F squash-message M` must exit 0: the
+  title is a Conventional Commit of 50 characters or fewer, capitalised
+  after the prefix, with the right prefix (`feat:` only for user-visible
+  features), and the body opens with a paragraph of 1-3 sentences saying
+  why. A bad title or missing why is a rework reason. Do not require
+  `Refs:`, `PR:` or `Co-authored-by:` trailers: the merger adds them.
 
 ## 5. Verdict
 
 Post exactly one review comment with the verdict and every reason, most
-important first, each concrete enough to act on (file, commit, criterion):
+important first, each concrete enough to act on (file, criterion):
 
 `gh pr review M -R tvararu/tuicraft --comment --body-file <file>`
 
-Then:
+Then delete your claim comment and:
 
 - Pass (CI green and review clean):
   `gh api repos/tvararu/tuicraft/statuses/$sha -f state=success -f context=factory/review -f description="factory review passed"`
   and `gh issue edit N -R tvararu/tuicraft --remove-label agent:reviewing --add-label agent:merging`.
+  Post the status before the label: the merger precheck bounces an
+  `agent:merging` head without it back to `agent:review`.
 - Fail:
   `gh api repos/tvararu/tuicraft/statuses/$sha -f state=failure -f context=factory/review -f description="<main reason, ≤140 chars>"`
   and `gh issue edit N -R tvararu/tuicraft --remove-label agent:reviewing --add-label agent:rework`.

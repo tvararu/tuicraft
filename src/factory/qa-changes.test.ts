@@ -213,7 +213,7 @@ describe("parseLog", () => {
         "-m",
         "Why.",
         "-m",
-        "Refs: #7, #8\nPR: #9",
+        "Refs: #7, #8\nPR: #9\nCo-authored-by: Theodor Vararu <theo@vararu.org>",
       );
       const out = await git(
         dir,

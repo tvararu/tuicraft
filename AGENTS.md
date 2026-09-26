@@ -45,7 +45,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   ./src/test/live-quest.ts ./src/test/live-remote-motion.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
   commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
-- `bun src/factory/main.ts <precheck|qa-changes|soap|reap|setup>` — the dev
+- `bun src/factory/main.ts <precheck|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
   factory CLI (design: `docs/plans/2026-09-25-dev-factory-design.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
@@ -178,13 +178,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   because nobody reviewed them. Never merge, rebase or cherry-pick it without
   Theo saying so.
 - `main` has a GitHub `required_linear_history` rule and allows only
-  rebase merges, so **merge commits are rejected at push time**. Local
-  merges, hooks and `mise ci` all pass first, and the push then fails with
-  `GH013: Repository rule violations found` naming only a commit hash, which
-  reads as an auth or branch-protection fault rather than a history-shape
-  one. Theo's admin bypass is the only direct push to `main`; it integrates
-  by cherry-picking commits in order, never by merging. Note that
-  `git cherry-pick --continue` opens an editor, so pass
+  squash merges (since 2026-09-26), so **merge commits are rejected at push
+  time**. Local merges, hooks and `mise ci` all pass first, and the push
+  then fails with `GH013: Repository rule violations found` naming only a
+  commit hash, which reads as an auth or branch-protection fault rather
+  than a history-shape one. Theo's admin bypass is the only direct push to
+  `main`; it integrates by cherry-picking commits in order, never by
+  merging. Note that `git cherry-pick --continue` opens an editor, so pass
   `-c core.editor=true`.
 - The ten `gameplay-*` worktrees from the Astra run were removed on
   2026-09-21, but their uncommitted work was archived first, to
@@ -307,11 +307,15 @@ Use [Conventional Commits](https://www.conventionalcommits.org/), then:
 - Capitalize the subject after the prefix: `feat: Add thing` not `feat: add thing`
 - Pick the right prefix — `feat:` is only for application features visible to
   end users. Tooling and infra are `chore:`, README changes are `docs:`, CI
-  changes are `ci:`. When a commit spans types, split into separate commits.
+  changes are `ci:`. When a PR spans types, split it into separate PRs.
 - Blank line, then 1-3 sentence description of "why" (wrap at 72 chars)
 - No bullet points
 - Check `git log -n 5` first to match existing style
 - Never use `--oneline` — commit bodies carry important context
+- These rules bind the squash commit that lands on `main`, which the PR
+  title and body produce (see Shipping). The hk hooks still check every
+  local commit; they let `fixup!`, `squash!` and `amend!` subjects through
+  so autosquash works, but a PR's own history is never reviewed.
 
 Shipping:
 
@@ -325,7 +329,7 @@ Shipping:
 - The dev factory works issues that Theo has labelled `ready`: workers open
   PRs as `OpenHubris` from `factory/<issue>-<slug>` branches, reviewers post
   `factory/ci` and `factory/review`, and only the merger lands them, by
-  rebase-merge. Do not land or relabel factory PRs by hand. Adding `ready`
+  squash merge. Do not land or relabel factory PRs by hand. Adding `ready`
   is the whole release step: it overrides `needs:pm`, which the worker
   removes on claim.
 - Work that doesn't come from the factory goes through the same review and
@@ -335,16 +339,33 @@ Shipping:
   `## Proof` section. Then add `agent:review` to the issue. The reviewer
   posts the statuses and the merger lands it. Never post `factory/*`
   statuses on your own PR.
-- Rebase-merge lands every commit of a PR on `main` by itself. Each must be
-  a Conventional Commit that passes the hooks and `mise ci` on its own:
-  clean the history with `git commit --fixup` and
-  `git rebase -i --autosquash` before review. No WIP or "address review"
-  commits.
+- Each PR lands as one squash commit. OpenHubris authors it because it
+  performs the merge. Its subject is the PR title, so the title must be a
+  Conventional Commit of 50 characters or fewer, capitalised after the
+  prefix. Its body is the PR body's opening paragraph (1-3 sentences of
+  why, before `Fixes #N` and any heading), then one trailer block:
+  `Refs: #N` for each closed issue, `PR: #M`, and
+  `Co-authored-by: Theodor Vararu <theo@vararu.org>` to credit Theo.
+  `bun src/factory/main.ts squash-message <M>` builds it and fails on a bad
+  title or a missing why. Commits inside the PR may be as granular as
+  helps; no history cleanup is needed.
+- The merger lands only a PR whose current head has green `factory/ci` and
+  `factory/review`. `precheck merger` bounces an `agent:merging` issue
+  whose head moved after review back to `agent:review` with a comment, and
+  to `needs:pm` on its third moved head. After a rebase, a PR whose
+  zero-context patch (`same-patch`) still matches the reviewed head keeps
+  its review; CI reruns on the new head.
+- Stacked PRs: when an issue needs another open PR's code, link the child
+  issue as blocked by the parent's issue, base the child PR on the parent's
+  branch so its diff shows only the child, and put
+  `Stacked-on: #<parent PR> <parent tip SHA>` in its body. Once the parent
+  lands, GitHub retargets the child to `main` and it is rebased with
+  `git rebase --onto origin/main <parent tip>`. Keep stacks 2-3 deep.
 - `git add` the intended files, then `git commit` as a separate step. Do
   not stage unrelated work.
 - Independent agents work in their own worktree and commit there freely.
   Never instruct a worker to leave its work uncommitted.
 - Do not force-push, delete branches, or bypass hooks without permission.
   The exception is your own PR branch: force-push it with
-  `--force-with-lease` after cleaning its history.
+  `--force-with-lease` after rebasing it.
 - Releases are paused; do not run release-please or publish versions.
