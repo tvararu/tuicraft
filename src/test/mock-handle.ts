@@ -89,6 +89,7 @@ export function createMockHandle(): MockHandle {
     timeouts: { consecutive: 0, limit: 3, total: 0 },
   };
   const cycle = new EncounterCycleRuntime({
+    bags: { questItems: () => new Set(), stackSize: async () => undefined },
     control: { face: () => {}, move: () => {}, snapshot: () => controlState },
     now: runtimeDeps.now,
     recovery,

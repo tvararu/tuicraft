@@ -254,6 +254,35 @@ cycle still stopped as `loot_denied:release_only` rather than
 `objective_complete`, even though the slot was already complete. One
 8326 resume skipped three targets with `jev_timeout`.
 
+### Loot reserve rerun (#222)
+
+- [quest-loop-reserve-2026-09-26.json](quest-loop-reserve-2026-09-26.json) —
+  `positive`. `./dist/tuicraft` at 997ec0a, where cycle loot keeps one bag
+  slot free. Fresh character Fgklhnbbgka (0xb1a, own `fresh` account, 13
+  free slots at the start). No forbidden command was issued and no GM
+  command was used.
+
+`cycle --quest 8325` stopped with `objective_complete`, and the turn-in gave
+100 XP, 30 copper and 20997. Then `cycle --quest 8326 --source 15366 --source
+15372` and three resumes (travelling closer after each
+`objective_targets_out_of_reach`) reached `objective_complete`. The loot
+stacked well: the fewest free slots were 4 and `slotsLeft` stayed empty. At
+the turn-in, `choose-reward 0` was answered with QUEST `rewarded` (250 XP, 50
+copper), and item 20994 replaced the 8 collars at 255/30.
+
+To exercise the reserve itself, the same character accepted 8336 (Arcane
+Sliver 20482 ×6) and bought vendor items until one slot was free. The next
+corpse offered a Torn Wyrm Scale and a sliver. The loop took the sliver
+first, found it needed the last slot, closed the window 9 ms after it opened
+without a take, and stopped with `inventory_reserve_reached` (`itemId`
+20482, `lootSlot` 1, `freeSlots` 1, `reserve` 1). After `destroy` of a grey
+robe and a manual `open-loot`/`take-loot` of that corpse, `cycle --resume`
+ran to `objective_complete` with one slot free the whole time. It took each
+sliver and each item that fitted a carried stack, and left the rest:
+`slotsLeft` `[0]`, `[1]`, `[0]` and `[1]` on four corpses (a grey 21006 with
+no carried stack, and a Torn Wyrm Scale once the carried stack held 10).
+8336 was then turned in.
+
 ## Unanswered requests no longer block other givers (#215)
 
 Record: [quest-reply-bound-2026-09-26.json](quest-reply-bound-2026-09-26.json),

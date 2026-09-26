@@ -8,6 +8,7 @@ import type {
 } from "wow/control";
 import { type CycleDeps, EncounterCycleRuntime } from "wow/encounter-cycle";
 import type { EntityEvent, UnitEntity } from "wow/entity-store";
+import type { InventorySlot } from "wow/inventory";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import type { RecoveryEvent } from "wow/recovery";
 import {
@@ -76,6 +77,8 @@ export function fakeLoot(config: {
   deferTake?: boolean;
   leftoverWindow?: boolean;
   corpse?: FakeCorpseLoot;
+  freeSlots?: number;
+  carried?: InventorySlot[];
 }) {
   const corpse = config.corpse ?? { dead: true, lootable: true };
   const attempted = Promise.withResolvers<void>();
@@ -131,11 +134,11 @@ export function fakeLoot(config: {
       inventory: {
         bags: [],
         coinage,
-        freeSlots: undefined,
+        freeSlots: config.freeSlots ?? 16,
         issues: [],
         scope: "carried",
         selfGuid: 1n,
-        slots: [],
+        slots: config.carried ?? [],
         status: "complete",
       },
       lastInventoryError,
@@ -304,14 +307,24 @@ export type Wired<E> = {
   onEvent: (callback: (event: E) => void) => Unsubscribe;
 };
 
+const noQuestItems: CycleDeps["bags"] = {
+  questItems: () => new Set(),
+  stackSize: async () => undefined,
+};
+
 export function makeCycle(
-  deps: Omit<CycleDeps, "rewards"> & {
+  deps: Omit<CycleDeps, "rewards" | "bags"> & {
+    bags?: CycleDeps["bags"];
     loot: CycleDeps["rewards"] & Wired<RewardsEvent>;
     recovery: CycleDeps["recovery"] & Wired<RecoveryEvent>;
     control: CycleDeps["control"] & Wired<ControlEvent>;
   },
 ): EncounterCycleRuntime {
-  const runtime = new EncounterCycleRuntime({ ...deps, rewards: deps.loot });
+  const runtime = new EncounterCycleRuntime({
+    ...deps,
+    bags: deps.bags ?? noQuestItems,
+    rewards: deps.loot,
+  });
   deps.loot.onEvent((event) => runtime.observeRewards(event));
   deps.recovery.onEvent((event) => runtime.observeRecovery(event));
   deps.control.onEvent((event) => runtime.observeControl(event));

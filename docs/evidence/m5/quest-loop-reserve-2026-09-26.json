@@ -1,0 +1,113 @@
+{
+  "issue": 222,
+  "outcome": "positive",
+  "buildCommit": "997ec0a",
+  "binary": "./dist/tuicraft",
+  "account": "FAC6AB7D116A0 (own fresh SOAP account, deleted after the run)",
+  "character": "Fgklhnbbgka",
+  "guid": "0xb1a",
+  "rules": "The supervisor issued only objective (cycle --quest, cycle --resume), travel, dialog, inventory management and inspection commands. No fight, cast, attack, target, face-guid or GUID cycle, and no GM commands.",
+  "start": {
+    "level": 1,
+    "xp": 0,
+    "questLog": [],
+    "coinage": 0,
+    "freeSlots": 13,
+    "bags": [
+      { "bag": 255, "slot": 23, "entry": 20857, "name": "Honey Bread", "count": 4 },
+      { "bag": 255, "slot": 24, "entry": 159, "name": "Refreshing Spring Water", "count": 2 },
+      { "bag": 255, "slot": 25, "entry": 6948, "name": "Hearthstone", "count": 1 }
+    ]
+  },
+  "q8325": {
+    "cycleRuns": [
+      { "command": "cycle --quest 8325", "stoppedAt": 1790431747659, "stopCause": "objective_complete", "startsUsed": 10, "maxStarts": 16, "kills": 8, "skipped": ["target_unreachable", "server_action_rejected:line_of_sight"], "slotsLeft": [] }
+    ],
+    "freeSlotsAtObjectiveComplete": 10,
+    "turnIn": {
+      "steps": ["talk", "select-quest 8325 -> offer", "choose-reward 0"],
+      "rewardedAt": 1790431836937,
+      "lastReward": { "questId": 8325, "experience": 100, "money": 30 },
+      "itemPush": { "itemId": 20997, "bagSlot": 255, "slot": 29 },
+      "coinage": [0, 30],
+      "xp": [5, 105],
+      "freeSlots": [10, 9]
+    }
+  },
+  "q8326": {
+    "cycleRuns": [
+      { "command": "cycle --quest 8326 --source 15366 --source 15372", "stoppedAt": 1790431883650, "stopCause": "objective_targets_out_of_reach", "stopDetail": { "nearest": "0xf130003c060823f8", "distance": 66, "reach": 50 } },
+      { "command": "cycle --resume", "stoppedAt": 1790431909019, "stopCause": "objective_targets_out_of_reach", "stopDetail": { "nearest": "0xf130003c06082434", "distance": 58, "reach": 50 } },
+      { "command": "cycle --resume", "stoppedAt": 1790431947694, "stopCause": "objective_targets_out_of_reach", "stopDetail": { "nearest": "0xf130003c0c07ad14", "distance": 79, "reach": 50 } },
+      { "command": "cycle --resume", "stoppedAt": 1790432036406, "stopCause": "objective_complete", "startsUsed": 9, "skipped": ["target_unreachable", "target_unreachable", "too_steep"], "lastLoot": { "slotsTaken": [1, 0], "slotsLeft": [], "coinageBefore": 30, "coinageAfter": 30 } },
+      { "command": "cycle --resume", "stoppedAt": 1790432154540, "stopCause": "objective_complete", "note": "recovery only, after a death while idle" }
+    ],
+    "slotsLeftSeen": false,
+    "minFreeSlotsDuringLoop": 4,
+    "turnIn": {
+      "steps": ["talk", "select-quest 8326 -> requestItems (20797 x8)", "request-reward -> offer (50 copper, 250 XP, choices 20994/20993/20992)", "choose-reward 0"],
+      "rewardedAt": 1790432192448,
+      "lastReward": { "questId": 8326, "experience": 250, "money": 50 },
+      "itemPush": { "itemId": 20994, "bagSlot": 255, "slot": 30 },
+      "bagSlot30": ["20797 Lynx Collar x8", "20994 Green Chain Vest x1"],
+      "coinage": [30, 80],
+      "xp": [457, 707],
+      "freeSlots": [4, 4]
+    }
+  },
+  "reserve8336": {
+    "setup": "Quest 8336 A Fistful of Slivers (Arcane Sliver 20482 x6). Bought Rough Arrow x400 and two Crude Throwing Axes from Shara Sunwing to bring freeSlots from 4 to 1; nothing destroyed before the stop.",
+    "reserveStop": {
+      "command": "cycle --resume (cycle --quest 8336 --source 15274 --source 15273 --source 15298)",
+      "stoppedAt": 1790433211672,
+      "stopCause": "inventory_reserve_reached",
+      "stopDetail": { "itemId": 20482, "lootSlot": 1, "freeSlots": 1, "reserve": 1 },
+      "lootOffered": [
+        { "slot": 0, "itemId": 20845, "name": "Torn Wyrm Scale", "count": 1 },
+        { "slot": 1, "itemId": 20482, "name": "Arcane Sliver", "count": 1 }
+      ],
+      "rewardsEvents": [
+        { "at": 1790433211635, "type": "loot_opened" },
+        { "at": 1790433211644, "type": "loot_close_requested" },
+        { "at": 1790433211672, "type": "loot_release_observed" }
+      ],
+      "takeRequests": 0,
+      "freeSlots": 1,
+      "then": "destroy 255 28 (Unkempt Robe, quality 0) confirmed, freeSlots 2; open-loot the same corpse, take-loot 1 and 0; freeSlots 1"
+    },
+    "slotsLeftRun": {
+      "command": "cycle --resume",
+      "stoppedAt": 1790433299551,
+      "stopCause": "objective_complete",
+      "startsUsed": 6,
+      "freeSlotsThroughout": 1,
+      "loot": [
+        { "at": 1790433278639, "offered": [[0, 21006], [1, 20845]], "slotsTaken": [1], "slotsLeft": [0] },
+        { "at": 1790433286922, "offered": [[0, 20845], [1, 21006]], "slotsTaken": [0], "slotsLeft": [1] },
+        { "at": 1790433293251, "offered": [[0, 20845], [1, 20482]], "slotsTaken": [1], "slotsLeft": [0] },
+        { "at": 1790433299550, "offered": [[0, 20846], [1, 20845], [2, 20482]], "slotsTaken": [2, 0], "slotsLeft": [1] }
+      ]
+    },
+    "turnIn": {
+      "rewardedAt": 1790433399292,
+      "lastReward": { "questId": 8336, "experience": 350, "money": 0 },
+      "itemPush": { "itemId": 20991, "bagSlot": 255, "slot": 28 }
+    }
+  },
+  "supervisorCommandCounts": {
+    "main": { "objective": 6, "travel": 55, "dialog": 14, "inventoryManagement": 0, "inspection": 62 },
+    "reserve8336": { "objective": 8, "travel": 170, "dialog": 8, "inventoryManagement": 10, "inspection": 125 }
+  },
+  "forbiddenCommandsIssued": 0,
+  "record": {
+    "fightsStarted": 33,
+    "serverKillCredit": 23,
+    "skipsByCause": { "target_unreachable": 6, "server_action_rejected:line_of_sight": 2, "too_steep": 1, "JSON.stringify cannot serialize BigInt.": 1 },
+    "deaths": 4,
+    "recovered": 4
+  },
+  "failures": [
+    "One fight failed with a Jev transport error, JSON.stringify cannot serialize BigInt., after a refused goto <guid> (#282).",
+    "goto near the Sunspire and Falthrien Academy was mostly refused (ambiguous ground column, UNKNOWN_PATH), as in #138; travel used face/move legs."
+  ]
+}

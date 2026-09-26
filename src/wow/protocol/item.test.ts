@@ -74,6 +74,7 @@ describe("item template query", () => {
             trigger: 0,
           },
         ],
+        stackSize: 1019,
         subclass: 5,
       },
     });
@@ -99,6 +100,7 @@ describe("item template query", () => {
             trigger: 0,
           },
         ],
+        stackSize: 20,
         subclass: 1,
       },
     });
