@@ -4,8 +4,6 @@ import {
   type Automation,
   command,
   desiredAutomations,
-  desiredLabels,
-  missingLabels,
   plan,
   type Spec,
   wrapperCommand,
@@ -26,22 +24,6 @@ function recorded(spec: Spec, over: Partial<Automation> = {}): Automation {
     ...over,
   };
 }
-
-describe("missingLabels", () => {
-  test("keeps only absent labels in desired order", () => {
-    const existing = ["bug", "agent:review", "ready"];
-    const names = missingLabels(desiredLabels, existing).map((l) => l.name);
-    expect(names).toEqual([
-      "agent:working",
-      "agent:reviewing",
-      "agent:rework",
-      "agent:merging",
-      "agent:landing",
-      "needs:pm",
-      "qa:found",
-    ]);
-  });
-});
 
 describe("desiredAutomations", () => {
   test("every prompt starts with its role marker for omp-factory", () => {

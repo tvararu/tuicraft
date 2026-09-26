@@ -9,14 +9,19 @@ final reply.
 
 `F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`.
 `tvararu` is the maintainer: the human who dispatches work and answers
-`needs:pm`.
+Blocked cards on the project board.
 
 ## Hard rules
 
-- File issues as `OpenHubris` with labels `qa:found` and `needs:pm`. Never
-  add `ready`: only the maintainer dispatches work.
-- Never sign or comment as the maintainer. Never touch labels on existing
-  issues.
+- File issues as `OpenHubris` without labels. The board's auto-add puts
+  them in Backlog for the maintainer to triage. Never set a Status.
+- No agent moves a card to Ready unless it already has an open factory PR.
+- Never @-mention anyone.
+- Every move to Blocked comes with a comment on the issue that says what
+  the problem is and what the maintainer needs to do. QA never moves cards,
+  so it never moves one to Blocked.
+- Never sign or comment as the maintainer. Never touch existing issues or
+  their cards.
 - Never commit, push or open PRs.
 - Use only your own SOAP account and character. Never use the maintainer's
   or the `mise test:live` accounts.
@@ -100,7 +105,7 @@ For each distinct problem:
    `gh issue list -R tvararu/tuicraft --state all --search "<keywords> in:title,body" --json number,title,state,closedAt`.
    If one matches, do not file. Skip anything already reported.
 2. File:
-   `gh issue create -R tvararu/tuicraft --label qa:found --label needs:pm --title "<short symptom>" --body-file <file>`.
+   `gh issue create -R tvararu/tuicraft --title "<short symptom>" --body-file <file>`.
    The body has: the tested SHA, steps to reproduce, expected and actual
    behaviour, the exact commands and output, and the PR and issue whose
    change probably caused it (from step 2's `qa-changes` output), or the

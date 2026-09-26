@@ -1,120 +1,114 @@
-import { applyBounces, movedHeads, reviewedHead } from "factory/bounce";
+import { setStatus } from "factory/board";
+import { applyBounces, landableHead, movedHeads } from "factory/bounce";
 import {
   factoryStateDir,
-  labels,
+  maintainerApproval,
   paces,
-  pm,
-  pmApproval,
   type Role,
   readPace,
   repoSlug,
 } from "factory/config";
 import { must } from "factory/exec";
-import { fetchIssues, type Issue, type Pr } from "factory/github";
+import { factoryPr, fetchIssues, type Issue, type Pr } from "factory/github";
+import { liveLandings, reviewerClaimed, workerClaimed } from "factory/markers";
 import { strayMessage, strayWorktree } from "factory/repo-guard";
 
 export type Decision =
   | { ok: true; out: Record<string, number | string> }
   | { ok: false; why: string };
 
-const busy: string[] = [
-  labels.working,
-  labels.review,
-  labels.reviewing,
-  labels.merging,
-  labels.landing,
-];
-const priorities = ["p1", "p2", "p3"];
 const sha = /^[0-9a-f]{40}$/;
 
 function qaShaFile(): string {
   return `${factoryStateDir()}/qa-main-sha`;
 }
 
-export function inScope(issue: Issue): boolean {
-  if (
-    !issue.labels.some(
-      (label) => label === labels.ready || label === labels.rework,
-    )
-  )
-    return false;
-  const readies = issue.events.filter((event) => event.label === labels.ready);
-  return readies.at(-1)?.actor === pm;
-}
-
 function unblocked(issue: Issue): boolean {
   return issue.blockers.every((state) => state !== "OPEN");
 }
 
-function byPriority(issues: Issue[]): Issue[] {
-  const rank = (issue: Issue) => {
-    const index = priorities.findIndex((p) => issue.labels.includes(p));
-    return index === -1 ? priorities.length : index;
-  };
-  return issues.toSorted((a, b) => rank(a) - rank(b) || a.number - b.number);
+function oldestFirst(issues: Issue[]): Issue[] {
+  return issues.toSorted((a, b) => a.number - b.number);
 }
 
-function free(issue: Issue): boolean {
-  if (issue.labels.some((label) => busy.includes(label))) return false;
-  return (
-    !issue.labels.includes(labels.pm) || issue.labels.includes(labels.ready)
+function reviewable(pr: Pr): boolean {
+  return pr.state === "OPEN" && !pr.draft;
+}
+
+function lacksReview(pr: Pr): boolean {
+  return !(
+    pr.checked === pr.head &&
+    pr.statuses.some((s) => s.name === "factory/review")
   );
 }
 
-export function decideWorker(issues: Issue[], wip: number): Decision {
-  const working = issues.filter((issue) =>
-    issue.labels.includes(labels.working),
-  ).length;
+export function decideWorker(
+  issues: Issue[],
+  wip: number,
+  now: number,
+): Decision {
+  const working = issues.filter((i) => i.status === "in-progress").length;
   if (working >= wip) return { ok: false, why: `wip ${working}/${wip}` };
-  const [pick] = byPriority(
-    issues.filter((issue) => free(issue) && inScope(issue) && unblocked(issue)),
+  const [pick] = oldestFirst(
+    issues.filter(
+      (i) => i.status === "ready" && unblocked(i) && !workerClaimed(i, now),
+    ),
   );
-  return pick
-    ? { ok: true, out: { issue: pick.number } }
-    : { ok: false, why: "no eligible issue" };
+  if (!pick) return { ok: false, why: "no eligible Ready card" };
+  const pr = factoryPr(pick.number, pick.prs);
+  return {
+    ok: true,
+    out: pr
+      ? { issue: pick.number, mode: "rework", pr: pr.number }
+      : { issue: pick.number, mode: "fresh" },
+  };
 }
 
-export function decideReviewer(issues: Issue[], cap: number): Decision {
-  const reviewing = issues.filter((issue) =>
-    issue.labels.includes(labels.reviewing),
-  ).length;
+export function decideReviewer(
+  issues: Issue[],
+  cap: number,
+  now: number,
+): Decision {
+  const pairs = oldestFirst(
+    issues.filter((i) => i.status === "in-review"),
+  ).flatMap((issue) => {
+    const pr = issue.prs.find(reviewable);
+    return pr
+      ? [{ claimed: reviewerClaimed(issue, pr.head, now), issue, pr }]
+      : [];
+  });
+  const reviewing = pairs.filter((p) => p.claimed).length;
   if (reviewing >= cap)
     return { ok: false, why: `reviewing ${reviewing}/${cap}` };
-  const waiting = issues.filter(
-    (i) =>
-      i.labels.includes(labels.review) && !i.labels.includes(labels.reviewing),
-  );
-  const pairs = byPriority(waiting).map((issue) => ({
-    issue,
-    pr: issue.prs.find(reviewable),
-  }));
-  const pick = pairs.find((pair) => pair.pr);
-  if (!pick?.pr) return { ok: false, why: "no PR awaiting review" };
+  const pick = pairs.find((p) => !p.claimed && lacksReview(p.pr));
+  if (!pick) return { ok: false, why: "no PR awaiting review" };
   return { ok: true, out: { issue: pick.issue.number, pr: pick.pr.number } };
 }
 
-export function decideMerger(issues: Issue[], approval = pmApproval): Decision {
-  const landing = issues.find((issue) => issue.labels.includes(labels.landing));
-  if (landing) return { ok: false, why: `#${landing.number} is landing` };
-  const merging = byPriority(
-    issues.filter(
-      (issue) =>
-        issue.labels.includes(labels.merging) &&
-        !issue.labels.includes(labels.pm) &&
-        unblocked(issue),
-    ),
-  );
-  const pairs = merging.map((issue) => ({
-    issue,
-    pr: issue.prs.find((pr) => landable(pr, approval)),
-  }));
-  const pick = pairs.find((pair) => pair.pr);
+export function decideMerger(
+  issues: Issue[],
+  now: number,
+  approval = maintainerApproval,
+): Decision {
+  const [landing] = liveLandings(issues, now);
+  if (landing) return { ok: false, why: `#${landing.issue} is landing` };
+  const pick = oldestFirst(
+    issues.filter((i) => i.status === "in-review" && unblocked(i)),
+  )
+    .map((issue) => ({
+      issue,
+      pr: issue.prs.find((pr) => landable(pr, approval)),
+    }))
+    .find((pair) => pair.pr);
   if (!pick?.pr)
     return { ok: false, why: "no landable PR with passing statuses" };
-  const out = { approval: approval ? "required" : "not-required" };
   return {
     ok: true,
-    out: { ...out, issue: pick.issue.number, pr: pick.pr.number },
+    out: {
+      approval: approval ? "required" : "not-required",
+      issue: pick.issue.number,
+      pr: pick.pr.number,
+    },
   };
 }
 
@@ -124,16 +118,12 @@ export function decideQa(remote: string, stored: string | null): Decision {
   return { ok: true, out: { sha: remote } };
 }
 
-function reviewable(pr: Pr): boolean {
-  return pr.state === "OPEN" && !pr.draft;
-}
-
 function landable(pr: Pr, approval: boolean): boolean {
   return (
     reviewable(pr) &&
     pr.base === "main" &&
     (!approval || pr.decision === "APPROVED") &&
-    reviewedHead(pr)
+    landableHead(pr)
   );
 }
 
@@ -155,19 +145,24 @@ async function qa(): Promise<Decision> {
 const deciders: Record<Role, (dryRun: boolean) => Promise<Decision>> = {
   merger: async (dryRun) => {
     const issues = await fetchIssues();
-    await applyBounces(movedHeads(issues), dryRun);
-    return decideMerger(issues);
+    await applyBounces(movedHeads(issues, Date.now()), dryRun, setStatus);
+    return decideMerger(issues, Date.now());
   },
   qa,
   reviewer: async () => {
     const { reviewing } = paces[await readPace()];
-    return decideReviewer(await fetchIssues(), reviewing);
+    return decideReviewer(await fetchIssues(), reviewing, Date.now());
   },
   worker: async () => {
     const { wip } = paces[await readPace()];
-    return decideWorker(await fetchIssues(), wip);
+    return decideWorker(await fetchIssues(), wip, Date.now());
   },
 };
+
+export async function runLandings(): Promise<number> {
+  console.log(JSON.stringify(liveLandings(await fetchIssues(), Date.now())));
+  return 0;
+}
 
 export async function runPrecheck(args: string[]): Promise<number> {
   const role = args[0];

@@ -46,7 +46,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   ./src/test/live-vendor.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
   commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
-- `bun src/factory/main.ts <precheck|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
+- `bun src/factory/main.ts <precheck|status|landings|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
   factory CLI (how it works: `docs/factory.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
@@ -226,9 +226,10 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   other worktrees only when they have landed on `main`, are clean, and have
   been idle for more than 12 hours. It never deletes a dirty tree: it
   archives a patch to `tmp/worktree-archive-<date>/` in the main checkout
-  and opens one `Reaper: <worktree> held (<reason>)` issue with `needs:pm`
-  that tells the maintainer what to do. It closes that issue itself once the
-  worktree is gone or no longer held, so an open one always needs action.
+  and keeps one draft card in Blocked on the project board titled
+  `Reaper: <worktree> held (<reason>)` that says what to do. It deletes
+  that card itself once the worktree is gone or no longer held, so a Reaper
+  card in Blocked always needs action.
 
 ## Reference Codebases
 
@@ -331,23 +332,23 @@ Shipping:
 - Everything reaches `main` through a pull request that has green
   `signoff/ci`, `factory/ci` and `factory/review` statuses (the `main`
   ruleset). The maintainer's approval is not required right now
-  (`required_approving_review_count: 0`, and `pmApproval = false` in
+  (`required_approving_review_count: 0`, and `maintainerApproval = false` in
   `src/factory/config.ts`). If it is turned back on, only an approval by
   `tvararu` on github.com counts: approvals clicked inside Orca are sent as
   `OpenHubris`, the PR author.
-- The dev factory works issues that the maintainer has labelled `ready`:
-  workers open PRs as `OpenHubris` from `factory/<issue>-<slug>` branches,
-  reviewers post `factory/ci` and `factory/review`, and only the merger
-  lands them, by squash merge. Do not land or relabel factory PRs by hand.
-  Adding `ready` is the whole release step: it overrides `needs:pm`, which
-  the worker removes on claim.
+- The dev factory works issues whose card the maintainer has moved to
+  Ready on the project board (tvararu/1): workers open PRs as `OpenHubris`
+  from `factory/<issue>-<slug>` branches, reviewers post `factory/ci` and
+  `factory/review`, and only the merger lands them, by squash merge. Do not
+  land factory PRs or move their cards by hand. Moving the card to Ready is
+  the whole release step.
 - Work that doesn't come from the factory goes through the same review and
   merger, so give it what their prompts need. File an issue with a
   `## Acceptance criteria` section. Push the work to a branch named
   `factory/<N>-<slug>`, and open a PR whose body has `Fixes #N` and a
-  `## Proof` section. Then add `agent:review` to the issue. The reviewer
-  posts the statuses and the merger lands it. Never post `factory/*`
-  statuses on your own PR.
+  `## Proof` section. Then run `bun src/factory/main.ts status N in-review`.
+  The reviewer posts the statuses and the merger lands it. Never post
+  `factory/*` statuses on your own PR.
 - Each PR lands as one squash commit. OpenHubris authors it because it
   performs the merge. Its subject is the PR title, so the title must be a
   Conventional Commit of 50 characters or fewer, capitalised after the
@@ -359,11 +360,10 @@ Shipping:
   title or a missing why. Commits inside the PR may be as granular as
   helps; no history cleanup is needed.
 - The merger lands only a PR whose current head has green `factory/ci` and
-  `factory/review`. `precheck merger` bounces an `agent:merging` issue
-  whose head moved after review back to `agent:review` with a comment, and
-  to `needs:pm` on its third moved head. After a rebase, a PR whose
-  zero-context patch (`same-patch`) still matches the reviewed head keeps
-  its review; CI reruns on the new head.
+  `factory/review`. `precheck merger` comments on an In review issue whose
+  head moved after review, and moves it to Blocked on its third moved head.
+  After a rebase, a PR whose zero-context patch (`same-patch`) still
+  matches the reviewed head keeps its review; CI reruns on the new head.
 - Stacked PRs: when an issue needs another open PR's code, link the child
   issue as blocked by the parent's issue, base the child PR on the parent's
   branch so its diff shows only the child, and put

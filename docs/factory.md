@@ -5,15 +5,21 @@ How the factory works now. History and rationale live in
 
 ## Flow
 
+Work state lives in the Status field of the project board
+[tvararu/1](https://github.com/users/tvararu/projects/1). Design:
+[plans/2026-09-26-project-board-design.md](plans/2026-09-26-project-board-design.md).
+
 ```mermaid
 flowchart LR
-  T[Maintainer adds ready] --> W[Worker]
-  W -->|PR + proof| R[Reviewer]
-  R -->|fail| W
-  R -->|pass| M[Merger]
-  M -->|head moved| R
-  M -->|squash commit| Q[QA on main]
-  Q -->|qa:found + needs:pm| T
+  B[Backlog] -->|maintainer| R[Ready]
+  R -->|worker claims| P[In progress]
+  P -->|PR opened| V[In review]
+  V -->|review or landing fails| R
+  V -->|merged| D[Done]
+  P -->|question| K[Blocked]
+  V -->|question| K
+  K -->|maintainer answers| R
+  D -->|QA files issues| B
 ```
 
 Roles are Orca automations running `omp` through `src/factory/omp-factory`,
@@ -26,48 +32,86 @@ passes that file as `--config` to factory roles, so they run with omp memory
 and autolearn off. Prompts are in `src/factory/prompts/`. Every role starts
 with `bun src/factory/main.ts precheck <role>` and stops on exit 1.
 
-## Labels
+## Status
 
-| Label | Meaning |
-|---|---|
-| `ready` | The maintainer wants it worked on. Only counts if the maintainer added it last |
-| `agent:working` | A worker owns it |
-| `agent:review` | PR waits for review |
-| `agent:reviewing` | A reviewer owns it |
-| `agent:rework` | Reviewer or merger wants changes |
-| `agent:merging` | Reviewed, waits for the merger |
-| `agent:landing` | The merger is landing it (one issue at a time) |
-| `needs:pm` | The maintainer must decide. `ready` from the maintainer overrides it |
-| `qa:found` | Filed by QA |
+| Status | Moved there by | Meaning |
+|---|---|---|
+| Backlog | GitHub's auto-add, for every new issue | Filed, not started |
+| Blocked | any agent, with a comment | Waits on the maintainer; the comment says what the problem is and what to do |
+| Ready | the maintainer; agents only when an open factory PR exists | Work on this (rework if a PR is open); oldest first |
+| In progress | worker, on claim | A worker owns it |
+| In review | worker, on opening the PR | Reviewer, then merger |
+| Done | GitHub, on merge or close | Landed or closed |
 
-An issue with an open blocked-by issue is never picked up or landed.
+Moving a card to Ready is the whole release step. No agent moves a card to
+Ready unless it already has an open factory PR, no agent @-mentions anyone,
+and the Blocked group is the maintainer's inbox. An issue with an open
+blocked-by issue stays where it is and is never picked up or landed.
+
+`bun src/factory/main.ts status <issue>` prints a card's Status;
+`status <issue> <backlog|blocked|ready|in-progress|in-review|done>` sets it
+(adding the issue to the board if missing) and refuses `ready` without an
+open `factory/<N>-…` PR.
+
+Comments on the issue are the per-run locks:
+
+- `<!-- factory:claim <run> -->`: a worker's claim. Live for 3 h and only
+  if newer than the card's last Status change.
+- `<!-- factory:claim <run> <sha> -->`: a reviewer's claim on one head. Live
+  for 1 h.
+- `<!-- factory:landing <run> -->`: the merger's landing claim. Live for
+  1 h; `bun src/factory/main.ts landings` lists the live ones, oldest first,
+  and the oldest wins.
 
 ## Roles
 
-- **Worker.** Takes the highest-priority in-scope issue, keeps one workpad
-  comment, live-tests on its own SOAP account, and opens a PR from
-  `factory/<N>-<slug>`. The PR title is the future commit subject
-  (Conventional, ≤ 50 chars); the body opens with a why paragraph, then
-  `Fixes #N` and `## Proof`. Commits inside the PR don't matter. At most 3
-  attempts per issue, then `needs:pm`.
-- **Reviewer.** Runs `mise ci` on the head and posts `factory/ci`, judges
-  the outcome and code, and posts `factory/review`. Never runs
-  `mise test:live`: it judges the implementer's proof. If an earlier head
-  passed review and the new head's zero-context patch matches it
-  (`same-patch`), the review carries over after CI. Claims are per head SHA.
-- **Merger.** The precheck first bounces any `agent:merging` issue whose
-  current head lacks green `factory/ci` and `factory/review` back to
-  `agent:review` (third moved head: `needs:pm`). It then lands one PR at a
+- **Worker.** Takes the oldest Ready card with no live claim, moves it to In
+  progress, keeps one workpad comment, live-tests on its own SOAP account,
+  opens a PR from `factory/<N>-<slug>` and moves the card to In review. A
+  Ready card with an open factory PR is rework. The PR title is the future
+  commit subject (Conventional, ≤ 50 chars); the body opens with a why
+  paragraph, then `Fixes #N` and `## Proof`. Commits inside the PR don't
+  matter. At most 3 attempts per issue, then Blocked.
+- **Reviewer.** Takes In review cards whose PR head lacks `factory/review`.
+  Runs `mise ci` on the head and posts `factory/ci`, judges the outcome and
+  code, and posts `factory/review`. Pass leaves the card In review for the
+  merger; fail moves it back to Ready; a product question moves it to
+  Blocked. Never runs `mise test:live`: it judges the implementer's proof.
+  If an earlier head passed review and the new head's zero-context patch
+  matches it (`same-patch`), the review carries over after CI. Claims are
+  per head SHA.
+- **Merger.** The precheck first bounces In review cards whose head moved
+  after a passing review: it comments "head changed since review" and the
+  card stays In review, so the reviewer checks the new head. The third moved
+  head moves the card to Blocked with a comment. It then lands one PR at a
   time: rebase onto `main`, `same-patch` against the reviewed head (differs:
   back to review), `mise ci`, push, then
-  `gh pr merge --squash --match-head-commit`.
+  `gh pr merge --squash --match-head-commit`. A conflict or failing CI sends
+  the card back to Ready with a comment. On merge GitHub moves the card to
+  Done.
 - **QA.** Runs when `main` moves. Maps new commits to PRs and issues via
-  trailers, smoke-tests and plays, and files problems as `qa:found` +
-  `needs:pm`.
+  trailers, smoke-tests and plays, and files problems as OpenHubris issues
+  without labels; auto-add puts them in Backlog.
 - **Reaper** (systemd timer, 5 min). Removes finished or over-cap `auto-*`
   worktrees that are clean and pushed or landed, and other worktrees that
   are landed, clean and idle over 12 h. Dirty trees are archived to
-  `tmp/worktree-archive-<date>/` and reported in a `Reaper: … held` issue.
+  `tmp/worktree-archive-<date>/`. Each hold is one draft card in Blocked,
+  `Reaper: <worktree> held (<reason>)`, saying what to do; the reaper
+  deletes it once the hold clears.
+
+## Cutover from labels
+
+The factory used workflow labels before the board. The first reaper run
+after the board change landed puts every open issue on the board with its
+Status mapped from its labels, first match wins: `agent:working` → In
+progress; `needs:pm` without `ready` → Blocked; `agent:review`,
+`agent:reviewing`, `agent:merging` or `agent:landing` → In review;
+`agent:rework` or `ready` → Ready. An issue with no other label (none,
+or only `qa:found` or `p1`) keeps its Status, or goes to Backlog if it is
+not on the board yet.
+It then removes the legacy labels from every issue, deletes them from the
+repo, and closes the open `Reaper: … held` issues with a comment. Later
+runs find nothing to migrate.
 
 ## Landing
 

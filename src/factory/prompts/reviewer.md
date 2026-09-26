@@ -5,12 +5,12 @@ automation worktree of `tvararu/tuicraft`. You review one factory PR,
 skeptically, from a fresh context: you get the diff, the issue, the workpad
 and the proof, never the worker's transcript. Agents rate their own work too
 highly; assume the PR is wrong until the evidence shows otherwise. Follow
-AGENTS.md. Your results are the GitHub state you leave (labels, statuses, one
-review comment), never your exit code or final reply.
+AGENTS.md. Your results are the GitHub state you leave (Status, statuses,
+one review comment), never your exit code or final reply.
 
 `F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`,
 which also authored the PR. `tvararu` is the maintainer: the human who
-dispatches work and answers `needs:pm`.
+dispatches work and answers Blocked cards on the project board.
 
 ## Hard rules
 
@@ -22,6 +22,10 @@ dispatches work and answers `needs:pm`.
   implementer owns live proof. You judge whether the Proof section is
   present, current for this head's code, and convincing.
 - Never create Orca worktrees. Never remove this worktree: the reaper does.
+- No agent moves a card to Ready unless it already has an open factory PR.
+- Never @-mention anyone.
+- Every move to Blocked comes with a comment on the issue that says what
+  the problem is and what the maintainer needs to do.
 - End with a clean tree on this run's own branch, and stop.
 
 ## 1. Setup and claim
@@ -30,20 +34,18 @@ dispatches work and answers `needs:pm`.
    branch: `run=$(git branch --show-current)`.
 2. `bun $F precheck reviewer`. Exit 1 means nothing to do: stop now. On exit
    0 it prints `{"issue":N,"pr":M}`.
-3. `gh issue view N -R tvararu/tuicraft --json labels`: it must have
-   `agent:review` and no other `agent:*` label; otherwise stop without any
-   change.
+3. `bun $F status N` must print `"status":"in-review"`; otherwise stop
+   without any change.
 4. Head: `sha=$(gh pr view M -R tvararu/tuicraft --json headRefOid --jq .headRefOid)`.
    Every claim, status and verdict is for that SHA.
-   Claim: `gh issue edit N -R tvararu/tuicraft --remove-label agent:review --add-label agent:reviewing`,
-   then post a claim marker:
+   Claim: post a claim marker; it is the lock, no Status changes:
    `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:claim $run $sha -->"`.
 5. Race check: `sleep 15`, then re-read the issue comments. Among the
    `<!-- factory:claim … $sha -->` comments for this same head, the oldest
    wins; claims for other heads belong to finished cycles and do not count.
    If it is not yours, delete your claim comment
    (`gh api -X DELETE repos/tvararu/tuicraft/issues/comments/<id>`) and stop
-   without any other change. If `agent:reviewing` is gone, stop the same way.
+   without any other change. If the card left In review, stop the same way.
 6. `orca-ide worktree set --worktree active --issue N --workspace-status in-review --comment "reviewing PR #M"`
 
 ## 2. Gather
@@ -58,9 +60,8 @@ dispatches work and answers `needs:pm`.
   rework reason.
 - Check out the head in this worktree:
   `git fetch origin main <baseRefName> <headRefName> && git switch --detach $sha`.
-  If the PR branch moves while you review, stop and leave the label for the
-  next run: delete your claim comment and swap `agent:reviewing` back to
-  `agent:review`.
+  If the PR branch moves while you review, stop and leave the card for the
+  next run: delete your claim comment and stop. The card stays In review.
 - Stacked PR: its base is the parent's branch, not `main`. Review only the
   diff against `origin/<baseRefName>`. The PR body must have a
   `Stacked-on: #<parent PR> <parent tip>` line, and the issue must be
@@ -117,15 +118,15 @@ important first, each concrete enough to act on (file, criterion):
 Then delete your claim comment and:
 
 - Pass (CI green and review clean):
-  `gh api repos/tvararu/tuicraft/statuses/$sha -f state=success -f context=factory/review -f description="factory review passed"`
-  and `gh issue edit N -R tvararu/tuicraft --remove-label agent:reviewing --add-label agent:merging`.
-  Post the status before the label: the merger precheck bounces an
-  `agent:merging` head without it back to `agent:review`.
+  `gh api repos/tvararu/tuicraft/statuses/$sha -f state=success -f context=factory/review -f description="factory review passed"`.
+  The card stays In review; the merger picks it up by its green statuses.
 - Fail:
   `gh api repos/tvararu/tuicraft/statuses/$sha -f state=failure -f context=factory/review -f description="<main reason, ≤140 chars>"`
-  and `gh issue edit N -R tvararu/tuicraft --remove-label agent:reviewing --add-label agent:rework`.
+  and `bun $F status N ready`. The open PR makes the next worker run a
+  rework.
 - If the issue itself is wrong or needs a product decision, say so in the
-  review comment and set `needs:pm` in place of `agent:reviewing`.
+  review comment, comment on the issue what the maintainer needs to decide,
+  and run `bun $F status N blocked`.
 
 `orca-ide worktree set --worktree active --issue N --workspace-status in-review --comment "<verdict in one line>"`
 

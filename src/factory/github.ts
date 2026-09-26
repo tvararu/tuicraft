@@ -1,8 +1,19 @@
-import { labels, repoSlug } from "factory/config";
-import { json } from "factory/exec";
+import { type BoardStatus, board, repoSlug, statusOf } from "factory/config";
+import {
+  graphql,
+  login,
+  type Node,
+  nodes,
+  num,
+  obj,
+  page,
+  paginate,
+  str,
+} from "factory/gql";
 
 export type Status = { name: string; state: string };
-export type LabelEvent = { label: string; actor: string; at: string };
+export type Marker = { id: number; body: string; at: string };
+export type Verdict = { oid: string; state: string; at: string };
 
 export type Pr = {
   number: number;
@@ -14,66 +25,83 @@ export type Pr = {
   draft: boolean;
   checked: string;
   statuses: Status[];
+  verdicts: Verdict[];
 };
 
 export type Issue = {
   number: number;
-  title: string;
   author: string;
-  labels: string[];
+  status: BoardStatus | null;
+  statusAt: string;
   blockers: string[];
-  events: LabelEvent[];
+  markers: Marker[];
   prs: Pr[];
 };
 
-type Node = Record<string, unknown>;
+const reviewState = `status{context(name:"factory/review"){state createdAt}}`;
 
-const query = `query($q:String!){search(type:ISSUE,query:$q,first:100){nodes{... on Issue{
-  number title author{login} labels(first:50){nodes{name}} blockedBy(first:20){nodes{state}}
-  timelineItems(itemTypes:LABELED_EVENT,last:50){nodes{... on LabeledEvent{label{name} actor{login} createdAt}}}
+const query = `query($q:String!,$cursor:String){search(type:ISSUE,query:$q,first:50,after:$cursor){
+  pageInfo{hasNextPage endCursor} nodes{... on Issue{
+  number author{login} blockedBy(first:20){nodes{state}}
+  projectItems(first:20){nodes{project{id}
+    fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{optionId updatedAt}}}}
+  comments(last:40){nodes{databaseId body createdAt}}
   closedByPullRequestsReferences(first:5,includeClosedPrs:false){nodes{
     number state baseRefName headRefName headRefOid reviewDecision isDraft
+    history:commits(last:30){nodes{commit{oid ${reviewState}}}}
+    timelineItems(itemTypes:HEAD_REF_FORCE_PUSHED_EVENT,last:30){nodes{
+      ... on HeadRefForcePushedEvent{beforeCommit{oid ${reviewState}}}}}
     commits(last:1){nodes{commit{oid statusCheckRollup{contexts(first:50){nodes{__typename
       ... on StatusContext{context state} ... on CheckRun{name conclusion}}}}}}}}}}}}}`;
 
-function searchQuery(): string {
-  const names = Object.values(labels).map((name) => `"${name}"`);
-  return `repo:${repoSlug} is:issue is:open label:${names.join(",")}`;
+export function factoryPr<T extends { state: string; branch: string }>(
+  issue: number,
+  prs: T[],
+): T | undefined {
+  return prs.find(
+    (pr) => pr.state === "OPEN" && pr.branch.startsWith(`factory/${issue}-`),
+  );
 }
 
 export async function fetchIssues(): Promise<Issue[]> {
-  const cmd = [
-    "gh",
-    "api",
-    "graphql",
-    "-f",
-    `q=${searchQuery()}`,
-    "-f",
-    `query=${query}`,
-  ];
-  return parseIssues(await json<unknown>(cmd));
-}
-
-function parseIssues(body: unknown): Issue[] {
-  const search = obj(obj(obj(body)["data"])["search"]);
-  return nodes(search).map(parseIssue);
+  const q = `repo:${repoSlug} is:issue is:open`;
+  const all = await paginate(async (cursor) =>
+    page((await graphql(query, { cursor, q }))["search"]),
+  );
+  return all.map(parseIssue);
 }
 
 function parseIssue(node: Node): Issue {
+  const item = nodes(node["projectItems"]).find(
+    (i) => str(obj(i["project"])["id"]) === board.project,
+  );
+  const value = item?.["fieldValueByName"];
+  const field = value ? obj(value) : null;
   return {
     author: login(node["author"]),
     blockers: nodes(node["blockedBy"]).map((blocker) => str(blocker["state"])),
-    events: nodes(node["timelineItems"]).map(parseEvent),
-    labels: nodes(node["labels"]).map((label) => str(label["name"])),
+    markers: nodes(node["comments"]).flatMap(parseMarker),
     number: num(node["number"]),
     prs: nodes(node["closedByPullRequestsReferences"]).map(parsePr),
-    title: str(node["title"]),
+    status: field ? statusOf(str(field["optionId"])) : null,
+    statusAt: field ? str(field["updatedAt"]) : "",
   };
 }
 
-function parseEvent(node: Node): LabelEvent {
-  const label = str(obj(node["label"])["name"]);
-  return { actor: login(node["actor"]), at: str(node["createdAt"]), label };
+function parseMarker(node: Node): Marker[] {
+  const body = str(node["body"]);
+  if (!body.startsWith("<!-- factory:")) return [];
+  return [{ at: str(node["createdAt"]), body, id: num(node["databaseId"]) }];
+}
+
+function verdict(commit: unknown): Verdict[] {
+  if (!commit) return [];
+  const c = obj(commit);
+  const status = c["status"];
+  const context = status ? obj(status)["context"] : null;
+  if (!context) return [];
+  const { state, createdAt } = obj(context);
+  return [{ at: str(createdAt), oid: str(c["oid"]), state: str(state) }];
 }
 
 function parsePr(node: Node): Pr {
@@ -81,6 +109,11 @@ function parsePr(node: Node): Pr {
   const [last] = nodes(node["commits"]);
   const commit = last ? obj(last["commit"]) : {};
   const rollup = commit["statusCheckRollup"];
+  const seen = new Set<string>();
+  const verdicts = [
+    ...nodes(node["history"]).flatMap((n) => verdict(n["commit"])),
+    ...nodes(node["timelineItems"]).flatMap((n) => verdict(n["beforeCommit"])),
+  ].filter((v) => !seen.has(v.oid) && seen.add(v.oid));
   return {
     base: str(node["baseRefName"]),
     branch: str(node["headRefName"]),
@@ -91,6 +124,7 @@ function parsePr(node: Node): Pr {
     number: num(node["number"]),
     state: str(node["state"]),
     statuses: rollup ? nodes(obj(rollup)["contexts"]).map(parseStatus) : [],
+    verdicts,
   };
 }
 
@@ -103,30 +137,4 @@ function parseStatus(node: Node): Status {
     };
   }
   return { name: str(node["context"]), state: str(node["state"]) };
-}
-
-function nodes(value: unknown): Node[] {
-  const list = obj(value)["nodes"];
-  if (!Array.isArray(list)) throw new Error("github: expected nodes array");
-  return list.map(obj);
-}
-
-function obj(value: unknown): Node {
-  if (typeof value !== "object" || value === null)
-    throw new Error("github: expected object");
-  return value as Node;
-}
-
-function str(value: unknown): string {
-  if (typeof value !== "string") throw new Error("github: expected string");
-  return value;
-}
-
-function num(value: unknown): number {
-  if (typeof value !== "number") throw new Error("github: expected number");
-  return value;
-}
-
-function login(value: unknown): string {
-  return value ? str(obj(value)["login"]) : "ghost";
 }

@@ -1,5 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { boardItems, openIssues } from "factory/board-items";
 import {
   automationNames,
   bot,
@@ -10,12 +11,18 @@ import {
   stalledRunQuietHours,
 } from "factory/config";
 import { json, must, run } from "factory/exec";
+import { migrate } from "factory/migrate";
 import { landed, landFacts } from "factory/reaper-land";
 import {
+  applyDrafts,
+  closeReports,
   type Held,
+  issueOf,
+  legacyReports,
+  planDrafts,
+  planStray,
   type Reason,
-  report,
-  reportStray,
+  reaperDrafts,
 } from "factory/reaper-report";
 import { strayMessage, strayWorktree } from "factory/repo-guard";
 import { sweep } from "factory/soap";
@@ -417,6 +424,7 @@ async function holdTree(ctx: Ctx, d: Decision, action: Hold): Promise<Held> {
   return {
     ageHours,
     archive: path,
+    issue: issueOf(wt.branch),
     name: wt.displayName,
     owner: ownerName(d.owner),
     reason: action.reason,
@@ -455,16 +463,32 @@ async function reap(opts: ReapOptions): Promise<Held[]> {
 
 export async function runReap(args: string[]): Promise<number> {
   const dryRun = args.includes("--dry-run");
+  const [issues, items] = await Promise.all([openIssues(), boardItems()]);
+  const reports = legacyReports(issues);
+  if (!dryRun) await closeReports(reports);
+  await migrate(
+    dryRun,
+    issues.filter((i) => !reports.includes(i.number)),
+    items,
+  );
+  const drafts = reaperDrafts(items);
   const stray = await strayWorktree();
   if (stray !== null) {
     console.error(`reap: ${strayMessage(stray)}`);
-    if (!dryRun) await reportStray(stray);
+    const plan = planStray(stray, drafts);
+    if (dryRun)
+      console.log(JSON.stringify({ close: reports, drafts: plan }, null, 2));
+    else await applyDrafts(plan);
     return 1;
   }
   const held = await reap({ dryRun, idleHours });
   console.log(JSON.stringify(held, null, 2));
-  if (dryRun) return 0;
-  await report(held);
+  const plan = planDrafts(held, drafts);
+  if (dryRun) {
+    console.log(JSON.stringify({ close: reports, drafts: plan }, null, 2));
+    return 0;
+  }
+  await applyDrafts(plan);
   const swept = await sweep(Math.max(...Object.values(roleCapHours)));
   if (swept.length > 0)
     console.error(`reap: swept SOAP accounts ${swept.join(", ")}`);
