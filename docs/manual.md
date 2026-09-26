@@ -650,6 +650,18 @@ Without `--json`, `inventory` lists occupied item stacks, coinage, free
 slots, and unknown slot counts. `loot` shows the offer, pickup permission,
 pending request, and carried coinage. Use `--json` for all observation fields.
 
+Item rows name the item next to its entry, for example
+`Item 858 Lesser Healing Potion x11 at bag 255 slot 32` and
+`Slot 0: item 4813 Small Leather Collar x1 (pickup allowed)`. The daemon asks
+the server for each item template when the item appears in the inventory or a
+loot window opens, and caches the answer for the session (the same cache `use`
+reads). An entry is asked again only if the server has not answered within 5
+seconds. Replies never wait
+for it: a row shows only the entry until the server answers. In `--json`,
+inventory slot items and loot items carry `name` and `quality` (the server's
+0–7 quality code) next to `entry`/`itemId`; both stay `null` until answered or
+when the server has no such item.
+
 `tuicraft open-loot` _guid_
 :: Request loot from an observed UNIT corpse with an explicitly observed lootable flag while self is authoritatively alive.
 _guid_ is a nonzero uint64 in decimal or `0x` hex. The server still checks range and loot rights.

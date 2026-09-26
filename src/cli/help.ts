@@ -76,9 +76,9 @@ USAGE
   tuicraft cancel-interaction  Request close; wait for observed close
                             Unanswered requests expire after 5s (no_reply)
                             OK is intent, not accepted/completed/rewarded state
-  tuicraft inventory [--json]  Observed carried items, coinage and unknown fields
+  tuicraft inventory [--json]  Observed carried items with names, coinage, unknowns
   tuicraft experience [--json]  Observed level and XP fields, last XP gain and level-up notices
-  tuicraft loot [--json]      Loot offer, pending intent and inventory evidence
+  tuicraft loot [--json]      Loot offer with item names, intent and evidence
   tuicraft open-loot <guid>  Request loot from an observed lootable corpse
   tuicraft take-loot <slot>  Request an offered uint8 loot slot (0-255)
   tuicraft take-money        Request money from the current offer

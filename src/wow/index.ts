@@ -38,6 +38,11 @@ export type { FriendEntry, FriendEvent } from "wow/friend-store";
 export type { GuildEvent, GuildMember, GuildRoster } from "wow/guild-store";
 export type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 export type { InventoryState } from "wow/inventory";
+export type {
+  ItemLabel,
+  NamedInventoryState,
+  NamedRewardsState,
+} from "wow/item-labels";
 export {
   type NavigationObservation,
   nextStepFor,

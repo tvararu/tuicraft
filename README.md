@@ -167,9 +167,9 @@ tuicraft request-reward    # Continue on a requestItems dialog; opens the reward
 tuicraft choose-reward 0   # choose an offered reward (zero-based 0-5)
 tuicraft abandon-quest 0   # request abandonment of a log slot (zero-based 0-24)
 tuicraft cancel-interaction # request dialog close; wait for observed closure
-tuicraft inventory       # carried item stacks, free slots and coinage
+tuicraft inventory       # carried item stacks by name, free slots and coinage
 tuicraft experience      # observed level, XP and XP/level-up notices
-tuicraft loot            # current offer and unanswered requests
+tuicraft loot            # current offer by item name and unanswered requests
 tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money

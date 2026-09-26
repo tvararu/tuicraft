@@ -376,6 +376,7 @@ Rules:
 - Inventory scope is carried equipment, equipped bags, backpack, keyring and currency. Bank and buyback are excluded.
 - Unknown counts, ownership, GUID halves, or capacity stay unknown. Item identity does not imply count 1.
 - `freeSlots` counts physical empty backpack/bag cells, not bag-family eligibility, stacking space, or guaranteed storage.
+- Item rows show the server item name next to the entry (`Item 858 Lesser Healing Potion x11 ...`, `Slot 0: item 4813 Small Leather Collar x1 ...`). JSON inventory slot items and loot items add `name` and `quality` (0 poor, 1 common, 2 uncommon, 3 rare, 4 epic) beside `entry`/`itemId`. The daemon queries each template once and caches the answer for the session (re-asking only after an unanswered 5-second wait) without delaying replies, so both stay `null` until the server answers.
 - Open requires authoritative alive self and an observed lootable UNIT corpse. Use a nonzero uint64 GUID in decimal or hex.
 - A sent open request is not a loot offer. Wait for a matching full successful response before taking items or money.
 - Loot slots are decimal uint8 values 0–255. Use an actually offered allow/owner slot, not a guessed row index.
