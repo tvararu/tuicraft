@@ -27,6 +27,7 @@ import {
   formatRewardsState,
 } from "ui/format-gameplay";
 import { formatPartyState } from "ui/format-party";
+import { formatQuestState } from "ui/format-quests";
 import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
@@ -386,7 +387,7 @@ const HANDLERS: Handlers = {
   query_quest: (cmd, { handle, socket }) =>
     reply(socket, () => handle.queryQuest(cmd.questId), ok),
   quests: (_cmd, { handle, socket }) =>
-    reply(socket, () => handle.getQuestState(), pretty),
+    reply(socket, () => handle.getQuestState(), formatQuestState),
   quests_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getQuestState(), json),
   read: (_cmd, { events, socket }) => send(socket, asText(events.drain())),

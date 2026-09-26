@@ -56,9 +56,20 @@ export {
   GuildMemberStatus,
 } from "wow/protocol/guild";
 export { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
+export type {
+  QuestDisplayItem,
+  QuestRewards,
+} from "wow/protocol/questgiver";
 export { FriendResult, FriendStatus } from "wow/protocol/social";
 export { CLASS_NAMES } from "wow/protocol/world";
-export type { QuestEvent, QuestState } from "wow/quests";
+export { type QuestLogSlot, questSlotStatus } from "wow/quest-slots";
+export type {
+  QuestDialog,
+  QuestEvent,
+  QuestIntent,
+  QuestQuery,
+  QuestState,
+} from "wow/quests";
 export type { RecoveryEvent, RecoveryState } from "wow/recovery";
 export type { RemotePose } from "wow/remote-motion";
 export type { RewardsEvent, RewardsState } from "wow/rewards";
