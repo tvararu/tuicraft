@@ -123,7 +123,11 @@ what a marker means.
 
 - **Worker.** Takes the oldest Ready card with no live claim, moves it to In
   progress, keeps one workpad comment, live-tests on its own SOAP account,
-  opens a PR from `factory/<N>-<slug>` and moves the card to In review. A
+  opens a PR from `factory/<N>-<slug>` and moves the card to In review. The
+  worker precheck records each pick in `worker-picks.json` in the factory
+  state directory and skips, and counts toward the cap, a Ready card it
+  picked in the last 3 minutes, so a tick that runs before the previous
+  worker has posted its claim does not start the same card. A
   Ready card with an open factory PR is rework. The PR title is the future
   commit subject (Conventional, ≤ 50 chars); the body opens with a why
   paragraph, then `Fixes #N` and `## Proof`. Commits inside the PR don't
@@ -259,9 +263,9 @@ retargets the child to `main` and the merger runs
 
 | | default | max |
 |---|---|---|
-| Worker | every 3 min, 3 in flight | every 2 min, 6 |
+| Worker | every 3 min, 3 in flight | every min, 6 |
 | Reviewer | every 3 min, 3 in flight | every min, 6 |
-| Merger | every 10 min | every 3 min |
+| Merger | every 10 min | every min |
 | QA | every 30 min | every 15 min |
 | Reaper timer | every min | every min |
 

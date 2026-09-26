@@ -78,10 +78,10 @@ export const paces: Record<Level, PaceLevel> = {
     reaperMinutes: 1,
     reviewing: 6,
     schedules: {
-      merger: "*/3 * * * *",
+      merger: "* * * * *",
       qa: "*/15 * * * *",
       reviewer: "* * * * *",
-      worker: "*/2 * * * *",
+      worker: "* * * * *",
     },
     wip: 6,
   },

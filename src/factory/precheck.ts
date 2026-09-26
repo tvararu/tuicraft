@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import { runReason } from "factory/attempts";
 import { setStatus } from "factory/board";
 import { applyBounces, landableHead, movedHeads } from "factory/bounce";
@@ -24,6 +25,33 @@ function qaShaFile(): string {
   return `${factoryStateDir()}/qa-main-sha`;
 }
 
+const pickHoldMs = 3 * 60_000;
+
+function picksFile(): string {
+  return `${factoryStateDir()}/worker-picks.json`;
+}
+
+export type Picks = Record<string, number>;
+
+export function heldPicks(picks: Picks, now: number): number[] {
+  return Object.entries(picks)
+    .filter(([, at]) => now - at < pickHoldMs)
+    .map(([issue]) => Number(issue));
+}
+
+async function readPicks(): Promise<Picks> {
+  const file = Bun.file(picksFile());
+  return (await file.exists()) ? ((await file.json()) as Picks) : {};
+}
+
+async function recordPick(picks: Picks, issue: number, now: number) {
+  const live = Object.fromEntries(
+    heldPicks(picks, now).map((n) => [n, picks[n] ?? now]),
+  );
+  await mkdir(factoryStateDir(), { recursive: true });
+  await Bun.write(picksFile(), JSON.stringify({ ...live, [issue]: now }));
+}
+
 function unblocked(issue: Issue): boolean {
   return issue.blockers.every((state) => state !== "OPEN");
 }
@@ -47,12 +75,20 @@ export function decideWorker(
   issues: Issue[],
   wip: number,
   now: number,
+  held: number[] = [],
 ): Decision {
-  const working = issues.filter((i) => i.status === "in-progress").length;
+  const pending = (i: Issue) => i.status === "ready" && held.includes(i.number);
+  const working = issues.filter(
+    (i) => i.status === "in-progress" || pending(i),
+  ).length;
   if (working >= wip) return { ok: false, why: `wip ${working}/${wip}` };
   const [pick] = oldestFirst(
     issues.filter(
-      (i) => i.status === "ready" && unblocked(i) && !workerClaimed(i, now),
+      (i) =>
+        i.status === "ready" &&
+        !pending(i) &&
+        unblocked(i) &&
+        !workerClaimed(i, now),
     ),
   );
   if (!pick) return { ok: false, why: "no eligible Ready card" };
@@ -158,9 +194,19 @@ const deciders: Record<Role, (dryRun: boolean) => Promise<Decision>> = {
     const { reviewing } = levelOf(await readPace());
     return decideReviewer(await fetchIssues(), reviewing, Date.now());
   },
-  worker: async () => {
+  worker: async (dryRun) => {
     const { wip } = levelOf(await readPace());
-    return decideWorker(await fetchIssues(), wip, Date.now());
+    const now = Date.now();
+    const picks = await readPicks();
+    const decision = decideWorker(
+      await fetchIssues(),
+      wip,
+      now,
+      heldPicks(picks, now),
+    );
+    if (decision.ok && !dryRun)
+      await recordPick(picks, Number(decision.out["issue"]), now);
+    return decision;
   },
 };
 
