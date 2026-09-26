@@ -50,24 +50,20 @@ Success means:
 - A worker may, at its own discretion, fan out parallel omp subagents inside
   its own run and worktree and land one PR (decided 2026-09-25). See
   [Worker fan-out](#worker-fan-out).
-- Merge settings (Theo, 2026-09-26): squash only. The repository allows
-  only squash merges and the `main` ruleset's `allowed_merge_methods` is
-  `["squash"]`, with `required_linear_history` kept. Each PR lands as one
-  commit whose subject is the PR title. This ended the rebase-merge trial
-  of 2026-09-25 (see [Merging](#merging) in the register).
-- Retro decisions (Theo, 2026-09-26): the merger lands only on green
-  `factory/*` statuses for the PR's current head and bounces a moved head
-  back to review (more than 2 bounces: `needs:pm`); a rebase whose
-  zero-context patch matches the reviewed head keeps its review; reviewers
-  never run `mise test:live`; stacked PRs are allowed, 2-3 deep.
+- Merge settings trial (Theo, 2026-09-25, verified with `gh api`):
+  `allow_rebase_merge=true`, `allow_squash_merge=false`,
+  `allow_merge_commit=false`, and `main` keeps `required_linear_history`.
+  PRs therefore land by rebase-merge, and every PR commit lands on `main`.
+  Theo may relax this later.
 
 ### Assumptions (correct if wrong)
 
 - The tracker is GitHub Issues, with labels as states. Linear is an optional
   cockpit for Theo later, not part of phase 1.
-- `main` keeps `required_linear_history`, and PRs land by squash merge, so
-  each PR becomes one commit on `main`. Rebase and merge commits are
-  disabled in the repository settings and the `main` ruleset.
+- `main` keeps `required_linear_history`, and PRs land by rebase-merge, so
+  each commit of a PR becomes a commit on `main`. Squash and merge commits
+  are disabled in the repository settings. That only changes if Theo ends
+  the trial (see the register).
 - Each factory role is an Orca Automation. Phase 0 confirmed that `omp`
   works as an automation provider, with three gaps the factory must close
   itself: no per-run time cap, no worktree or process cleanup, and no setup
@@ -84,7 +80,7 @@ flowchart LR
   R -->|rework| W
   R -->|factory/review ok| P{Phase 1: Theo approves}
   P --> M[Merger]
-  M -->|squash merge to main| Q[QA on main]
+  M -->|rebase-merge to main| Q[QA on main]
   Q -->|files issue as OpenHubris| N[needs:pm]
   N -->|Theo adds ready| W
   M -->|conflict / ordering| N
@@ -189,14 +185,12 @@ only concurrency guards.
    update progress and blockers.
 5. Create a SOAP account and character for this run. Live-test against the
    real server, and tear the account down at the end.
-6. Rebase onto `origin/main` before review. The PR lands as one squash
-   commit, so its internal history needs no cleanup. The PR title becomes
-   the commit subject (Conventional, 50 characters or fewer) and the PR
-   body's opening paragraph its why; `squash-message` checks both. A PR
-   that needs another open PR's code is stacked: based on the parent's
-   branch, blocked by the parent's issue, with a
-   `Stacked-on: #<parent PR> <parent tip>` line (see
-   [Merging](#merging)).
+6. Clean the history before review. Every commit lands on `main` on its
+   own (rebase-merge), so each must stand alone: a Conventional Commit with
+   a subject of 50 characters or fewer, passing the hk commit hooks and
+   `mise ci`. Use `git commit --fixup` and `git rebase -i --autosquash`.
+   No "WIP", "address review" or "fix typo" commits. Rework is folded into
+   the commits it corrects, then force-pushed to the `factory/` branch.
 7. Open or update the PR as `OpenHubris` with `Fixes #N` and proof attached
    (below). Set `agent:review` and `--workspace-status in-review`.
 8. Stop conditions: a per-run time cap (the omp wrapper's `--max-time`, with
@@ -232,53 +226,37 @@ carry `agent:reviewing`.
 2. Run `mise ci` on the PR head in its own worktree. Post the commit statuses
    `factory/ci` and `factory/review` to the head SHA. Orca's PR Checks panel
    shows commit statuses natively.
-3. Check the PR title and why paragraph (`squash-message` must pass) as
-   well as the diff; the PR's internal commit history is not reviewed.
-   Never run `mise test:live`: the implementer owns live proof, and the
-   reviewer judges whether the Proof is present, current and convincing.
-   If an earlier head of the PR passed review and the new head's
-   zero-context patch matches it (`same-patch`), the review carries over
-   after CI. Claim markers name the head SHA, so claims from finished
-   cycles never block a new one.
+3. Check commit hygiene as well as the diff. Every commit on the PR is
+   Conventional, has a subject of 50 characters or fewer and passes hk.
+   Each one makes sense on its own and builds (`git rebase -x "mise
+   typecheck" origin/main` on a scratch branch). There are no fixup, WIP or
+   review-response commits. A history failure is a rework reason like a
+   code failure.
 4. If it passes, set `agent:merging`. Otherwise post one review comment and
    set `agent:rework`.
 
-**Merger.** Trigger: the [pace](#pace) schedule. The precheck passes when an
-issue has `agent:merging`, no `needs:pm` and no open blocked-by issue, and
-its PR's base is `main` and its current head has green `factory/ci` and
-`factory/review` (plus, with the approval gate on,
-`reviewDecision == APPROVED`). An unlandable PR must not wake the merger
-every run to find nothing to land. Before deciding, the precheck bounces
-each `agent:merging` issue whose head lacks those statuses back to
-`agent:review` with a "head changed since review" comment carrying a
-`<!-- factory:bounce <sha> -->` marker; the third distinct moved head goes
-to `needs:pm` instead.
+**Merger.** Trigger: the [pace](#pace) schedule. The precheck passes when an issue has
+`agent:merging` and (phase 1) its PR has `reviewDecision == APPROVED`. An
+unapproved PR must not wake the merger every run to find nothing to land.
 
 1. List candidate PRs: `factory/ci` and `factory/review` pass, and (phase 1)
    Theo has approved.
 2. Order them by issue priority, then by age. Flag dependency or ordering
    ambiguity with `needs:pm`.
-3. One at a time: rebase the PR branch onto `origin/main` (a stacked child
-   whose parent landed: `git rebase --onto origin/main <parent tip>`) and
-   force-push the `factory/` branch (never `main`). The pre-push hook's
-   `mise ci --publish` posts `signoff/ci` on the new head. Run `mise ci`
-   again. Compare the zero-context patch before and after the rebase
-   (`same-patch`, which ignores hunk line numbers and surrounding
-   context). If it matches, post `factory/ci` and `factory/review` on the
-   new head, check that all three statuses are green, and squash-merge with
-   `gh pr merge <N> --squash --match-head-commit <sha>`, passing the
-   subject and body from `squash-message`. If it differs (a resolved
-   conflict), the review no longer covers that code: back to
-   `agent:review`, or `needs:pm` for re-approval with the gate on. On a
-   conflict it cannot resolve cleanly, set `agent:rework` with a note.
-4. The squash commit is authored by OpenHubris, which performs the merge.
-   Its subject is the PR title; its body is the PR's why paragraph and one
-   trailer block: `Refs: #N` for each closed issue, `PR: #M`, and
-   `Co-authored-by: Theodor Vararu <theo@vararu.org>`, which credits
-   Theo. After the merge, comment the landed commit on the PR, so a revert
-   is one `git revert <sha>`. Run `orca-ide worktree set
-   --workspace-status completed` on the issue's worktree if one still
-   exists. The issue closes via `Fixes #N`.
+3. One at a time: rebase the PR branch onto `origin/main` and force-push the
+   `factory/` branch (never `main`). The pre-push hook's `mise ci --publish`
+   posts `signoff/ci` on the new head. Run `mise ci` again, post
+   `factory/ci` and `factory/review` on the new head, check that all three
+   statuses are green, then rebase-merge with
+   `gh pr merge <N> --rebase --match-head-commit <sha>`. Compare with
+   `git range-diff` before and after the rebase. If it shows a content change
+   (a resolved conflict), Theo's approval no longer covers that code, so set
+   `needs:pm` for re-approval. On a conflict it cannot resolve cleanly, set
+   `agent:rework` with a note.
+4. After the merge: comment the landed range (`main` before and after, and
+   the commit count) on the PR, so a revert can cover every commit of the
+   issue. Run `orca-ide worktree set --workspace-status completed` on the
+   issue's worktree if one still exists. The issue closes via `Fixes #N`.
 
 **QA.** Trigger: when `main` has moved since the last QA run. The precheck
 compares `git rev-parse origin/main` with a stored SHA.
@@ -376,12 +354,8 @@ checkout, never from a worktree it might delete. Each pass:
    role's time cap (worker 3 h, QA 2 h, reviewer and merger 1 h; Theo left
    the choice to the factory, 2026-09-25, tune from phase 1 run times):
    - If the tree is clean and every commit is on a remote branch
-     (`git rev-list <ref> --not --remotes` is empty for the worktree's
-     current HEAD, its recorded branch and its run branch), or every ref
-     that fails that test has landed (the tests in 2 below), run
-     `orca-ide worktree rm`. The landed fallback fixes #251: GitHub deletes
-     a merged PR's `factory/*` branch, and once any fetch prunes
-     `origin/factory/*` its commits count as unpushed. For runs, "clean" ignores gitignored scratch
+     (`git rev-list <branch> --not --remotes` is empty), run
+     `orca-ide worktree rm`. For runs, "clean" ignores gitignored scratch
      such as `tmp/`. The first overnight reviewer runs were held only for
      the `tmp/cli-*` directories that `mise ci`'s tests leave behind.
      Tracked or untracked changes still count.
@@ -390,17 +364,15 @@ checkout, never from a worktree it might delete. Each pass:
      keep the tree, and report it.
 2. Other worktrees are removed only when all three conditions hold:
    - **Landed.** Any one of these proves it:
-     - a merged PR for the branch had the local tip as one of its heads:
-       its final `headRefOid`, one of its commits, or a before or after
-       commit of a `HeadRefForcePushedEvent`. This covers squash merges,
-       where the merger's rebase and the squash both leave the worker's
-       local tip off `main`;
+     - a merged PR for the branch whose `headRefOid` equals the local tip
+       (`gh pr list --head <branch> --state merged --json headRefOid`);
      - `git cherry origin/main <branch>` prints only `-` lines. This covers
-       cherry-picked integration and the older rebase-merged PRs;
+       cherry-picked integration and rebase-merged PRs, because a rebase
+       keeps each commit's patch-id unless it had to resolve a conflict;
      - the patch-id of the whole branch diff (`git diff
        $(git merge-base origin/main <branch>) <branch> | git patch-id
        --stable`) equals the patch-id of a commit on `origin/main`. This
-       covers a squash commit whose diff and context did not change;
+       covers squash merges, which the trial disables but Theo may re-enable;
      - the branch has no commits beyond `origin/main`.
 
      `git branch --merged` is never used. Phase 0 checked this on a
@@ -535,9 +507,10 @@ double-written.
 6. **Merge button.** Orca's PR panel offers whichever merge methods the
    repository allows. When squash and merge commits were enabled, its
    default on PR #84 was "Create merge commit", which `main` refuses under
-   linear history. Now the button offers only squash, so that trap is
-   gone. The ruleset pins "allowed merge methods: Squash", so relaxing
-   repository settings cannot bring the trap back.
+   linear history. With the rebase-only trial, the button offers only
+   rebase, so that trap is gone. The ruleset still pins "allowed merge
+   methods: Rebase", so relaxing repository settings cannot bring the trap
+   back.
 7. **Approval identity: Orca approvals do not count.** Orca's GitHub reads
    and writes go through the host's `gh`. The bundle parses
    `gh auth status` and runs `gh pr merge`, `gh pr edit` and
@@ -578,12 +551,11 @@ Required checks on `main`:
   worker's and merger's force-pushes of a `factory/` branch.
 - **`factory/ci`** and **`factory/review`**: added at the cutover.
 
-GitHub checks the required statuses on the PR head and then writes a new
-commit to `main`. That commit carries no statuses of its own: confirmed
-under rebase-merge on PR #89, where `main`'s new head `b98c9b4` had an
-empty status list, and a squash commit is likewise new. Before merging,
-the merger therefore checks that the head it lands has all three
-statuses, `signoff/ci` included.
+With rebase-merge, GitHub checks the required statuses on the PR head and
+then writes new commits to `main`. The new commits carry no statuses of
+their own: confirmed on PR #89, where `main`'s new head `b98c9b4` had an
+empty status list. Before merging, the merger therefore checks that the
+head it lands has all three statuses, `signoff/ci` included.
 
 `gh signoff` is an option for posting. `mise ci` already posts `signoff/ci`
 through it when HEAD is clean and pushed, and the pre-push hook posts it for
@@ -640,13 +612,12 @@ blocks the direct pushes that current work depends on.
    - Keep: Restrict creations, Restrict deletions, Block force pushes,
      Require linear history.
    - Add **Require a pull request before merging**: 1 required approval,
-     allowed merge methods: **Squash** (Rebase until 2026-09-26). Pinning
-     the method keeps the Orca merge button safe even if repository
-     settings are relaxed. Leave "dismiss stale approvals on new commits"
-     off. The merger's rebase-and-force-push would dismiss Theo's approval
-     on every landing ([INFERENCE]; confirm at cutover). The merger's
-     zero-context patch check replaces it: any content change after
-     approval goes back to review, or to Theo with the gate on.
+     allowed merge methods: **Rebase**. Pinning the method keeps the Orca
+     merge button safe even if repository settings are relaxed. Leave
+     "dismiss stale approvals on new commits" off. The merger's
+     rebase-and-force-push would dismiss Theo's approval on every landing
+     ([INFERENCE]; confirm at cutover). The merger's `range-diff` check
+     replaces it: any content change after approval goes back to Theo.
    - **Require status checks to pass**: `signoff/ci` is already required
      (not strict). Add `factory/ci` and `factory/review`. Leave "require
      branches to be up to date" off, matching Theo's `signoff/ci` choice:
@@ -661,7 +632,7 @@ setting so the first overnight run can land without him. Read back with
 `gh api repos/tvararu/tuicraft/rulesets/12936638`:
 
 - `pull_request`: `required_approving_review_count: 0`,
-  `allowed_merge_methods: ["rebase"]` (`["squash"]` since 2026-09-26) and
+  `allowed_merge_methods: ["rebase"]` and
   `dismiss_stale_reviews_on_push: false`.
 - `required_status_checks`: `signoff/ci`, `factory/ci` and
   `factory/review`, not strict.
@@ -681,8 +652,7 @@ PR.
 
 History of the merge settings: on 2026-09-25 Theo first enabled squash and
 merge commits, then switched to a rebase-only trial (`allow_rebase_merge`
-only). On 2026-09-26 he ended the trial and made `main` squash-only, in the
-repository settings and the ruleset. Auto-merge remains enabled.
+only). Auto-merge remains enabled.
 
 ## AGENTS.md changes at cutover
 
@@ -693,11 +663,9 @@ The current shipping rules assume one integration owner who cherry-picks onto
   the factory flow: PRs from `OpenHubris`, merged only by the merger.
 - Remove the cherry-pick integration guidance, or keep it only for the admin
   bypass.
-- Add to "Commits" and "Shipping": each PR lands as one squash commit,
-  whose subject is the PR title and whose body is the PR's why paragraph
-  plus the `Refs:`, `PR:` and `Co-authored-by:` trailers, so the PR title
-  and body must pass the commit rules (squash-only since 2026-09-26; the
-  earlier rebase trial required per-commit history cleanup).
+- Add to "Commits": every commit on a factory PR lands on `main` by itself
+  (rebase-merge), so each must pass the commit rules and `mise ci` on its
+  own. Clean the history with fixup and autosquash before review.
 - Change "Always run `mise test:live` yourself" to per-agent live testing on
   SOAP-created accounts. The two fixed test accounts stay for `mise test:live`
   until it provisions its own.
@@ -1000,8 +968,8 @@ Rules for the factory's SOAP helper, from the report:
   If an issue needs another class or zone, the worker raises it with
   `needs:pm` and Theo relays the request to t1.
 - Does a force-push rebase dismiss Theo's approval even with "dismiss stale
-  approvals" off, and does "require up to date" plus squash merge land
-  cleanly? Check on the first factory PR after the squash switch.
+  approvals" off, and does "require up to date" plus rebase-merge land
+  cleanly? Check on the first factory PR.
 - How do factory workers get model access for live proof of harness features
   (Pi needs a provider) without sharing Theo's refresh tokens? Proposal: a
   factory-owned credential, either an API key with a spend limit in the
@@ -1077,13 +1045,10 @@ sources are in the research doc.
 
 | Idea | Status | Why / when to revisit |
 |---|---|---|
-| Merger agent: periodic, priority order, rebase + re-test + squash merge, `needs:pm` on ambiguity | adopted | Theo's design. Same as Symphony's `Merging` state plus its `land` skill. A zero-context patch mismatch after the rebase sends the PR back to review |
+| Merger agent: periodic, priority order, rebase + re-test + rebase-merge, `needs:pm` on ambiguity | adopted | Theo's design. Same as Symphony's `Merging` state plus its `land` skill. `git range-diff` sends post-approval content changes back to Theo |
 | GitHub native merge queue | rejected | Only available to organizations. Not needed, since Symphony lands without it. Revisit if merge throughput becomes the bottleneck (a free org for an open-source project) |
-| Squash merge with linear history kept: one commit per PR, subject = PR title, body = why + `Refs:`/`PR:`/`Co-authored-by: Theodor Vararu <theo@vararu.org>` trailers, authored by OpenHubris as the merger | adopted (Theo, 2026-09-26) | The initial design. The overnight run showed history cleanup and per-commit range-diffs cost more than they bought: fixup subjects broke the hk length check, and context-only range-diff changes sent six PRs back through review |
-| Rebase-merge with linear history kept; every PR commit lands on `main`, so the worker cleans history and the reviewer checks it | ended (trial 2026-09-25 to 2026-09-26) | Replaced by squash merge. It kept per-commit history at the cost of a history-cleanup step per PR |
-| Merger checks factory statuses on the PR's current head and bounces a moved head to `agent:review` (third moved head: `needs:pm`) | adopted (Theo, 2026-09-26) | A rebase while `agent:merging` jammed a whole stack overnight. `precheck merger` does it before deciding |
-| Keep the review after a rebase whose zero-context patch matches (`same-patch`) | adopted (Theo, 2026-09-26) | CI still reruns on the rebased head. Only a real hunk change goes back to review |
-| Stacked PRs: base = parent branch, blocked-by between the issues, `Stacked-on:` line, `git rebase --onto origin/main <parent tip>` after the parent lands, 2-3 deep | adopted (Theo, 2026-09-26) | Nine overnight PRs silently carried other PRs' commits; the base keeps the child's diff to its own work and blocked-by keeps the order machine-readable |
+| Rebase-merge with linear history kept; every PR commit lands on `main`, so the worker cleans history and the reviewer checks it | adopted (Theo's trial, 2026-09-25) | Keeps per-commit history without merge commits. It costs a history-cleanup step per PR |
+| Squash merge with linear history kept | deferred | Was the initial design (one commit per issue). Theo disabled squash for the rebase trial. Revisit if history cleanup costs too much |
 | Merge commits with linear history dropped | rejected for now | Theo disabled merge commits. Orca's merge button defaulted to "Create merge commit", which `main` refused |
 | Auto-merge button driven by required checks | deferred | Could replace the merger's final step. The merger still decides order |
 | Bot approvals satisfying required reviews (GitHub App or Copilot review approvals) | deferred | Unverified for custom Apps. Needed only if phase 2 wants a review record, not 0 approvals |
@@ -1104,7 +1069,7 @@ sources are in the research doc.
 | Paid AI reviewers (Copilot review, Claude Code Review, Bugbot, CodeRabbit, Greptile) | rejected for now | Cost per PR or per seat. Greptile's free tier excludes AGPL. Our own reviewer runs locally |
 | Digital twin: grow the mock world server into a validated clone | deferred | Theo: we use the one real server. Mock stays for unit/integration tests |
 | Private AzerothCore in Docker | rejected | Theo: one server, and accounts are trivial |
-| Revert-on-red for `main` after QA | deferred | Reverts are plain commits and compatible with linear history. With squash merge, an issue lands as one commit, which the merger names in a PR comment, so a revert is one `git revert <sha>`. Candidate QA action once QA is reliable |
+| Revert-on-red for `main` after QA | deferred | Reverts are plain commits and compatible with linear history. With rebase-merge, an issue lands as several commits, and GitHub rewrites their SHAs. The merger therefore records the landed range (`main` before and after) in the PR's merge comment, and a revert covers every commit in that range, newest first. Candidate QA action once QA is reliable |
 | tmux `capture-pane -p` text snapshots of the rendered screen in the Proof section | adopted for TUI and harness issues | Minimum proof for screen output with no new dependency. Checked in phase 0 |
 | Terminal recordings (VHS GIFs), Showboat-style demos | deferred | Richer proof than text snapshots |
 | Daily or weekly digest (Linear Pulse-like) | deferred | PM surface for phase 2 when Theo stops approving |

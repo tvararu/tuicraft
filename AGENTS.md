@@ -46,7 +46,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
   commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
 - `bun src/factory/main.ts <precheck|qa-changes|squash-message|same-patch|soap|reap|setup>` — the dev
-  factory CLI (design: `docs/plans/2026-09-25-dev-factory-design.md`).
+  factory CLI (how it works: `docs/factory.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
 - `mise factory:pace [default|max]` — show the factory pace and the live

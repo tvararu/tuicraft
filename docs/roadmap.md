@@ -187,7 +187,7 @@ another large branch of plausible agent-written code would not solve that.
 
 Every change reaches `main` through a pull request with green `signoff/ci`,
 `factory/ci` and `factory/review` statuses, and lands as one squash commit. The
-[dev factory](plans/2026-09-25-dev-factory-design.md) takes issues Theo labels
+[dev factory](factory.md) takes issues Theo labels
 `ready` through a worker, a reviewer and a merger. Work from outside the
 factory goes through the same reviewer and merger: an issue with
 `## Acceptance criteria`, a `factory/<N>-<slug>` branch, a PR with `Fixes #N`
