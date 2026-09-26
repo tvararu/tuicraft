@@ -6,7 +6,7 @@ WoW 3.3.5a chat client
 
 ```
 tuicraft
-tuicraft send [-w <name> | -y | -g | -p] <message> [--wait N] [--json]
+tuicraft send [-s | -w <name> | -y | -g | -p] <message> [--wait N] [--json]
 tuicraft [-w <name> | -y | -g | -p] <message> [--wait N] [--json]
 tuicraft who [filter] [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME] [flags]
@@ -62,15 +62,54 @@ Set `TYPESAFE_API_KEY` in the daemon environment, not in the account config.
 Restart the daemon after changing data paths or its environment. Chat and
 manual casting by learned spell ID do not require these data paths or a Jev key.
 
+### Environment variables
+
+The daemon (or the interactive TUI) reads the Jev variables when it logs in;
+a CLI command that auto-starts the daemon passes its own environment on.
+
+`XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_RUNTIME_DIR`, `TMPDIR`
+: Choose where the config, session log, socket and pidfile live. See
+[Files](#files).
+
+`TYPESAFE_API_KEY`
+: Jev API key. Without it, starting tactics fails with `missing_jev_key`.
+
+`JEV_ENDPOINT_URL`
+: Send Jev requests to this URL instead of
+`https://api.typesafe.ai/v1/systemone`. `TYPESAFE_ENDPOINT_URL` is used when
+`JEV_ENDPOINT_URL` is unset.
+
+`JEV_FAULT`
+: Test-only fault injection at the Jev boundary, used by the
+[fault runbook](evidence/m2/fault-runbook.md). `delay:<ms>` holds each Jev
+result until at least _ms_ milliseconds after the request started, and the
+request is not cancelled meanwhile. `http:<status>` (100-599) fails every
+request with `TypeSafe HTTP <status>` without contacting the endpoint.
+`transport` fails every request with `fetch failed`. `tactics --json` and the
+tactics `started` event record the fault as `fault` (`delay:<ms>ms`,
+`http:<status>` or `transport:network`). Any other non-empty value stops the
+world session from starting.
+
+`WOW_JEV_FRAMING`
+: Default `--framing` for `tuicraft fight`: `none`, `minimal` or `mechanics`;
+unset or empty means `none`. The `tuicraft` CLI process reads it, not the
+daemon, so it does not apply to a raw `FIGHT` socket command. An unknown
+value fails `fight` as an argument error. `--framing` overrides it.
+
 ## Commands
 
 `tuicraft`
 : Interactive TUI with a readline prompt. Type slash commands or plain text.
 
-`tuicraft send` [`-w` _name_ | `-y` | `-g` | `-p`] _message_ [`--wait` _N_] [`--json`]
-: Send a chat message. Say is the default. Auto-starts the daemon if needed.
-A message that starts with `/` runs as a slash command, for example
-`tuicraft send "/roll 50"`. The chat flags also work without `send`.
+`tuicraft send` [`-s` | `-w` _name_ | `-y` | `-g` | `-p`] _message_ [`--wait` _N_] [`--json`]
+: Send a chat message. Say is the default; `-s` selects it explicitly.
+Auto-starts the daemon if needed. A message that starts with `/` is sent to
+the daemon as a slash command, for example `tuicraft send "/roll 50"`. The
+daemon handles the chat, social, group, channel, guild and `/mail` commands
+listed in [Interactive Commands](#interactive-commands). `/r`, `/raid`,
+`/`_N_ channel messages, `/quit`, `/tuicraft`, `/join` without a channel,
+and unknown commands are said as plain text, slash included. The chat flags
+except `-s` also work without `send`.
 `--wait` _N_ then returns unread events, as `read --wait` _N_ does.
 
 `tuicraft who` [_filter_] [`--json`]
@@ -457,7 +496,10 @@ Human mode prints `ERR`; JSON mode returns an error envelope.
 
 ## Chat Flags
 
-These flags work with `send` or on their own.
+These flags work with `send` or on their own, except `-s`, which needs `send`.
+
+`-s` _message_
+: Say. Same as no flag.
 
 `-w` _name_ _message_
 : Whisper to a player.
@@ -495,8 +537,29 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 : With `read` and `send`: return unread events, waiting up to _N_ seconds for
 the first one. The events count as read.
 
-`--help`
+`--framing` _variant_, `--framing=`_variant_
+: `fight` only. Jev situation framing: `none`, `minimal` or `mechanics`.
+Defaults to `WOW_JEV_FRAMING`, then `none`. See `tuicraft fight`.
+
+`--instruction` _text_, `--instruction=`_text_
+: `cycle` only. Instruction for every target. The spaced form takes the
+following words up to the next `--max`, `--instruction` or `--resume`, so
+put GUIDs before it. Defaults to the `fight` default instruction (with
+`--resume`, to the stopped cycle's instruction). Line breaks are rejected.
+
+`--max` _N_, `--max=`_N_
+: `cycle` only. Cap tactics-loop starts for the whole run. Positive integer,
+default 10.
+
+`--resume`
+: `cycle` only. Resume the stopped cycle's remaining queue instead of starting
+a new one; GUIDs are rejected. See `tuicraft cycle --resume`.
+
+`-h`, `--help`
 : Print usage summary.
+
+`-v`, `--version`
+: Print the version and exit.
 
 `--daemon`
 : Start as background daemon. Internal — not meant to be called directly.
@@ -526,23 +589,24 @@ the first one. The events count as read.
 
 ## Interactive Commands
 
-When running in TUI mode, the following slash commands are available:
+When running in TUI mode, the following slash commands are available.
+`tuicraft send "/..."` accepts the same commands except those the
+[`send`](#commands) entry lists as said as plain text.
 
 | Command                      | Action                                     |
 | ---------------------------- | ------------------------------------------ |
-| _text_                       | Say (no slash needed)                      |
-| `/s` _msg_                   | Say (explicit)                             |
-| `/y` _msg_                   | Yell                                       |
-| `/w` _name_ _msg_            | Whisper                                    |
+| _text_                       | Send in the last chat mode (say at first)  |
+| `/s`, `/say` _msg_           | Say (explicit)                             |
+| `/y`, `/yell` _msg_          | Yell                                       |
+| `/w`, `/whisper` _name_ _msg_ | Whisper                                   |
 | `/r` _msg_                   | Reply to last whisper                      |
-| `/g` _msg_                   | Guild chat                                 |
-| `/p` _msg_                   | Party chat                                 |
+| `/g`, `/guild` _msg_         | Guild chat                                 |
+| `/p`, `/party` _msg_         | Party chat                                 |
 | `/raid` _msg_                | Raid chat                                  |
-| `/e` _msg_                   | Text emote                                 |
+| `/e`, `/emote` _msg_         | Text emote                                 |
 | `/dnd` [_msg_]               | Toggle Do Not Disturb                      |
 | `/afk` [_msg_]               | Toggle Away From Keyboard                  |
-| `/1` _msg_                   | Channel 1 (usually General)                |
-| `/2` _msg_                   | Channel 2 (usually Trade)                  |
+| `/`_N_ _msg_                 | Channel _N_ (`/1` usually General, `/2` usually Trade) |
 | `/join` _channel_            | Join a chat channel                        |
 | `/leave` _channel_           | Leave a chat channel                       |
 | `/who` _query_               | Who search                                 |
@@ -553,12 +617,12 @@ When running in TUI mode, the following slash commands are available:
 | `/accept`                    | Accept pending invitation (group or duel)  |
 | `/decline`                   | Decline pending invitation (group or duel) |
 | `/roll` [_N_] [_M_]          | Roll random number (1-100)                 |
-| `/friends`                   | Show your friends list                     |
+| `/friends`, `/f`, `/friend`  | Show your friends list                     |
 | `/friend add` _name_         | Add a player to friends                    |
 | `/friend remove` _name_      | Remove from friends                        |
 | `/ignore` _name_             | Add a player to ignore list                |
 | `/unignore` _name_           | Remove from ignore list                    |
-| `/ignorelist`                | Show your ignore list                      |
+| `/ignorelist`, `/ignore`     | Show your ignore list                      |
 | `/groster`                   | Show guild roster                          |
 | `/ginvite` _name_            | Invite player to guild                     |
 | `/gkick` _name_              | Remove player from guild                   |
@@ -570,6 +634,7 @@ When running in TUI mode, the following slash commands are available:
 | `/gaccept`                   | Accept guild invitation                    |
 | `/gdecline`                  | Decline guild invitation                   |
 | `/tuicraft entities on\|off` | Toggle entity event display                |
+| `/mail`                      | Report that mail reading is unimplemented  |
 | `/quit`                      | Disconnect and exit                        |
 
 ## Output Format
@@ -630,19 +695,85 @@ JSON errors print to stdout as one envelope. Human output remains unchanged.
 `logs` prints the raw JSONL session log. `skill` prints the raw reference text.
 Neither command accepts `--json`.
 
+## Socket Protocol
+
+CLI commands talk to the daemon over its unix socket, `sock` in the runtime
+directory (see [Files](#files)). Each request is one line; each reply is zero
+or more lines followed by an empty line. For example:
+
+```sh
+SOCK=${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/tuicraft/sock}
+SOCK=${SOCK:-${TMPDIR:-/tmp}/tuicraft-$(id -u)/sock}
+echo "WHO_JSON mage" | nc -U "$SOCK"
+```
+
+A line that starts with `/` is a slash command, handled as described under
+[`tuicraft send`](#commands). Otherwise the first word is the verb. A line
+whose first word is not a verb is sent as chat in the last chat mode and
+answered `OK <MODE>`. A known verb with missing or invalid arguments answers
+`ERR <reason>`.
+
+- Chat: `SAY`, `YELL`, `GUILD`, `PARTY`, `EMOTE`, `DND`, `AFK` _message_;
+  `WHISPER` _name_ _message_; `ROLL` [_N_ [_M_]]; `JOIN` _channel_
+  [_password_]; `LEAVE` [_channel_] (without a channel, leaves the group).
+- Events and daemon: `READ`, `READ_JSON`, `READ_WAIT` _ms_,
+  `READ_WAIT_JSON` _ms_ (return unread events, waiting up to _ms_ for the
+  first), `TAIL_WAIT` _ms_, `TAIL_WAIT_JSON` _ms_ (wait _ms_, then return the
+  events that arrived meanwhile without marking them read), `STATUS`, `STOP`.
+  Wait verbs cap _ms_ at 60000.
+- Players and entities: `WHO` [_filter_], `WHO_JSON` [_filter_],
+  `NEARBY` [`all`], `NEARBY_JSON` [`all`].
+- Group: `INVITE`, `KICK`, `LEADER` _name_; `ACCEPT`, `DECLINE`.
+- Friends and ignore: `FRIENDS`, `FRIENDS_JSON`, `ADD_FRIEND`, `DEL_FRIEND`
+  _name_; `IGNORED`, `IGNORED_JSON`, `ADD_IGNORE`, `DEL_IGNORE` _name_.
+- Guild: `GUILD_ROSTER`, `GUILD_ROSTER_JSON`, `GLEAVE`, `GACCEPT`,
+  `GDECLINE`; `GINVITE`, `GKICK`, `GPROMOTE`, `GDEMOTE`, `GLEADER` _name_;
+  `GMOTD` [_message_].
+- `MAIL` answers `UNIMPLEMENTED Mail reading`.
+- Inspections: `CONTROL`, `COMBAT`, `SPELLS`, `TACTICS`, `CYCLING`,
+  `NAVIGATION`, `RECOVERY`, `QUESTS`, `INVENTORY`, `EXPERIENCE`, `LOOT`,
+  each with a `_JSON` variant.
+- Actions take the same arguments as the CLI command of the same name:
+  `MOVE`, `FACE`, `FACE_GUID`, `WALK_TOWARD`, `TARGET`, `HALT`, `CAST`,
+  `ATTACK`, `CANCEL_CAST`, `STOP_ATTACK`, `FIGHT`, `CYCLE`, `GOTO`,
+  `QUERY_CORPSE`, `RELEASE_SPIRIT`, `RECLAIM_CORPSE`, `SPIRIT_HEALER`,
+  `RESURRECT`, `TALK`, `QUERY_QUEST`, `SELECT_OPTION`, `SELECT_QUEST`,
+  `ACCEPT_QUEST`, `COMPLETE_QUEST`, `REQUEST_REWARD`, `CHOOSE_REWARD`,
+  `ABANDON_QUEST`, `CANCEL_INTERACTION`, `OPEN_LOOT`, `TAKE_LOOT`,
+  `TAKE_MONEY`, `RELEASE_LOOT`. `SELECT_OPTION` takes its optional code as
+  JSON (see `tuicraft select-option`). `CYCLE_RESUME` [`--instruction`
+  _text_] [`--max` _N_] is `tuicraft cycle --resume`.
+
 ## Files
 
-`~/.config/tuicraft/config.toml`
+The runtime directory is `$XDG_RUNTIME_DIR/tuicraft` when `XDG_RUNTIME_DIR`
+is set, otherwise `<tmpdir>/tuicraft-<uid>`, where _tmpdir_ is `$TMPDIR` or
+`/tmp`.
+
+`${XDG_CONFIG_HOME:-~/.config}/tuicraft/config.toml`
 : Account credentials and settings.
 
-`$TMPDIR/tuicraft-<uid>/sock`
+`<runtime directory>/sock`
 : Daemon unix domain socket.
 
-`$TMPDIR/tuicraft-<uid>/pid`
+`<runtime directory>/pid`
 : Daemon pidfile.
 
-`~/.local/state/tuicraft/session.log`
+`${XDG_STATE_HOME:-~/.local/state}/tuicraft/session.log`
 : Persistent JSONL session log.
+
+## Testing
+
+`mise test` runs the unit suite. `mise test:live` runs `src/test/live.ts`
+against a real server with two game accounts, read from `WOW_ACCOUNT_1`,
+`WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`, `WOW_PASSWORD_2` and
+`WOW_CHARACTER_2`. `WOW_HOST` (default `t1`), `WOW_PORT` (default `3724`) and
+`WOW_LANGUAGE` (default `1`) are optional. Use throwaway accounts: create
+account 1 with `bun src/factory/main.ts soap create fresh --gm 2` (GM level 2
+for the `.freeze` and `.tele` checks) and account 2 with
+`bun src/factory/main.ts soap create eversong10`, set the variables from the
+JSON each prints, and delete both with `soap delete <ACCOUNT>` afterwards.
+[AGENTS.md](../AGENTS.md) has the details.
 
 ## Examples
 

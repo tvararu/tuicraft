@@ -5,10 +5,14 @@ USAGE
   tuicraft                    Interactive TUI mode
   tuicraft setup [flags]      Configure account credentials
   tuicraft send "message"     Send a say message (auto-starts daemon)
+  tuicraft send -s "message"  Say (explicit; same as no flag)
   tuicraft send -w <name> "m" Whisper a player
   tuicraft send -y "message"  Yell
   tuicraft send -g "message"  Guild chat
   tuicraft send -p "message"  Party chat
+  tuicraft -w|-y|-g|-p ...    Chat flags -w, -y, -g, -p also work without send
+  tuicraft send "/cmd ..."    Run a slash command through the daemon; /r, /raid,
+                            /<N>, /quit, /tuicraft and unknown ones are said as text
   tuicraft who [filter]       Who query
   tuicraft read [--wait N] [--json]  Read buffered events
   tuicraft tail [--json]      Continuous event stream
@@ -83,6 +87,12 @@ FLAGS
   --json          All daemon-backed commands: chat, queries, gameplay actions, start, status, stop, read, tail
   --all           Output all tracked entities without distance filter (nearby), including transports and off-map (>100yd)
   --wait N        read/send: return unread events, waiting up to N seconds for one
+  --framing V     fight: Jev framing none|minimal|mechanics (or --framing=V)
+  --instruction T cycle: instruction for every target; takes the following
+                  words up to the next cycle flag (or --instruction=T)
+  --resume        cycle: resume the stopped cycle's remaining queue; no guids
+  --max N         cycle: cap tactics-loop starts, positive integer, default 10
+                  (or --max=N)
   --daemon        Start as background daemon (internal)
 
 JSON OUTPUT
@@ -114,7 +124,8 @@ SETUP FLAGS
   --timeout_minutes N  Daemon idle timeout (default: 30)
 
 INTERACTIVE COMMANDS (TUI mode)
-  /s, /y, /w, /g, /p, /raid, /e, /1, /2  Chat commands
+  /s, /y, /w, /g, /p, /raid, /e, /1, /2  Chat commands (any /<N> is a channel)
+  /say, /yell, /whisper, /guild, /party, /emote  Long forms of the above
   /dnd [message]  Toggle Do Not Disturb status
   /afk [message]  Toggle Away From Keyboard status
   /r              Reply to last whisper
@@ -128,7 +139,7 @@ INTERACTIVE COMMANDS (TUI mode)
   /accept         Accept pending invitation (group or duel)
   /decline        Decline pending invitation (group or duel)
   /roll [N] [M]   Roll random number (default 1-100)
-  /friends        Show your friends list
+  /friends, /f    Show your friends list
   /friend add <n> Add a player to friends
   /friend remove  Remove a player from friends
   /ignore <name>  Add a player to ignore list
@@ -145,23 +156,30 @@ INTERACTIVE COMMANDS (TUI mode)
   /gaccept        Accept guild invitation
   /gdecline       Decline guild invitation
   /tuicraft entities on|off  Toggle entity event display
+  /mail           Reply that mail reading is unimplemented
   /quit           Disconnect and exit
 
 DAEMON
   The daemon starts automatically when needed and stays running
   for 30 minutes of inactivity. It maintains the WoW connection
-  and buffers events for CLI clients.
+  and buffers events for CLI clients. It accepts one command per
+  line on its socket; docs/manual.md (Socket Protocol) lists the verbs.
 
 GAMEPLAY DATA
   spell_data_dir            Build-12340 DBC directory in account config
   navigation_data_dir       Compatible Namigator data root (map 530)
   navigation_library        Compatible Namigator shared library
   TYPESAFE_API_KEY           Jev key in daemon environment, never config
+  JEV_ENDPOINT_URL           Jev endpoint override (fallback TYPESAFE_ENDPOINT_URL)
+  JEV_FAULT                  Test-only Jev fault: delay:<ms>, http:<status>, transport
+  WOW_JEV_FRAMING            Default fight --framing, read by the CLI process
   Restart the daemon after configuration changes. See docs/manual.md.
 
 FILES
-  ~/.config/tuicraft/config.toml  Account config
-  $TMPDIR/tuicraft-<uid>/sock     Daemon socket
-  $TMPDIR/tuicraft-<uid>/pid     Daemon pidfile
-  ~/.local/state/tuicraft/session.log  Session log`;
+  $XDG_CONFIG_HOME/tuicraft/config.toml  Account config (default ~/.config)
+  <run>/sock                     Daemon socket
+  <run>/pid                      Daemon pidfile
+                                 <run> = $XDG_RUNTIME_DIR/tuicraft if set,
+                                 else \${TMPDIR:-/tmp}/tuicraft-<uid>
+  $XDG_STATE_HOME/tuicraft/session.log  Session log (default ~/.local/state)`;
 }

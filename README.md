@@ -90,8 +90,15 @@ rules are in [AGENTS.md](AGENTS.md).
 mise test
 ```
 
-To run live integration tests against a real server, copy the example config and
-fill in your credentials:
+To run live integration tests against a real server, `mise test:live` needs
+two game accounts in `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`,
+`WOW_ACCOUNT_2`, `WOW_PASSWORD_2` and `WOW_CHARACTER_2` (`WOW_HOST`,
+`WOW_PORT` and `WOW_LANGUAGE` are optional). Use throwaway accounts made with
+`bun src/factory/main.ts soap create fresh --gm 2` and
+`bun src/factory/main.ts soap create eversong10`, and delete them with
+`soap delete <ACCOUNT>` afterwards; see [AGENTS.md](AGENTS.md#testing) and
+[the manual](docs/manual.md#testing). To keep the variables in a file, copy
+the example config:
 
 ```
 cp mise.local.toml.example mise.local.toml
@@ -103,11 +110,15 @@ mise test:live
 
 ```
 tuicraft help              # show help
-tuicraft setup
+tuicraft setup             # interactive wizard
+tuicraft setup --account A --password P --character C # also --host --port --language --timeout_minutes
 tuicraft                   # interactive TUI
-tuicraft send "Hello"      # send a say message (auto-starts daemon)
+tuicraft send "Hello"      # send a say message (auto-starts daemon); -s is explicit say
 tuicraft send -w Hemet "x" # whisper
+tuicraft send -y "hi"      # yell
 tuicraft send -g "lfm"     # guild chat
+tuicraft -p "inc"          # party chat; -w/-y/-g/-p also work without send
+tuicraft send "/roll 50"   # slash command via the daemon
 tuicraft who               # who query
 tuicraft read --wait 5     # read unread events, wait up to 5s for one
 tuicraft tail              # continuous event stream
@@ -126,8 +137,9 @@ tuicraft attack 0xabc      # auto-attack
 tuicraft cancel-cast        # interrupt the current cast
 tuicraft stop-attack       # stop auto-attack
 tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
+tuicraft fight 0xabc conserve mana # extra words are the instruction
 tuicraft tactics [--json]  # tactics loop state and terminal observation
-tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
+tuicraft cycle 0xa 0xb --max 3 --instruction stay alive # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 3        # ground route
@@ -168,6 +180,13 @@ tuicraft version           # print version
 The GUIDs in these examples are placeholders. Copy current creature GUIDs from
 `nearby --json` before `fight` or `cycle`; `target` also accepts a stale GUID
 and `control --json` separates the sent request from the observed selection.
+
+The interactive TUI's slash commands (`/w`, `/invite`, `/ginvite`, `/roll` and
+more, with long forms such as `/whisper`) are listed in
+[Interactive Commands](docs/manual.md#interactive-commands); most also work as
+`tuicraft send "/..."`. Scripts can also write one-line verbs such as
+`WHO_JSON mage` straight to the daemon socket; see
+[Socket Protocol](docs/manual.md#socket-protocol).
 
 ## JSON CLI output
 
@@ -223,7 +242,9 @@ Use `--json` for the full observed state and for scripts.
 Spellbook/tactics require compatible client tables; ground routes require
 Namigator data and its native library. Set their optional config paths and the
 daemon's `TYPESAFE_API_KEY` as described in
-[gameplay configuration](docs/manual.md#gameplay-configuration).
+[gameplay configuration](docs/manual.md#gameplay-configuration), which also
+covers `JEV_ENDPOINT_URL`/`TYPESAFE_ENDPOINT_URL`, the test-only `JEV_FAULT`,
+and `WOW_JEV_FRAMING` (the default `fight --framing`).
 
 The narrow Jev spell kit requires observed normal form, including protocol-defined
 zero fields in a complete server CREATE. Unknown or nonzero forms disable spells,
