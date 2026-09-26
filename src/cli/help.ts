@@ -113,6 +113,8 @@ JSON OUTPUT
   Every envelope has command, kind, data, events, error. Chat aliases use command=send.
   kind=intent|result|events|error; data contains query JSON; events holds event objects.
   read returns events (events:[] when empty); nearby returns data:[] when empty.
+  Creature chat types: MONSTER_SAY, MONSTER_YELL, MONSTER_WHISPER, MONSTER_PARTY,
+  MONSTER_EMOTE and RAID_BOSS_EMOTE (%s replaced by the name), RAID_BOSS_WHISPER.
   send --wait --json returns one envelope with waited events, not separate lines.
   kind=intent acknowledges a request, not its game-world outcome. Inspect state/events.
   Errors use error.stage=arguments|startup|command|wait and exit 1; a wait error

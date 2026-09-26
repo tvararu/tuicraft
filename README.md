@@ -220,6 +220,11 @@ envelope with waited events in `events`, not an acknowledgment plus event lines.
 not prove the game server accepted or completed it. Inspect later state and
 events for outcomes; predicted and unknown facts do not become observed facts.
 
+Creature chat uses its own event types: `MONSTER_SAY`, `MONSTER_YELL`,
+`MONSTER_WHISPER`, `MONSTER_PARTY`, `MONSTER_EMOTE`, `RAID_BOSS_EMOTE` and
+`RAID_BOSS_WHISPER`. Emotes read as sentences, for example
+`[monster emote] Darkwraith goes into a frenzy!`.
+
 Only `tail --json` is continuous JSONL. Parse each line as an envelope. It
 emits one envelope per event and no line for an empty poll:
 

@@ -1,9 +1,5 @@
-import type { LogEntry } from "lib/session-log";
-import { stripColorCodes } from "lib/strip-colors";
 import {
-  type ChatMessage,
   type ChatMode,
-  ChatType,
   CLASS_NAMES,
   type Entity,
   type EntityEvent,
@@ -22,94 +18,6 @@ import {
   type UnitEntity,
   type WhoResult,
 } from "wow";
-
-const CHAT_TYPE_LABELS: Record<number, string> = {
-  [ChatType.SYSTEM]: "system",
-  [ChatType.SAY]: "say",
-  [ChatType.PARTY]: "party",
-  [ChatType.RAID]: "raid",
-  [ChatType.GUILD]: "guild",
-  [ChatType.OFFICER]: "officer",
-  [ChatType.YELL]: "yell",
-  [ChatType.WHISPER]: "whisper from",
-  [ChatType.WHISPER_INFORM]: "whisper to",
-  [ChatType.EMOTE]: "emote",
-  [ChatType.CHANNEL]: "channel",
-  [ChatType.RAID_LEADER]: "raid leader",
-  [ChatType.RAID_WARNING]: "raid warning",
-  [ChatType.PARTY_LEADER]: "party leader",
-  [ChatType.ROLL]: "roll",
-};
-
-export function formatMessage(msg: ChatMessage): string {
-  const message = stripColorCodes(msg.message);
-  const label = CHAT_TYPE_LABELS[msg.type] ?? `type ${msg.type}`;
-
-  if (msg.type === ChatType.WHISPER) {
-    return `[whisper from ${msg.sender}] ${message}`;
-  }
-  if (msg.type === ChatType.WHISPER_INFORM) {
-    return `[whisper to ${msg.sender}] ${message}`;
-  }
-  if (
-    msg.type === ChatType.SYSTEM &&
-    (msg.origin === "server" || msg.origin === "notification")
-  ) {
-    return `[server] ${message}`;
-  }
-  if (msg.type === ChatType.SYSTEM && msg.origin === "mail") {
-    return `[mail] ${message}`;
-  }
-  if (msg.type === ChatType.SYSTEM) {
-    return `[system] ${message}`;
-  }
-  if (msg.type === ChatType.ROLL) {
-    return `[roll] ${msg.sender} ${message}`;
-  }
-  if (msg.type === ChatType.CHANNEL && msg.channel) {
-    return `[${msg.channel}] ${msg.sender}: ${message}`;
-  }
-  return `[${label}] ${msg.sender}: ${message}`;
-}
-
-const JSON_TYPE_LABELS: Record<number, string> = {
-  [ChatType.SYSTEM]: "SYSTEM",
-  [ChatType.SAY]: "SAY",
-  [ChatType.PARTY]: "PARTY",
-  [ChatType.RAID]: "RAID",
-  [ChatType.GUILD]: "GUILD",
-  [ChatType.OFFICER]: "OFFICER",
-  [ChatType.YELL]: "YELL",
-  [ChatType.WHISPER]: "WHISPER_FROM",
-  [ChatType.WHISPER_INFORM]: "WHISPER_TO",
-  [ChatType.EMOTE]: "EMOTE",
-  [ChatType.CHANNEL]: "CHANNEL",
-  [ChatType.RAID_LEADER]: "RAID_LEADER",
-  [ChatType.RAID_WARNING]: "RAID_WARNING",
-  [ChatType.PARTY_LEADER]: "PARTY_LEADER",
-  [ChatType.ROLL]: "ROLL",
-};
-
-function messageObjType(msg: ChatMessage): string {
-  if (msg.origin === "server") return "SERVER_BROADCAST";
-  if (msg.origin === "notification") return "NOTIFICATION";
-  if (msg.origin === "mail") return "MAIL";
-  return JSON_TYPE_LABELS[msg.type] ?? `TYPE_${msg.type}`;
-}
-
-export function formatMessageObj(msg: ChatMessage): LogEntry {
-  const obj: LogEntry = {
-    message: stripColorCodes(msg.message),
-    sender: msg.sender,
-    type: messageObjType(msg),
-  };
-  if (msg.channel) obj.channel = msg.channel;
-  return obj;
-}
-
-export function formatMessageJson(msg: ChatMessage): string {
-  return JSON.stringify(formatMessageObj(msg));
-}
 
 export function formatError(message: string): string {
   return `[system] ${message}`;
