@@ -82,7 +82,8 @@ a CLI command that auto-starts the daemon passes its own environment on.
 [Files](#files).
 
 `TYPESAFE_API_KEY`
-: Jev API key. Without it, starting tactics fails with `missing_jev_key`.
+: Jev API key. Without it, starting tactics fails with
+`jev_unavailable: missing_jev_key`.
 
 `JEV_ENDPOINT_URL`
 : Send Jev requests to this URL instead of
@@ -93,8 +94,9 @@ a CLI command that auto-starts the daemon passes its own environment on.
 : Test-only fault injection at the Jev boundary, used by the
 [fault runbook](evidence/m2/fault-runbook.md). `delay:<ms>` holds each Jev
 result until at least _ms_ milliseconds after the request started, and the
-request is not cancelled meanwhile. `http:<status>` (100-599) fails every
-request with `TypeSafe HTTP <status>` without contacting the endpoint.
+request is not cancelled meanwhile. `http:<status>` (400-599) answers every
+request with that status, without contacting the endpoint, and the reply is
+classified like a real one (see [`fight`](#commands)).
 `transport` fails every request with `fetch failed`. `tactics --json` and the
 tactics `started` event record the fault as `fault` (`delay:<ms>ms`,
 `http:<status>` or `transport:network`). Any other non-empty value stops the
@@ -303,8 +305,15 @@ the 3.3.5a enum gives `reason: "unknown"`. The COMBAT `cast_failed` and
 :: Run Jev tactics to its terminal outcome. Default instruction is to defeat the selected target while
 keeping the character alive. The command returns after the encounter completes, blocks, fails, or is halted; use `halt` to stop a running fight. Framing defaults to `none` (or `WOW_JEV_FRAMING`).
 `minimal` frames the game, class and observed level; `mechanics` adds non-refilling
-resource pool, damage-over-time and cast disruption mechanics. Missing Jev key
-fails with `ERR`.
+resource pool, damage-over-time and cast disruption mechanics.
+When Jev cannot serve the fight, `fight` ends with `ERR jev_unavailable: <cause>`
+and exits with status 1 (with `--json`, an error envelope). The cause is
+`HTTP <status> <error_type>` for a refused key (401, 402 or 403, with the
+`error_type` from the response, for example `HTTP 402 billing_error` when the
+organisation has no credits), `transport <error> (3 in a row)` after three
+consecutive network failures, rate limits (429) or server errors (5xx), or
+`missing_jev_key`. A single network failure or server error is retried; the
+request timeout is counted separately as `jev_timeout`.
 The instruction must be a single line. Daemon `ERR` replies, including inspection failures, make the CLI exit with status 1.
 The spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). A complete server CREATE defines omitted public fields as zero. An absent entity or incomplete observation does not establish that baseline.
 Unknown or nonzero forms make spells unsupported, not melee automatically.
@@ -334,8 +343,8 @@ carries target separation and facing for those choices.
 A Jev request that takes longer than 5 s is discarded as `jev_timeout`; no
 action is taken for it and the loop asks again. The run stops with
 `failed`/`jev_timeout` only after 3 timeouts in a row, and any answered request
-resets that count. Other Jev failures (HTTP errors, network errors, malformed
-replies) stop the run at once. When Jev fails a run, the stop keeps or starts
+resets that count. Refused keys, other 4xx replies and malformed replies stop
+the run at once; network failures, 429 and 5xx follow the transport rule above. When Jev fails a run, the stop keeps or starts
 auto-attack on the target if it is alive and attacking the character
 (`tactics.defense: auto_attack`). Otherwise it releases control and reports
 `uncontrolled_in_combat` if the character is still in combat, or `none`.
@@ -406,6 +415,12 @@ is recorded as `loot: "none"` on its queue entry and the loop continues,
 as is one that despawns while its loot is opening.
 If no death update arrives within the loot settle time, the loop stops with
 `target_death_unconfirmed`.
+A fight that ends because Jev is unavailable (see `fight`) is not the target's
+fault: the loop stops with `jev_unavailable`, `stopDetail.reason` holds the
+cause (for example `HTTP 402 billing_error`), the current target and the rest
+of the queue stay `queued`, and `cycle` or `cycle --resume` replies
+`ERR jev_unavailable: <cause>` and exits with status 1. Run `cycle --resume`
+once Jev is back to fight the same target again.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
 (`loot_denied:*`, `loot_inventory_full`,

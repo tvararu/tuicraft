@@ -82,6 +82,16 @@ describe("formatCycleState", () => {
     expect(output).not.toContain("item gained");
   });
 
+  test("names the cause of a Jev stop next to the stop reason", () => {
+    const output = cycle({
+      stopCause: "jev_unavailable",
+      stopDetail: { reason: "HTTP 402 billing_error" },
+    });
+    expect(output).toContain(
+      "Stop reason: jev_unavailable (HTTP 402 billing_error)",
+    );
+  });
+
   test("marks a kill that left no loot", () => {
     const output = cycle({ queue: [{ ...killed(TARGET), loot: "none" }] });
     expect(output).toContain(

@@ -60,7 +60,9 @@ export function formatCycleState(state: CycleState): string[] {
   if (state.lastLoot) lines.push(...formatCycleLoot(state.lastLoot));
   if (state.lastRecovery)
     lines.push(`Last recovery: ${state.lastRecovery.outcome}`);
-  if (state.stopCause) lines.push(`Stop reason: ${state.stopCause}`);
+  const detail = state.stopDetail?.["reason"];
+  const why = typeof detail === "string" ? ` (${detail})` : "";
+  if (state.stopCause) lines.push(`Stop reason: ${state.stopCause}${why}`);
   return lines;
 }
 

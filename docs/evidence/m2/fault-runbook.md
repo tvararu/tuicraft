@@ -186,6 +186,8 @@ Exercise an endpoint returning a non-OK HTTP status code.
    tuicraft target <guid>
    tuicraft fight <guid>
    ```
+   `fight` retries twice, then prints
+   `ERR jev_unavailable: transport TypeSafe HTTP 503 (3 in a row)` and exits 1.
 4. Wait 2 seconds for the failure to register:
    ```bash
    sleep 2
@@ -197,17 +199,18 @@ Exercise an endpoint returning a non-OK HTTP status code.
    **Expect in `tuicraft tactics --json`:**
    - `status`: `"idle"`
    - `lastStopReason`: `"failed"`
-   - `lastDiscardReason`: `"TypeSafe HTTP 503"`
-   - `lastOutcome.reason`: `"TypeSafe HTTP 503"`
+   - `lastDiscardReason`: `"jev_unavailable: transport TypeSafe HTTP 503 (3 in a row)"`
+   - `lastOutcome.reason`: `"jev_unavailable: transport TypeSafe HTTP 503 (3 in a row)"`
    - `fault`: `"http:503"`
 6. Distil the encounter record:
    ```bash
    mise evidence:encounter latest model-unavailable-http > docs/evidence/m2/model-unavailable-http.json
    ```
    **Proof field in distilled record:**
-   - `transportErrors`: contains `"TypeSafe HTTP 503"`
+   - `transportErrors`: contains `"TypeSafe HTTP 503"` twice and the
+     `jev_unavailable` reason
    - `outcome.status`: `"failed"`
-   - `outcome.reason`: `"TypeSafe HTTP 503"`
+   - `outcome.reason`: `"jev_unavailable: transport TypeSafe HTTP 503 (3 in a row)"`
    - `fault`: `"http:503"`
 
 ### 3B. Transport Network Failure (`fetch failed`)
@@ -227,6 +230,8 @@ Exercise an endpoint connection failure at the transport layer.
    tuicraft target <guid>
    tuicraft fight <guid>
    ```
+   `fight` retries twice, then prints
+   `ERR jev_unavailable: transport fetch failed (3 in a row)` and exits 1.
 4. Wait 2 seconds for the transport failure to register:
    ```bash
    sleep 2
@@ -238,15 +243,16 @@ Exercise an endpoint connection failure at the transport layer.
    **Expect in `tuicraft tactics --json`:**
    - `status`: `"idle"`
    - `lastStopReason`: `"failed"`
-   - `lastDiscardReason`: `"fetch failed"`
-   - `lastOutcome.reason`: `"fetch failed"`
+   - `lastDiscardReason`: `"jev_unavailable: transport fetch failed (3 in a row)"`
+   - `lastOutcome.reason`: `"jev_unavailable: transport fetch failed (3 in a row)"`
    - `fault`: `"transport:network"`
 6. Distil the encounter record:
    ```bash
    mise evidence:encounter latest model-unavailable-transport > docs/evidence/m2/model-unavailable-transport.json
    ```
    **Proof field in distilled record:**
-   - `transportErrors`: contains `"fetch failed"`
+   - `transportErrors`: contains `"fetch failed"` twice and the
+     `jev_unavailable` reason
    - `outcome.status`: `"failed"`
-   - `outcome.reason`: `"fetch failed"`
+   - `outcome.reason`: `"jev_unavailable: transport fetch failed (3 in a row)"`
    - `fault`: `"transport:network"`
