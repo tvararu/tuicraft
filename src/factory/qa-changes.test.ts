@@ -10,6 +10,7 @@ import {
   type Sources,
   section,
 } from "factory/qa-changes";
+import { git } from "test/git";
 
 function commit(sha: string, extra: Partial<Commit> = {}): Commit {
   return {
@@ -181,23 +182,9 @@ describe("parseLog", () => {
 
   test("reads trailers from a real commit", async () => {
     const dir = `${process.cwd()}/tmp/qa-changes-${Date.now()}`;
-    const env = Object.fromEntries(
-      Object.entries(Bun.env).filter(([key]) => !key.startsWith("GIT_")),
-    );
-    const git = async (...args: string[]) => {
-      const proc = Bun.spawn(["git", "-C", dir, ...args], {
-        env,
-        stderr: "ignore",
-        stdout: "pipe",
-      });
-      const text = await new Response(proc.stdout).text();
-      if ((await proc.exited) !== 0)
-        throw new Error(`git ${args.join(" ")} failed`);
-      return text;
-    };
     try {
       await Bun.$`mkdir -p ${dir}`.quiet();
-      await git("init", "-q");
+      await git(dir, "init", "-q");
       const identity = [
         "-c",
         "user.name=t",
@@ -207,6 +194,7 @@ describe("parseLog", () => {
         "core.hooksPath=/dev/null",
       ];
       await git(
+        dir,
         ...identity,
         "commit",
         "-q",
@@ -215,6 +203,7 @@ describe("parseLog", () => {
         "chore: Base",
       );
       await git(
+        dir,
         ...identity,
         "commit",
         "-q",
@@ -227,6 +216,7 @@ describe("parseLog", () => {
         "Refs: #7, #8\nPR: #9",
       );
       const out = await git(
+        dir,
         "log",
         "--reverse",
         `--format=${logFormat()}`,
