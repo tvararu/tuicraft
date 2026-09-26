@@ -12,8 +12,22 @@ hooks {
           subject=$(sed -n '1p' "$file")
           body=$(sed -n '3,$p' "$file" | sed '/^#/d')
           if [ -n "$body" ]; then
-            wrapped=$(printf '%s\n' "$body" | fmt -w 72)
-            printf '%s\n\n%s\n' "$subject" "$wrapped" > "$file"
+            prose=$body
+            trailers=
+            if [ -n "$(printf '%s\n\n%s\n' "$subject" "$body" | git interpret-trailers --parse)" ]; then
+              split=$(printf '%s\n' "$body" | awk '$0 == "" { n = NR } END { print n + 0 }')
+              prose=$(printf '%s\n' "$body" | awk -v n="$split" 'NR < n')
+              trailers=$(printf '%s\n' "$body" | awk -v n="$split" 'NR > n')
+            fi
+            {
+              printf '%s\n' "$subject"
+              if [ -n "$prose" ]; then
+                printf '\n%s\n' "$(printf '%s\n' "$prose" | fmt -w 72)"
+              fi
+              if [ -n "$trailers" ]; then
+                printf '\n%s\n' "$trailers"
+              fi
+            } > "$file"
           fi
           """#
       }
