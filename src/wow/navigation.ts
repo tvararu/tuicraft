@@ -34,12 +34,23 @@ const WALKABLE_CLIMB = 1;
 const CELL_HEIGHT = 0.25;
 const CORNER_RISE = WALKABLE_CLIMB + CELL_HEIGHT;
 
-export type NavigationRefusal = "wait" | "pick_destination" | "stop";
+export type NavigationRefusal =
+  | "wait"
+  | "pick_destination"
+  | "unreachable"
+  | "stop";
+
+const UNREACHABLE = [
+  "pathfind_find_path failed (UNKNOWN_PATH)",
+  "end snapped off the requested ground position",
+  "native path omits destination",
+];
 
 export function classifyNavigationRefusal(reason: string): NavigationRefusal {
   if (reason.includes("position disagrees with ground height")) return "wait";
   if (reason.includes("ambiguous ground column at destination"))
     return "pick_destination";
+  if (UNREACHABLE.some((cause) => reason.includes(cause))) return "unreachable";
   return "stop";
 }
 

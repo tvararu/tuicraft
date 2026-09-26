@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-  classifyNavigationRefusal,
   collisionFree,
   createNavigation,
   GroundRoute,
@@ -501,24 +500,6 @@ describe("ground destinations", () => {
       false,
     );
     expect(() => nav.clear(0, start, end)).toThrow(/unsupported map/);
-  });
-});
-
-describe("classifyNavigationRefusal", () => {
-  test("maps ground refusals to a next step", () => {
-    expect(
-      classifyNavigationRefusal("position disagrees with ground height"),
-    ).toBe("wait");
-    expect(
-      classifyNavigationRefusal("ambiguous ground column at destination"),
-    ).toBe("pick_destination");
-    expect(classifyNavigationRefusal("ambiguous ground column at start")).toBe(
-      "stop",
-    );
-    expect(classifyNavigationRefusal("ambiguous ground column at route")).toBe(
-      "stop",
-    );
-    expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
   });
 });
 

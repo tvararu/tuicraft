@@ -2,6 +2,7 @@ import { messageOf } from "lib/errors";
 import {
   DEFAULT_FIGHT_INSTRUCTION,
   type FramingVariant,
+  type GotoTarget,
   type MovementDirection,
   parseFramingVariant,
   type WalkTarget,
@@ -145,15 +146,21 @@ function parsePoint(
   return { x, y, z };
 }
 
-export function parseGoto(
-  tokens: string[],
-): Parsed<{ x: number; y: number; z?: number }> {
+export function parseGoto(tokens: string[]): Parsed<{ target: GotoTarget }> {
+  if (tokens.length === 1) {
+    const guid = parseGuidArg(tokens, true);
+    if (!guid.ok) return fail("invalid goto");
+    return ok({ target: { guid: guid.value.guid, kind: "guid" } });
+  }
   if (tokens.length === 2) {
     const [x, y] = tokens.map(parseFiniteNumber);
-    if (x !== undefined && y !== undefined) return ok({ x, y });
+    if (x !== undefined && y !== undefined)
+      return ok({ target: { kind: "point", x, y } });
   }
   const point = parsePoint(tokens);
-  return point ? ok(point) : fail("invalid goto");
+  return point
+    ? ok({ target: { kind: "point", ...point } })
+    : fail("invalid goto");
 }
 
 export function parseWalkToward(

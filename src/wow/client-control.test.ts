@@ -1,6 +1,7 @@
 import { describe, expect, jest, test } from "bun:test";
 import { setup } from "test/control-fixtures";
 import { must } from "test/must";
+import type { GotoTarget } from "wow/client";
 import { controlMethods } from "wow/client-control";
 import { createNavigation, type NavPoint } from "wow/navigation";
 import type { NativeMap } from "wow/navigation-native";
@@ -8,12 +9,19 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import type { Runtimes } from "wow/runtime";
 import type { WorldConn } from "wow/world-conn";
 
+function point(x: number, y: number, z?: number): GotoTarget {
+  return z === undefined ? { kind: "point", x, y } : { kind: "point", x, y, z };
+}
+
 const MOTION = new Set<number>([
   GameOpcode.MSG_MOVE_START_FORWARD,
   GameOpcode.MSG_MOVE_SET_FACING,
 ]);
 
-function ground(columns: (x: number, y: number) => number[]): NativeMap {
+function ground(
+  columns: (x: number, y: number) => number[],
+  over: Partial<NativeMap> = {},
+): NativeMap {
   return {
     loadAdtAt() {},
     findHeights: columns,
@@ -22,19 +30,29 @@ function ground(columns: (x: number, y: number) => number[]): NativeMap {
     lineOfSight: () => true,
     findPath: (from: NavPoint, to: NavPoint) => [from, to],
     close() {},
+    ...over,
   };
 }
 
-function fixture(columns: (x: number, y: number) => number[]) {
+function fixture(
+  columns: (x: number, y: number) => number[],
+  over: Partial<NativeMap> = {},
+  targets = new Map<bigint, NavPoint>(),
+) {
   const control = setup();
   const navigation = createNavigation(
     { dataPath: "data", libraryPath: "lib" },
-    () => ground(columns),
+    () => ground(columns, over),
   );
   const override = jest.fn((reason?: string) => control.runtime.halt(reason));
   const rt = {
     control: control.runtime,
     navigation: () => navigation,
+    observedTarget: (guid: bigint) => {
+      const target = targets.get(guid);
+      if (!target) throw new Error("target_not_observed");
+      return target;
+    },
     override,
   } as unknown as Runtimes;
   const handle = controlMethods({} as WorldConn, rt);
@@ -47,7 +65,7 @@ describe("goTo without Z", () => {
     try {
       const f = fixture((x) => [70.34 + (x - 8709.46) / 10]);
       const start = must(f.runtime.snapshot().pose);
-      f.handle.goTo(start.x + 10, start.y);
+      f.handle.goTo(point(start.x + 10, start.y));
       expect(f.override).toHaveBeenCalled();
       const destination = must(f.runtime.navigationState().destination);
       expect(destination.x).toBe(start.x + 10);
@@ -73,7 +91,7 @@ describe("goTo without Z", () => {
       x > 8715 ? [70.34, 80.34] : [70.34 + (x - 8709.46) / 100],
     );
     const start = must(f.runtime.snapshot().pose);
-    expect(() => f.handle.goTo(start.x + 10, start.y)).toThrow(
+    expect(() => f.handle.goTo(point(start.x + 10, start.y))).toThrow(
       "pick_destination: ambiguous ground column",
     );
     expect(f.runtime.navigationState()).toMatchObject({
@@ -89,7 +107,7 @@ describe("goTo without Z", () => {
   test("keeps an explicit Z on the grounded-point plan", () => {
     const f = fixture(() => [70.34]);
     const start = must(f.runtime.snapshot().pose);
-    expect(() => f.handle.goTo(start.x + 5, start.y, 90)).toThrow(
+    expect(() => f.handle.goTo(point(start.x + 5, start.y, 90))).toThrow(
       "wait: position disagrees with ground height",
     );
     expect(f.runtime.navigationState().destination).toEqual({
@@ -97,7 +115,7 @@ describe("goTo without Z", () => {
       y: start.y,
       z: 90,
     });
-    f.handle.goTo(start.x + 5, start.y, 70.34);
+    f.handle.goTo(point(start.x + 5, start.y, 70.34));
     expect(f.runtime.navigationState().active).toBe(true);
   });
 });
@@ -108,12 +126,12 @@ describe("goTo redirect", () => {
     try {
       const f = fixture(() => [70.34]);
       const start = must(f.runtime.snapshot().pose);
-      f.handle.goTo(start.x + 20, start.y);
+      f.handle.goTo(point(start.x + 20, start.y));
       f.advance(1000);
       const midway = must(f.runtime.snapshot().pose);
       expect(midway.x).toBeGreaterThan(start.x + 6);
       f.events.length = 0;
-      f.handle.goTo(midway.x, start.y + 10);
+      f.handle.goTo(point(midway.x, start.y + 10));
       expect(f.override).toHaveBeenLastCalledWith("navigation_replaced");
       expect(
         f.events.map((event) => [event.type, event.reason ?? null]),
@@ -144,10 +162,89 @@ describe("goTo redirect", () => {
   test("an idle goto halts with the ordinary reason", () => {
     const f = fixture(() => [70.34]);
     const start = must(f.runtime.snapshot().pose);
-    f.handle.goTo(start.x + 5, start.y);
+    f.handle.goTo(point(start.x + 5, start.y));
     expect(f.override).toHaveBeenLastCalledWith(undefined);
     expect(
       f.events.some((event) => event.reason === "navigation_replaced"),
     ).toBe(false);
+  });
+});
+
+describe("goTo unreachable and lost destinations", () => {
+  test("a mesh that cannot reach the destination refuses as unreachable with no motion", () => {
+    const cases: Partial<NativeMap>[] = [
+      {
+        findPath: () => {
+          throw new Error("pathfind_find_path failed (UNKNOWN_PATH)");
+        },
+      },
+      { findPath: (from, to) => [from, { ...to, x: to.x - 3 }] },
+      { findPath: (from) => [from] },
+    ];
+    for (const over of cases) {
+      const f = fixture(() => [70.34], over);
+      const start = must(f.runtime.snapshot().pose);
+      expect(() => f.handle.goTo(point(start.x + 10, start.y))).toThrow(
+        /^unreachable: /,
+      );
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: false,
+        refusal: "unreachable",
+      });
+      expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
+    }
+  });
+
+  test("a creature destination stops as target_lost when it disappears, without replanning", () => {
+    jest.useFakeTimers();
+    try {
+      const targets = new Map<bigint, NavPoint>();
+      const f = fixture(() => [70.34], {}, targets);
+      const start = must(f.runtime.snapshot().pose);
+      targets.set(0x99n, { x: start.x + 30, y: start.y, z: 75 });
+      f.handle.goTo({ guid: 0x99n, kind: "guid" });
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: true,
+        destination: { x: start.x + 30, y: start.y, z: 70.34 },
+        target: 0x99n,
+      });
+      f.advance(1000);
+      f.runtime.observeDisappear(0x98n);
+      expect(f.runtime.navigationState().active).toBe(true);
+      f.runtime.observeDisappear(0x99n);
+      const lost = f.runtime.navigationState();
+      expect(lost).toMatchObject({
+        active: false,
+        blockedReason: "target_lost",
+        refusal: "stop",
+        target: 0x99n,
+      });
+      expect(f.runtime.snapshot().moving).toBe(false);
+      expect(f.events.at(-2)).toMatchObject({
+        reason: "target_lost",
+        type: "movement_stopped",
+      });
+      const stopped = f.runtime.snapshot().pose;
+      const count = f.sent.length;
+      f.advance(10_000);
+      expect(f.sent.length).toBe(count);
+      expect(f.runtime.snapshot().pose).toEqual(stopped);
+      expect(f.runtime.navigationState()).toEqual(lost);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("an unobserved creature refuses before any motion", () => {
+    const f = fixture(() => [70.34]);
+    expect(() => f.handle.goTo({ guid: 0x99n, kind: "guid" })).toThrow(
+      "stop: target_not_observed",
+    );
+    expect(f.runtime.navigationState()).toMatchObject({
+      active: false,
+      destination: undefined,
+      target: 0x99n,
+    });
+    expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
   });
 });

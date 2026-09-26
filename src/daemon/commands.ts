@@ -275,7 +275,7 @@ const HANDLERS: Handlers = {
   friends_json: (_cmd, { handle, socket }) =>
     send(socket, [formatFriendListJson(handle.getFriends())]),
   goto: (cmd, { handle, socket }) =>
-    reply(socket, () => handle.goTo(cmd.x, cmd.y, cmd.z), ok),
+    reply(socket, () => handle.goTo(cmd.target), ok),
   group: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getPartyState(), formatPartyState),
   group_json: (_cmd, { handle, socket }) =>

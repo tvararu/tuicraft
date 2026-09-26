@@ -9,6 +9,7 @@ import {
 } from "test/fixtures";
 import { startMockWorldServer } from "test/mock-world-server";
 import { must } from "test/must";
+import { writePackedGuid } from "test/world-handlers-fixtures";
 import { type WorldHandle, worldSession } from "wow/client";
 import { type ControlMode, ControlRuntime } from "wow/control";
 import type { DbcFile } from "wow/dbc";
@@ -33,7 +34,11 @@ const realClearTimeout = globalThis.clearTimeout;
 const selfGuid = 0x42;
 const targetGuid = 0x99;
 
-type Fixture = { handle: WorldHandle; stop: () => void };
+type Fixture = {
+  handle: WorldHandle;
+  stop: () => void;
+  inject: (opcode: number, body: Uint8Array) => void;
+};
 
 async function bounded<T>(pending: Promise<T>): Promise<T> {
   const timeout = Promise.withResolvers<never>();
@@ -149,7 +154,11 @@ async function fixture(targetX: number): Promise<Fixture> {
     server.inject(GameOpcode.SMSG_UPDATE_OBJECT, units(targetX));
     handle.sendSay("gameplay-lifecycle-ready");
     await bounded(ready.promise);
-    return { handle, stop };
+    return {
+      handle,
+      stop,
+      inject: (opcode, body) => server.inject(opcode, body),
+    };
   } catch (error) {
     handle?.close();
     stop();
@@ -190,6 +199,46 @@ function emptySpells(): spellData.SpellCatalog {
 }
 
 describe("gameplay forced-close lifecycle", () => {
+  test("an out-of-range update for the navigated creature stops its route as target_lost", async () => {
+    const createNavigation = navigation.createNavigation;
+    const nav = jest
+      .spyOn(navigation, "createNavigation")
+      .mockImplementation((options) =>
+        createNavigation(options, () => flatMap()),
+      );
+    let f: Fixture | undefined;
+    try {
+      f = await fixture(60);
+      const handle = f.handle;
+      const stopped = Promise.withResolvers<string | undefined>();
+      handle.onControlEvent((event) => {
+        if (event.type === "movement_stopped") stopped.resolve(event.reason);
+      });
+      handle.goTo({ guid: BigInt(targetGuid), kind: "guid" });
+      expect(handle.getNavigationState()).toMatchObject({
+        active: true,
+        target: BigInt(targetGuid),
+      });
+      const outOfRange = new PacketWriter();
+      outOfRange.uint32LE(1);
+      outOfRange.uint8(UpdateType.OUT_OF_RANGE);
+      outOfRange.uint32LE(1);
+      writePackedGuid(outOfRange, BigInt(targetGuid));
+      f.inject(GameOpcode.SMSG_UPDATE_OBJECT, outOfRange.finish());
+      expect(await bounded(stopped.promise)).toBe("target_lost");
+      expect(handle.getNavigationState()).toMatchObject({
+        active: false,
+        blockedReason: "target_lost",
+        refusal: "stop",
+      });
+    } finally {
+      try {
+        await disposeFixture(f);
+      } finally {
+        nav.mockRestore();
+      }
+    }
+  });
   test("server close silently retires an active route owner and its timers", async () => {
     const createNavigation = navigation.createNavigation;
     const nav = jest
@@ -202,7 +251,7 @@ describe("gameplay forced-close lifecycle", () => {
     try {
       jest.useFakeTimers();
       f = await fixture(21);
-      f.handle.goTo(21, 2, 3);
+      f.handle.goTo({ kind: "point", x: 21, y: 2, z: 3 });
       expect(f.handle.getControlState()).toMatchObject({
         moving: true,
         owner: "manual",

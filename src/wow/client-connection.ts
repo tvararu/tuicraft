@@ -174,6 +174,7 @@ export function createWorldConn(): WorldConn {
     if (event.type === "disappear") {
       conn.remoteMotion.forget(event.guid);
       conn.combat?.forget(event.guid);
+      conn.control?.observeDisappear(event.guid);
     }
     conn.recovery?.observeEntity(event);
     conn.rewards?.observeEntity(event);

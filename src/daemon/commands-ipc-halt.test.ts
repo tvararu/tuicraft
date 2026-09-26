@@ -30,7 +30,12 @@ describe("IPC round-trip", () => {
     ]);
     expect(ipc.handle.cast).not.toHaveBeenCalled();
     expect(ipc.handle.halt).toHaveBeenCalled();
-    expect(ipc.handle.goTo).toHaveBeenCalledWith(1, 2, 3);
+    expect(ipc.handle.goTo).toHaveBeenCalledWith({
+      kind: "point",
+      x: 1,
+      y: 2,
+      z: 3,
+    });
     expect(lines).toContain("OK");
   });
 

@@ -51,6 +51,7 @@ export type NavigationState = {
   owner: ControlOwner;
   blockedReason: string | undefined;
   refusal: NavigationRefusal | undefined;
+  target?: bigint;
 };
 
 export type ControlEventType =
@@ -98,23 +99,25 @@ export class ControlRuntime extends ControlSync {
   }
 
   navigationError(
-    destination: NavDestination,
+    destination: NavDestination | undefined,
     reason: string,
     refusal?: NavigationRefusal,
+    target?: bigint,
   ): void {
     this.abortUnsafe(reason);
     this.navigation = {
       active: false,
-      destination: { ...destination },
+      destination: destination ? { ...destination } : undefined,
       remaining: undefined,
       owner: "none",
       blockedReason: reason,
       refusal: refusal ?? classifyNavigationRefusal(reason),
+      target,
     };
     this.emit("control_error", reason);
   }
 
-  navigate(route: GroundRoute, destination: NavPoint): void {
+  navigate(route: GroundRoute, destination: NavPoint, target?: bigint): void {
     this.guardMove("forward");
     this.stopMoving("navigation_replaced", true);
     const origin = route.points[0];
@@ -130,6 +133,7 @@ export class ControlRuntime extends ControlSync {
         owner: "none",
         blockedReason: undefined,
         refusal: undefined,
+        target,
       };
       return;
     }
@@ -143,6 +147,7 @@ export class ControlRuntime extends ControlSync {
       owner: this.mode === "none" ? "manual" : this.mode,
       blockedReason: undefined,
       refusal: undefined,
+      target,
     };
     this.startMoving(
       "forward",
@@ -151,6 +156,11 @@ export class ControlRuntime extends ControlSync {
         (route.length / (this.runSpeed ?? Number.NaN)) * 1000,
       ),
     );
+  }
+
+  observeDisappear(guid: bigint): void {
+    if (this.route && this.navigation.target === guid)
+      this.stopMoving("target_lost", true);
   }
 
   walkActive(): boolean {

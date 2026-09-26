@@ -45,6 +45,16 @@ describe("nextStepFor", () => {
     );
   });
 
+  test("a lost target and an unreachable destination forbid retrying", () => {
+    expect(nextStepFor("target_lost")).toContain("route was not retried");
+    expect(nextStepFor("pathfind_find_path failed (UNKNOWN_PATH)")).toContain(
+      "do not retry this one",
+    );
+    expect(nextStepFor("start snapped off the requested ground position")).toBe(
+      null,
+    );
+  });
+
   test("other or missing reasons have no hint", () => {
     expect(nextStepFor(undefined)).toBeNull();
     expect(nextStepFor("rooted")).toBeNull();
