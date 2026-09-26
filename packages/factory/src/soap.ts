@@ -7,15 +7,24 @@ import {
 } from "@tuicraft/core/lib/config";
 import { factoryConfigDir, factoryStateDir } from "#factory/config";
 import {
+  copyConfirmed,
+  type Names,
+  pinfoAccount,
+  type SoapResult,
+} from "#factory/soap-copy";
+import {
+  type Preset,
+  presetLanguage,
+  presets,
+  templateFor,
+} from "#factory/soap-presets";
+import {
   accountFiles,
   removeAccountFiles,
   writeWrapper,
   xdgEnv,
 } from "#factory/soap-wrapper";
 
-export type Preset = "fresh" | "eversong10" | "max80";
-export type SoapResult = { ok: boolean; text: string };
-export type Names = { account: string; character: string };
 export type Ledger = Names & {
   password: string;
   preset: Preset;
@@ -35,7 +44,6 @@ export type Session = Names & {
   wrapper: string;
 };
 
-export const presets: Preset[] = ["fresh", "eversong10", "max80"];
 export const factoryAccount = /^FAC[0-9A-F]{10}$/;
 
 const lockStaleMs = 30_000;
@@ -54,9 +62,7 @@ const quoted = /^(["'])(.*)\1$/;
 const resultTag = /<result>([\s\S]*?)<\/result>/;
 const faultTag = /<faultstring>([\s\S]*?)<\/faultstring>/;
 const tripleLetter = /(.)\1\1/i;
-const pinfoAccountLine = /Account:\s*([A-Za-z0-9_]+)/;
 const accountMissing = /Account not exist/i;
-const copyTargetMissing = /Account '.*' does not exist/i;
 const lowerLetters = String.fromCharCode(
   ...Array.from({ length: 26 }, (_, i) => 97 + i),
 );
@@ -216,10 +222,6 @@ export function accountAgeHours(account: string, now = Date.now()): number {
   return (now / 1000 - seconds) / 3600;
 }
 
-export function pinfoAccount(text: string): string | undefined {
-  return text.match(pinfoAccountLine)?.[1];
-}
-
 function ledgerDir(): string {
   return `${factoryStateDir()}/accounts`;
 }
@@ -260,10 +262,10 @@ async function must(command: string): Promise<string> {
   return res.text;
 }
 
-async function templateFor(preset: Preset): Promise<string> {
+async function presetTemplate(preset: Preset): Promise<string> {
   if (!presets.includes(preset))
     throw new Error(`unknown preset: ${preset} (${presets.join("|")})`);
-  return required(await soapEnv(), `TUICRAFT_PRESET_${preset.toUpperCase()}`);
+  return templateFor(preset, await soapEnv());
 }
 
 async function navConfig(): Promise<Nav> {
@@ -286,7 +288,7 @@ async function writeSession(
     account,
     character,
     host: "t1",
-    language: 1,
+    language: presetLanguage(preset),
     password,
     port: 3724,
     timeout_minutes: 30,
@@ -308,41 +310,15 @@ async function writeSession(
   return { account, character, dir, password, preset, wrapper };
 }
 
-async function copyTemplate(template: string, names: Names): Promise<void> {
-  const command = `pdump copy ${template} ${names.account} ${names.character}`;
-  for (let i = 0; i < pinfoTries; i++) {
-    const res = await soap(command);
-    if (res.ok) return;
-    if (!copyTargetMissing.test(res.text)) {
-      throw new Error(`pdump copy: ${res.text}`);
-    }
-    await Bun.sleep(pinfoPollMs);
-  }
-  throw new Error(`pdump copy: ${names.account} never became visible`);
-}
-
-async function verifyCharacter({ account, character }: Names): Promise<void> {
-  let last = "";
-  for (let i = 0; i < pinfoTries; i++) {
-    const res = await soap(`pinfo ${character}`);
-    const owner = pinfoAccount(res.text);
-    if (owner === account) return;
-    if (owner)
-      throw new Error(
-        `pinfo ${character} names account ${owner}, expected ${account}`,
-      );
-    last = res.text;
-    await Bun.sleep(pinfoPollMs);
-  }
-  throw new Error(`pinfo ${character} never showed ${account}: ${last}`);
-}
-
 export async function createAccount({
   preset,
   gm,
   owner,
 }: CreateOptions): Promise<Session> {
-  const [template, nav] = await Promise.all([templateFor(preset), navConfig()]);
+  const [template, nav] = await Promise.all([
+    presetTemplate(preset),
+    navConfig(),
+  ]);
   const names = newNames();
   const root = process.cwd();
   const entry = {
@@ -356,9 +332,8 @@ export async function createAccount({
   await must(`account create ${entry.account} ${entry.password}`);
   try {
     await saveLedger(entry);
-    await copyTemplate(template, names);
+    await copyConfirmed(soap, template, names);
     if (gm) await must(`account set gmlevel ${entry.account} ${gm} -1`);
-    await verifyCharacter(names);
     return await writeSession(entry, nav);
   } catch (err) {
     await deleteAccount(entry.account).catch((e) =>

@@ -5,10 +5,9 @@ import {
   deleteAccount,
   expired,
   list,
-  type Preset,
-  presets,
   sweep,
 } from "#factory/soap";
+import { isPreset, presets } from "#factory/soap-presets";
 
 const usage = `usage: soap create <${presets.join("|")}> [--owner <label>] [--gm <level>]
        soap delete <ACCOUNT>
@@ -24,7 +23,7 @@ const options = {
 type CreateArgs = { preset: string; owner?: string; gm?: string };
 
 async function create({ preset, owner, gm }: CreateArgs): Promise<number> {
-  if (!presets.includes(preset as Preset)) throw new Error(usage);
+  if (!isPreset(preset)) throw new Error(usage);
   const level = gm === undefined ? undefined : Number(gm);
   if (
     level !== undefined &&
@@ -34,7 +33,7 @@ async function create({ preset, owner, gm }: CreateArgs): Promise<number> {
   const session = await createAccount({
     gm: level,
     owner,
-    preset: preset as Preset,
+    preset,
   });
   console.log(JSON.stringify(session));
   return 0;
