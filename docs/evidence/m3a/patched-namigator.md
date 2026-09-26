@@ -1,11 +1,14 @@
 # M3a: a patched namigator for corner heights
 
-Issue #151, 2026-09-26. Two patches are applied by default, in order: the
-corner-height patch below, then the boundary-ray patch (section "Second
-patch"), which was added after the planner-policy work in #162 exposed the
-remaining native refusals. A third, opt-in patch for ADT heights on quad
-edges (section "Opt-in third patch") changes results of calls that already
-succeed, so the default build leaves it out. It follows #123 / PR #126,
+Issue #151, 2026-09-26. This record covers two of the three patches that
+are applied by default, in order: the corner-height patch below, then the
+boundary-ray patch (section "Second patch"), which was added after the
+planner-policy work in #162 exposed the remaining native refusals. The
+third default patch, `surface-above-hint.patch`, has its own record,
+[findheight-surface-above-hint.md](findheight-surface-above-hint.md). An
+opt-in patch for ADT heights on quad edges (section "Opt-in third patch")
+changes results of calls that already succeed, so the default build leaves
+it out. It follows #123 / PR #126,
 which traced goto's `UNKNOWN_HEIGHT` refusals at path corners to namigator
 `Map::FindHeight`. This record covers the patches, how to build them,
 offline before/after counts and live walks. The shared library in
@@ -25,9 +28,9 @@ installed library was built from. Both change only `Map::FindHeight` in
 goes on top and changes `Map::GetADTHeight`.
 `mise namigator:build` (`vendor/namigator/build.sh`) clones upstream into
 `tmp/namigator/src`, checks out that commit with the `recastnavigation` and
-`stormlib` submodules, applies the two default patches (and the third with
-`NAMIGATOR_ADT_EDGES=1`), builds the `libpathfind`, `utility`, `Detour`
-and `Recast` targets with CMake in Release, links
+`stormlib` submodules, applies the three default patches (and the ADT
+patch with `NAMIGATOR_ADT_EDGES=1`), builds the `libpathfind`, `utility`,
+`Detour` and `Recast` targets with CMake in Release, links
 `tmp/namigator/libnamigator.so` from those archives, and checks that
 `pathfind_find_height` is exported. Set `NAMIGATOR_REPO` to clone from a
 local mirror instead.
@@ -279,9 +282,9 @@ with the ADT change that is now the opt-in third patch:
 
 With the #162 planner (PR #172, now on `main`), which accepts mesh corners
 and overhead columns and so reaches much further along each route,
-re-measured on `main` at `682a605`. "Default" is what `mise namigator:build`
-produces (corner and boundary-ray patches), "+ ADT" adds the opt-in third
-patch:
+re-measured on `main` at `682a605`. "Default" is the corner and
+boundary-ray patches, without `surface-above-hint.patch`, and "+ ADT" adds
+the opt-in ADT patch:
 
 | Result | Fairbreeze installed | corner | default | + ADT | Sunstrider installed | corner | default | + ADT |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|

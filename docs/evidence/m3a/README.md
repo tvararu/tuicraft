@@ -11,9 +11,11 @@ comes from them.
 Other records in this directory: slice 2, the funnel corner
 ([funnel-corner.md](funnel-corner.md)); slice 3, bounded replanning
 ([replanning.md](replanning.md)); the namigator patches
-([patched-namigator.md](patched-namigator.md)); goto's corner and column
-refusals ([ground-policy.md](ground-policy.md)); and Sunstrider Isle's
-refusals and ground floors ([sunstrider-floors.md](sunstrider-floors.md)).
+([patched-namigator.md](patched-namigator.md) and
+[findheight-surface-above-hint.md](findheight-surface-above-hint.md));
+goto's corner and column refusals ([ground-policy.md](ground-policy.md));
+and Sunstrider Isle's refusals and ground floors
+([sunstrider-floors.md](sunstrider-floors.md)).
 
 ## Slice 1: ground-derived `goto` (issue #120), 2026-09-26
 

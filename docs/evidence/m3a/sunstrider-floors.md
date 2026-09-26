@@ -201,6 +201,10 @@ installed library, except in the last test. Transcript:
   maintainer's call.
 - The tile-border ray at y = −6333.333 needs a tolerance in Detour's clip
   (see [patched-namigator.md](patched-namigator.md), "What remains").
-- #314: `FindNextZ` misses a surface just above the mesh hint.
+- `FindNextZ` missing a surface just above the mesh hint (#314) is fixed
+  by the default build's third patch
+  ([findheight-surface-above-hint.md](findheight-surface-above-hint.md)).
+  Past it, one Sunspire route stops at a stair riser the planner refuses
+  (#350).
 - #315: the low collision ray refuses step downs within `WalkableClimb`.
 - `UNKNOWN_HEIGHT` still has no `nextStep` (#275).
