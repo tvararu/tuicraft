@@ -12,6 +12,8 @@ Work state lives in the Status field of the project board
 ```mermaid
 flowchart LR
   B[Backlog] -->|maintainer| R[Ready]
+  B -->|maintainer or coordinator| T[Triage]
+  T -->|maintainer| R
   R -->|worker claims| P[In progress]
   P -->|PR opened| V[In review]
   V -->|review or landing fails| R
@@ -37,6 +39,7 @@ with `bun src/factory/main.ts precheck <role>` and stops on exit 1.
 | Status | Moved there by | Meaning |
 |---|---|---|
 | Backlog | GitHub's auto-add, for every new issue | Filed, not started |
+| Triage | the maintainer or the coordinator | Picked to look at now; the factory ignores it like Backlog and never moves a card there, and only the maintainer moves one on to Ready |
 | Blocked | any agent, with a comment | Waits on the maintainer; the comment says what the problem is and what to do |
 | Ready | the maintainer; agents only when an open factory PR exists | Work on this (rework if a PR is open); oldest first |
 | In progress | worker, on claim | A worker owns it |
@@ -49,7 +52,7 @@ and the Blocked group is the maintainer's inbox. An issue with an open
 blocked-by issue stays where it is and is never picked up or landed.
 
 `bun src/factory/main.ts status <issue>` prints a card's Status;
-`status <issue> <backlog|blocked|ready|in-progress|in-review|done>` sets it
+`status <issue> <backlog|triage|blocked|ready|in-progress|in-review|done>` sets it
 (adding the issue to the board if missing) and refuses `ready` without an
 open `factory/<N>-…` PR.
 
@@ -99,7 +102,9 @@ Two more mark heads for the bounce count:
   merge GitHub moves the card to Done.
 - **QA.** Runs when `main` moves. Maps new commits to PRs and issues via
   trailers, smoke-tests and plays, and files problems as OpenHubris issues
-  without labels; auto-add puts them in Backlog.
+  with the `qa` label; auto-add puts them in Backlog. Every agent files as
+  OpenHubris, so the label is what shows that QA found an issue. No other
+  role adds, removes or reacts to it.
 - **Reaper** (systemd timer, 5 min). Removes finished or over-cap `auto-*`
   worktrees that are clean and pushed or landed, and other worktrees that
   are landed, clean and idle over 12 h. Dirty trees are archived to
@@ -116,9 +121,10 @@ progress; `needs:pm` without `ready` → Blocked; `agent:review`,
 `agent:reviewing`, `agent:merging` or `agent:landing` → In review;
 `agent:rework` or `ready` → Ready. An issue with no other label (none,
 or only `qa:found` or `p1`) keeps its Status, or goes to Backlog if it is
-not on the board yet. It then removes the legacy labels from every issue,
-deletes them from the repo, and closes the open `Reaper: … held` issues
-with a comment. Later runs find nothing to migrate.
+not on the board yet. It then removes the legacy labels from every issue
+(never `qa`, which is not one of them), deletes them from the repo, and
+closes the open `Reaper: … held` issues with a comment. Later runs find
+nothing to migrate.
 
 Orca keeps its own copy of each role's prompt, so run
 `bun src/factory/main.ts setup automations --apply` from the runner clone

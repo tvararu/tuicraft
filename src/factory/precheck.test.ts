@@ -27,14 +27,15 @@ describe("worker", () => {
   test("picks the oldest Ready card as fresh when it has no factory PR", () => {
     const issues = [
       issue(9, "ready"),
-      issue(4, "ready"),
+      issue(5, "ready"),
       issue(2, "backlog"),
+      issue(4, "triage"),
       issue(3, "blocked"),
       issue(1, null),
     ];
     expect(pickWork(issues)).toEqual({
       ok: true,
-      out: { issue: 4, mode: "fresh" },
+      out: { issue: 5, mode: "fresh" },
     });
   });
 

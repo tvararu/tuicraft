@@ -66,4 +66,11 @@ describe("planMigration", () => {
       planMigration([{ card, labels: ["bug"], number: 9 }], ["bug"]),
     ).toEqual([]);
   });
+
+  test("leaves the qa label and Triage cards alone", () => {
+    const card = { item: "PVTI_10", status: "triage" as const };
+    expect(
+      planMigration([{ card, labels: ["qa"], number: 10 }], ["qa"]),
+    ).toEqual([]);
+  });
 });

@@ -13,8 +13,9 @@ Blocked cards on the project board.
 
 ## Hard rules
 
-- File issues as `OpenHubris` without labels. The board's auto-add puts
-  them in Backlog for the maintainer to triage. Never set a Status.
+- File issues as `OpenHubris` with `--label qa` and no other label. The
+  board's auto-add puts them in Backlog for the maintainer to triage. Never
+  set a Status.
 - No agent moves a card to Ready unless it already has an open factory PR.
 - Never @-mention anyone.
 - Every move to Blocked comes with a comment on the issue that says what
@@ -105,7 +106,7 @@ For each distinct problem:
    `gh issue list -R tvararu/tuicraft --state all --search "<keywords> in:title,body" --json number,title,state,closedAt`.
    If one matches, do not file. Skip anything already reported.
 2. File:
-   `gh issue create -R tvararu/tuicraft --title "<short symptom>" --body-file <file>`.
+   `gh issue create -R tvararu/tuicraft --title "<short symptom>" --label qa --body-file <file>`.
    The body has: the tested SHA, steps to reproduce, expected and actual
    behaviour, the exact commands and output, and the PR and issue whose
    change probably caused it (from step 2's `qa-changes` output), or the
