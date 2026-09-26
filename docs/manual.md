@@ -570,7 +570,11 @@ platform or upper level can plan from there. Along the route, a column may
 also hold surfaces below the walked ground or more than 1.6 yards above it,
 such as a canopy or a bridge overhead. A route still refuses a surface within
 1.6 yards above the walked ground and a step of more than 1 yard between
-0.5-yard samples (`ambiguous ground column at route`). A native path corner
+0.5-yard samples (`ambiguous ground column at route`). When the start column
+has more than one floor, as on a platform or in a building, and the route is
+refused this way before any sample reaches open ground (a column with one
+floor), the reason is `ambiguous ground column leaving start` instead: the
+start, not the destination, is the problem. A native path corner
 may sit up to 1.25 yards above the ground (the navmesh's climb plus one cell),
 but no other surface may be closer to it. A `goto` while a route is active
 stops the old route with a `movement_stopped` CONTROL event whose reason is
@@ -611,8 +615,11 @@ column at destination` or `destination is not on a ground floor`
 (`refusal=pick_destination`), repeat the `goto` with one of `floors` as _z_,
 or choose another destination; do not guess Z. `ambiguous ground column at start`
 means a surface sits less than 1.6 yards above the character's pose, so the
-pose is not on a floor; move to open ground first. `at route` means the route
-crosses such ground; choose another destination or waypoint. Both stop.
+pose is not on a floor; move to open ground first. `leaving start` means the
+route from a multi-floor start is refused before it reaches open ground; move
+to open ground first instead of changing the destination. `at route` means
+the route crosses such ground farther on; choose another destination or
+waypoint. All three stop.
 `refusal=unreachable` means the navigation mesh cannot connect the start to
 the destination: native `UNKNOWN_PATH`, a path that ends away from the
 requested point, or a path that omits it. Choose another destination; the

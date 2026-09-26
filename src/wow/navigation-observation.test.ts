@@ -27,10 +27,12 @@ describe("nextStepFor", () => {
     );
   });
 
-  test("any ambiguous ground column reason asks for one ground height", () => {
-    expect(nextStepFor("ambiguous ground column at 8713.8, -6625.3")).toBe(
-      "Choose a destination with one ground height. Do not guess Z.",
-    );
+  test("start-side refusals send the caller to open ground, not elsewhere", () => {
+    for (const site of ["at start", "leaving start"]) {
+      const hint = nextStepFor(`ambiguous ground column ${site}`);
+      expect(hint).toContain("Move to open ground");
+      expect(hint).not.toMatch(/choose/i);
+    }
   });
 
   test("gives each ambiguous-column site its own advice", () => {
@@ -40,9 +42,6 @@ describe("nextStepFor", () => {
     expect(
       nextStepFor("destination is not on a ground floor (floors 30)"),
     ).toContain("one of floors as Z");
-    expect(nextStepFor("ambiguous ground column at start")).toContain(
-      "Move to open ground",
-    );
     expect(nextStepFor("ambiguous ground column at route")).toContain(
       "route crosses ground",
     );

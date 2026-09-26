@@ -9,12 +9,10 @@ describe("classifyNavigationRefusal", () => {
     expect(
       classifyNavigationRefusal("ambiguous ground column at destination"),
     ).toBe("pick_destination");
-    expect(classifyNavigationRefusal("ambiguous ground column at start")).toBe(
-      "stop",
-    );
-    expect(classifyNavigationRefusal("ambiguous ground column at route")).toBe(
-      "stop",
-    );
+    for (const site of ["at start", "at route", "leaving start"])
+      expect(classifyNavigationRefusal(`ambiguous ground column ${site}`)).toBe(
+        "stop",
+      );
     expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
     for (const reason of [
       "pathfind_find_path failed (UNKNOWN_PATH)",
