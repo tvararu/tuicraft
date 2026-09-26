@@ -268,6 +268,23 @@ test("full inventory stops with loot_inventory_full", async () => {
   expect(runtime.snapshot().stopCause).toBe("loot_inventory_full");
 });
 
+test("a window left open by an earlier stop is released before the next corpse", async () => {
+  const loot = fakeLoot({ items: [4], leftoverWindow: true });
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
+    loot,
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  await runtime.start({ guids: [2n], instruction: "fight" });
+  expect(loot.taken()).toEqual([4]);
+  expect(runtime.snapshot()).toMatchObject({
+    stopCause: "queue_exhausted",
+    lastLoot: { slotsTaken: [4] },
+  });
+});
+
 test("a failed release-only open stops with its reason", async () => {
   const loot = fakeLoot({ openFailure: "release_only" });
   const runtime = makeCycle({
