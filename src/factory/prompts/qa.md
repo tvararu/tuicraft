@@ -45,7 +45,7 @@ If `$prev` is not set, test the core loop only. Otherwise map the landed
 commits to their PRs and issues:
 
 ```sh
-mkdir -p tmp && bun $F qa-changes $prev <sha> > tmp/qa-changes.json
+bun $F qa-changes $prev <sha> > tmp/qa-changes.json
 ```
 
 It prints JSON with `commits` (each with `source`, `prs` and `issues`),

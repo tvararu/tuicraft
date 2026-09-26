@@ -35,7 +35,7 @@ never your exit code or final reply.
 ## 1. Setup
 
 1. Orca ran the repo setup (`orca.yaml`) before starting you.
-   `run=$(git branch --show-current)`; `mkdir -p tmp`.
+   `run=$(git branch --show-current)`.
 2. `bun $F precheck merger`. Before deciding, it bounces every
    `agent:merging` issue whose PR head lacks green `factory/ci` and
    `factory/review` (the head moved after review) back to `agent:review`

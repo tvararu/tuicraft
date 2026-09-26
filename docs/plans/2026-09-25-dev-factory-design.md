@@ -172,8 +172,9 @@ only concurrency guards.
    `needs:pm`, if present) for `agent:working`, then re-read the issue to
    detect a race with another run.
 2. Setup: Orca runs the committed `orca.yaml` setup
-   (`mise trust -y && mise bundle`) before the agent starts, because the
-   factory automations have `setupDecision: run` (phase 0 finding 1).
+   (`mise trust -y && mise bundle && mkdir -p tmp`) before the agent
+   starts, because the factory automations have `setupDecision: run`
+   (phase 0 finding 1).
 3. Work in the run's fresh worktree (`--workspace-mode new-per-run`). Check
    out `factory/<issue>-<slug>` as the worktree's branch: a new branch from
    `origin/main`, or for rework the existing remote branch. Then run
