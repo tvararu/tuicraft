@@ -27,14 +27,31 @@ export type Target = [Spec, Automation];
 const timer = "tuicraft-factory-reaper.timer";
 const dropIn = `${homedir()}/.config/systemd/user/${timer}.d/pace.conf`;
 const activeSec = /OnUnitActiveUSec=(\S+)/;
+const bootSec = /OnBootUSec=/;
+const subState = /^SubState=(\S+)$/m;
+const scheduled = ["waiting", "running"];
 const paused = pausedRoles.map((role) => automationNames[role]);
 
 export function timerDropIn(minutes: number): string {
-  return `[Timer]\nOnUnitActiveSec=\nOnUnitActiveSec=${minutes}min\n`;
+  const every = `${minutes}min`;
+  return `[Timer]\nOnBootSec=\nOnUnitActiveSec=\nOnBootSec=${every}\nOnUnitActiveSec=${every}\n`;
 }
 
-export function timerInterval(props: string): string | null {
-  return props.match(activeSec)?.[1] ?? null;
+export function timerCheck(
+  pace: Pace,
+  props: string,
+): { interval: string | null; drift: string[] } {
+  const interval = props.match(activeSec)?.[1] ?? null;
+  const want =
+    pace === "pause" ? interval : `${levelOf(pace).reaperMinutes}min`;
+  const state = props.match(subState)?.[1] ?? "unknown";
+  const checks: [string, boolean][] = [
+    [`want ${want ?? "an interval"}`, interval === null || interval !== want],
+    ["no boot trigger", !bootSec.test(props)],
+    [`no next run (${state})`, !scheduled.includes(state)],
+  ];
+  const drift = checks.filter(([, bad]) => bad).map(([message]) => message);
+  return { drift, interval };
 }
 
 export function targets(pace: Pace, existing: Automation[]): Target[] {
@@ -79,14 +96,20 @@ export function problems(spec: Spec, detail: Detail): string[] {
 }
 
 async function timerOk(pace: Pace): Promise<boolean> {
-  const cmd = ["systemctl", "--user", "show", timer, "-p", "TimersMonotonic"];
-  const interval = timerInterval(await must(cmd));
-  const want =
-    pace === "pause" ? interval : `${levelOf(pace).reaperMinutes}min`;
-  const ok = interval !== null && interval === want;
-  const state = ok ? "ok" : `MISMATCH: want ${want ?? "an interval"}`;
+  const props = await must([
+    "systemctl",
+    "--user",
+    "show",
+    timer,
+    "-p",
+    "TimersMonotonic",
+    "-p",
+    "SubState",
+  ]);
+  const { interval, drift: found } = timerCheck(pace, props);
+  const state = found.length === 0 ? "ok" : `MISMATCH: ${found.join("; ")}`;
   console.log(`${timer} ${String(interval).padEnd(14)} ${state}`);
-  return ok;
+  return found.length === 0;
 }
 
 async function show(): Promise<number> {
