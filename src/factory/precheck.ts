@@ -1,3 +1,4 @@
+import { runReason } from "factory/attempts";
 import { setStatus } from "factory/board";
 import { applyBounces, landableHead, movedHeads } from "factory/bounce";
 import {
@@ -56,11 +57,12 @@ export function decideWorker(
   );
   if (!pick) return { ok: false, why: "no eligible Ready card" };
   const pr = factoryPr(pick.number, pick.prs);
+  const reason = runReason(pr);
   return {
     ok: true,
     out: pr
-      ? { issue: pick.number, mode: "rework", pr: pr.number }
-      : { issue: pick.number, mode: "fresh" },
+      ? { issue: pick.number, mode: "rework", pr: pr.number, reason }
+      : { issue: pick.number, mode: "fresh", reason },
   };
 }
 

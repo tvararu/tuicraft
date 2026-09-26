@@ -127,7 +127,7 @@ what a marker means.
   Ready card with an open factory PR is rework. The PR title is the future
   commit subject (Conventional, ≤ 50 chars); the body opens with a why
   paragraph, then `Fixes #N` and `## Proof`. Commits inside the PR don't
-  matter. At most 3 attempts per issue, then Blocked.
+  matter. At most 3 attempts per issue, then Blocked (see Attempts).
 - **Reviewer.** Takes In review cards whose PR head lacks `factory/review`.
   Runs `mise ci` on the head and posts `factory/ci`, judges the outcome and
   code, and posts `factory/review`. Pass leaves the card In review for the
@@ -182,6 +182,32 @@ what a marker means.
   is recovered only when the reaper removes it after the hold clears, so a
   held worker run's card says what to do if the maintainer removes the tree
   by hand.
+
+## Attempts
+
+A worker run is an attempt only when it opens the first PR or reworks a PR
+after a failed review; crash recoveries and merger rebases or CI fixes are
+free. `precheck worker` prints a `reason` next to `mode`, from the newest
+`factory/review` verdict on the open factory PR's commits, including heads
+force-pushed away:
+
+| `reason` | When | Counts |
+|---|---|---|
+| `fresh` | no open factory PR: the run opens the first one | yes |
+| `review` | the newest verdict is a failure on the head | yes |
+| `rebase` | the newest verdict passed, so the merger sent the card back: a conflict, failing CI after its rebase, or a head it bounced or rebased | no |
+| `recovery` | the newest verdict is a failure on an older head, or there is none: an earlier run died after pushing or before the hand-off | no |
+
+The workpad's `Attempts: k/3` line counts the attempts used, and its
+`## Runs` list has one line per worker run with its reason, the PR head it
+started from, and its attempt number or "not counted", so the count can be
+checked from the issue. A `fresh` run is a `recovery` instead when the list
+already has a counted `fresh` run, and a `review` run when it already has a
+counted `review` run at the same head: the earlier run died before it
+pushed. A run that would be attempt 4 moves the card to Blocked with a
+comment saying what keeps failing; `rebase` and `recovery` runs never do.
+The maintainer grants another attempt by lowering the `Attempts:` line and
+moving the card to Ready.
 
 ## Legacy labels
 

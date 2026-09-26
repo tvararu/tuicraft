@@ -1,6 +1,6 @@
 import { type BoardStatus, repoSlug } from "factory/config";
 import { must } from "factory/exec";
-import type { Issue, Pr } from "factory/github";
+import type { Issue, Pr, Verdict } from "factory/github";
 import { liveLandings } from "factory/markers";
 
 export type Moved = { issue: number; pr: number; head: string; since: string };
@@ -26,13 +26,14 @@ export function landableHead(pr: Pr): boolean {
   return reviewedHead(pr) && passed(pr, "signoff/ci");
 }
 
+export function latestVerdict(pr: Pr): Verdict | undefined {
+  return pr.verdicts.toSorted((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
+}
+
 function movedAfterPass(pr: Pr): boolean {
   if (reviewedHead(pr) || pr.verdicts.some((v) => v.oid === pr.head))
     return false;
-  const [latest] = pr.verdicts.toSorted(
-    (a, b) => Date.parse(b.at) - Date.parse(a.at),
-  );
-  return latest?.state === "SUCCESS";
+  return latestVerdict(pr)?.state === "SUCCESS";
 }
 
 export function movedHeads(issues: Issue[], now: number): Moved[] {
