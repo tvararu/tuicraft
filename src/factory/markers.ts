@@ -1,7 +1,8 @@
 import { roleCapHours } from "factory/config";
-import type { Issue } from "factory/github";
+import type { Issue, Marker } from "factory/github";
 
 export type Landing = { issue: number; id: number; run: string; at: string };
+export type Claim = { run: string; head: string | null };
 
 const claimMarker = /^<!-- factory:claim (\S+)(?: ([0-9a-f]{40}))? -->/;
 const landingMarker = /^<!-- factory:landing (\S+) -->/;
@@ -45,4 +46,21 @@ export function reviewerClaimed(
       claimMarker.exec(m.body)?.[2] === head &&
       within(m.at, roleCapHours.reviewer, now),
   );
+}
+
+export function claimOf(body: string): Claim | null {
+  const [, run, head] = claimMarker.exec(body) ?? [];
+  return run === undefined ? null : { head: head ?? null, run };
+}
+
+export function lastWorkerClaim(
+  issue: Issue,
+): (Marker & { run: string }) | undefined {
+  return issue.markers
+    .flatMap((m) => {
+      const claim = claimOf(m.body);
+      return claim && claim.head === null ? [{ ...m, run: claim.run }] : [];
+    })
+    .toSorted((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id - b.id)
+    .at(-1);
 }

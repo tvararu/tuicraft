@@ -11,8 +11,10 @@ import {
   stalledRunQuietHours,
 } from "factory/config";
 import { json, must, run } from "factory/exec";
+import { fetchIssues, type Issue } from "factory/github";
 import { migrate } from "factory/migrate";
 import { landed, landFacts } from "factory/reaper-land";
+import { deathOf, recoverRun } from "factory/reaper-recover";
 import {
   applyDrafts,
   closeReports,
@@ -46,6 +48,7 @@ export type Terminal = { worktreeId: string; lastOutputAt: number | null };
 export type AutoRun = {
   workspaceId: string | null;
   status: string;
+  error?: string | null;
   startedAt?: Stamp;
   dispatchedAt?: Stamp;
 };
@@ -80,12 +83,19 @@ type Inventory = {
   terminals: Terminal[];
   runs: AutoRun[];
 };
-type Ctx = { wt: Worktree; inv: Inventory; opts: ReapOptions; now: number };
+type Ctx = {
+  wt: Worktree;
+  inv: Inventory;
+  opts: ReapOptions;
+  now: number;
+  issues: () => Promise<Issue[]>;
+};
 type Decision = {
   owner: Owner;
   action: Action;
   ageHours: number;
   status: string[];
+  death: string | null;
 };
 
 const hour = 3_600_000;
@@ -316,6 +326,7 @@ async function decideAuto(
   return {
     action: autoAction({ clean, done, merged, over, pushed }),
     ageHours,
+    death: deathOf(autoRun, { done, over, role: owner.role }),
     owner,
     status,
   };
@@ -332,6 +343,7 @@ async function decideOther(
   return {
     action: otherAction({ clean: isClean(status), idle, landed: done }),
     ageHours,
+    death: null,
     owner,
     status,
   };
@@ -383,6 +395,20 @@ async function manifest(dir: string, line: string): Promise<void> {
   const name = line.split(" ")[0] ?? "";
   if (text.split("\n").some((l) => l.startsWith(`${name} `))) return;
   await Bun.write(file, `${text}${line}\n`);
+}
+
+async function recovered(
+  { wt, opts, issues }: Ctx,
+  d: Decision,
+): Promise<boolean> {
+  if (d.owner.kind !== "reaper" || d.death === null) return true;
+  const end = {
+    death: d.death,
+    ref: wt.branch,
+    role: d.owner.role,
+    run: runBranch(wt),
+  };
+  return await recoverRun({ dryRun: opts.dryRun, end, issues });
 }
 
 async function remove({ wt, opts }: Ctx, owner: Owner): Promise<void> {
@@ -444,19 +470,22 @@ async function handle(ctx: Ctx): Promise<Held | null> {
   console.error(
     `reap: ${ctx.wt.displayName} owner=${ownerName(owner)} ${d.action.kind} ${detail}`.trim(),
   );
-  if (d.action.kind === "remove") await remove(ctx, owner);
+  if (d.action.kind === "remove" && (await recovered(ctx, d)))
+    await remove(ctx, owner);
   return d.action.kind === "hold" ? holdTree(ctx, d, d.action) : null;
 }
 
 async function reap(opts: ReapOptions): Promise<Held[]> {
   const inv = await inventory();
   const now = opts.now ?? Date.now();
+  let fetched: Promise<Issue[]> | undefined;
+  const issues = () => (fetched ??= fetchIssues());
   await git(["fetch", "--quiet", "origin", "main"]);
   const held: Held[] = [];
   for (const wt of inv.worktrees.filter(
     (w) => !opts.only || opts.only(w.displayName),
   )) {
-    const item = await handle({ inv, now, opts, wt });
+    const item = await handle({ inv, issues, now, opts, wt });
     if (item) held.push(item);
   }
   return held;

@@ -53,12 +53,14 @@ describe("report text", () => {
     expect(body).toContain("What to do:");
     expect(body).toContain("deletes this card");
     expect(body).not.toContain("- Issue:");
+    expect(body).not.toContain("back to Ready");
   });
 
   test("a branch that names an issue links it", () => {
     expect(issueOf("refs/heads/factory/103-factory-project-board")).toBe(103);
     expect(issueOf("OpenHubris/auto-work-run-177")).toBeNull();
     expect(reportBody(b)).toContain("- Issue: #103");
+    expect(reportBody(b)).toContain("move #103 back to Ready");
   });
 });
 

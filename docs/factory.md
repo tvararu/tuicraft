@@ -15,6 +15,7 @@ flowchart LR
   B -->|maintainer or coordinator| T[Triage]
   T -->|maintainer| R
   R -->|worker claims| P[In progress]
+  P -->|worker run died| R
   P -->|PR opened| V[In review]
   V -->|review or landing fails| R
   V -->|merged| D[Done]
@@ -79,7 +80,7 @@ the wrapper and those directories.
 | Backlog | GitHub's auto-add, for every new issue | Filed, not started |
 | Triage | the maintainer or the coordinator | Picked to look at now; the factory ignores it like Backlog and never moves a card there, and only the maintainer moves one on to Ready |
 | Blocked | any agent, with a comment | Waits on the maintainer; the comment says what the problem is and what to do |
-| Ready | the maintainer; agents only when an open factory PR exists | Work on this (rework if a PR is open); oldest first |
+| Ready | the maintainer; agents only when an open factory PR exists; the reaper when the worker run holding the card died | Work on this (rework if a PR is open); oldest first |
 | In progress | worker, on claim | A worker owns it |
 | In review | worker, on opening the PR | Reviewer, then merger |
 | Done | GitHub, on merge or close | Landed or closed |
@@ -158,6 +159,29 @@ what a marker means.
   archived to `tmp/worktree-archive-<date>/`. Each hold is one draft card in
   Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
   reaper deletes it once the hold clears.
+
+  A run it removes died if it ended without finishing: Orca marked it
+  `failed`, or `dispatch_failed` with its terminals quiet for 10 min, or it
+  is over its cap, but never `completed`. Before removing a dead worker
+  run, the reaper looks at every open issue whose latest worker claim is
+  that run's. If the card has been In progress since that run's claim, it
+  comments which run died, how, and what it left (the pushed
+  `factory/<N>-…` branch and the open PR), moves the card back to Ready,
+  and then deletes the run's claim comments there, so the next worker's
+  race check can't lose to a dead claim. If the card is already Ready, it
+  only deletes the claim: that is the retry after a pass that moved the
+  card but failed to delete it. Cards in any other Status are left alone,
+  as is a card whose latest worker claim belongs to another run, and an In
+  progress card moved there after that claim: a new worker moves the card
+  before it posts its own claim, and the card is that worker's. Orca marks
+  most finished runs `dispatch_failed`, so "died" often means "finished";
+  these checks keep the reaper away from cards a run has already handed
+  on. Before removing a dead reviewer run, it deletes that run's claim
+  comments, so the head can be reviewed again straight away. If a recovery
+  fails, the worktree stays and the next pass tries again. A held dead run
+  is recovered only when the reaper removes it after the hold clears, so a
+  held worker run's card says what to do if the maintainer removes the tree
+  by hand.
 
 ## Legacy labels
 
