@@ -46,6 +46,7 @@ import {
   type QuestUnresolvedReason,
   type QuestWindow,
   questIdsVisible,
+  repliesAtOnce,
   requestRewardRequest,
   selectOptionRequest,
   selectQuestRequest,
@@ -384,7 +385,7 @@ export class QuestRuntime {
     const answered =
       this.pending?.action === "talk" ||
       this.pending?.action === "selectOption";
-    if (answered) this.pending = undefined;
+    if (answered) this.answer();
     this.dialog = undefined;
     this.giver = undefined;
     if (window === "trainer" || window === "vendor") {
@@ -432,7 +433,7 @@ export class QuestRuntime {
       return;
     }
     this.dialog = dialog;
-    if (expected) this.pending = undefined;
+    if (expected) this.answer();
     this.emit(
       "dialog",
       "packet",
@@ -444,7 +445,8 @@ export class QuestRuntime {
     if (this.disposed) return;
     this.dialog = undefined;
     this.giver = undefined;
-    if (this.pending?.action !== "abandon") {
+    if (this.pending?.action === "cancel") this.answer();
+    else if (this.pending?.action !== "abandon") {
       this.leaveUnresolved("closed");
       this.pending = undefined;
     }
@@ -502,7 +504,7 @@ export class QuestRuntime {
       this.pending?.action !== "cancel" &&
       (error.questId === undefined || error.questId === this.pending?.questId)
     ) {
-      this.pending = undefined;
+      if (this.pending) this.answer();
       this.dialog = undefined;
     }
     this.emit("error", "packet", error.questId);
@@ -523,10 +525,15 @@ export class QuestRuntime {
 
   private resolve(action: QuestAction, questId: number): void {
     if (this.pending?.action === action && this.pending.questId === questId)
-      this.pending = undefined;
+      this.answer();
     this.unresolved = this.unresolved.filter(
       (intent) => intent.action !== action || intent.questId !== questId,
     );
+  }
+
+  private answer(): void {
+    this.pending = undefined;
+    this.unresolved = this.unresolved.filter((i) => !repliesAtOnce(i.action));
   }
 
   private transitions(previous: QuestLog, next: QuestLog): void {

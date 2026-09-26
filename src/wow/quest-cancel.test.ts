@@ -11,11 +11,14 @@ const capturedCancel = {
 };
 
 describe("cancelling an unanswered quest request", () => {
-  test("a talk ignored at range stays unresolved through two live cancels", () => {
+  test("the close of a live cancel settles a talk ignored at range", () => {
     const { bodies, packet, runtime, sent } = setup();
     runtime.talk(ERONA_GUID);
     runtime.cancel();
     expect(() => runtime.talk(ERONA_GUID)).toThrow("quest_reply_unanswered");
+    expect(runtime.snapshot().unresolved).toEqual([
+      { action: "talk", at: 1000, guid: ERONA_GUID, reason: "cancelled" },
+    ]);
     packet(GameOpcode.SMSG_GOSSIP_COMPLETE, capturedCancel.close);
     runtime.cancel();
     packet(GameOpcode.SMSG_GOSSIP_COMPLETE, capturedCancel.close);
@@ -26,22 +29,27 @@ describe("cancelling an unanswered quest request", () => {
     ]);
     expect(bodies).toEqual([capturedCancel.talk, "", ""]);
     expect(runtime.snapshot().pending).toBeUndefined();
-    expect(runtime.snapshot().unresolved).toEqual([
-      { action: "talk", at: 1000, guid: ERONA_GUID, reason: "cancelled" },
-    ]);
+    expect(runtime.snapshot().unresolved).toEqual([]);
   });
 
   test("a second cancelled request does not replace the first", () => {
     const { packet, runtime } = setup();
     runtime.talk(ERONA_GUID);
+    packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured8325.offerMenu);
+    runtime.selectQuest(8325);
+    packet(GameOpcode.SMSG_QUESTGIVER_QUEST_DETAILS, captured8325.details);
+    runtime.accept();
     runtime.cancel();
     packet(GameOpcode.SMSG_GOSSIP_COMPLETE, "");
     runtime.talk(3n);
     runtime.cancel();
-    packet(GameOpcode.SMSG_GOSSIP_COMPLETE, "");
     expect(runtime.snapshot().unresolved.map((intent) => intent.guid)).toEqual([
       ERONA_GUID,
       3n,
+    ]);
+    packet(GameOpcode.SMSG_GOSSIP_COMPLETE, "");
+    expect(runtime.snapshot().unresolved.map((intent) => intent.guid)).toEqual([
+      ERONA_GUID,
     ]);
   });
 

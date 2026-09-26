@@ -271,6 +271,34 @@ describe("quest packet and lifecycle failures", () => {
     ).toBe(false);
   });
 
+  test("a later server reply settles earlier dialog-only intents but never an accept", () => {
+    const { runtime } = setup();
+    const unresolved = () =>
+      runtime.snapshot().unresolved.map((i) => `${i.action}:${i.reason}`);
+    show(runtime, "details");
+    runtime.accept();
+    runtime.cancel();
+    packet(runtime, GameOpcode.SMSG_GOSSIP_COMPLETE, new Uint8Array());
+    runtime.talk(giver);
+    runtime.resetInteraction();
+    packet(runtime, GameOpcode.SMSG_GOSSIP_COMPLETE, new Uint8Array());
+    expect(unresolved()).toEqual(["accept:cancelled", "talk:reset"]);
+    runtime.talk(giver);
+    runtime.cancel();
+    expect(unresolved()).toEqual([
+      "accept:cancelled",
+      "talk:reset",
+      "talk:cancelled",
+    ]);
+    packet(runtime, GameOpcode.SMSG_GOSSIP_COMPLETE, new Uint8Array());
+    expect(unresolved()).toEqual(["accept:cancelled"]);
+    runtime.talk(giver);
+    runtime.resetInteraction();
+    runtime.talk(giver);
+    packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
+    expect(unresolved()).toEqual(["accept:cancelled"]);
+  });
+
   test("unanswered requests cannot be overwritten and old menus cannot satisfy a quest-specific request", () => {
     const { runtime } = setup();
     runtime.talk(giver);

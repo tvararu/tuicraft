@@ -784,7 +784,7 @@ Only a server quest-complete reward notification establishes a reward fact. It d
 The quest remains until an authoritative log observation removes it. Removal alone is not a reward fact.
 
 `tuicraft cancel-interaction`
-:: Request close of the current interaction and revoke its authorization. The prior unanswered intent stays in `unresolved` until the quest log or a reward packet settles it; later cancels never drop it.
+: Request close of the current interaction and revoke its authorization. The prior unanswered intent stays in `unresolved`; later cancels never drop it. A `talk`, `select-option`, `select-quest`, `complete-quest` or `request-reward` entry leaves once the server answers a later request: the cancel's own close, a dialog or window, a quest error, or the quest-log or reward packet that settles the pending request. The server handles one session's requests in order and answers these five at once, so no reply to them can still arrive. An `accept-quest`, `abandon-quest` or `choose-reward` entry leaves only when the quest log or a reward packet settles it, because the log update can trail other replies.
 Wait for observed close or a confirmed world reset before another mutation. Late menu/error packets do not unlock a pending cancel.
 
 All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending; another verb fails with `quest_reply_unanswered: <action> <guid> unanswered for <s>s; it expires as no_reply after 5s, or run cancel-interaction`.
