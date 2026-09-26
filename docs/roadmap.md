@@ -192,7 +192,7 @@ Every change reaches `main` through a pull request with green `signoff/ci`,
 factory goes through the same reviewer and merger: an issue with
 `## Acceptance criteria`, a `factory/<N>-<slug>` branch, a PR with `Fixes #N`
 and a `## Proof` section, then `agent:review` on the issue. The procedure is in
-[AGENTS.md](../AGENTS.md) under Commits. Releases are paused. A merged PR does
+[AGENTS.md](../AGENTS.md) under Commits. There are no releases. A merged PR does
 not accept a milestone; that stays the maintainer's call.
 
 ### What an increment provides
