@@ -3,9 +3,13 @@ import {
   type Held,
   heldName,
   planReport,
+  planStray,
   type ReportIssue,
   reportBody,
   reportTitle,
+  strayBody,
+  strayName,
+  strayTitle,
 } from "factory/reaper-report";
 
 describe("planReport", () => {
@@ -85,5 +89,50 @@ describe("planReport", () => {
       create: [],
       update: [],
     });
+  });
+});
+
+describe("planStray", () => {
+  const dirty: ReportIssue = {
+    body: "",
+    number: 7,
+    title: "Reaper: alpha held (dirty)",
+  };
+  const stray = (value: string, number: number): ReportIssue => ({
+    body: strayBody(value),
+    number,
+    title: strayTitle(),
+  });
+
+  test("the body gives the value and the unset command", () => {
+    const body = strayBody("/wt/run-26");
+    expect(body).toContain("`/wt/run-26`");
+    expect(body).toContain("config --unset core.worktree");
+  });
+
+  test("opens one issue and leaves other held reports open", () => {
+    expect(planStray("/wt/run-26", [dirty])).toEqual({
+      close: [],
+      create: [{ body: strayBody("/wt/run-26"), title: strayTitle() }],
+      update: [],
+    });
+  });
+
+  test("an unchanged value changes nothing; a new value edits the issue", () => {
+    const open = stray("/wt/run-26", 9);
+    expect(planStray("/wt/run-26", [open]).update).toEqual([]);
+    expect(planStray("/wt/run-27", [open])).toEqual({
+      close: [],
+      create: [],
+      update: [
+        { body: strayBody("/wt/run-27"), number: 9, title: strayTitle() },
+      ],
+    });
+  });
+
+  test("the next normal pass closes it", () => {
+    const plan = planReport([], [stray("/wt/run-26", 9)]);
+    expect(plan.close.map((c) => c.number)).toEqual([9]);
+    expect(heldName(strayTitle())).toBe(strayName);
   });
 });

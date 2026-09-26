@@ -1,5 +1,7 @@
-import { bot, labels, pm, repoSlug } from "factory/config";
+import { basename } from "node:path";
+import { bot, labels, mainCheckout, pm, repoSlug } from "factory/config";
 import { json, must } from "factory/exec";
+import { strayFix } from "factory/repo-guard";
 
 export type Reason = "dirty" | "unlanded-commits" | "over-cap-dirty";
 export type Held = {
@@ -75,6 +77,38 @@ export function planReport(held: Held[], issues: ReportIssue[]): ReportPlan {
   return plan;
 }
 
+export const strayName = basename(mainCheckout);
+
+export function strayTitle(): string {
+  return `Reaper: ${strayName} held (core-worktree)`;
+}
+
+export function strayBody(value: string): string {
+  return [
+    `@${pm}: the reaper did nothing, because the main repository's shared config sets \`core.worktree\`.`,
+    "",
+    `- Repository: \`${mainCheckout}\``,
+    `- Value: \`${value}\``,
+    "",
+    "Every git command in the main checkout runs against that tree instead, so the reaper's status, ref and patch-id checks would be wrong, and every factory precheck refuses to start a run. A `git init` or `git worktree` run with `GIT_DIR` or `GIT_WORK_TREE` exported usually causes it.",
+    "",
+    `What to do: check that tree for work you want, then run \`${strayFix()}\`. The reaper never fixes it itself.`,
+    "",
+    "The reaper closes this issue on its first pass after the setting is gone.",
+    "",
+  ].join("\n");
+}
+
+export function planStray(value: string, issues: ReportIssue[]): ReportPlan {
+  const want = { body: strayBody(value), title: strayTitle() };
+  const issue = issues.find((i) => heldName(i.title) === strayName);
+  const plan: ReportPlan = { close: [], create: [], update: [] };
+  if (!issue) plan.create.push(want);
+  else if (issue.title !== want.title || issue.body !== want.body)
+    plan.update.push({ ...want, number: issue.number });
+  return plan;
+}
+
 async function openReports(): Promise<ReportIssue[]> {
   const list = await json<(ReportIssue & { author: { login: string } })[]>([
     "gh",
@@ -95,7 +129,14 @@ async function openReports(): Promise<ReportIssue[]> {
 }
 
 export async function report(held: Held[]): Promise<void> {
-  const plan = planReport(held, await openReports());
+  await apply(planReport(held, await openReports()));
+}
+
+export async function reportStray(value: string): Promise<void> {
+  await apply(planStray(value, await openReports()));
+}
+
+async function apply(plan: ReportPlan): Promise<void> {
   for (const { title, body } of plan.create)
     await must([
       "gh",

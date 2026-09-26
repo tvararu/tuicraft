@@ -9,6 +9,7 @@ import {
 } from "factory/config";
 import { must } from "factory/exec";
 import { fetchIssues, type Issue, type Pr } from "factory/github";
+import { strayMessage, strayWorktree } from "factory/repo-guard";
 
 export type Decision =
   | { ok: true; out: Record<string, number | string> }
@@ -155,6 +156,11 @@ export async function runPrecheck(args: string[]): Promise<number> {
     return 2;
   }
   try {
+    const stray = await strayWorktree();
+    if (stray !== null) {
+      console.error(`precheck ${role}: ${strayMessage(stray)}`);
+      return 1;
+    }
     const decision = await deciders[role as Role]();
     if (decision.ok) console.log(JSON.stringify(decision.out));
     else console.error(`precheck ${role}: ${decision.why}`);

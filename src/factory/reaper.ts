@@ -9,7 +9,13 @@ import {
   roleCapHours,
 } from "factory/config";
 import { json, must, run } from "factory/exec";
-import { type Held, type Reason, report } from "factory/reaper-report";
+import {
+  type Held,
+  type Reason,
+  report,
+  reportStray,
+} from "factory/reaper-report";
+import { strayMessage, strayWorktree } from "factory/repo-guard";
 import { sweep } from "factory/soap";
 
 type Stamp = number | string | null | undefined;
@@ -488,6 +494,12 @@ async function reap(opts: ReapOptions): Promise<Held[]> {
 
 export async function runReap(args: string[]): Promise<number> {
   const dryRun = args.includes("--dry-run");
+  const stray = await strayWorktree();
+  if (stray !== null) {
+    console.error(`reap: ${strayMessage(stray)}`);
+    if (!dryRun) await reportStray(stray);
+    return 1;
+  }
   const held = await reap({ dryRun, idleHours });
   console.log(JSON.stringify(held, null, 2));
   if (dryRun) return 0;
