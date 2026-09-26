@@ -268,8 +268,8 @@ test("full inventory stops with loot_inventory_full", async () => {
   expect(runtime.snapshot().stopCause).toBe("loot_inventory_full");
 });
 
-test("release-only denial stops with reconnect cause", async () => {
-  const loot = fakeLoot({ releaseOnly: true });
+test("a failed release-only open stops with its reason", async () => {
+  const loot = fakeLoot({ openFailure: "release_only" });
   const runtime = makeCycle({
     tactics: fakeTactics([]),
     loot,
@@ -278,9 +278,23 @@ test("release-only denial stops with reconnect cause", async () => {
     now: () => 0,
   });
   await runtime.start({ guids: [2n], instruction: "fight" });
-  expect(runtime.snapshot().stopCause).toBe(
-    "loot_release_only_reconnect_required",
-  );
+  expect(runtime.snapshot().stopCause).toBe("loot_denied:release_only");
+});
+
+test("an open failed by a vanished corpse records no loot and continues", async () => {
+  const loot = fakeLoot({ openFailure: "loot_source_unavailable" });
+  const runtime = makeCycle({
+    tactics: fakeTactics([]),
+    loot,
+    recovery: fakeRecovery({ life: ["alive"] }),
+    control: fakeControl(),
+    now: () => 0,
+  });
+  await runtime.start({ guids: [2n], instruction: "fight" });
+  expect(runtime.snapshot()).toMatchObject({
+    queue: [{ guid: 2n, loot: "none", status: "done" }],
+    stopCause: "queue_exhausted",
+  });
 });
 
 test("current resurrection offer is accepted and the cycle continues", async () => {

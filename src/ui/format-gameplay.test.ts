@@ -170,6 +170,16 @@ describe("formatRewardsState", () => {
     expect(output).not.toContain("denied");
   });
 
+  test("says why the last open failed", () => {
+    const output = rewards({
+      lastOpenFailure: { guid: 0xabcn, observedAt: 1, reason: "release_only" },
+      loot: { phase: "closed" },
+    });
+    expect(output).toContain(
+      "Last open failed: the server answered with a release only (0xabc)",
+    );
+  });
+
   test("labels offered slots that allow direct pickup", () => {
     const item = {
       displayId: 0,

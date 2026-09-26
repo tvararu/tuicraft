@@ -84,8 +84,11 @@ async function openLoot(run: LootRun, guid: bigint): Promise<Opened> {
     if (!event) return stop("loot_denied:timeout");
     if (event.type === "loot_opened") return { ok: true, state: event.state };
     if (event.type === "loot_error") return lootError(event);
-    if (event.type === "loot_release_observed")
-      return stop("loot_release_only_reconnect_required");
+    if (event.type !== "loot_open_failed") continue;
+    const reason = event.state.lastOpenFailure?.reason ?? "unknown";
+    if (reason === "loot_source_unavailable")
+      return { ok: true, state: undefined };
+    return stop(`loot_denied:${reason}`);
   }
 }
 

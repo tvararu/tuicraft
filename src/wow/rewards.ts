@@ -69,12 +69,18 @@ export type RewardsLootError = {
 export type RewardsItemPush = ItemPushResult & { observedAt: number };
 export type RewardsMoneyNotice = LootMoneyNotify & { observedAt: number };
 export type RewardsRelease = LootReleaseResponse & { observedAt: number };
+export type RewardsOpenFailure = {
+  guid: bigint;
+  reason: string;
+  observedAt: number;
+};
 
 export type RewardsState = {
   loot: RewardsLoot;
   pending: RewardsRequest | undefined;
   inventory: InventoryState;
   lastLootError: RewardsLootError | undefined;
+  lastOpenFailure: RewardsOpenFailure | undefined;
   lastInventoryError: RewardsInventoryError | undefined;
   lastItemPush: RewardsItemPush | undefined;
   lastMoneyNotice: RewardsMoneyNotice | undefined;
@@ -92,6 +98,7 @@ export type RewardsEvent = {
     | "loot_removed"
     | "loot_money_cleared"
     | "loot_release_observed"
+    | "loot_open_failed"
     | "loot_error"
     | "inventory_error"
     | "inventory_result"
@@ -105,6 +112,7 @@ export type RewardsEvent = {
 
 export const NOT_DEAD = "Loot source is not authoritatively dead";
 export const NOT_LOOTABLE = "Creature has no observed lootable flag";
+export const RELEASE_ONLY_MS = 3000;
 
 function holdsItem(inventory: InventoryState, guid: bigint): boolean {
   return inventory.slots.some(
@@ -135,6 +143,8 @@ export class RewardsRuntime {
   private loot: RewardsLoot = { phase: "closed" };
   private pending: RewardsRequest | undefined;
   private lastLootError: RewardsLootError | undefined;
+  private lastOpenFailure: RewardsOpenFailure | undefined;
+  private releaseOnlyTimer: ReturnType<typeof setTimeout> | undefined;
   private lastInventoryError: RewardsInventoryError | undefined;
   private lastItemPush: RewardsItemPush | undefined;
   private lastMoneyNotice: RewardsMoneyNotice | undefined;
@@ -159,6 +169,9 @@ export class RewardsRuntime {
       pending: this.pending ? { ...this.pending } : undefined,
       inventory: this.inventory(),
       lastLootError: this.lastLootError ? { ...this.lastLootError } : undefined,
+      lastOpenFailure: this.lastOpenFailure
+        ? { ...this.lastOpenFailure }
+        : undefined,
       lastInventoryError: copyInventoryError(this.lastInventoryError),
       lastItemPush: this.lastItemPush ? { ...this.lastItemPush } : undefined,
       lastMoneyNotice: this.lastMoneyNotice
@@ -183,6 +196,7 @@ export class RewardsRuntime {
     if (flags === undefined || !(flags & 1)) throw new Error(NOT_LOOTABLE);
     const requestedAt = this.deps.now();
     this.deps.send(GameOpcode.CMSG_LOOT, buildLoot(guid));
+    this.lastOpenFailure = undefined;
     this.loot = {
       phase: "opening",
       guid,
@@ -242,6 +256,7 @@ export class RewardsRuntime {
     if (this.loot.phase === "closed" || response.guid !== this.loot.guid)
       return;
     if (response.kind === "error") {
+      this.stopReleaseOnlyTimer();
       this.lastLootError = {
         guid: response.guid,
         error: response.error,
@@ -253,6 +268,7 @@ export class RewardsRuntime {
       return;
     }
     if (this.loot.phase !== "opening") return;
+    this.stopReleaseOnlyTimer();
     this.loot = {
       phase: "open",
       guid: response.guid,
@@ -292,6 +308,8 @@ export class RewardsRuntime {
     if (this.loot.phase === "closed" || response.guid !== this.loot.guid)
       return;
     this.lastRelease = { ...response, observedAt: this.deps.now() };
+    if (this.loot.phase === "opening")
+      this.startReleaseOnlyTimer(response.guid);
     if (response.status === 1 && this.loot.phase !== "opening") {
       this.loot = { phase: "closed" };
       this.pending = undefined;
@@ -378,6 +396,8 @@ export class RewardsRuntime {
     this.lastItemPush = undefined;
     this.lastMoneyNotice = undefined;
     this.lastRelease = undefined;
+    this.lastOpenFailure = undefined;
+    this.stopReleaseOnlyTimer();
     this.lastInventory = undefined;
   }
 
@@ -424,9 +444,40 @@ export class RewardsRuntime {
   }
 
   private invalidate(reason: string): void {
+    if (this.loot.phase === "opening") {
+      this.failOpen(reason);
+      return;
+    }
     if (this.loot.phase === "closed" || this.loot.invalidatedReason) return;
     this.loot.invalidatedReason = reason;
     this.emit("loot_invalidated");
+  }
+
+  private failOpen(reason: string): void {
+    if (this.loot.phase !== "opening") return;
+    this.stopReleaseOnlyTimer();
+    this.lastOpenFailure = {
+      guid: this.loot.guid,
+      reason,
+      observedAt: this.deps.now(),
+    };
+    this.loot = { phase: "closed" };
+    this.pending = undefined;
+    this.emit("loot_open_failed");
+  }
+
+  private startReleaseOnlyTimer(guid: bigint): void {
+    if (this.releaseOnlyTimer) return;
+    this.releaseOnlyTimer = setTimeout(() => {
+      this.releaseOnlyTimer = undefined;
+      if (this.loot.phase === "opening" && this.loot.guid === guid)
+        this.failOpen("release_only");
+    }, RELEASE_ONLY_MS);
+  }
+
+  private stopReleaseOnlyTimer(): void {
+    clearTimeout(this.releaseOnlyTimer);
+    this.releaseOnlyTimer = undefined;
   }
 
   private release(window: RewardsOpenLoot): RewardsState {
