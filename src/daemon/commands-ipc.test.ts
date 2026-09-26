@@ -72,6 +72,18 @@ describe("IPC round-trip", () => {
     expect(lines).toEqual(["[say] Alice: hi", "[say] Bob: hey"]);
   });
 
+  test("READ_JSON delivers a response larger than the socket buffer", async () => {
+    ipc.start();
+    const events = Array.from(
+      { length: 40 },
+      (_, i) => `{"type":"QUEST","n":${i},"pad":"${"x".repeat(100_000)}"}`,
+    );
+    for (const json of events)
+      ipc.result.events.push({ json, text: undefined });
+    const lines = await sendToSocket("READ_JSON", ipc.sockPath);
+    expect(lines).toEqual(events);
+  });
+
   test("bare text sends via sticky mode", async () => {
     ipc.start();
     const lines = await sendToSocket("hello world", ipc.sockPath);

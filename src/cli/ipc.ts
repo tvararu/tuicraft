@@ -15,6 +15,7 @@ export function sendToSocket(
   sock?: string,
 ): Promise<string[]> {
   let buffer = "";
+  const decoder = new TextDecoder();
   let complete = false;
   return new Promise<string[]>((resolve, reject) => {
     Bun.connect({
@@ -23,7 +24,7 @@ export function sendToSocket(
           if (!complete) reject(new Error("Incomplete daemon response"));
         },
         data(socket, data) {
-          buffer += Buffer.from(data).toString();
+          buffer += decoder.decode(data, { stream: true });
           if (buffer.endsWith("\n\n") || buffer === "\n") {
             complete = true;
             socket.end();

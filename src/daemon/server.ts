@@ -17,6 +17,7 @@ import {
   onIgnoreEvent,
 } from "daemon/events";
 import { type IpcCommand, parseIpcCommand } from "daemon/parse";
+import { type SocketOutbox, socketOutbox } from "daemon/socket-outbox";
 import { clientConfig, readConfig } from "lib/config";
 import { ignoreFailure } from "lib/ignore-failure";
 import { type Paths, resolvePaths } from "lib/paths";
@@ -34,6 +35,7 @@ type SocketState = {
   processing: boolean;
   ended: boolean;
   abort: AbortController | undefined;
+  out: SocketOutbox;
 };
 
 type ServerCtx = {
@@ -72,6 +74,7 @@ function getSocketState(socket: IpcSocket): SocketState {
     abort: undefined,
     buffer: "",
     ended: false,
+    out: socketOutbox(socket),
     processing: false,
     queue: [],
   };
@@ -160,7 +163,7 @@ function drainQueue(ctx: ServerCtx, socket: IpcSocket): void {
   }
   if (state.buffer.length > 0) return;
   state.ended = true;
-  socket.end();
+  state.out.end();
 }
 
 function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
@@ -169,10 +172,10 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
   state.processing = true;
   ctx.onActivity?.();
   if (!cmd) {
-    writeLines(socket, ["ERR unknown command"]);
+    writeLines(state.out, ["ERR unknown command"]);
     state.ended = true;
     state.processing = false;
-    socket.end();
+    state.out.end();
     return;
   }
   const abort = new AbortController();
@@ -187,11 +190,11 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
   }
   const gated: IpcSocket = {
     end() {
-      if (!abort.signal.aborted) socket.end();
+      if (!abort.signal.aborted) state.out.end();
     },
     write(data) {
       if (abort.signal.aborted) return 0;
-      return socket.write(data);
+      return state.out.write(data);
     },
   };
   abort.signal.addEventListener("abort", () => finish(false), { once: true });
@@ -206,7 +209,7 @@ function processLine(ctx: ServerCtx, socket: IpcSocket, { cmd }: Queued): void {
       finish(shouldExit);
     })
     .catch(() => {
-      if (!abort.signal.aborted) writeLines(socket, ["ERR internal"]);
+      if (!abort.signal.aborted) writeLines(state.out, ["ERR internal"]);
       finish(false);
     });
 }
@@ -263,6 +266,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
     socket: {
       close: (socket) => onSocketClose(socket),
       data: (socket, data) => onSocketData(ctx, socket, data),
+      drain: (socket) => getSocketState(socket).out.flush(),
       error: (socket) => onSocketClose(socket),
     },
     unix: sock,
