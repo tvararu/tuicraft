@@ -1,4 +1,4 @@
-import type { WalkTarget, WorldConn, WorldHandle } from "wow/client";
+import type { WalkTarget, WorldHandle } from "wow/client";
 import type { ControlPose, MovementDirection, WalkOutcome } from "wow/control";
 import { bearing } from "wow/geometry";
 import {
@@ -7,6 +7,7 @@ import {
   type NavPoint,
 } from "wow/navigation";
 import type { Runtimes } from "wow/runtime";
+import type { WorldConn } from "wow/world-conn";
 
 function manualMove(
   rt: Runtimes,

@@ -1,6 +1,5 @@
 import { must } from "test/must";
 import { hexBytes } from "test/quest-8325-packets";
-import type { WorldConn } from "wow/client";
 import { EntityStore } from "wow/entity-store";
 import {
   registerLootHandlers,
@@ -15,6 +14,7 @@ import {
 import { PacketReader } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
+import type { WorldConn } from "wow/world-conn";
 
 export function questCapture(self: bigint) {
   const entities = new EntityStore();

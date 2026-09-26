@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import { parseAuraUpdate, parseAuraUpdateAll } from "wow/protocol/aura";
 import {
   ATTACK_SWING_ERRORS,
@@ -57,6 +56,7 @@ import {
   parseSupersededSpell,
 } from "wow/protocol/spell";
 import type { QuestDialog } from "wow/quests";
+import type { WorldConn } from "wow/world-conn";
 
 export function registerCombatHandlers(conn: WorldConn): void {
   registerSpellHandlers(conn);

@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { FIXTURE_CHARACTER } from "test/fixtures";
 import { startMockWorldServer } from "test/mock-world-server";
 import { base, fakeAuth, waitForEchoProbe } from "test/world-handlers-fixtures";
-import { type ChatMessage, type WorldConn, worldSession } from "wow/client";
+import { type ChatMessage, worldSession } from "wow/client";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import type { WorldConn } from "wow/world-conn";
 import { createWorldEvents } from "wow/world-events";
 import { handleChatMessage } from "wow/world-handlers-chat";
 

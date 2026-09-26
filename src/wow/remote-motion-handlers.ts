@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader } from "wow/protocol/packet";
 import {
@@ -8,6 +7,7 @@ import {
   REMOTE_MOVEMENT_OPCODES,
   type RemoteMovementBody,
 } from "wow/protocol/remote-movement";
+import type { WorldConn } from "wow/world-conn";
 
 export function observeRemoteMovement(
   conn: WorldConn,

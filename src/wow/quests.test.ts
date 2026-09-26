@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { must } from "test/must";
-import type { WorldConn } from "wow/client";
 import { EntityStore } from "wow/entity-store";
 import { registerQuestHandlers } from "wow/gameplay-handlers";
 import {
@@ -13,6 +12,7 @@ import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { readQuestLog } from "wow/quest-slots";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
+import type { WorldConn } from "wow/world-conn";
 
 const self = 1n;
 const giver = 2n;

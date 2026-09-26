@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import {
   parseDuelComplete,
   parseDuelCountdown,
@@ -16,6 +15,7 @@ import {
 import { GameOpcode } from "wow/protocol/opcodes";
 import { joinGuid, type PacketReader, PacketWriter } from "wow/protocol/packet";
 import { buildOutgoingPacket } from "wow/protocol/world";
+import type { WorldConn } from "wow/world-conn";
 
 export function sendPacket(
   conn: WorldConn,

@@ -1,5 +1,5 @@
 import type { Unsubscribe } from "lib/emitter";
-import type { ClientConfig, WorldConn } from "wow/client";
+import type { ClientConfig } from "wow/client";
 import { CombatRuntime } from "wow/combat";
 import { CombatActions } from "wow/combat-actions";
 import { ControlRuntime } from "wow/control";
@@ -23,6 +23,7 @@ import { RecoveryRuntime } from "wow/recovery";
 import { RewardsRuntime } from "wow/rewards";
 import { loadSpellCatalog } from "wow/spell-catalog";
 import { TacticsLoop } from "wow/tactics";
+import type { WorldConn } from "wow/world-conn";
 import { selfGuid, sendPacket } from "wow/world-handlers";
 
 export type Runtimes = {

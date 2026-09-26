@@ -1,4 +1,4 @@
-import type { WorldConn, WorldHandle } from "wow/client";
+import type { WorldHandle } from "wow/client";
 import type { GuildRoster } from "wow/guild-store";
 import {
   buildJoinChannel,
@@ -31,6 +31,7 @@ import {
   buildDelFriend,
   buildDelIgnore,
 } from "wow/protocol/social";
+import type { WorldConn } from "wow/world-conn";
 import { sendPacket } from "wow/world-handlers";
 import {
   handleGuildQueryResponse,

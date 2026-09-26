@@ -1,5 +1,5 @@
 import type { AuthResult } from "wow/auth";
-import type { ClientConfig, WorldConn } from "wow/client";
+import type { ClientConfig } from "wow/client";
 import { Arc4 } from "wow/crypto/arc4";
 import { EntityStore, isUnit } from "wow/entity-store";
 import { FriendStore } from "wow/friend-store";
@@ -20,6 +20,7 @@ import {
 } from "wow/protocol/world";
 import { RemoteMotion } from "wow/remote-motion";
 import type { Runtimes } from "wow/runtime";
+import type { WorldConn } from "wow/world-conn";
 import { clearWorldEvents, createWorldEvents } from "wow/world-events";
 import { selfGuid, sendPacket } from "wow/world-handlers";
 
