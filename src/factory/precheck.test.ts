@@ -35,27 +35,32 @@ describe("worker", () => {
     ];
     expect(pickWork(issues)).toEqual({
       ok: true,
-      out: { issue: 5, mode: "fresh" },
+      out: { issue: 5, mode: "fresh", reason: "fresh" },
     });
   });
 
-  test("an open factory PR for the issue makes it a rework", () => {
+  test("an open factory PR for the issue makes it a rework, with why", () => {
+    const failed = [{ at: ago(30), oid: head, state: "FAILURE" }];
     const rework = issue(7, "ready", {
       prs: [
         pr({ branch: "factory/70-other", number: 69 }),
-        pr({ branch: "factory/7-fix-it", number: 71 }),
+        unreviewed({
+          branch: "factory/7-fix-it",
+          number: 71,
+          verdicts: failed,
+        }),
       ],
     });
     expect(pickWork([rework])).toEqual({
       ok: true,
-      out: { issue: 7, mode: "rework", pr: 71 },
+      out: { issue: 7, mode: "rework", pr: 71, reason: "review" },
     });
     const closed = issue(7, "ready", {
       prs: [pr({ branch: "factory/7-fix-it", state: "CLOSED" })],
     });
     expect(pickWork([closed])).toEqual({
       ok: true,
-      out: { issue: 7, mode: "fresh" },
+      out: { issue: 7, mode: "fresh", reason: "fresh" },
     });
   });
 
@@ -64,7 +69,7 @@ describe("worker", () => {
     const done = issue(2, "ready", { blockers: ["CLOSED"] });
     expect(pickWork([blocked, done])).toEqual({
       ok: true,
-      out: { issue: 2, mode: "fresh" },
+      out: { issue: 2, mode: "fresh", reason: "fresh" },
     });
     expect(pickWork([blocked]).ok).toBe(false);
   });
@@ -77,7 +82,7 @@ describe("worker", () => {
     });
     expect(pickWork([claimed, issue(2, "ready")])).toEqual({
       ok: true,
-      out: { issue: 2, mode: "fresh" },
+      out: { issue: 2, mode: "fresh", reason: "fresh" },
     });
     const stale = { ...claimed, markers: [marker(claim, 4 * 60)] };
     expect(pickWork([{ ...stale, statusAt: ago(5 * 60) }]).ok).toBe(true);

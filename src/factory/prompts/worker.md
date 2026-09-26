@@ -29,9 +29,10 @@ Blocked cards on the project board.
 
 1. Orca ran the repo setup (`orca.yaml`) before starting you.
 2. `bun $F precheck worker`. Exit 1 means nothing to do: stop now. On exit
-   0 it prints `{"issue":N,"mode":"fresh"}` or
-   `{"issue":N,"mode":"rework","pr":M}`. That is your issue; `mode` says
-   whether this run starts fresh or reworks the open PR `M`.
+   0 it prints `{"issue":N,"mode":"fresh","reason":"fresh"}` or
+   `{"issue":N,"mode":"rework","pr":M,"reason":R}`. That is your issue;
+   `mode` says whether this run starts fresh or reworks the open PR `M`,
+   and `reason` says why this run happened (step 6).
 3. `bun $F status N` must print `"status":"ready"`; otherwise stop without
    any change. Read the issue with
    `gh issue view N -R tvararu/tuicraft --json title,body,comments`.
@@ -45,11 +46,30 @@ Blocked cards on the project board.
    comment (`gh api -X DELETE repos/tvararu/tuicraft/issues/comments/<id>`)
    and stop without any other change; do not move the card. If
    `bun $F status N` no longer prints `in-progress`, stop the same way.
-6. Attempts: the workpad (step 3) has an `Attempts: k/3` line counting
-   earlier factory runs that opened or reworked a PR for this issue. This
-   run is attempt k+1. If k is already 3, add a workpad section saying what
-   keeps failing, comment on the issue what keeps failing and what the
-   maintainer needs to do, run `bun $F status N blocked`, and stop.
+6. Attempts: the workpad (step 3) has an `Attempts: k/3` line counting the
+   attempts used so far, and a Runs list with one line per earlier worker
+   run. Only two kinds of run are attempts: the one that opens the first
+   PR, and a rework after a failed review. The precheck's `reason` says
+   which kind this run is:
+   - `fresh`: no open factory PR; this run opens the first one.
+   - `review`: the PR's head failed `factory/review`; rework it.
+   - `rebase`: the PR's latest `factory/review` passed and the merger sent
+     the card back (a conflict or failing CI after its rebase, or a head it
+     bounced or rebased; see its comments and `factory:bounce` or
+     `factory:rebase` markers). Rebase or fix CI without reworking the
+     reviewed change.
+   - `recovery`: the PR's head has no review of its own: an earlier run
+     died after pushing or before the hand-off. Finish its work.
+
+   A `fresh` run counts unless the Runs list already has a counted
+   `fresh` run, and a `review` run counts unless it already has a counted
+   `review` run at the same PR head: that earlier run died before it
+   pushed, so this run is `recovery`. `rebase` and `recovery` runs never
+   count. A run that counts is attempt k+1. If k is already 3, record this
+   run in the Runs list as blocked at the cap, not counted, add a workpad
+   section saying what keeps failing, comment on the issue what keeps
+   failing and what the maintainer needs to do, run
+   `bun $F status N blocked`, and stop.
 
 ## 2. Branch and card
 
@@ -73,12 +93,17 @@ it in place with
 
 Write it before any code, in this order:
 
-1. `Attempts: <k>/3` and the current status line.
+1. `Attempts: <k>/3`, counting this run if it counts (step 6), and the
+   current status line.
 2. Acceptance criteria: numbered, observable, taken from the issue. Treat
    the issue's Validation or Test Plan sections as non-negotiable.
 3. Test plan: unit tests, the live scenario you will run, and the proof you
    will attach.
 4. Progress and blockers, updated as you go.
+5. `## Runs`: keep every earlier line and add one for this run:
+   `- <run>: <reason>[ at <short PR head>], attempt <k>` or `not counted`,
+   with the head this run started from (none for `fresh`) and a few words
+   on what sent the card back when the reason alone does not say it.
 
 If the issue is ambiguous or needs something only the maintainer can decide
 (a new preset, a product choice, credentials), write the question in the
