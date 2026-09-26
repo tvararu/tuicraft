@@ -27,6 +27,7 @@ import {
 } from "cli/send-output";
 import { messageOf } from "lib/errors";
 import { resolvePaths } from "lib/paths";
+import { sessionRecord } from "tools/session-record";
 import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
   type: "text",
 };
@@ -322,6 +323,12 @@ async function runLogs(): Promise<void> {
   }
 }
 
+async function runRecord(since: number | undefined): Promise<void> {
+  const file = Bun.file(resolvePaths().logPath);
+  const text = (await file.exists()) ? await file.text() : "";
+  console.log(JSON.stringify(sessionRecord(text, since), null, 2));
+}
+
 async function runAction(cliAction: CliAction): Promise<void> {
   switch (cliAction.mode) {
     case "interactive":
@@ -363,6 +370,8 @@ async function runAction(cliAction: CliAction): Promise<void> {
       return;
     case "logs":
       return runLogs();
+    case "record":
+      return runRecord(cliAction.since);
     default:
       await ensureDaemon();
       if (isInspection(cliAction)) await printInspection(cliAction);

@@ -19,7 +19,7 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 - Without `--json`, `start` prints `Daemon is already running.` or `CONNECTED` on success. `CONNECTED` confirms only that the daemon socket answered the probe. It does not verify the world session. Startup failure exits with status 1.
 - Without `--json`, `status` returns `CONNECTED` or `Daemon is not running.`
 - `stop` gracefully disconnects the session and terminates the daemon. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
-- `tuicraft logs` prints the raw JSONL session log. `tuicraft skill` prints this document. `tuicraft version` (`-v`, `--version`) prints the version. `tuicraft help` (`-h`, `--help`) prints usage. `tuicraft` with no arguments starts the interactive TUI, which is for humans.
+- `tuicraft logs` prints the raw JSONL session log. `tuicraft record [--since MS]` prints one JSON session record built from the logged CYCLE, TACTICS and RECOVERY events (see Session record below). `tuicraft skill` prints this document. `tuicraft version` (`-v`, `--version`) prints the version. `tuicraft help` (`-h`, `--help`) prints usage. `tuicraft` with no arguments starts the interactive TUI, which is for humans.
 - `tuicraft setup` configures the account. With no flags it runs an interactive wizard; non-interactively pass `--account NAME --password PASS --character NAME` and optionally `--host` (default `t1`), `--port` (`3724`), `--language` (`1`, Orcish; `7` for Alliance) and `--timeout_minutes` (`30`).
 
 ## JSON output
@@ -273,6 +273,17 @@ A current unanswered resurrection offer is a separate choice. Answer `resurrect 
 Mutating recovery actions stop tactics and motion. `halt` drops older queued recovery mutations. It cannot reverse a sent request. Command and inspection errors print `ERR` and exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, SPIRIT_HEALER <guid>, RESURRECT accept|decline.
+
+## Session record
+
+    tuicraft record                     # whole session log
+    tuicraft record --since 1790382736199
+
+- Prints one JSON object (not an envelope; no daemon needed; rejects `--json`) derived from the CYCLE, TACTICS and RECOVERY events in the session log at or after `--since` epoch ms.
+- `cycles[]`: one entry per `cycle` start or `cycle --resume`, with `kind`, `instruction`, per-target `status`/`cause`/`outcome`/`loot`, `recoveries`, `startsUsed`, `stopCause`, `stopDetail`.
+- Totals: `fights` (runs started, outcomes by status and reason, lone `fight` runs included), `completions` (`targetsDone`, `serverKillCredit`), `blocked` (`targetsSkipped`, `skipsByCause`, and `cycleStops` for any stop other than `queue_exhausted`, `max_starts_reached`, `halt`, `manual_override`), `recoveries` (`deaths`, `recovered`, `byOutcome`), `interventions[]` (`halt`, `manual_override`, `resume`, `instruction_change` with `at` and `scope`), `staleActions` (discarded Jev results by reason).
+- `latency`: `loopRatePerSec` (requests per active tactics second, with `meanRequestMs` and `p95RequestMs`) and `decisionRatePerSec` (requests that offered any candidate other than `wait`/`cancel`, counted in `decisionRequests`, per active second; `appliedDecisions` and `appliedWaits` alongside). Quote both together; the loop rate alone is not the decision cadence.
+- A target resumed across runs counts once. GM and chat commands are not in these events; record them yourself.
 
 ## Offered quest interactions
 

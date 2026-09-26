@@ -7,7 +7,7 @@ import {
   parseWho,
 } from "cli/args-chat";
 import { parseGameplay, take } from "cli/args-gameplay";
-import { parseBare } from "cli/tokens";
+import { parseBare, parseUnsigned } from "cli/tokens";
 import type { WalkTarget } from "wow/client";
 import type { MovementDirection } from "wow/control";
 import type { FramingVariant } from "wow/framing";
@@ -22,6 +22,7 @@ export type CliAction =
   | { mode: "status"; json?: true }
   | { mode: "start"; json?: true }
   | { mode: "logs" }
+  | { mode: "record"; since?: number }
   | { mode: "read"; wait: number | undefined; json: boolean }
   | { mode: "tail"; json: boolean }
   | { mode: "say"; message: string; json: boolean; wait: number | undefined }
@@ -118,6 +119,7 @@ const SUBCOMMANDS = new Set([
   "read",
   "tail",
   "logs",
+  "record",
   "help",
   "version",
   "send",
@@ -236,6 +238,8 @@ function parseSubcommand(args: string[]): CliAction | undefined {
       return parseSend(args);
     case "who":
       return parseWho(args);
+    case "record":
+      return parseRecord(rest);
     case "nearby": {
       const all = hasFlag(rest, "--all");
       return {
@@ -247,6 +251,16 @@ function parseSubcommand(args: string[]): CliAction | undefined {
     default:
       return parseGameplay(cmd, rest);
   }
+}
+
+function parseRecord(rest: string[]): CliAction {
+  if (rest.length === 0) return { mode: "record" };
+  const since =
+    rest.length === 2 && rest[0] === "--since"
+      ? parseUnsigned(rest[1] ?? "", 0, Number.MAX_SAFE_INTEGER)
+      : undefined;
+  if (since === undefined) throw new Error("invalid record");
+  return { mode: "record", since };
 }
 
 const SETUP_VALUE_FLAGS: Record<string, true> = {
@@ -304,6 +318,7 @@ function withJson(action: CliAction, json: boolean): CliAction {
     case "setup":
     case "help":
     case "logs":
+    case "record":
     case "skill":
       throw new Error(`--json is not supported for ${action.mode}`);
     default:

@@ -175,6 +175,7 @@ tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
 tuicraft stop [--json]     # stop daemon
 tuicraft logs              # print the raw session log
+tuicraft record --since 1790382736199 # session record JSON from the log
 tuicraft skill             # print SKILL.md for AI agents
 tuicraft version           # print version
 ```
@@ -231,6 +232,12 @@ responds, not whether the world session is healthy. `start --json` reports
 whether a daemon started or already existed. `stop --json` reports intent when
 it stops a daemon and a `not_running` result when none exists.
 `logs` keeps its raw JSONL session log; `skill` keeps its raw reference text.
+`record [--since MS]` prints one JSON session record derived from the logged
+CYCLE, TACTICS and RECOVERY events: cycle runs and resumes, kills, skips and
+blocking stops, deaths and recoveries, interventions (HALT, override, resume,
+instruction change), discarded Jev results, and latency. Its loop rate
+(requests per active second) and decision rate (requests offering more than
+`wait`/`cancel`, per active second) must be quoted together. It always prints JSON.
 Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 

@@ -64,6 +64,19 @@ describe("parseArgs", () => {
     expect(parseArgs(["logs"])).toEqual({ mode: "logs" });
   });
 
+  test("record takes an optional --since epoch millisecond bound", () => {
+    expect(parseArgs(["record"])).toEqual({ mode: "record" });
+    expect(parseArgs(["record", "--since", "1790382736199"])).toEqual({
+      mode: "record",
+      since: 1_790_382_736_199,
+    });
+    expect(() => parseArgs(["record", "--since"])).toThrow("invalid record");
+    expect(() => parseArgs(["record", "--since", "-1"])).toThrow(
+      "invalid record",
+    );
+    expect(() => parseArgs(["record", "--json"])).toThrow();
+  });
+
   test("help subcommand", () => {
     expect(parseArgs(["help"])).toEqual({ mode: "help" });
   });

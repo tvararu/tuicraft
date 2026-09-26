@@ -31,7 +31,7 @@ function parseGuid(raw: string): bigint | undefined {
   return guid <= MAX_GUID ? guid : undefined;
 }
 
-function parseUnsigned(
+export function parseUnsigned(
   raw: string,
   min: number,
   max: number,

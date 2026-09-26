@@ -79,6 +79,7 @@ USAGE
                             Release-only opening stays unanswered; reconnect explicitly
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
+  tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)
   tuicraft skill              Print SKILL.md for AI agents
   tuicraft version            Print version and exit
   tuicraft help               Show this help
