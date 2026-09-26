@@ -1,0 +1,35 @@
+{
+  "account": "FAC6AB71649FF",
+  "character": "Fgklhbgejpp",
+  "guid": "0xa12",
+  "buildCommit": "4b5a9b3",
+  "binary": "tmp/m5b-live/tuicraft-8326",
+  "buildNote": "built from 4b5a9b3 plus an uncommitted TUICRAFT_PACKET_DUMP patch in client-connection.ts/world-handlers.ts used only to capture packets",
+  "giver": {
+    "name": "Magistrix Erona",
+    "entry": 15278,
+    "guid": "0xf130003bae004980"
+  },
+  "journal": "tmp/m5b-live/journal-8326.md section A; full CLI JSON in tmp/m5b-live/commands.log; packets in tmp/m5b-live/packets-8326.txt",
+  "position": {
+    "goto": {"at": 1790384140339, "cmd": "goto 10382 -6379.56 37.69", "output": {"command": "goto", "data": null, "error": null, "events": [], "kind": "intent"}},
+    "observedAt": 1790384146716,
+    "self": {"x": 10382, "y": -6379.56, "z": 37.630558013916016, "mapId": 530, "originSource": "predicted"},
+    "erona": {"distance": 36.02, "horizontalDistance": 35.85, "x": 10352, "y": -6359.93017578125, "z": 34.114601135253906, "listedByNearby": true}
+  },
+  "steps": [
+    {"step": "talk", "at": 1790384152008, "output": {"command": "talk", "data": null, "error": null, "events": [], "kind": "intent"}, "dump": ["1790384152026 >17b 804900ae3b0030f1"], "serverAnswer": "none; no gossip packet between the talk and the cancel"},
+    {"step": "quests-after-3s", "at": 1790384155028, "dialog": null, "giver": "0xf130003bae004980", "lastIntent": {"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}, "pending": {"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026, "status": "unanswered"}, "unresolved": []},
+    {"step": "cancel-1", "at": 1790384155051, "output": {"command": "cancel-interaction", "data": null, "error": null, "events": [], "kind": "intent"}, "dump": ["1790384155073 >190", "1790384155089 17e"], "dumpNote": ">190 CMSG_QUESTGIVER_CANCEL, 17e SMSG_GOSSIP_COMPLETE"},
+    {"step": "read", "at": 1790384156074, "questEvents": [{"type": "QUEST", "evt": "intent", "source": "request", "lastIntent": {"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}, "pending": {"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026, "status": "unanswered"}, "unresolved": []}, {"type": "QUEST", "evt": "intent", "source": "request", "lastIntent": {"action": "cancel", "at": 1790384155073, "guid": "0xf130003bae004980"}, "pending": {"action": "cancel", "at": 1790384155073, "guid": "0xf130003bae004980", "status": "unanswered"}, "unresolved": [{"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}]}, {"type": "QUEST", "evt": "closed", "source": "packet", "lastIntent": {"action": "cancel", "at": 1790384155073, "guid": "0xf130003bae004980"}, "pending": null, "unresolved": [{"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}]}]},
+    {"step": "quests-after-cancel-1", "at": 1790384156095, "dialog": null, "giver": null, "lastIntent": {"action": "cancel", "at": 1790384155073, "guid": "0xf130003bae004980"}, "pending": null, "unresolved": [{"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}]},
+    {"step": "cancel-2", "at": 1790384156114, "output": {"command": "cancel-interaction", "data": null, "error": null, "events": [], "kind": "intent"}, "dump": ["1790384156133 >190", "1790384156143 17e"]},
+    {"step": "quests-after-cancel-2", "at": 1790384157134, "dialog": null, "giver": null, "lastIntent": {"action": "cancel", "at": 1790384156133}, "pending": null, "unresolved": [{"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}]}
+  ],
+  "laterState": {
+    "at": 1790384565020,
+    "unresolved": [{"action": "talk", "guid": "0xf130003bae004980", "at": 1790384152026}],
+    "note": "The stage-A talk was still in unresolved after quest 8326 was rewarded (choose-reward at 1790384548689) and after the later successful talks at 1790384183842 and 1790384535175. Nothing cleared it"
+  },
+  "outcome": "positive"
+}
