@@ -560,10 +560,37 @@ Escaped newlines and quotes stay inside the code instead of creating another IPC
 Auto-accept quests (for example 8325) enter the log when `select-quest` opens their details. The details stay open, but `accept-quest` then fails with `quest_already_in_log` instead of sending a request the server rejects.
 
 `tuicraft complete-quest` _id_
-:: Request completion for a currently offered quest. Log membership or queried metadata alone does not authorize this action.
+:: Send `CMSG_QUESTGIVER_COMPLETE_QUEST` for a quest in the current dialog. This is the request `select-quest` already sends for a quest you can turn in. The server answers with a `requestItems` dialog when the quest needs items, even if you carry them, and with `offer` otherwise. On an open `requestItems` dialog it only re-sends the same dialog, with no error; use `request-reward` there. Log membership or queried metadata alone does not authorize this action.
 
 `tuicraft request-reward`
-:: Request the reward offer for the current dialog. Server prerequisites still apply.
+:: The Continue button of a `requestItems` dialog: send `CMSG_QUESTGIVER_REQUEST_REWARD`. The server checks the required items and money, completes the quest and answers with the `offer` dialog. It sends nothing when they are missing, and tuicraft refuses the request with `quest_requirements_unmet` while the dialog's completion flags say so.
+
+### Accept and turn-in sequences
+
+Each step depends on the current dialog kind, `quests --json` `.data.dialog.kind`:
+
+| Kind | What it is | Advance with |
+| ---- | ---------- | ------------ |
+| `gossip`, `list` | The giver's menu: options, offered and returnable quests | `select-quest <id>` (or `select-option <id>`) |
+| `details` | A new quest's text | `accept-quest`; an auto-accept quest is already in the log, so `cancel-interaction` |
+| `requestItems` | Turn-in of a quest that needs items or money | `request-reward` |
+| `offer` | The reward offer | `choose-reward <index>` (0 without choices) |
+
+Accept: `talk <giver>` → `gossip` → `select-quest <id>` → `details` →
+`accept-quest` → the log shows it accepted.
+
+Turn in: `talk <giver>` → `gossip` → `select-quest <id>`. For a quest that
+needs items (8326 Unfortunate Measures, 8 Lynx Collars) the server opens
+`requestItems`; `request-reward` moves it to `offer`. A kill or talk quest
+(8325, 8564) goes straight to `offer`. Then `choose-reward <index>`, and the
+server sends the reward (`rewarded`, and the quest leaves the log).
+
+Check the log before `accept-quest`: this server accepts many quests (8325,
+8326) as soon as `select-quest` opens their `details`, and `accept-quest` on
+one of those fails. Close such a dialog with `cancel-interaction`. After a
+reward, the giver can open the follow-up quest's `details` at once (8326 opens
+8327, already accepted), so the dialog is not closed yet. Item objectives show carried counts from
+the inventory (`items` in `quests --json`).
 
 `tuicraft choose-reward` _index_
 :: Choose a currently offered reward using a zero-based index from 0 through 5.

@@ -68,8 +68,8 @@ USAGE
   tuicraft select-quest <id>  Choose a quest from the offered menu
   tuicraft accept-quest      Request acceptance of offered details
                             Auto-accept quests are logged on select; accept then fails
-  tuicraft complete-quest <id>  Request offered quest completion
-  tuicraft request-reward    Request the current quest reward offer
+  tuicraft complete-quest <id>  Send the turn-in request select-quest sends; re-sends requestItems
+  tuicraft request-reward    Continue a requestItems dialog to the reward offer
   tuicraft choose-reward <index>  Choose offered reward (zero-based 0-5)
   tuicraft abandon-quest <slot>  Request log-slot abandonment (zero-based 0-24)
   tuicraft cancel-interaction  Request close; wait for observed close
@@ -125,6 +125,9 @@ JSON OUTPUT
   keeps the original kind and data. All JSON errors print to stdout.
   logs and skill remain raw; --json is unsupported for them, setup, help, version,
   interactive mode and internal daemon mode.
+  Quest steps by quests --json .data.dialog.kind: gossip/list -> select-quest <id>;
+  details -> accept-quest (unless already in the log); requestItems -> request-reward;
+  offer -> choose-reward <i>.
   Without --json, combat, tactics, cycling, recovery, inventory, experience and
   loot print readable summaries.
   Control actions print daemon request acceptance, not a server result.
