@@ -29,6 +29,9 @@ const GROUND_STEP = 0.5;
 export const GROUND_ERROR = 0.25;
 const FLOOR_MERGE = 0.01;
 const MESH_HEIGHT = 1.6;
+const WALKABLE_CLIMB = 1;
+const CELL_HEIGHT = 0.25;
+const CORNER_RISE = WALKABLE_CLIMB + CELL_HEIGHT;
 
 export type NavigationRefusal = "wait" | "pick_destination" | "stop";
 
@@ -205,7 +208,13 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
     const to = corners[i];
     if (from === undefined || to === undefined)
       throw new Error("ground route corner missing");
-    stepCorner(map, points, from, to);
+    const corner = stepCorner(map, points, from, to);
+    const agrees =
+      i < corners.length - 1
+        ? meshCornerOnGround(map, corner, to.z)
+        : Math.abs(corner.z - to.z) <= GROUND_ERROR;
+    if (!agrees)
+      throw groundError("path corner disagrees with connected ground");
   }
   return points;
 }
@@ -215,7 +224,7 @@ function stepCorner(
   points: NavPoint[],
   from: NavPoint,
   to: NavPoint,
-): void {
+): NavPoint {
   validateNativePoint(to);
   const span = distance2d(from, to);
   if (span === 0 && Math.abs(to.z - from.z) > GROUND_ERROR)
@@ -236,8 +245,23 @@ function stepCorner(
   }
   const corner = points.at(-1);
   if (corner === undefined) throw new Error("ground route point missing");
-  if (Math.abs(corner.z - to.z) > GROUND_ERROR)
-    throw groundError("path corner disagrees with connected ground");
+  return corner;
+}
+
+function meshCornerOnGround(
+  map: NativeMap,
+  ground: NavPoint,
+  meshZ: number,
+): boolean {
+  const rise = meshZ - ground.z;
+  if (rise < -GROUND_ERROR || rise > CORNER_RISE) return false;
+  return map
+    .findHeights(ground.x, ground.y)
+    .every(
+      (height) =>
+        Math.abs(height - ground.z) <= GROUND_ERROR ||
+        Math.abs(height - meshZ) > Math.abs(rise),
+    );
 }
 
 function groundPoint(
@@ -248,12 +272,34 @@ function groundPoint(
 ): NavPoint {
   map.loadAdtAt(x, y);
   const point = { x, y, z: map.findHeight(from, x, y) };
-  checkGround(map, point);
+  checkRouteGround(map, point, from);
   const back = map.findHeight(point, from.x, from.y);
   if (!Number.isFinite(back) || Math.abs(back - from.z) > GROUND_ERROR)
     throw groundError("ground corridor changes surface");
   checkCollision(map, from, point);
   return point;
+}
+
+function checkRouteGround(
+  map: NativeMap,
+  point: NavPoint,
+  from: NavPoint,
+): void {
+  validateNativePoint(point);
+  const heights = map.findHeights(point.x, point.y);
+  if (heights.length === 0 || !heights.every(Number.isFinite))
+    throw groundError("ground height unavailable");
+  const others = heights.filter(
+    (height) => Math.abs(height - point.z) > GROUND_ERROR,
+  );
+  if (others.length === heights.length)
+    throw groundError("position disagrees with ground height");
+  if (others.length === 0) return;
+  const headroom = others.every(
+    (height) => height < point.z || height > point.z + MESH_HEIGHT,
+  );
+  if (!headroom || Math.abs(point.z - from.z) > WALKABLE_CLIMB)
+    throw groundError("ambiguous ground column");
 }
 
 function checkGround(map: NativeMap, point: NavPoint): void {

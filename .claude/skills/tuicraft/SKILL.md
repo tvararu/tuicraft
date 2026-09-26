@@ -238,6 +238,7 @@ Rules:
 - Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`, in `data.state`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
+- `goto` needs one ground height at the start and the destination. Along the route it accepts surfaces overhead (more than 1.6 yards up) or below, and refuses surfaces within 1.6 yards above and steps over 1 yard.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
 - `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded. With `--json`, the error is an envelope on stdout.
 - `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column`, choose a destination with one ground height. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
