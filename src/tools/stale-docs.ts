@@ -18,6 +18,8 @@ const tmpOutputs = [
   "worktree-archive-<date>/",
   "squash.json",
   "qa-changes.json",
+  "tc-<ACCOUNT>",
+  "factory-account-<ACCOUNT>/",
 ];
 
 const tmpPrefix = /^(?:\.\/)?tmp\//;

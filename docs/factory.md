@@ -49,10 +49,10 @@ main checkout (which covers the coordinator's `orca-ide worktree create
 and `XDG_STATE_HOME` under `factory-xdg/` in the worktree's git directory
 (`git rev-parse --absolute-git-dir`), which git status never shows and
 worktree removal deletes. Each links every entry of the real directory
-except `tuicraft`, so `gh`, git, `mise` and `systemctl --user` work as
-before, while plain `bun src/main.ts` finds no config and cannot reach the
-default daemon socket. The main checkout and other repositories keep the
-default directories. Live characters come from
+except `tuicraft`, so `gh`, git, `mise` and `systemctl --user` find their
+usual config, state and sockets, while plain `bun src/main.ts` finds no
+config and cannot reach the default daemon socket. The main checkout and
+other repositories keep the default directories. Live characters come from
 `bun src/factory/main.ts soap create <preset>`, which also writes
 `tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
 `tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config
