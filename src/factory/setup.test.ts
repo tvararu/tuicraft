@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { paces } from "factory/config";
+import type { Result } from "factory/exec";
 import {
   type Automation,
   command,
   desiredAutomations,
+  type Orca,
   plan,
+  promptDrift,
   type Spec,
+  syncPrompts,
   wrapperCommand,
   wrapperTarget,
 } from "factory/setup";
@@ -109,6 +113,99 @@ describe("command", () => {
     expect(edit).not.toContain("--enabled");
     expect(edit).not.toContain("--disabled");
     expect(command({ id: "abc", kind: "ok", spec: worker })).toBeUndefined();
+  });
+});
+
+describe("promptDrift", () => {
+  const [worker, reviewer, , qa] = desiredAutomations(true, paces.max) as [
+    Spec,
+    Spec,
+    Spec,
+    Spec,
+  ];
+
+  test("edits drifted prompts only, whatever the schedule or state", () => {
+    const existing = [
+      recorded(worker, { enabled: false, prompt: "old", rrule: "0 * * * *" }),
+      recorded(reviewer, { rrule: "0 * * * *" }),
+      recorded({ ...qa, name: "nightly" }, { prompt: "old" }),
+    ];
+    expect(promptDrift(existing)).toEqual([
+      { id: "id-work", name: "work", prompt: worker.prompt },
+    ]);
+  });
+});
+
+describe("syncPrompts", () => {
+  const [worker, reviewer, merger, qa] = desiredAutomations(
+    true,
+    paces.default,
+  ) as [Spec, Spec, Spec, Spec];
+  const drifted = [worker, reviewer, merger, qa].map((spec) =>
+    recorded(spec, { prompt: "old" }),
+  );
+
+  function fakeOrca(
+    list: () => Promise<Automation[]>,
+    outcomes: Record<string, Result | Error> = {},
+  ): Orca & { runs: string[][] } {
+    const runs: string[][] = [];
+    const run = (cmd: string[]) => {
+      runs.push(cmd);
+      const outcome = outcomes[cmd[4] ?? ""] ?? {
+        code: 0,
+        stderr: "",
+        stdout: "",
+      };
+      return outcome instanceof Error
+        ? Promise.reject(outcome)
+        : Promise.resolve(outcome);
+    };
+    return { list, run, runs };
+  }
+
+  test("edits only the prompt of each drifted automation", async () => {
+    const orca = fakeOrca(() => Promise.resolve(drifted.slice(0, 2)));
+    const log: string[] = [];
+    await syncPrompts(false, (line) => log.push(line), orca);
+    const edit = ["orca-ide", "automations", "edit", "--id"];
+    expect(orca.runs).toEqual([
+      [...edit, "id-work", "--prompt", worker.prompt],
+      [...edit, "id-review", "--prompt", reviewer.prompt],
+    ]);
+    expect(log).toEqual(["prompt work synced", "prompt review synced"]);
+  });
+
+  test("logs a failed edit and still syncs the rest", async () => {
+    const orca = fakeOrca(() => Promise.resolve(drifted), {
+      "id-review": { code: 1, stderr: "owner fence\n", stdout: "" },
+      "id-work": new Error("spawn orca-ide ENOENT"),
+    });
+    const log: string[] = [];
+    await syncPrompts(false, (line) => log.push(line), orca);
+    expect(orca.runs).toHaveLength(4);
+    expect(log).toEqual([
+      "prompt work sync failed: spawn orca-ide ENOENT",
+      "prompt review sync failed: exited 1: owner fence",
+      "prompt merge synced",
+      "prompt qa synced",
+    ]);
+  });
+
+  test("logs a failed listing without throwing", async () => {
+    const orca = fakeOrca(() => Promise.reject(new Error("Orca not running")));
+    const log: string[] = [];
+    await syncPrompts(false, (line) => log.push(line), orca);
+    expect(orca.runs).toEqual([]);
+    expect(log).toEqual(["prompt sync failed: Orca not running"]);
+  });
+
+  test("a dry run reports drift without editing", async () => {
+    const orca = fakeOrca(() => Promise.resolve(drifted.slice(3)));
+    const log: string[] = [];
+    await syncPrompts(true, (line) => log.push(line), orca);
+    expect(orca.runs).toEqual([]);
+    expect(log).toEqual(["prompt qa drifted, dry run"]);
   });
 });
 

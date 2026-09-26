@@ -9,7 +9,7 @@ import {
   readPace,
   runner,
 } from "factory/config";
-import { json, must } from "factory/exec";
+import { json, must, type Result, run } from "factory/exec";
 import merger from "factory/prompts/merger.md" with { type: "text" };
 import qa from "factory/prompts/qa.md" with { type: "text" };
 import reviewer from "factory/prompts/reviewer.md" with { type: "text" };
@@ -139,6 +139,54 @@ export async function existingAutomations(): Promise<Automation[]> {
   const cmd = ["orca-ide", "automations", "list", "--json"];
   const listed = await json<{ result: { automations: Automation[] } }>(cmd);
   return listed.result.automations;
+}
+
+export type PromptEdit = { id: string; name: string; prompt: string };
+
+export type Orca = {
+  list: () => Promise<Automation[]>;
+  run: (cmd: string[]) => Promise<Result>;
+};
+
+const liveOrca: Orca = { list: existingAutomations, run };
+
+export function promptDrift(existing: Automation[]): PromptEdit[] {
+  return roles.flatMap(([role, prompt]) => {
+    const current = existing.find(({ name }) => name === automationNames[role]);
+    if (!current || current.prompt === prompt) return [];
+    return [{ id: current.id, name: current.name, prompt }];
+  });
+}
+
+export function promptCommand({ id, prompt }: PromptEdit): string[] {
+  return ["orca-ide", "automations", "edit", "--id", id, "--prompt", prompt];
+}
+
+async function syncPrompt(orca: Orca, edit: PromptEdit): Promise<string> {
+  try {
+    const { code, stderr } = await orca.run(promptCommand(edit));
+    if (code === 0) return "synced";
+    return `sync failed: exited ${code}: ${stderr.trim()}`;
+  } catch (error) {
+    return `sync failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+export async function syncPrompts(
+  dryRun: boolean,
+  log: (line: string) => void,
+  orca: Orca = liveOrca,
+): Promise<void> {
+  const existing = await orca.list().catch((error: unknown) => {
+    log(
+      `prompt sync failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return [];
+  });
+  for (const edit of promptDrift(existing)) {
+    const outcome = dryRun ? "drifted, dry run" : await syncPrompt(orca, edit);
+    log(`prompt ${edit.name} ${outcome}`);
+  }
 }
 
 async function setupAutomations(

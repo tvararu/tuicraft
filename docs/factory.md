@@ -34,6 +34,14 @@ passes that file as `--config` to factory roles, so they run with omp memory
 and autolearn off. Prompts are in `src/factory/prompts/`. Every role starts
 with `bun src/factory/main.ts precheck <role>` and stops on exit 1.
 
+Orca keeps its own copy of each role's prompt. Every reaper pass, run from
+the freshly reset runner clone, edits the prompt of any role automation whose
+copy differs from `main` and changes nothing else, so a disabled automation,
+the pace schedule and `setupDecision` stay as they are, and a prompt change
+is live within one reaper tick of landing. `bun src/factory/main.ts setup
+automations --apply` is still how automations are created or their other
+fields changed.
+
 ## Status
 
 | Status | Moved there by | Meaning |
@@ -105,12 +113,13 @@ Two more mark heads for the bounce count:
   with the `qa` label; auto-add puts them in Backlog. Every agent files as
   OpenHubris, so the label is what shows that QA found an issue. No other
   role adds, removes or reacts to it.
-- **Reaper** (systemd timer, 5 min). Removes finished or over-cap `auto-*`
-  worktrees that are clean and pushed or landed, and other worktrees that
-  are landed, clean and idle over 12 h. Dirty trees are archived to
-  `tmp/worktree-archive-<date>/`. Each hold is one draft card in Blocked,
-  `Reaper: <worktree> held (<reason>)`, saying what to do; the reaper
-  deletes it once the hold clears.
+- **Reaper** (systemd timer, 5 min). First syncs the role prompts (above),
+  logging a failed edit and carrying on. Then removes finished or over-cap
+  `auto-*` worktrees that are clean and pushed or landed, and other
+  worktrees that are landed, clean and idle over 12 h. Dirty trees are
+  archived to `tmp/worktree-archive-<date>/`. Each hold is one draft card in
+  Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
+  reaper deletes it once the hold clears.
 
 ## Cutover from labels
 
@@ -125,11 +134,6 @@ not on the board yet. It then removes the legacy labels from every issue
 (never `qa`, which is not one of them), deletes them from the repo, and
 closes the open `Reaper: … held` issues with a comment. Later runs find
 nothing to migrate.
-
-Orca keeps its own copy of each role's prompt, so run
-`bun src/factory/main.ts setup automations --apply` from the runner clone
-once the change lands. Until then the old prompts look for labels that no
-longer exist and stop without changing anything.
 
 ## Landing
 

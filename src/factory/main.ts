@@ -33,7 +33,7 @@ const usage = `usage: bun src/factory/main.ts <command>
   same-patch <base>..<old> <base>..<new>  exit 0 when -U0 patches match
   squash-message <pr>                     JSON subject and body to land
   soap <create|delete|sweep|list> ...    per-run game accounts on t1
-  reap [--dry-run]                        worktree and account backstop
+  reap [--dry-run]                        worktree, account, prompt backstop
   setup <automations|wrapper> [--apply]  automations, omp wrapper link`;
 
 const [name, ...rest] = process.argv.slice(2);
