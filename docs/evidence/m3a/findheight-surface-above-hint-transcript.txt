@@ -1,0 +1,71 @@
+# A: navigation_library = tmp/libnm-default.so (corner + boundary-ray patches)
+$ tc goto 10318.4 -6415.6 --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"goto","data":null,"error":{"message":"stop: ambiguous ground column at route","stage":"command"},"events":[],"kind":"error"}
+daemon pid 515286 maps: tmp/libnm-default.so 
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":false,"destination":{"x":10318.4,"y":-6415.6},"owner":"none","blockedReason":"ambiguous ground column at route","refusal":"stop","nextStep":"The route crosses ground with more than one floor. Choose a different destination or an open-ground waypoint."},"error":null,"events":[],"kind":"result"}
+$ tc control --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"control","data":{"blockedReason":"ambiguous ground column at route","direction":null,"movementAllowed":true,"moving":false,"nextStep":"The route crosses ground with more than one floor. Choose a different destination or an open-ground waypoint.","owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790443266928,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xb6c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790443266928,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tc stop
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+OK
+# B: navigation_library = tmp/libnm-patched.so (adds surface-above-hint.patch); daemon restarted
+$ tc start
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+CONNECTED
+$ tc control --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790443283736,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xb6c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790443283736,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tc goto 10318.4 -6415.6 --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+daemon pid 517338 maps: tmp/libnm-patched.so 
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":true,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":55.292503604555435,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":true,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":37.07150360455543,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":true,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":19.536503604555378,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":true,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":1.3015036045553359,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":false,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":72.82750360455543,"elapsedMs":10405,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":false,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":72.82750360455543,"elapsedMs":10405,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":false,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":72.82750360455543,"elapsedMs":10405,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc navigation --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"navigation","data":{"active":false,"destination":{"x":10318.4,"y":-6415.6,"z":37.663055419921875},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":72.82750360455543,"elapsedMs":10405,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":145.65500720911086,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+$ tc control --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.8401324793189624,"source":"predicted","updatedAt":1790443297788,"x":10318.4,"y":-6415.6,"z":37.663055419921875},"requestedTarget":null,"selfGuid":"0xb6c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790443283736,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+$ tc stop
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+OK
+$ tc start
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+CONNECTED
+$ tc control --json
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.840132474899292,"source":"server","updatedAt":1790443311020,"x":10318.400390625,"y":-6415.60009765625,"z":37.663055419921875},"requestedTarget":null,"selfGuid":"0xb6c","serverPose":{"mapId":530,"orientation":2.840132474899292,"source":"server","updatedAt":1790443311020,"x":10318.400390625,"y":-6415.60009765625,"z":37.663055419921875},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+# CONTROL events from the account session log (event, reason, owner, pose):
+1790443279806 control_error reason=ambiguous ground column at route owner=none pose=(10349.599609375, -6357.2900390625, 33.4025993347168) server
+1790443287384 facing_changed reason=- owner=none pose=(10349.599609375, -6357.2900390625, 33.4025993347168) predicted
+1790443287384 movement_started reason=- owner=manual pose=(10349.599609375, -6357.2900390625, 33.4025993347168) predicted
+1790443287384 control_changed reason=- owner=manual pose=(10349.599609375, -6357.2900390625, 33.4025993347168) predicted
+1790443297788 movement_stopped reason=arrived owner=none pose=(10318.4, -6415.6, 37.663055419921875) predicted
+1790443297788 control_changed reason=arrived owner=none pose=(10318.4, -6415.6, 37.663055419921875) predicted
+$ tc stop
+tc-FAC6AB7FEFC81: character Fgklhpopmib
+OK

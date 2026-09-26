@@ -1,0 +1,84 @@
+diff --git a/pathfind/Map.cpp b/pathfind/Map.cpp
+index 74f249c..8f1dfb9 100644
+--- a/pathfind/Map.cpp
++++ b/pathfind/Map.cpp
+@@ -790,16 +790,38 @@ bool Map::GetADTHeight(const Tile* tile, float x, float y, float& height,
+ 
+ bool Map::FindNextZ(const Tile* tile, float x, float y, float zHint,
+                     bool includeAdt, float& result) const
++{
++    return FindNextZ(tile, x, y, zHint, 0.f, includeAdt, result);
++}
++
++bool Map::FindNextZ(const Tile* tile, float x, float y, float zHint,
++                    float band, bool includeAdt, float& result) const
+ {
+     result = zHint;
+ 
+     // check BVH data for this tile
+-    bool rayHit;
++    bool rayHit = false;
++    auto const bottom = tile->m_bounds.getMinimum().Z;
+ 
+-    math::Ray ray {{x, y, zHint}, {x, y, tile->m_bounds.getMinimum().Z}};
++    // a surface no more than band above the hint wins over the first surface
++    // below the hint.  when there is none, the result is the ray from the
++    // hint, exactly as before
++    if (band > 0.f)
++    {
++        math::Ray above {{x, y, zHint + band}, {x, y, bottom}};
++        if (RayCast(above, {tile}, true) && above.GetHitPoint().Z > zHint)
++        {
++            rayHit = true;
++            result = above.GetHitPoint().Z;
++        }
++    }
+ 
+-    if ((rayHit = RayCast(ray, {tile}, true)))
+-        result = ray.GetHitPoint().Z;
++    if (!rayHit)
++    {
++        math::Ray ray {{x, y, zHint}, {x, y, bottom}};
++        if ((rayHit = RayCast(ray, {tile}, true)))
++            result = ray.GetHitPoint().Z;
++    }
+ 
+     // if we don't care about adts, we're done
+     if (!includeAdt)
+@@ -986,8 +1008,16 @@ bool Map::FindHeight(const math::Vertex& source, float x, float y, float& z) con
+     if (!tile)
+         return false;
+ 
+-    // take the imprecise z value from the mesh, and return the precise value
+-    if (!FindNextZ(tile, x, y, z, true, z))
++    // take the imprecise z value from the mesh, and return the precise value.
++    // the heightfield quantizes the surface to CellHeight, and the detail mesh
++    // deviates from the heightfield by up to DetailSampleMaxError, so the
++    // mesh can lie below the surface it was built from.  a ray from the mesh
++    // height then starts under that surface and returns the next surface
++    // below it, so a surface that close above the mesh height takes precedence
++    if (!FindNextZ(tile, x, y, z,
++                   MeshSettings::CellHeight +
++                       MeshSettings::DetailSampleMaxError,
++                   true, z))
+         return false;
+ 
+     return true;
+diff --git a/pathfind/Map.hpp b/pathfind/Map.hpp
+index 1bb5951..5d66107 100644
+--- a/pathfind/Map.hpp
++++ b/pathfind/Map.hpp
+@@ -98,9 +98,12 @@ private:
+                       unsigned int* zone = nullptr,
+                       unsigned int* area = nullptr) const;
+ 
+-    // find the next floor z below the given hint
++    // find the next floor z below the given hint.  a surface above the hint by
++    // no more than band takes precedence, the highest one if there are several
+     bool FindNextZ(const Tile* tile, float x, float y, float zHint,
+                       bool includeAdt, float& result) const;
++    bool FindNextZ(const Tile* tile, float x, float y, float zHint,
++                   float band, bool includeAdt, float& result) const;
+ 
+     bool RayCast(math::Ray& ray, bool doodads) const;
+     bool RayCast(math::Ray& ray, const std::vector<const Tile*>& tiles,
