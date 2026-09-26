@@ -334,6 +334,7 @@ describe("dispatchCommand", () => {
       ...selfPlayer,
       guid: 0x11n,
       name: "Landra",
+      position: { mapId: 530, orientation: 0, x: 8710, y: -6671.76, z: 70.34 },
     };
     (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
       selfPlayer,

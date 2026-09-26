@@ -143,7 +143,7 @@ function compareNearby(a: NearbyRow, b: NearbyRow): number {
 function withinDefaultRange(row: NearbyRow, mapId: number): boolean {
   if (row.self) return true;
   if (row.distance !== null) return row.distance <= NEARBY_DEFAULT_RANGE;
-  return !row.position || row.position.mapId === mapId;
+  return row.position?.mapId === mapId;
 }
 
 export function queryNearby(
