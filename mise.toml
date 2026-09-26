@@ -44,7 +44,7 @@ run = "bun test"
 [tasks."test:live"]
 description = "Run tests against a live server"
 raw = true
-run = "bun test ./src/test/live.ts"
+run = "bun test ./src/test/live.ts ./src/test/live-quest.ts"
 
 [tasks."test:coverage"]
 description = "Run tests with coverage report"
