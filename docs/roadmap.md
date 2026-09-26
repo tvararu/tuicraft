@@ -785,10 +785,10 @@ and concrete live-verifiable acceptance criteria.
 ## Other context
 
 Tuicraft reads build-12340 spell tables, extracted from the client MPQs with
-patch precedence, from `spell_data_dir`, and Expansion01 navigation data from
-`navigation_data_dir` (see the
-[gameplay configuration](manual.md#gameplay-configuration)). Their presence
-alone does not prove navigation.
+patch precedence, from `spell_data_dir`, Expansion01 navigation data from
+`navigation_data_dir` and the native library from `navigation_library` (see
+the [gameplay configuration](manual.md#gameplay-configuration)). Their
+presence alone does not prove navigation.
 
 The unmerged `vibe` work (tag `archive/vibe`) contains movement, namigator
 navigation, combat, and priest-hunting work, along with research notes and
