@@ -221,7 +221,7 @@ These commands inspect or act. They do not invent a spell rotation.
 
 Rules:
 
-- `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none.
+- `cast` takes a positive integer spell id and one uint64 GUID. `0`/`0x0` is self/none. Its reply (human and `--json`) only confirms the daemon sent the cast. Read the server's answer in `combat --json` `.data.lastOutcome`: `status` `succeeded`, `failed` or `interrupted`; a failure keeps the raw `SpellCastResult` code in `result` and names it in `reason` (`97` → `out_of_range`, `12` → `bad_targets`, `61` → `not_infront`, `85` → `no_power` for not enough mana, `40` → `interrupted`, unknown codes → `unknown`). COMBAT `cast_failed`/`cast_interrupted` events in `read --json` carry the same outcome and a `reason` such as `cast_failed:out_of_range`. Fix the named cause (range, facing, mana) before recasting.
 - `fight` requires a GUID. Optional `--framing` (or `--framing=`) accepts `none`, `minimal`, or `mechanics`; the default is `WOW_JEV_FRAMING` from the CLI's environment, else `none`. A raw `FIGHT` socket command ignores `WOW_JEV_FRAMING`. Extra words are the instruction. If omitted, the instruction is to defeat the selected target while keeping the character alive.
 - Use a current observed PvE opponent, not a GUID copied from an example or an old spawn position.
 - The Jev spell kit requires observed normal form (`combat.self.shapeshiftForm=0`). Complete server CREATE defines omitted public fields as zero; absent entities and incomplete observations remain unknown. Unknown and nonzero forms disable supported spells, not necessarily melee.

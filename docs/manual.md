@@ -234,7 +234,17 @@ does not disengage combat.
 
 `tuicraft cast` _id_ _guid_
 :: Cast a learned spell. _id_ is a positive integer. _guid_ is uint64 hex or
-decimal. `0` is self/none.
+decimal. `0` is self/none. The reply only confirms that the daemon sent the
+cast. The server's answer lands in `combat --json` `.data.lastOutcome`:
+`status` is `succeeded`, `failed` or `interrupted`, and a failure keeps the
+raw AzerothCore `SpellCastResult` code in `result` with its name in `reason`
+(for example `result: 97`, `reason: "out_of_range"`; `bad_targets`,
+`not_infront`, `no_power` for not enough mana, `interrupted`). A code outside
+the 3.3.5a enum gives `reason: "unknown"`. The COMBAT `cast_failed` and
+`cast_interrupted` events in `read --json` carry the same outcome in
+`data.state.lastOutcome` and the name in their own `reason`
+(`cast_failed:out_of_range`). A fight blocked by a rejected cast ends as
+`server_action_rejected:<reason>`.
 
 `tuicraft attack` _guid_
 :: Start auto-attack on _guid_.

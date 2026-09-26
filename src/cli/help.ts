@@ -30,7 +30,7 @@ USAGE
   tuicraft combat [--json]   Combat state
   tuicraft spells [--json]   Learned spellbook
                             After reconnect, run once if all learned spells appear in unknownLearned
-  tuicraft cast <id> <guid>  Cast a learned spell
+  tuicraft cast <id> <guid>  Cast a learned spell; result in combat --json lastOutcome (reason names failures)
   tuicraft attack <guid>     Start auto-attack
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack

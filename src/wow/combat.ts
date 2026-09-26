@@ -61,6 +61,7 @@ export type CombatOutcome = {
   spellId?: number;
   target?: bigint;
   result?: number;
+  reason?: string;
   error?: AttackSwingError;
   at: number;
   hits?: bigint[];
@@ -358,7 +359,7 @@ export class CombatRuntime {
     );
     if (!outcome) return;
     this.lastOutcome = outcome;
-    this.emit("cast_failed", `cast_failed:${packet.result}`);
+    this.emit("cast_failed", `cast_failed:${outcome.reason}`);
   }
 
   applyInventoryFailure(packet: InventoryChangeFailure): void {
@@ -379,7 +380,7 @@ export class CombatRuntime {
     );
     if (!outcome) return;
     this.lastOutcome = outcome;
-    this.emit("cast_interrupted", `spell_failure:${packet.result}`);
+    this.emit("cast_interrupted", `spell_failure:${outcome.reason}`);
   }
 
   applyCooldown(packet: SpellCooldown): void {
