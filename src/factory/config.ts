@@ -22,6 +22,13 @@ export const labels = {
 
 export type Role = "worker" | "reviewer" | "merger" | "qa";
 
+export const automationNames: Record<Role, string> = {
+  merger: "merge",
+  qa: "qa",
+  reviewer: "review",
+  worker: "work",
+};
+
 export const roleCapHours: Record<Role, number> = {
   merger: 1,
   qa: 2,

@@ -1,6 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
+  automationNames,
   bot,
   idleHours,
   mainCheckout,
@@ -89,7 +90,8 @@ const headsPrefix = /^refs\/heads\//;
 export function roleOf(automation: string): Role {
   const role = roles.find(
     (r) =>
-      automation === `factory-${r}` || automation.startsWith(`factory-${r}-`),
+      automation === automationNames[r] ||
+      automation.startsWith(`${automationNames[r]}-`),
   );
   return (
     role ?? roles.reduce((a, b) => (roleCapHours[b] > roleCapHours[a] ? b : a))

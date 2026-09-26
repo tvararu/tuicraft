@@ -279,12 +279,12 @@ code:
 
 | Knob | `default` | `max` |
 |---|---|---|
-| `factory-worker` schedule | `*/3` | `*/2` |
+| `work` schedule | `*/3` | `*/2` |
 | Worker WIP cap | 3 | 6 |
-| `factory-reviewer` schedule | `*/3` | every minute |
+| `review` schedule | `*/3` | every minute |
 | Reviews in flight (`agent:reviewing`) cap | 3 | 6 |
-| `factory-merger` schedule | `*/10` | `*/3` |
-| `factory-qa` schedule | `*/30` | `*/15` |
+| `merge` schedule | `*/10` | `*/3` |
+| `qa` schedule | `*/30` | `*/15` |
 | Reaper timer | 5 min | 5 min |
 
 The active level is persisted in `~/.config/tuicraft-factory/pace`;
@@ -314,6 +314,14 @@ runs that claimed at the same time.
 Theo's hard requirement: he must never find stale worktrees or idle agents
 using RAM in Orca. For scale, phase 0 measured each idle interactive omp
 session at 0.7-1.1 GB RSS, plus about 140 MB for each omp broker process.
+
+The four automations are named `work`, `review`, `merge` and `qa`
+(`automationNames` in `src/factory/config.ts`; they were `factory-<role>`
+until 2026-09-26). Orca names each run's worktree
+`auto-<automation>-run-<N>-<yyyymmddThhmm>` and that template is fixed in
+Orca, so short automation names are what keep the role and run number
+visible in Orca's sidebar, which clips names after about 20 characters:
+`auto-qa-run-32-20260926T1145`, `auto-review-run-109-…`.
 
 **Every worktree has exactly one owner, recorded when it is created.**
 
