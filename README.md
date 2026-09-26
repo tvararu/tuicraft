@@ -316,7 +316,8 @@ offered dialog. Reward indices and abandonment slots are zero-based.
 `OK` is intent only. Acceptance/progress/removal require observed log changes,
 and rewards require a server reward notification. Unanswered metadata is unknown,
 not missing. `cancel-interaction` requests closure and does not immediately unlock
-another mutation. Do not retry before an observed close or authoritative outcome.
+another mutation. The cancelled request stays reported as `unresolved` until an
+authoritative outcome. Do not retry before an observed close or authoritative outcome.
 
 `experience` reads the observed level, XP and next-level XP fields beside the
 last XP-gain and level-up notices. A notice is not an XP change; compare the

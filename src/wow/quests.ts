@@ -103,7 +103,7 @@ export type QuestState = {
   log: QuestLog;
   queries: QuestQuery[];
   lastIntent: QuestIntent | undefined;
-  uncertain: QuestIntent | undefined;
+  unresolved: QuestIntent[];
   pending: (QuestIntent & { status: "unanswered" }) | undefined;
   lastError: QuestError | undefined;
   lastProgress: QuestProgress | undefined;
@@ -148,7 +148,7 @@ export class QuestRuntime {
   private readonly visibleQuestIds = new WeakMap<Entity, boolean>();
   private readonly queries = new Map<number, QuestQuery>();
   private lastIntent: QuestIntent | undefined;
-  private uncertain: QuestIntent | undefined;
+  private unresolved: QuestIntent[] = [];
   private pending: QuestState["pending"];
   private lastError: QuestError | undefined;
   private lastProgress: QuestProgress | undefined;
@@ -175,7 +175,7 @@ export class QuestRuntime {
       queries: [...this.queries.values()],
       lastIntent: this.lastIntent,
       pending: this.pending,
-      uncertain: this.uncertain,
+      unresolved: this.unresolved,
       lastError: this.lastError,
       lastProgress: this.lastProgress,
       lastReward: this.lastReward,
@@ -246,7 +246,7 @@ export class QuestRuntime {
     if (this.pending?.action === "cancel")
       throw new Error("quest_cancel_unanswered");
     this.deps.send(GameOpcode.CMSG_QUESTGIVER_CANCEL);
-    this.uncertain = this.pending;
+    this.leaveUnresolved();
     this.dialog = undefined;
     this.lastIntent = {
       action: "cancel",
@@ -298,7 +298,7 @@ export class QuestRuntime {
       this.dialog !== undefined ||
       this.giver !== undefined ||
       this.pending !== undefined;
-    if (this.pending) this.uncertain = this.pending;
+    this.leaveUnresolved();
     this.dialog = undefined;
     this.giver = undefined;
     this.pending = undefined;
@@ -311,6 +311,7 @@ export class QuestRuntime {
     this.dialog = undefined;
     this.giver = undefined;
     this.pending = undefined;
+    this.unresolved = [];
     this.queries.clear();
   }
 
@@ -379,8 +380,7 @@ export class QuestRuntime {
     this.dialog = undefined;
     this.giver = undefined;
     if (this.pending?.action !== "abandon") {
-      if (this.pending && this.pending.action !== "cancel")
-        this.uncertain = this.pending;
+      this.leaveUnresolved();
       this.pending = undefined;
     }
     this.emit("closed", "packet");
@@ -436,9 +436,18 @@ export class QuestRuntime {
     this.emit("error", "packet", error.questId);
   }
 
+  private leaveUnresolved(): void {
+    if (!this.pending || this.pending.action === "cancel") return;
+    const { status: _status, ...intent } = this.pending;
+    this.unresolved.push(intent);
+  }
+
   private resolve(action: QuestAction, questId: number): void {
     if (this.pending?.action === action && this.pending.questId === questId)
       this.pending = undefined;
+    this.unresolved = this.unresolved.filter(
+      (intent) => intent.action !== action || intent.questId !== questId,
+    );
   }
 
   private transitions(previous: QuestLog, next: QuestLog): void {
