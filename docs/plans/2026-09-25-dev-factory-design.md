@@ -298,13 +298,14 @@ schedule and enabled state of each automation in place (`orca-ide
 automations edit --id <id> --trigger <rrule> --enabled`, a partial
 `automation.update`, so `setupDecision: run` survives; recreating an
 automation would lose it), writes the timer drop-in
-`~/.config/systemd/user/tuicraft-factory-reaper.timer.d/pace.conf`, then
-reloads systemd and restarts the timer. `mise factory:pace` alone prints the
-level and the live schedules read back from Orca and systemd, and flags a
-schedule that does not match the level, or an automation that lost
-`setupDecision: run`, its precheck, `--base-branch origin/main` or
-`enabled`. Use `max` in quiet weeks with usage to spare and for overnight
-pushes.
+`~/.config/systemd/user/tuicraft-factory-reaper.timer.d/pace.conf` with a
+boot trigger and the reaper interval, then reloads systemd and restarts the
+timer. `mise factory:pace` alone prints the level and the live schedules
+read back from Orca and systemd, and flags a schedule that does not match
+the level, a reaper timer with no boot trigger or no next run, or an
+automation that lost `setupDecision: run`, its precheck,
+`--base-branch origin/main` or `enabled`. Use `max` in quiet weeks with
+usage to spare and for overnight pushes.
 
 `mise factory:pace pause` is the third level (decision recorded
 2026-09-26). It writes `pause` to the file and disables `work`, `review`

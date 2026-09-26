@@ -5,7 +5,8 @@ import {
   editCommand,
   problems,
   targets,
-  timerInterval,
+  timerCheck,
+  timerDropIn,
 } from "factory/pace";
 import { desiredAutomations, type Spec } from "factory/setup";
 
@@ -137,13 +138,61 @@ describe("editCommand", () => {
   });
 });
 
-describe("timerInterval", () => {
-  test("reads OnUnitActiveSec from systemctl show", () => {
-    const props = [
-      "TimersMonotonic={ OnUnitActiveUSec=5min ; next_elapse=1d }",
-      "TimersMonotonic={ OnBootUSec=5min ; next_elapse=5min }",
+describe("timerDropIn", () => {
+  test("keeps a boot trigger alongside the pace interval", () => {
+    expect(timerDropIn(7)).toBe(
+      [
+        "[Timer]",
+        "OnBootSec=",
+        "OnUnitActiveSec=",
+        "OnBootSec=7min",
+        "OnUnitActiveSec=7min",
+        "",
+      ].join("\n"),
+    );
+  });
+});
+
+describe("timerCheck", () => {
+  const boot = "OnBootUSec=10min";
+  const every = "OnUnitActiveUSec=5min";
+
+  function shown(state: string, ...timers: string[]): string {
+    return [
+      `SubState=${state}`,
+      ...timers.map((t) => `TimersMonotonic={ ${t} ; next_elapse=5min }`),
     ].join("\n");
-    expect(timerInterval(props)).toBe("5min");
-    expect(timerInterval("TimersMonotonic=")).toBeNull();
+  }
+
+  test("reads the interval from OnUnitActiveSec, not the boot trigger", () => {
+    expect(timerCheck("default", shown("waiting", boot, every))).toEqual({
+      drift: [],
+      interval: "5min",
+    });
+  });
+
+  test("a run in progress still counts as scheduled", () => {
+    const { drift } = timerCheck("max", shown("running", every, boot));
+    expect(drift).toEqual([]);
+  });
+
+  test("a timer with no next run is drift", () => {
+    const afterReboot = shown("elapsed", every);
+    expect(timerCheck("default", afterReboot).drift).toEqual([
+      "no boot trigger",
+      "no next run (elapsed)",
+    ]);
+    expect(timerCheck("pause", shown("dead", boot, every)).drift).toEqual([
+      "no next run (dead)",
+    ]);
+  });
+
+  test("the interval must match the pace unless paused", () => {
+    const slow = shown("waiting", boot, "OnUnitActiveUSec=10min");
+    expect(timerCheck("default", slow).drift).toEqual(["want 5min"]);
+    expect(timerCheck("pause", slow).drift).toEqual([]);
+    expect(timerCheck("pause", shown("waiting", boot)).drift).toEqual([
+      "want an interval",
+    ]);
   });
 });

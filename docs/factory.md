@@ -217,4 +217,13 @@ paused, `mise factory:pace` reports the three as `paused` rather than as
 drift, and a manual precheck or `setup automations` uses the `default`
 caps and schedules.
 
+`default` and `max` write the reaper timer drop-in
+`~/.config/systemd/user/tuicraft-factory-reaper.timer.d/pace.conf`. An
+empty `On*Sec=` line in systemd clears every trigger of the timer, so the
+drop-in clears both and sets `OnBootSec=` and `OnUnitActiveSec=` to the
+reaper interval: without the boot trigger the timer has no next run after
+a reboot. Plain `mise factory:pace` reports the timer as drift when its
+interval does not match the level, when it has no boot trigger, or when
+it has no next run and no run in progress.
+
 Run caps: worker 3 h, QA 2 h, reviewer and merger 1 h.
