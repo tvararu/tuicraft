@@ -10,6 +10,7 @@ import {
   auraObservation,
   facing,
   hex,
+  outcomeObservation,
   separation,
   timeoutOutcome,
   unitObservation,
@@ -23,6 +24,7 @@ import {
 } from "wow/combat-actions-spells";
 import { targetReason, targetRelation } from "wow/combat-actions-target";
 import { ProgressWatch } from "wow/combat-progress";
+import { RejectionTracker } from "wow/combat-rejections";
 import type { ControlRuntime } from "wow/control";
 import { type EntityLookup, isUnit } from "wow/entity-store";
 import type { FactionTemplateCatalog } from "wow/faction-template";
@@ -54,6 +56,7 @@ export class CombatActions {
   private deadAt: number | undefined;
   private unreachableAt: number | undefined;
   private readonly progress = new ProgressWatch();
+  private readonly rejections = new RejectionTracker();
 
   constructor(deps: ActionDeps) {
     this.deps = deps;
@@ -67,6 +70,7 @@ export class CombatActions {
     this.deadAt = undefined;
     this.unreachableAt = undefined;
     this.progress.reset();
+    this.rejections.reset(this.startedAt);
     this.deps.control.halt();
     this.deps.combat.halt();
     this.deps.control.setMode("jev");
@@ -109,20 +113,13 @@ export class CombatActions {
           .filter((action) => action.reason)
           .map((action) => ({ id: action.id, reason: action.reason })),
         lastOutcome: state.lastOutcome
-          ? {
-              kind: state.lastOutcome.kind,
-              status: state.lastOutcome.status,
-              spellId: state.lastOutcome.spellId,
-              result: state.lastOutcome.result,
-              reason: state.lastOutcome.reason,
-              error: state.lastOutcome.error,
-              at: state.lastOutcome.at,
-            }
+          ? outcomeObservation(state.lastOutcome)
           : null,
         lastXp: state.lastXp
           ? { ...state.lastXp, victim: hex(state.lastXp.victim) }
           : null,
         navigation: this.deps.control.navigationState(),
+        rejections: this.rejections.observation(),
       },
       candidates,
       outcome,
@@ -230,13 +227,14 @@ export class CombatActions {
     if (
       state.self.pose &&
       state.target?.pose &&
-      !facing(state) &&
+      (!facing(state) || this.rejections.facingRejected()) &&
       this.deps.control.snapshot().movementAllowed
     )
       candidates.push({
         id: "face_target",
-        description:
-          "Turn to face the selected creature at its current observed or predicted position",
+        description: this.rejections.facingRejected()
+          ? "Turn to face the selected creature; the server rejected the last action because it was not in front"
+          : "Turn to face the selected creature at its current observed or predicted position",
       });
   }
 
@@ -344,19 +342,8 @@ export class CombatActions {
       return { status: "completed", reason: "server_kill_credit" };
     if (state.self.health === 0)
       return { status: "failed", reason: "self_dead" };
-    const last = state.lastOutcome;
-    if (
-      last &&
-      last.at >= this.startedAt &&
-      (last.status === "failed" || last.status === "interrupted") &&
-      (last.kind === "cast" ||
-        (last.kind === "attack" && last.status === "failed"))
-    )
-      return {
-        status: "blocked",
-        reason: `server_action_rejected:${last.error ?? last.reason ?? "interrupted"}`,
-      };
-    return undefined;
+    this.rejections.track(state.lastOutcome);
+    return this.rejections.outcome();
   }
 
   private reachOutcome(
