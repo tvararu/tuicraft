@@ -47,6 +47,15 @@ export function formatCycleState(state: CycleState): string[] {
     `Resumes: ${state.resumes}`,
     ...state.queue.map(formatCycleTarget),
   ];
+  const { objective } = state;
+  if (objective) {
+    const done = objective.complete ? "complete" : "incomplete";
+    lines.push(`Objective: quest ${objective.questId} ${done}`);
+    for (const kill of objective.kills)
+      lines.push(`Kill ${kill.entry}: ${show(kill.current)}/${kill.required}`);
+    for (const item of objective.items)
+      lines.push(`Item ${item.itemId}: ${item.required} required`);
+  }
   if (state.lastLoot) lines.push(...formatCycleLoot(state.lastLoot));
   if (state.lastRecovery)
     lines.push(`Last recovery: ${state.lastRecovery.outcome}`);

@@ -15,7 +15,13 @@ const DEFAULT_MOVE_MS = 1000;
 const MAX_MOVE_MS = 10_000;
 const MAX_WALK_YARDS = 20;
 const DIRECTIONS: readonly string[] = ["forward", "backward", "left", "right"];
-const CYCLE_FLAGS = ["--max", "--instruction", "--resume"];
+const CYCLE_FLAGS = [
+  "--max",
+  "--instruction",
+  "--resume",
+  "--quest",
+  "--source",
+];
 const WHITESPACE = /\s+/;
 const GUID_PATTERN = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
 const DIGITS = /^[0-9]+$/;
@@ -240,6 +246,8 @@ export type CycleArgs = {
   guids: bigint[];
   instruction: string;
   maxStarts?: number;
+  questId?: number;
+  sources?: number[];
 };
 
 function isCycleFlag(token: string): boolean {
@@ -258,8 +266,20 @@ type CycleDraft = {
   guids: bigint[];
   maxStarts?: number;
   resume: boolean;
+  questId?: number;
+  sources: number[];
   words: string[];
 };
+
+function flagValue(
+  token: string,
+  flag: string,
+  queue: string[],
+): string | undefined | null {
+  if (token === flag) return queue.shift();
+  if (token.startsWith(`${flag}=`)) return token.slice(flag.length + 1);
+  return null;
+}
 
 function takeInstructionWords(queue: string[]): string[] {
   const words: string[] = [];
@@ -274,6 +294,24 @@ function takeInstructionWords(queue: string[]): string[] {
   return words;
 }
 
+function readQuestToken(
+  token: string,
+  queue: string[],
+  draft: CycleDraft,
+): string | null | undefined {
+  const quest = flagValue(token, "--quest", queue);
+  if (quest !== null) {
+    draft.questId = parseUnsigned(quest ?? "", 1, 0xff_ff_ff_ff);
+    return draft.questId === undefined ? "invalid quest id" : null;
+  }
+  const source = flagValue(token, "--source", queue);
+  if (source === null) return undefined;
+  const entry = parseUnsigned(source ?? "", 1, 0xff_ff_ff_ff);
+  if (entry === undefined) return "invalid cycle source";
+  draft.sources.push(entry);
+  return null;
+}
+
 function readCycleToken(
   token: string,
   queue: string[],
@@ -283,12 +321,13 @@ function readCycleToken(
     draft.resume = true;
     return null;
   }
-  if (token === "--max" || token.startsWith("--max=")) {
-    const raw =
-      token === "--max" ? queue.shift() : token.slice("--max=".length);
-    draft.maxStarts = parseCycleMax(raw);
+  const max = flagValue(token, "--max", queue);
+  if (max !== null) {
+    draft.maxStarts = parseCycleMax(max);
     return draft.maxStarts === undefined ? "invalid cycle max" : null;
   }
+  const quest = readQuestToken(token, queue, draft);
+  if (quest !== undefined) return quest;
   if (token.startsWith("--instruction=")) {
     draft.words = [token.slice("--instruction=".length)];
     return null;
@@ -304,7 +343,12 @@ function readCycleToken(
 }
 
 function readCycleDraft(tokens: string[]): Parsed<CycleDraft> {
-  const draft: CycleDraft = { guids: [], resume: false, words: [] };
+  const draft: CycleDraft = {
+    guids: [],
+    resume: false,
+    sources: [],
+    words: [],
+  };
   const queue = [...tokens];
   for (let token = queue.shift(); token !== undefined; token = queue.shift()) {
     const reason = readCycleToken(token, queue, draft);
@@ -316,11 +360,15 @@ function readCycleDraft(tokens: string[]): Parsed<CycleDraft> {
 export function parseCycle(tokens: string[]): Parsed<CycleArgs> {
   const draft = readCycleDraft(tokens);
   if (!draft.ok) return draft;
-  const { guids, maxStarts, resume, words } = draft.value;
-  if (resume || guids.length === 0) return fail("invalid cycle");
+  const { guids, maxStarts, questId, resume, sources, words } = draft.value;
+  if (resume || (guids.length === 0) === (questId === undefined))
+    return fail("invalid cycle");
+  if (sources.length > 0 && questId === undefined)
+    return fail("cycle source requires quest");
   const instruction = oneLine(words.join(" "));
   if (!instruction.ok) return instruction;
-  return ok({ guids, instruction: instruction.value, maxStarts });
+  const cycle = { guids, instruction: instruction.value, maxStarts };
+  return ok(questId === undefined ? cycle : { ...cycle, questId, sources });
 }
 
 export type CycleResumeArgs = { instruction?: string; maxStarts?: number };
@@ -328,8 +376,10 @@ export type CycleResumeArgs = { instruction?: string; maxStarts?: number };
 export function parseCycleResume(tokens: string[]): Parsed<CycleResumeArgs> {
   const draft = readCycleDraft(tokens);
   if (!draft.ok) return draft;
-  const { guids, maxStarts, words } = draft.value;
+  const { guids, maxStarts, questId, sources, words } = draft.value;
   if (guids.length > 0) return fail("cycle --resume takes no guids");
+  if (questId !== undefined || sources.length > 0)
+    return fail("cycle --resume takes no quest");
   if (words.length === 0) return ok({ maxStarts });
   const instruction = oneLine(words.join(" "));
   if (!instruction.ok) return instruction;

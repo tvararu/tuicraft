@@ -68,6 +68,8 @@ export type CliAction =
       guids: bigint[];
       instruction: string;
       maxStarts?: number;
+      questId?: number;
+      sources?: number[];
       json?: true;
     }
   | {
