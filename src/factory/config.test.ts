@@ -21,8 +21,10 @@ describe("readPace", () => {
   });
 
   test("reads the persisted level", async () => {
-    await Bun.write(paceFile(dir), "max\n");
-    expect(await readPace(paceFile(dir))).toBe("max");
+    for (const pace of ["pause", "max"] as const) {
+      await Bun.write(paceFile(dir), `${pace}\n`);
+      expect(await readPace(paceFile(dir))).toBe(pace);
+    }
   });
 
   test("rejects an unknown level instead of guessing", async () => {
