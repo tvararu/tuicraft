@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { must } from "test/must";
-import { CombatRuntime } from "wow/combat";
+import { type CombatEvent, CombatRuntime } from "wow/combat";
 import { EntityStore } from "wow/entity-store";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type { MonsterMovePath } from "wow/protocol/monster-move";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type { CastFailed, SpellStart } from "wow/protocol/spell";
+import type { SpellCatalog } from "wow/spell-catalog";
 
 function path(over: Partial<MonsterMovePath>): MonsterMovePath {
   return {
@@ -366,4 +367,30 @@ test("dead incoming attacker is cleared on check", () => {
   expect(combat.isAttackingSelf(0x10n)).toBe(true);
   store.update(0x10n, { health: 0 });
   expect(combat.isAttackingSelf(0x10n)).toBe(false);
+});
+
+test("cast events carry the spell name when spell data is loaded", () => {
+  const { combat } = setup();
+  const events: CombatEvent[] = [];
+  combat.onEvent((event) => events.push(event));
+  combat.cast(17, 2n);
+  combat.applyCastFailed(failure(1, 97));
+  expect(events.at(-1)?.spellName).toBeUndefined();
+  combat.setCatalog({
+    get: (id: number) =>
+      id === 17 ? { name: "Power Word: Shield" } : undefined,
+  } as unknown as SpellCatalog);
+  combat.cast(17, 2n);
+  combat.applyCastFailed(failure(2, 97));
+  expect(events.at(-1)).toMatchObject({
+    spellName: "Power Word: Shield",
+    type: "cast_failed",
+  });
+  combat.applyXp({
+    kind: "kill",
+    recruitAFriend: false,
+    total: 40,
+    victim: 2n,
+  });
+  expect(events.at(-1)?.spellName).toBeUndefined();
 });

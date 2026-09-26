@@ -122,7 +122,7 @@ tuicraft send -g "lfm"     # guild chat
 tuicraft -p "inc"          # party chat; -w/-y/-g/-p also work without send
 tuicraft send "/roll 50"   # slash command via the daemon
 tuicraft who               # who query
-tuicraft read --wait 5     # read unread events, wait up to 5s for one
+tuicraft read --wait 5     # read unread events (XP, loot, cast failures), wait up to 5s
 tuicraft send "/roll" --wait 5 # events after the roll; older unread stay
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
