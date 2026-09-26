@@ -15,7 +15,7 @@ milestone section and in the linked records.
 | [1. Evidence baseline and direct control](#1-evidence-baseline-and-direct-control) | Partly met: no committed record of target selection and clearing | None |
 | [2. A constrained Jev-controlled encounter](#2-a-constrained-jev-controlled-encounter) | Partly met: two exit criteria unmet | Accepted with two gaps, `609f814` |
 | [3. Movement as a tactical action](#3-movement-as-a-tactical-action) | Partly met: two exit criteria unmet | Accepted with two gaps, `001882d` |
-| [3a. Reliable local navigation](#3a-reliable-local-navigation) | Partly met: one route walked, refusals and a clean halt recorded; repeated traversal, redirection, unreachable reporting, ground-derived destinations, the funnel corner and bounded replanning missing | None |
+| [3a. Reliable local navigation](#3a-reliable-local-navigation) | Partly met: one route walked, refusals and a clean halt recorded; repeated traversal, redirection, unreachable reporting, ground-derived destinations, the funnel corner and bounded replanning missing | Maintainer ruling, 2026-09-26: `goto <guid>` takes the destination floor from the creature's observed Z ([3a](#recorded-decisions)) |
 | [3b. Remote movement and character following](#3b-remote-movement-and-character-following) | Not started; there is no `follow` command | None |
 | [4. Repeatable encounter cycles](#4-repeatable-encounter-cycles) | Evidence recorded as met, awaiting the maintainer's acceptance | `7da1f02` ("Accept M4 exit evidence"), which records the evidence as met and is not an acceptance |
 | [5. A selected questing loop](#5-a-selected-questing-loop) | Not started; quest protocol code is on `main`, with no live record | None |
@@ -424,12 +424,25 @@ planner on the observed 20-yard funnel corner, with non-anchor samples checked
 against the real native height query, exact preservation of the original start
 point, and rejection of wrong-floor and obstructed cases.
 
-Independent navigation review approved deriving destination Z from a unique
-native column, retaining the existing route gates, and stopping and integrating
-old motion before sampling a fresh replan origin. Replans require meaningful
+Destination Z comes from a unique native column. For `goto <guid>` over a
+column with several floors, it is the one floor within 0.25 yards of the
+creature's observed Z; with no such floor or more than one, the goto refuses
+at `pick_destination`. Independent navigation review approved retaining the
+existing route gates, and stopping and integrating old motion before sampling
+a fresh replan origin. Replans require meaningful
 observed displacement and have explicit time, distance and plan-count limits.
 Quiet or unsupported targets may stop conservatively with a reason, not trigger
 automatic retries.
+
+#### Recorded decisions
+
+- Maintainer ruling, 2026-09-26: `goto <guid>` picks the destination floor
+  within 0.25 yards (the planner's ground tolerance) of the creature's
+  observed Z when the column has several floors. This replaces the reviewed
+  rule that derived destination Z only from a unique native column. Observed
+  NPCs in Fairbreeze Village stand 0.08 to 0.10 yards above exactly
+  one of 2 to 5 floors, so the unique-column rule refused 7 of 9 of them. The
+  coordinate form is unchanged.
 
 #### Status: partly met on committed evidence
 

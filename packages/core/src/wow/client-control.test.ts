@@ -56,7 +56,7 @@ function fixture(
     steer,
   } as unknown as Runtimes;
   const handle = controlMethods({} as WorldConn, rt);
-  return { ...control, handle, steer };
+  return { ...control, handle, navigation, steer };
 }
 
 describe("goTo without Z", () => {
@@ -252,6 +252,74 @@ describe("goTo unreachable and lost destinations", () => {
       destination: undefined,
       target: 0x99n,
     });
+    expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
+  });
+});
+
+describe("goTo a creature over several floors", () => {
+  const MULTI = [93.42, 72.75, 70.37];
+  const columns = (x: number) => (x > 8715 ? MULTI : [70.34]);
+
+  function creatureAt(z: number, floors = columns) {
+    const targets = new Map<bigint, NavPoint>();
+    const f = fixture(floors, {}, targets);
+    const start = must(f.runtime.snapshot().pose);
+    targets.set(0x99n, { x: start.x + 10, y: start.y, z });
+    return { ...f, start };
+  }
+
+  test("walks to the floor within 0.25 yards of the creature", () => {
+    jest.useFakeTimers();
+    try {
+      const f = creatureAt(70.45);
+      f.handle.goTo({ guid: 0x99n, kind: "guid" });
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: true,
+        destination: { x: f.start.x + 10, y: f.start.y, z: 70.37 },
+        target: 0x99n,
+      });
+      f.advance(3000);
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: false,
+        remaining: 0,
+      });
+      expect(f.runtime.snapshot().pose?.z).toBeCloseTo(70.37, 4);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("plans to an upper floor when the creature stands on it", () => {
+    const f = creatureAt(72.84);
+    const plan = jest.spyOn(f.navigation, "plan");
+    expect(() => f.handle.goTo({ guid: 0x99n, kind: "guid" })).toThrow();
+    expect(plan).toHaveBeenCalledWith(530, expect.anything(), {
+      x: f.start.x + 10,
+      y: f.start.y,
+      z: 72.75,
+    });
+  });
+
+  test("keeps the ambiguous refusal when no floor is near the creature", () => {
+    const f = creatureAt(80);
+    expect(() => f.handle.goTo({ guid: 0x99n, kind: "guid" })).toThrow(
+      "pick_destination: ambiguous ground column at destination (floors 93.42, 72.75, 70.37)",
+    );
+    expect(f.runtime.navigationState()).toMatchObject({
+      active: false,
+      refusal: "pick_destination",
+      floors: MULTI,
+      target: 0x99n,
+    });
+    expect(f.runtime.navigationState().destination).not.toHaveProperty("z");
+    expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
+  });
+
+  test("keeps the ambiguous refusal when two floors are near the creature", () => {
+    const f = creatureAt(70.42, (x) => (x > 8715 ? [70.5, 70.34] : [70.34]));
+    expect(() => f.handle.goTo({ guid: 0x99n, kind: "guid" })).toThrow(
+      "pick_destination: ambiguous ground column at destination (floors 70.50, 70.34)",
+    );
     expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
   });
 });

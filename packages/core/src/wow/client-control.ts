@@ -9,6 +9,7 @@ import {
   type NavPoint,
   refusalFloors,
 } from "#wow/navigation";
+import { GROUND_ERROR } from "#wow/navigation-collision";
 import { observeNavigation } from "#wow/navigation-observation";
 import { queryNearby } from "#wow/nearby";
 import type { Runtimes } from "#wow/runtime";
@@ -117,6 +118,24 @@ function planDestination(
   return { route, resolved: { x, y, z: end.z } };
 }
 
+function planUnitFloor(
+  navigation: Navigation,
+  pose: ControlPose,
+  destination: NavDestination,
+  unitZ: number,
+): { route: GroundRoute; resolved: NavPoint } {
+  try {
+    return planDestination(navigation, pose, destination);
+  } catch (error) {
+    const near = (refusalFloors(error) ?? []).filter(
+      (height) => Math.abs(height - unitZ) <= GROUND_ERROR,
+    );
+    const [picked] = near;
+    if (near.length !== 1 || picked === undefined) throw error;
+    return planDestination(navigation, pose, { ...destination, z: picked });
+  }
+}
+
 function pointOf(target: GotoTarget): NavDestination | undefined {
   if (target.kind === "guid") return undefined;
   const { x, y, z } = target;
@@ -135,12 +154,17 @@ function navigateTo(rt: Runtimes, target: GotoTarget): void {
   const navigation = rt.navigation();
   const guid = target.kind === "guid" ? target.guid : undefined;
   try {
+    let unitZ: number | undefined;
     if (guid !== undefined) {
-      const { x, y } = rt.observedTarget(guid);
+      const { x, y, z } = rt.observedTarget(guid);
       destination = { x, y };
+      unitZ = z;
     }
     if (destination === undefined) throw new Error("invalid_destination");
-    const { route, resolved } = planDestination(navigation, pose, destination);
+    const { route, resolved } =
+      unitZ === undefined
+        ? planDestination(navigation, pose, destination)
+        : planUnitFloor(navigation, pose, destination, unitZ);
     rt.control.navigate(
       route,
       resolved,
