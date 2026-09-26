@@ -25,6 +25,7 @@ import {
   reaperDrafts,
 } from "factory/reaper-report";
 import { strayMessage, strayWorktree } from "factory/repo-guard";
+import { syncPrompts } from "factory/setup";
 import { sweep } from "factory/soap";
 
 type Stamp = number | string | null | undefined;
@@ -463,6 +464,7 @@ async function reap(opts: ReapOptions): Promise<Held[]> {
 
 export async function runReap(args: string[]): Promise<number> {
   const dryRun = args.includes("--dry-run");
+  await syncPrompts(dryRun, (line) => console.error(`reap: ${line}`));
   const [issues, items] = await Promise.all([openIssues(), boardItems()]);
   const reports = legacyReports(issues);
   if (!dryRun) await closeReports(reports);
