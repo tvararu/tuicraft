@@ -288,6 +288,51 @@ describe("session lifecycle", () => {
     }
   });
 
+  test("turning and moving keep auto-attack running until halt", async () => {
+    const nav = flatNavigation();
+    const server = await startMockWorldServer({
+      loginMapId: 530,
+      coalesceSelfCreate: true,
+    });
+    try {
+      const handle = await worldSession(
+        { ...base, ...NAVIGATION, host: "127.0.0.1", port: server.port },
+        fakeAuth(server.port),
+      );
+      try {
+        const appeared = Promise.withResolvers<void>();
+        handle.onEntityEvent((event) => {
+          if (event.type === "appear" && event.entity.guid === 0x99n)
+            appeared.resolve();
+        });
+        server.inject(GameOpcode.SMSG_UPDATE_OBJECT, observedObject(1, 12, 3));
+        await appeared.promise;
+        handle.attack(0x99n);
+        handle.faceGuid(0x99n);
+        handle.face(1);
+        handle.move("forward", 1000);
+        expect(handle.getCombatState().pendingAttack).toBe(0x99n);
+        handle.halt();
+        await server.waitForCapture(
+          (p) => p.opcode === GameOpcode.CMSG_ATTACKSTOP,
+        );
+        const opcodes = server.captured.map((p) => p.opcode);
+        expect(
+          opcodes.filter((op) => op === GameOpcode.CMSG_ATTACKSTOP),
+        ).toHaveLength(1);
+        expect(opcodes.indexOf(GameOpcode.CMSG_ATTACKSTOP)).toBeGreaterThan(
+          opcodes.lastIndexOf(GameOpcode.MSG_MOVE_SET_FACING),
+        );
+      } finally {
+        handle.close();
+        await handle.closed;
+      }
+    } finally {
+      server.stop();
+      nav.mockRestore();
+    }
+  });
+
   test("walk-toward reports ungrounded destination without cancelling manual motion", async () => {
     const nav = flatNavigation();
     const server = await startMockWorldServer({

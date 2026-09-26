@@ -51,6 +51,7 @@ export type Runtimes = {
   observedTarget: (guid: bigint) => NavPoint;
   halt: () => void;
   override: (reason?: string) => void;
+  steer: (reason?: string) => void;
   dispose: (sendStop: boolean) => void;
 };
 
@@ -404,6 +405,28 @@ function createDefense(
   });
 }
 
+function manualControl(
+  parts: RuntimeParts,
+  halt: (reason?: string) => void,
+  haltMovement: (reason: string) => void,
+): Pick<Runtimes, "override" | "steer"> {
+  function takeOver(): void {
+    parts.defense.yieldTo("manual_override");
+    parts.cycle.stop("manual_override");
+    parts.tactics.stop("manual_override");
+  }
+  return {
+    override(reason): void {
+      takeOver();
+      halt(reason);
+    },
+    steer(reason = "halt"): void {
+      takeOver();
+      haltMovement(reason);
+    },
+  };
+}
+
 export function createRuntimes(
   conn: WorldConn,
   config: ClientConfig,
@@ -420,10 +443,14 @@ export function createRuntimes(
     control,
   );
   const prepareCatalog = (): Promise<void> => loadCatalog(config, lazy, combat);
-  function rawHalt(reason = "halt"): void {
+  function haltMovement(reason: string): void {
     if (lazy.disposed) return;
     control.setMode("none");
     control.halt(reason);
+  }
+  function rawHalt(reason = "halt"): void {
+    if (lazy.disposed) return;
+    haltMovement(reason);
     combat.halt();
   }
   const tactics = createTactics(conn, config, {
@@ -454,12 +481,7 @@ export function createRuntimes(
     navigation: getNavigation,
     observedTarget: (guid) => findObservedTarget(conn, parts, guid),
     halt: () => rawHalt(),
-    override(reason): void {
-      parts.defense.yieldTo("manual_override");
-      parts.cycle.stop("manual_override");
-      tactics.stop("manual_override");
-      rawHalt(reason);
-    },
+    ...manualControl(parts, rawHalt, haltMovement),
     dispose(sendStop: boolean): void {
       if (lazy.disposed) return;
       disposeParts(parts, lazy, { sendStop, halt: rawHalt, unwire });

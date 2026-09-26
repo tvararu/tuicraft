@@ -28,7 +28,7 @@ function manualMove(
     rt.tactics.snapshot().status !== "idle" ||
     rt.cycle.snapshot().active
   )
-    rt.override();
+    rt.steer();
   rt.control.move(direction, durationMs);
 }
 
@@ -85,7 +85,7 @@ async function walkTowardTarget(
       error instanceof Error ? error.message : "target_unavailable";
     return { status: "stopped", reason, traveled: 0, pose };
   }
-  rt.override();
+  rt.steer();
   try {
     return await rt.control.walkToward(destination, yards, signal);
   } catch (error) {
@@ -126,7 +126,7 @@ function pointOf(target: GotoTarget): NavDestination | undefined {
 }
 
 function navigateTo(rt: Runtimes, target: GotoTarget): void {
-  rt.override(
+  rt.steer(
     rt.control.navigationState().active ? "navigation_replaced" : undefined,
   );
   let destination = pointOf(target);
@@ -169,12 +169,12 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
       manualMove(rt, direction, durationMs);
     },
     face(orientation) {
-      rt.override();
+      rt.steer();
       control.face(orientation);
     },
     faceGuid(guid) {
       const target = rt.observedTarget(guid);
-      rt.override();
+      rt.steer();
       const pose = control.snapshot().pose;
       if (!pose) throw new Error("no_pose");
       if (pose.x === target.x && pose.y === target.y)

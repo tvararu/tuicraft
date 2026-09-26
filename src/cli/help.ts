@@ -25,6 +25,7 @@ USAGE
                              Needs navigation data, else ERR missing_navigation
   tuicraft face <radians>    Set facing in radians
   tuicraft face-guid <guid>  Face a currently observed GUID
+                            move, face, face-guid, walk-toward and goto keep auto-attack running
   tuicraft walk-toward <yards> <guid>|<x> <y> <z>  Bounded direct leg (>0 to 20yd); JSON terminal outcome
   tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
   tuicraft halt              Cancel motion, cast, attack, tactics, cycle

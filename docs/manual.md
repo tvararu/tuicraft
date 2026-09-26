@@ -207,7 +207,11 @@ For `fight` and `cycle`, choose current non-self creature GUIDs from this JSON o
 `left`/`right` strafe. *ms* is an integer 1–10000. Default 1000. The walk
 ends when the duration ends. Repeating the same direction while manual movement
 is active renews the lease without a stop. A manual command takes over from
-Jev or cycle immediately instead of refreshing their movement.
+Jev or cycle immediately instead of refreshing their movement. Turning and
+moving (`move`, `face`, `face-guid`, `walk-toward`, `goto`) stop earlier
+movement but leave auto-attack and casts alone, as in the game client: keep
+facing a target with `face-guid` while `attack` swings. Taking over from a
+running `fight` or `cycle` still ends that fight's attack.
 `move` needs navigation data. The daemon walks the ground a half yard at a time
 and keeps the character on the highest surface it can reach: a rise of at most
 0.25 yd (one navmesh cell) plus the navmesh's 50° walkable slope, or a drop of up to 13 yd (under the server's 13.48 yd fall-damage distance). If the first half yard cannot
