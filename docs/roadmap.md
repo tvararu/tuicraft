@@ -270,7 +270,7 @@ evidence that the two-account suite passes.
   (relogin pose within about 0.0003 yards) and
   [m2/cancellation-reproof.json](evidence/m2/cancellation-reproof.json)
   (external `halt` stopping a Jev loop).
-- Fault paths run as committed live tests in `src/test/live.ts`
+- Fault paths run as committed live tests in `packages/cli/test-support/live.ts`
   (`1c06e0b`): forced `.tele`, `.freeze`/`.unfreeze`, and WHO pipelined with
   HALT on one socket. See
   [2026-09-21-fault-paths-live-plan.md](plans/2026-09-21-fault-paths-live-plan.md).
@@ -333,9 +333,9 @@ the records and their analysis are in [docs/evidence/m2/](evidence/m2/README.md)
   `unverified_hostile_relation` and killed the character repeatedly. `goto`
   failed with `UNKNOWN_HEIGHT`; the Detour `dtPointInPolygon` explanation is
   a hypothesis from observations, not an upstream-confirmed fact.
-- Not blocking: `src/wow/jev.ts` validates `output_tokens` and then discards
+- Not blocking: `packages/core/src/wow/jev.ts` validates `output_tokens` and then discards
   it, and the tactics bounds `DEFAULT_MAX_AGE_MS`, `DEFAULT_INTERVAL_MS` and
-  `DEFAULT_TIMEOUT_MS` in `src/wow/tactics.ts` have no recorded derivation.
+  `DEFAULT_TIMEOUT_MS` in `packages/core/src/wow/tactics.ts` have no recorded derivation.
 
 **Unmet: demonstrate behaviour change from instructions.** Encounters 04 and 05
 are one unreplicated pair; the whole difference is one Mind Blast and one
@@ -433,11 +433,11 @@ automatic retries.
 
 #### Status: partly met on committed evidence
 
-On `main`: `goto <x> <y> <z>` and `navigation` (`src/daemon/commands.ts`),
-the route planner in `src/wow/navigation.ts` (validated direct corridor, else
+On `main`: `goto <x> <y> <z>` and `navigation` (`packages/cli/src/daemon/commands.ts`),
+the route planner in `packages/core/src/wow/navigation.ts` (validated direct corridor, else
 native funnel corridor; `rejectSnap` start preservation; per-step ground and
 collision gates) from `27124fe`, `6f30aaa` and `802b91f`, and route aborts on
-server correction, teleport and knockback in `src/wow/control-sync.ts`.
+server correction, teleport and knockback in `packages/core/src/wow/control-sync.ts`.
 `walk-toward` and `face-guid` add bounded direct legs (`43ac81b`).
 
 Live so far, all in [the M2 records](evidence/m2/README.md): one 62-yard route
@@ -469,7 +469,7 @@ Missing against the exit evidence:
   recorded route still refuses on two planner-policy checks
   (`path corner disagrees with connected ground`, `ambiguous ground column at
   route`). The live refusals in that record used a Z-less `goto <x> <y>`,
-  which is not on `main` (`src/cli/args.ts` requires Z).
+  which is not on `main` (`packages/cli/src/cli/args.ts` requires Z).
 - Bounded replanning: no replan path exists in `src/`.
 - Known live defect: `goto` from a ghost fails with
   `position disagrees with ground height` or `UNKNOWN_HEIGHT` (M2 and M3
@@ -533,14 +533,14 @@ and gate map/transfer lifetime. Prove these boundaries before live player follow
 There is no `follow` command. On `main`:
 
 - No handler for other players' `MSG_MOVE_*` broadcasts
-  (`src/wow/movement-handlers.ts` registers teleport, root, knockback and
+  (`packages/core/src/wow/movement-handlers.ts` registers teleport, root, knockback and
   speed changes only). `SMSG_COMPRESSED_MOVES` is a stub and
   `MSG_MOVE_TIME_SKIPPED` has no handler.
-- `readLiving` in `src/wow/protocol/movement-block.ts` keeps movement flags
+- `readLiving` in `packages/core/src/wow/protocol/movement-block.ts` keeps movement flags
   but drops extra flags and mover time from CREATE/UPDATE movement blocks.
-- `src/wow/motion-store.ts` stores receive time only, and extrapolates
+- `packages/core/src/wow/motion-store.ts` stores receive time only, and extrapolates
   `SMSG_MONSTER_MOVE` splines. NPC splines and remote placements share it.
-- `ControlOwner` in `src/wow/control.ts` is `none`, `manual` or `jev`; there
+- `ControlOwner` in `packages/core/src/wow/control.ts` is `none`, `manual` or `jev`; there
   is no follow owner.
 
 There is no 3b record under `docs/evidence/` and no 3b design.
@@ -630,7 +630,7 @@ cycles needed no developer repair.
 - No committed live record covers in-cycle corpse runs (`1fbe0f2`,
   `723be6b`) or loot-open waits (`41077d1`, `f5386e9`). A death inside
   `cycle` still ends the run with `reclaimed` rather than continuing the
-  queue (`src/wow/encounter-cycle.ts`).
+  queue (`packages/core/src/wow/encounter-cycle.ts`).
 
 ### 5. A selected questing loop
 
@@ -659,12 +659,12 @@ notification and actual inventory/experience changes.
 On `main` (`7d05721`, `f1def23`, `641bfe9`, `44c7f18`): gossip hello and
 option select, questgiver query, accept, complete, request-reward,
 choose-reward, cancel and abandon, gated on the offered dialog
-(`src/wow/quests.ts`, `src/wow/quests-requests.ts`); quest-log slots with
-CREATE-time visibility (`src/wow/quest-slots.ts`);
+(`packages/core/src/wow/quests.ts`, `packages/core/src/wow/quests-requests.ts`); quest-log slots with
+CREATE-time visibility (`packages/core/src/wow/quest-slots.ts`);
 `SMSG_QUESTUPDATE_ADD_KILL`, `ADD_ITEM` and `COMPLETE` handling; carried
-inventory and coinage (`src/wow/inventory.ts`); and the matching CLI verbs
-(`src/cli/help.ts`). Gossip codes pass through IPC as string or null
-(`src/daemon/commands-quest-loot.test.ts`).
+inventory and coinage (`packages/core/src/wow/inventory.ts`); and the matching CLI verbs
+(`packages/cli/src/cli/help.ts`). Gossip codes pass through IPC as string or null
+(`packages/cli/src/daemon/commands-quest-loot.test.ts`).
 
 None of it has a live record, and there is no `docs/evidence/m5/`. Not on
 `main`: `CMSG_QUESTGIVER_HELLO` and `CMSG_QUESTGIVER_STATUS_QUERY` are never
@@ -717,10 +717,10 @@ Opcode coverage grows through the capabilities that need it.
 #### Status: not started
 
 No milestone 6 record exists. On `main`, `cycle <guid...> [--instruction]
-[--max]` runs an explicit target queue (`src/wow/encounter-cycle.ts`), HALT and
-manual actions pre-empt it (`src/wow/runtime.ts`, `src/daemon/server.ts`),
+[--max]` runs an explicit target queue (`packages/core/src/wow/encounter-cycle.ts`), HALT and
+manual actions pre-empt it (`packages/core/src/wow/runtime.ts`, `packages/cli/src/daemon/server.ts`),
 tactics events carry observation, instruction and latency into the session
-log, and `mise evidence:encounter` (`src/tools/distil-encounter.ts`) distils
+log, and `mise evidence:encounter` (`packages/devtools/src/distil-encounter.ts`) distils
 one encounter. Missing:
 
 - Changing objectives mid-session: the instruction is fixed per `cycle`

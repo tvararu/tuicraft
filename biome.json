@@ -1,9 +1,19 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
+  "assist": {
+    "actions": {
+      "source": {
+        "noDuplicateClasses": "on",
+        "organizeImports": "on",
+        "useSortedAttributes": "on",
+        "useSortedInterfaceMembers": "on",
+        "useSortedKeys": "on",
+        "useSortedProperties": "on"
+      }
+    }
+  },
+  "files": {
+    "includes": ["packages/**"]
   },
   "formatter": {
     "indentStyle": "space"
@@ -21,13 +31,13 @@
         "noForEach": "error",
         "noImplicitCoercions": "error",
         "noUselessCatchBinding": "error",
+        "noUselessReturn": "error",
         "noUselessStringConcat": "error",
         "noUselessUndefined": "error",
         "useLiteralKeys": "off",
         "useMaxParams": "error",
         "useSimplifiedLogicExpression": "error",
-        "useWhile": "error",
-        "noUselessReturn": "error"
+        "useWhile": "error"
       },
       "correctness": {
         "noGlobalDirnameFilename": "error",
@@ -45,6 +55,13 @@
         "noDefaultExport": "error",
         "noDoneCallback": "error",
         "noEnum": "error",
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 500,
+            "skipBlankLines": true
+          }
+        },
         "noExportedImports": "error",
         "noInferrableTypes": "error",
         "noNamespace": "error",
@@ -66,6 +83,12 @@
         "useConsistentArrowReturn": "error",
         "useConsistentBuiltinInstantiation": "error",
         "useConsistentMemberAccessibility": "error",
+        "useConsistentMethodSignatures": {
+          "level": "error",
+          "options": {
+            "style": "property"
+          }
+        },
         "useConsistentObjectDefinitions": {
           "level": "error",
           "options": {
@@ -80,6 +103,7 @@
         },
         "useDefaultParameterLast": "error",
         "useDefaultSwitchClause": "error",
+        "useErrorCause": "error",
         "useExplicitLengthCheck": "error",
         "useFilenamingConvention": "error",
         "useForOf": "error",
@@ -93,65 +117,35 @@
         "useThrowNewError": "error",
         "useThrowOnlyError": "error",
         "useTrimStartEnd": "error",
-        "useUnifiedTypeSignatures": "error",
-        "useConsistentMethodSignatures": {
-          "level": "error",
-          "options": {
-            "style": "property"
-          }
-        },
-        "useErrorCause": "error",
-        "noExcessiveLinesPerFile": {
-          "level": "error",
-          "options": {
-            "maxLines": 500,
-            "skipBlankLines": true
-          }
-        }
+        "useUnifiedTypeSignatures": "error"
       },
       "suspicious": {
         "noAlert": "error",
         "noBitwiseOperators": "error",
         "noConstantBinaryExpressions": "error",
         "noDeprecatedImports": "error",
+        "noEmptyBlockStatements": "error",
+        "noEqualsToNull": "error",
         "noEvolvingTypes": "error",
         "noImportCycles": "error",
         "noMisplacedAssertion": "error",
+        "noShadow": "error",
         "noSkippedTests": "error",
         "noUnassignedVariables": "error",
         "noUnusedExpressions": "error",
         "noVar": "error",
+        "useAwait": "error",
         "useDeprecatedDate": "error",
         "useErrorMessage": "error",
         "useGuardForIn": "error",
         "useNumberToFixedDigitsArgument": "error",
-        "useStaticResponseMethods": "error",
-        "useAwait": "error",
-        "noShadow": "error",
-        "noEqualsToNull": "error",
-        "noEmptyBlockStatements": "error"
+        "useStaticResponseMethods": "error"
       }
     }
   },
-  "assist": {
-    "actions": {
-      "source": {
-        "organizeImports": "on",
-        "useSortedKeys": "on",
-        "useSortedProperties": "on",
-        "useSortedAttributes": "on",
-        "useSortedInterfaceMembers": "on",
-        "noDuplicateClasses": "on"
-      }
-    }
-  },
-  "files": {
-    "includes": ["src/**"]
-  },
-  "plugins": ["./config/biome.grit"],
   "overrides": [
     {
-      "includes": ["src/factory/config.ts"],
+      "includes": ["packages/factory/src/config.ts"],
       "linter": {
         "rules": {
           "security": {
@@ -161,14 +155,11 @@
       }
     },
     {
-      "includes": ["src/**/*.test.ts", "src/test/**"],
+      "includes": ["packages/**/*.test.ts", "packages/*/test-support/**"],
       "linter": {
         "rules": {
           "complexity": {
             "noExcessiveLinesPerFunction": "off"
-          },
-          "style": {
-            "noProcessEnv": "off"
           },
           "performance": {
             "useTopLevelRegex": "off"
@@ -176,15 +167,18 @@
           "security": {
             "noSecrets": "off"
           },
+          "style": {
+            "noProcessEnv": "off"
+          },
           "suspicious": {
-            "useAwait": "off",
-            "noEmptyBlockStatements": "off"
+            "noEmptyBlockStatements": "off",
+            "useAwait": "off"
           }
         }
       }
     },
     {
-      "includes": ["src/wow/**", "src/test/**"],
+      "includes": ["packages/core/src/wow/**", "packages/*/test-support/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -194,28 +188,36 @@
       }
     },
     {
-      "includes": ["src/wow/**"],
       "assist": {
         "actions": {
           "source": {
             "useSortedKeys": "off"
           }
         }
-      }
+      },
+      "includes": [
+        "packages/core/src/wow/**",
+        "packages/cli/src/ui/party-store.test.ts",
+        "packages/cli/src/ui/control-replan.test.ts"
+      ]
     },
     {
-      "includes": ["src/wow/protocol/opcodes.ts"],
+      "includes": ["packages/core/src/wow/protocol/opcodes.ts"],
       "linter": {
         "rules": {
           "style": {
-            "useNumericSeparators": "off",
-            "noExcessiveLinesPerFile": "off"
+            "noExcessiveLinesPerFile": "off",
+            "useNumericSeparators": "off"
           }
         }
       }
     },
     {
-      "includes": ["src/wow/index.ts", "src/wow/session.ts"],
+      "includes": [
+        "packages/core/src/wow/index.ts",
+        "packages/core/src/wow/session.ts",
+        "packages/core/test-support/internals.ts"
+      ],
       "linter": {
         "rules": {
           "performance": {
@@ -225,12 +227,93 @@
       }
     },
     {
+      "includes": ["packages/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@tuicraft/**"],
+                    "message": "Core imports nothing from other packages; inside core use \"#wow/…\", \"#lib/…\" or \"#test-support/…\"."
+                  },
+                  {
+                    "group": ["@earendil-works/**", "../**/@earendil-works/**"],
+                    "message": "Only packages/harness may import the Pi SDK (@earendil-works/*)."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/core/src/**", "!packages/core/src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@tuicraft/**"],
+                    "message": "Core imports nothing from other packages; inside core use \"#wow/…\" or \"#lib/…\"."
+                  },
+                  {
+                    "group": ["#test-support/**", "../**/test-support/**"],
+                    "message": "Core runtime code must not import test support."
+                  },
+                  {
+                    "group": ["@earendil-works/**", "../**/@earendil-works/**"],
+                    "message": "Only packages/harness may import the Pi SDK (@earendil-works/*)."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": [
-        "src/cli/**",
-        "src/daemon/**",
-        "src/ui/**",
-        "src/tools/**",
-        "src/main.ts"
+        "packages/cli/**",
+        "packages/factory/**",
+        "packages/devtools/**",
+        "packages/harness/**"
       ],
       "linter": {
         "rules": {
@@ -240,8 +323,164 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["wow/**", "**/wow/**", "!wow/session"],
-                    "message": "Shells import core only from \"wow\" (src/wow/index.ts) or the session entry \"wow/session\"."
+                    "group": [
+                      "@tuicraft/**",
+                      "!@tuicraft/core",
+                      "!@tuicraft/core/session",
+                      "!@tuicraft/core/lib/*",
+                      "!@tuicraft/core/test-support/*"
+                    ],
+                    "message": "Shells import core only from \"@tuicraft/core\" (the barrel), \"@tuicraft/core/session\", \"@tuicraft/core/lib/<module>\" and, in tests, \"@tuicraft/core/test-support/<module>\"."
+                  },
+                  {
+                    "group": ["@earendil-works/**", "../**/@earendil-works/**"],
+                    "message": "Only packages/harness may import the Pi SDK (@earendil-works/*)."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/cli/src/**",
+        "packages/factory/src/**",
+        "packages/devtools/src/**",
+        "packages/harness/src/**",
+        "!**/*.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@tuicraft/**",
+                      "!@tuicraft/core",
+                      "!@tuicraft/core/session",
+                      "!@tuicraft/core/lib/*"
+                    ],
+                    "message": "Shells import core only from \"@tuicraft/core\" (the barrel), \"@tuicraft/core/session\", \"@tuicraft/core/lib/<module>\" and, in tests, \"@tuicraft/core/test-support/<module>\"."
+                  },
+                  {
+                    "group": ["@earendil-works/**", "../**/@earendil-works/**"],
+                    "message": "Only packages/harness may import the Pi SDK (@earendil-works/*)."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/harness/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@tuicraft/**",
+                      "!@tuicraft/core",
+                      "!@tuicraft/core/session",
+                      "!@tuicraft/core/lib/*",
+                      "!@tuicraft/core/test-support/*"
+                    ],
+                    "message": "Shells import core only from \"@tuicraft/core\" (the barrel), \"@tuicraft/core/session\", \"@tuicraft/core/lib/<module>\" and, in tests, \"@tuicraft/core/test-support/<module>\"."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/harness/src/**", "!**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@tuicraft/**",
+                      "!@tuicraft/core",
+                      "!@tuicraft/core/session",
+                      "!@tuicraft/core/lib/*"
+                    ],
+                    "message": "Shells import core only from \"@tuicraft/core\" (the barrel), \"@tuicraft/core/session\", \"@tuicraft/core/lib/<module>\" and, in tests, \"@tuicraft/core/test-support/<module>\"."
+                  },
+                  {
+                    "group": [
+                      "../**/core/src/**",
+                      "../**/core/test-support/**",
+                      "../**/cli/src/**",
+                      "../**/cli/test-support/**",
+                      "../**/factory/src/**",
+                      "../**/factory/test-support/**",
+                      "../**/devtools/src/**",
+                      "../**/harness/src/**",
+                      "../**/packages/**",
+                      "../**/node_modules/**"
+                    ],
+                    "message": "Import another package by its name, never by a relative path into its directory."
                   }
                 ]
               }
@@ -250,5 +489,11 @@
         }
       }
     }
-  ]
+  ],
+  "plugins": ["./config/biome.grit"],
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
 }

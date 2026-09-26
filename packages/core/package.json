@@ -1,0 +1,24 @@
+{
+  "exports": {
+    ".": "./src/wow/index.ts",
+    "./lib/abort": "./src/lib/abort.ts",
+    "./lib/config": "./src/lib/config.ts",
+    "./lib/errors": "./src/lib/errors.ts",
+    "./lib/ignore-failure": "./src/lib/ignore-failure.ts",
+    "./lib/paths": "./src/lib/paths.ts",
+    "./session": "./src/wow/session.ts",
+    "./test-support/control-fixtures": "./test-support/control-fixtures.ts",
+    "./test-support/internals": "./test-support/internals.ts",
+    "./test-support/mock-handle": "./test-support/mock-handle.ts",
+    "./test-support/must": "./test-support/must.ts",
+    "./test-support/temp-paths": "./test-support/temp-paths.ts"
+  },
+  "imports": {
+    "#lib/*": "./src/lib/*.ts",
+    "#test-support/*": "./test-support/*.ts",
+    "#wow/*": "./src/wow/*.ts"
+  },
+  "name": "@tuicraft/core",
+  "private": true,
+  "type": "module"
+}

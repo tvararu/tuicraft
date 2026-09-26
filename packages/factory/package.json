@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@tuicraft/core": "workspace:*"
+  },
+  "exports": {},
+  "imports": {
+    "#factory/*": "./src/*.ts",
+    "#factory/prompts/*": "./src/prompts/*",
+    "#test-support/*": "./test-support/*.ts"
+  },
+  "name": "@tuicraft/factory",
+  "private": true,
+  "type": "module"
+}

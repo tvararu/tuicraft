@@ -92,8 +92,8 @@ To run live integration tests against a real server, `mise test:live` needs
 two game accounts in `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`,
 `WOW_ACCOUNT_2`, `WOW_PASSWORD_2` and `WOW_CHARACTER_2` (`WOW_HOST`,
 `WOW_PORT` and `WOW_LANGUAGE` are optional). Use throwaway accounts made with
-`bun src/factory/main.ts soap create fresh --gm 2` and
-`bun src/factory/main.ts soap create eversong10`, and delete them with
+`bun packages/factory/src/main.ts soap create fresh --gm 2` and
+`bun packages/factory/src/main.ts soap create eversong10`, and delete them with
 `soap delete <ACCOUNT>` afterwards; see [AGENTS.md](AGENTS.md#testing) and
 [the manual](docs/manual.md#testing). To keep the variables in a file, copy
 the example config:

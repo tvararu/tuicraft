@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@tuicraft/core": "workspace:*"
+  },
+  "exports": {},
+  "imports": {
+    "#tools/*": "./src/*.ts"
+  },
+  "name": "@tuicraft/devtools",
+  "private": true,
+  "type": "module"
+}

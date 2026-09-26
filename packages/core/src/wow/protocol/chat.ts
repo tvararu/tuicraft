@@ -1,0 +1,272 @@
+import { ChannelNotify, ChatType, HighGuid } from "#wow/protocol/opcodes";
+import { type PacketReader, PacketWriter } from "#wow/protocol/packet";
+
+export type ChatMessage = {
+  type: number;
+  language: number;
+  senderGuidLow: number;
+  senderGuidHigh: number;
+  message: string;
+  channel?: string;
+  senderName?: string;
+};
+
+export type NameQueryResult = {
+  guidLow: number;
+  found: boolean;
+  name?: string;
+};
+
+export type WhoResult = {
+  name: string;
+  guild: string;
+  level: number;
+  classId: number;
+  race: number;
+  gender: number;
+  zone: number;
+};
+
+const MONSTER_CHAT = new Set<number>([
+  ChatType.MONSTER_SAY,
+  ChatType.MONSTER_PARTY,
+  ChatType.MONSTER_YELL,
+  ChatType.MONSTER_WHISPER,
+  ChatType.MONSTER_EMOTE,
+  ChatType.RAID_BOSS_EMOTE,
+  ChatType.RAID_BOSS_WHISPER,
+  ChatType.BATTLENET,
+]);
+
+const BG_SYSTEM_CHAT = new Set<number>([
+  ChatType.BG_SYSTEM_NEUTRAL,
+  ChatType.BG_SYSTEM_ALLIANCE,
+  ChatType.BG_SYSTEM_HORDE,
+]);
+
+type SenderBlock = { senderName?: string; channel?: string };
+
+function skipReceiver(r: PacketReader, skipPet: boolean): void {
+  const receiver = r.uint64LE();
+  const high = Number(receiver >> 48n);
+  if (receiver === 0n || high === HighGuid.PLAYER) return;
+  if (skipPet && high === HighGuid.PET) return;
+  r.sizedString();
+}
+
+function readSenderBlock(
+  r: PacketReader,
+  type: number,
+  isGm: boolean,
+): SenderBlock {
+  if (MONSTER_CHAT.has(type)) {
+    const senderName = r.sizedString();
+    skipReceiver(r, true);
+    return { senderName };
+  }
+  if (BG_SYSTEM_CHAT.has(type)) {
+    skipReceiver(r, false);
+    return {};
+  }
+  const named = isGm || type === ChatType.WHISPER_FOREIGN;
+  const senderName = named ? r.sizedString() : undefined;
+  const channel = type === ChatType.CHANNEL ? r.cString() : undefined;
+  r.uint64LE();
+  return { senderName, channel };
+}
+
+export function parseChatMessage(r: PacketReader, isGm = false): ChatMessage {
+  const type = r.uint8();
+  const language = r.uint32LE();
+  const senderGuidLow = r.uint32LE();
+  const senderGuidHigh = r.uint32LE();
+  r.uint32LE();
+  const { senderName, channel } = readSenderBlock(r, type, isGm);
+  const message = r.sizedString();
+  if (r.remaining > 0) r.uint8();
+
+  return {
+    type,
+    language,
+    senderGuidLow,
+    senderGuidHigh,
+    message,
+    channel,
+    senderName,
+  };
+}
+
+export function buildChatMessage(
+  type: number,
+  language: number,
+  message: string,
+  target?: string,
+): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(type);
+  w.uint32LE(language);
+  if (type === ChatType.WHISPER || type === ChatType.CHANNEL) {
+    w.cString(target ?? "");
+  }
+  w.cString(message);
+  return w.finish();
+}
+
+export function buildNameQuery(guidLow: number, guidHigh: number): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(guidLow);
+  w.uint32LE(guidHigh);
+  return w.finish();
+}
+
+export function parseNameQueryResponse(r: PacketReader): NameQueryResult {
+  const { low: guidLow } = r.packedGuid();
+  const notFound = r.uint8();
+  if (notFound) return { guidLow, found: false };
+  const name = r.cString();
+  return { guidLow, found: true, name };
+}
+
+export function buildWhoRequest(opts: {
+  name?: string;
+  minLevel?: number;
+  maxLevel?: number;
+}): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(opts.minLevel ?? 0);
+  w.uint32LE(opts.maxLevel ?? 100);
+  w.cString(opts.name ?? "");
+  w.cString("");
+  w.uint32LE(0xff_ff_ff_ff);
+  w.uint32LE(0xff_ff_ff_ff);
+  w.uint32LE(0);
+  w.uint32LE(0);
+  return w.finish();
+}
+
+export type ChannelNotifyEvent =
+  | { type: "joined"; channel: string }
+  | { type: "left"; channel: string }
+  | { type: "error"; channel: string; code: number; message: string }
+  | { type: "other" };
+
+const CHANNEL_NOTIFY_MESSAGES: Record<number, (ch: string) => string> = {
+  [ChannelNotify.WRONG_PASSWORD]: (ch) => `Wrong password for ${ch}`,
+  [ChannelNotify.NOT_MEMBER]: (ch) => `Not on channel ${ch}`,
+  [ChannelNotify.MUTED]: (ch) => `You do not have permission to speak in ${ch}`,
+  [ChannelNotify.BANNED]: (ch) => `You are banned from ${ch}`,
+  [ChannelNotify.ALREADY_MEMBER]: (ch) => `You are already in ${ch}`,
+  [ChannelNotify.WRONG_FACTION]: (ch) => `Wrong faction for ${ch}`,
+  [ChannelNotify.INVALID_NAME]: () => "Invalid channel name",
+  [ChannelNotify.THROTTLED]: (ch) => `Channel message throttled in ${ch}`,
+  [ChannelNotify.NOT_IN_AREA]: (ch) =>
+    `You are not in the correct area for ${ch}`,
+};
+
+export function parseChannelNotify(r: PacketReader): ChannelNotifyEvent {
+  const notifyType = r.uint8();
+  const channel = r.cString();
+
+  if (notifyType === ChannelNotify.YOU_JOINED) {
+    r.uint8();
+    r.uint32LE();
+    r.uint32LE();
+    return { type: "joined", channel };
+  }
+
+  if (notifyType === ChannelNotify.YOU_LEFT) {
+    r.uint32LE();
+    r.uint8();
+    return { type: "left", channel };
+  }
+
+  const fmt = CHANNEL_NOTIFY_MESSAGES[notifyType];
+  if (fmt) {
+    return { type: "error", channel, code: notifyType, message: fmt(channel) };
+  }
+
+  return { type: "other" };
+}
+
+export function buildJoinChannel(name: string, password?: string): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(0);
+  w.uint8(0);
+  w.uint8(0);
+  w.cString(name);
+  w.cString(password ?? "");
+  return w.finish();
+}
+
+export function buildLeaveChannel(name: string): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(0);
+  w.cString(name);
+  return w.finish();
+}
+
+export type RandomRoll = {
+  min: number;
+  max: number;
+  result: number;
+  guidLow: number;
+  guidHigh: number;
+};
+
+export function buildRandomRoll(min: number, max: number): Uint8Array {
+  const w = new PacketWriter();
+  w.uint32LE(min);
+  w.uint32LE(max);
+  return w.finish();
+}
+
+export function parseRandomRoll(r: PacketReader): RandomRoll {
+  const min = r.uint32LE();
+  const max = r.uint32LE();
+  const result = r.uint32LE();
+  const guidLow = r.uint32LE();
+  const guidHigh = r.uint32LE();
+  return { min, max, result, guidLow, guidHigh };
+}
+
+export function parseWhoResponse(r: PacketReader): WhoResult[] {
+  const displayCount = r.uint32LE();
+  r.uint32LE();
+  const results: WhoResult[] = [];
+  for (let i = 0; i < displayCount; i++) {
+    results.push({
+      name: r.cString(),
+      guild: r.cString(),
+      level: r.uint32LE(),
+      classId: r.uint32LE(),
+      race: r.uint32LE(),
+      gender: r.uint8(),
+      zone: r.uint32LE(),
+    });
+  }
+  return results;
+}
+
+const SERVER_MESSAGES: Record<number, (param: string) => string> = {
+  1: (p) => `Server shutdown in ${p}`,
+  2: (p) => `Server restart in ${p}`,
+  3: (p) => p,
+  4: () => "Server shutdown cancelled",
+  5: () => "Server restart cancelled",
+  6: (p) => `Battleground shutdown in ${p}`,
+  7: (p) => `Battleground restart in ${p}`,
+  8: (p) => `Instance shutdown in ${p}`,
+  9: (p) => `Instance restart in ${p}`,
+};
+
+export function parseServerBroadcast(r: PacketReader): { message: string } {
+  const messageId = r.uint32LE();
+  const param = r.cString();
+  const fmt = SERVER_MESSAGES[messageId];
+  const message = fmt ? fmt(param) : `Server message ${messageId}: ${param}`;
+  return { message };
+}
+
+export function parseNotification(r: PacketReader): { message: string } {
+  return { message: r.cString() };
+}

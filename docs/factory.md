@@ -25,11 +25,13 @@ flowchart LR
   D -->|QA files issues| B
 ```
 
-Roles are Orca automations running `omp` through `src/factory/omp-factory`,
+Roles are Orca automations running `omp` through `packages/factory/src/omp-factory`,
 each in a fresh `auto-*` worktree, from the runner clone
-`~/.local/share/tuicraft-factory/runner` (follows `origin/main`). Orca's
+`~/.local/share/tuicraft-factory/runner` (follows `origin/main`; the reaper runs
+`bun install --frozen-lockfile --filter @tuicraft/factory` there, because
+the factory imports `@tuicraft/core`). Orca's
 `agentCmdOverrides.omp` is `~/.local/bin/omp-factory`, a symlink to the
-runner's wrapper that `bun src/factory/main.ts setup wrapper --apply`
+runner's wrapper that `bun packages/factory/src/main.ts setup wrapper --apply`
 installs, so the wrapper and its `omp-factory.yml` follow `main`. The wrapper
 passes that file as `--config` to factory roles, so they run with omp memory
 and autolearn off, and with omp's git integration off: its status line
@@ -38,14 +40,14 @@ points a minute per running agent. Like Orca's own `omp` shell function,
 it passes `--extension "$ORCA_OMP_STATUS_EXTENSION"` to every launch when
 that file exists, so omp panes report working, idle and done to Orca once
 its "Agent status hooks" setting is on. Prompts are in
-`src/factory/prompts/`. Every role starts with `bun src/factory/main.ts
+`packages/factory/src/prompts/`. Every role starts with `bun packages/factory/src/main.ts
 precheck <role>` and stops on exit 1.
 
 Orca keeps its own copy of each role's prompt. Every reaper pass, run from
 the freshly reset runner clone, edits the prompt of any role automation whose
 copy differs from `main` and changes nothing else, so a disabled automation,
 the pace schedule and `setupDecision` stay as they are, and a prompt change
-is live within one reaper tick of landing. `bun src/factory/main.ts setup
+is live within one reaper tick of landing. `bun packages/factory/src/main.ts setup
 automations --apply` is still how automations are created or their other
 fields changed.
 
@@ -65,15 +67,42 @@ whose git directory is gone. A launch from an already isolated shell
 reuses the same directories. Each links every entry of the real directory
 except `tuicraft` and the other `tuicraft-factory-*` directories, so `gh`,
 git, `mise` and `systemctl --user` find their usual config, state and
-sockets, while plain `bun src/main.ts` finds no config and cannot reach the
+sockets, while plain `bun packages/cli/src/main.ts` finds no config and cannot reach the
 default daemon socket. The main checkout and other repositories keep the
 default directories. Live characters come from
-`bun src/factory/main.ts soap create <preset>`, which also writes
+`bun packages/factory/src/main.ts soap create <preset>`, which also writes
 `tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
 `tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config
 or running daemon names another character, prints the character on
-stderr, and runs `bun src/main.ts "$@"`. `soap delete <ACCOUNT>` removes
+stderr, and runs `bun packages/cli/src/main.ts "$@"`. `soap delete <ACCOUNT>` removes
 the wrapper and those directories.
+
+`soap create` presets are `fresh`, `eversong10`, `max80`,
+`eversong10-warrior`, `eversong10-mage`, `eversong10-hunter` (all Horde,
+Eversong), `elwynn1`, `elwynn10` (Alliance, Northshire and Goldshire) and
+`ghostlands20`. Each copies a template character from the `TCPRESETS`
+account with `pdump copy`; a `TUICRAFT_PRESET_<NAME>` key in `soap.env`,
+with `-` written as `_`, overrides the template. `pdump copy` can report
+success and create nothing, so create confirms the character with `pinfo`
+and copies again, up to three attempts, before it fails. Alliance presets
+get language 7 (Common) in their config. `soap list` prints the ledger
+without passwords; `--with-passwords` prints them.
+
+Graders reach the t1 service (`TUICRAFT_T1_SERVICE` in the environment or
+`soap.env`, default `http://100.73.138.96:7879`) through
+`soap health`, `soap presets`, `soap accounts`, `soap truth <ACCOUNT>`,
+`soap setup <ACCOUNT> <endpoint> [json]` and `soap reset <ACCOUNT>`. The
+endpoint is one of the service's character endpoints (`position`,
+`level`, `money`, `xp`, `hearth`, `rep`, `items/add`, `items/remove`,
+`items/clear-bags`, `spells/learn`, `spells/unlearn`, `quest/add`,
+`quest/complete`, `quest/remove`, `quest/reward`, `quest/objective`,
+`life`, `snapshot`, `restore`) and the JSON object is its body. Each
+prints the service's JSON on stdout. A failure prints
+`{"ok":false,"reason":...}` with the service's reason code and exits 1.
+The CLI refuses any account that is not a factory account before it calls
+the service. Setup endpoints refuse an online character
+(`character_online`), so stop its daemon first; `truth` saves an online
+character before it reads.
 
 ## Status
 
@@ -92,7 +121,7 @@ Ready unless it already has an open factory PR, no agent @-mentions anyone,
 and the Blocked group is the maintainer's inbox. An issue with an open
 blocked-by issue stays where it is and is never picked up or landed.
 
-`bun src/factory/main.ts status <issue>` prints a card's Status;
+`bun packages/factory/src/main.ts status <issue>` prints a card's Status;
 `status <issue> <backlog|triage|blocked|ready|in-progress|in-review|done>` sets it
 (adding the issue to the board if missing) and refuses `ready` without an
 open `factory/<N>-…` PR.
@@ -104,7 +133,7 @@ Comments on the issue are the per-run locks:
 - `<!-- factory:claim <run> <sha> -->`: a reviewer's claim on one head. Live
   for 1 h.
 - `<!-- factory:landing <run> -->`: the merger's landing claim. Live for
-  1 h; `bun src/factory/main.ts landings` lists the live ones, oldest first,
+  1 h; `bun packages/factory/src/main.ts landings` lists the live ones, oldest first,
   and the oldest wins. A reviewer does not pick up a card while it is live.
 
 Two more mark heads for the bounce count:
@@ -265,7 +294,7 @@ PR: #<pr>
 Co-authored-by: Theodor Vararu <theo@vararu.org>
 ```
 
-`bun src/factory/main.ts squash-message <pr>` builds it and fails on a bad
+`bun packages/factory/src/main.ts squash-message <pr>` builds it and fails on a bad
 title, missing why, or no closed issue. Revert with one `git revert <sha>`.
 
 ## Stacked PRs
