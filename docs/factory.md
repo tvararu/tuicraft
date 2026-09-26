@@ -77,6 +77,33 @@ or running daemon names another character, prints the character on
 stderr, and runs `bun packages/cli/src/main.ts "$@"`. `soap delete <ACCOUNT>` removes
 the wrapper and those directories.
 
+`soap create` presets are `fresh`, `eversong10`, `max80`,
+`eversong10-warrior`, `eversong10-mage`, `eversong10-hunter` (all Horde,
+Eversong), `elwynn1`, `elwynn10` (Alliance, Northshire and Goldshire) and
+`ghostlands20`. Each copies a template character from the `TCPRESETS`
+account with `pdump copy`; a `TUICRAFT_PRESET_<NAME>` key in `soap.env`,
+with `-` written as `_`, overrides the template. `pdump copy` can report
+success and create nothing, so create confirms the character with `pinfo`
+and copies again, up to three attempts, before it fails. Alliance presets
+get language 7 (Common) in their config. `soap list` prints the ledger
+without passwords; `--with-passwords` prints them.
+
+Graders reach the t1 service (`TUICRAFT_T1_SERVICE` in the environment or
+`soap.env`, default `http://100.73.138.96:7879`) through
+`soap health`, `soap presets`, `soap accounts`, `soap truth <ACCOUNT>`,
+`soap setup <ACCOUNT> <endpoint> [json]` and `soap reset <ACCOUNT>`. The
+endpoint is one of the service's character endpoints (`position`,
+`level`, `money`, `xp`, `hearth`, `rep`, `items/add`, `items/remove`,
+`items/clear-bags`, `spells/learn`, `spells/unlearn`, `quest/add`,
+`quest/complete`, `quest/remove`, `quest/reward`, `quest/objective`,
+`life`, `snapshot`, `restore`) and the JSON object is its body. Each
+prints the service's JSON on stdout. A failure prints
+`{"ok":false,"reason":...}` with the service's reason code and exits 1.
+The CLI refuses any account that is not a factory account before it calls
+the service. Setup endpoints refuse an online character
+(`character_online`), so stop its daemon first; `truth` saves an online
+character before it reads.
+
 ## Status
 
 | Status | Moved there by | Meaning |

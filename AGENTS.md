@@ -147,7 +147,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   for the `.freeze` and `.tele` checks) and
   `bun packages/factory/src/main.ts soap create eversong10` (account 2). Set
   `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
-  `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, run it
+  `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints
+  (redirect it to a file under `tmp/` and read fields with `jq`, so the
+  password never reaches a transcript; `soap list` omits passwords), run it
   as `XDG_CONFIG_HOME=<account 1 .dir>/config mise test:live` (the suite
   reads the navigation data paths from that config), and delete both with
   `soap delete <ACCOUNT>` afterwards. Unit, type, format, and coverage
