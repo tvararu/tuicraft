@@ -15,6 +15,7 @@ flowchart LR
   B -->|maintainer or coordinator| T[Triage]
   T -->|maintainer| R
   R -->|worker claims| P[In progress]
+  P -->|worker run died| R
   P -->|PR opened| V[In review]
   V -->|review or landing fails| R
   V -->|merged| D[Done]
@@ -79,7 +80,7 @@ the wrapper and those directories.
 | Backlog | GitHub's auto-add, for every new issue | Filed, not started |
 | Triage | the maintainer or the coordinator | Picked to look at now; the factory ignores it like Backlog and never moves a card there, and only the maintainer moves one on to Ready |
 | Blocked | any agent, with a comment | Waits on the maintainer; the comment says what the problem is and what to do |
-| Ready | the maintainer; agents only when an open factory PR exists | Work on this (rework if a PR is open); oldest first |
+| Ready | the maintainer; agents only when an open factory PR exists; the reaper when the worker run holding the card died | Work on this (rework if a PR is open); oldest first |
 | In progress | worker, on claim | A worker owns it |
 | In review | worker, on opening the PR | Reviewer, then merger |
 | Done | GitHub, on merge or close | Landed or closed |
@@ -158,6 +159,17 @@ what a marker means.
   archived to `tmp/worktree-archive-<date>/`. Each hold is one draft card in
   Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
   reaper deletes it once the hold clears.
+
+  A run it removes died if it ended without finishing: `dispatch_failed`
+  with its terminals quiet for 10 min, or over its cap, but not
+  `completed`. Before removing a dead worker run whose card is still In
+  progress with that run's claim as the latest worker claim, the reaper
+  comments which run died, how, and what it left (the pushed
+  `factory/<N>-…` branch and the open PR), then moves the card back to
+  Ready. Before removing a dead reviewer run, it deletes that run's claim
+  comments, so the head can be reviewed again straight away. A card whose
+  latest claim belongs to another run is left alone. If a recovery fails,
+  the worktree stays and the next pass tries again.
 
 ## Legacy labels
 
