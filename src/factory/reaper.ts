@@ -5,10 +5,10 @@ import {
   idleHours,
   mainCheckout,
   type Role,
-  repoSlug,
   roleCapHours,
 } from "factory/config";
 import { json, must, run } from "factory/exec";
+import { landed, landFacts } from "factory/reaper-land";
 import {
   type Held,
   type Reason,
@@ -54,16 +54,9 @@ export type AutoState = {
   over: boolean;
   clean: boolean;
   pushed: boolean;
+  merged: boolean;
 };
 export type OtherState = { idle: boolean; landed: boolean; clean: boolean };
-export type LandFacts = {
-  ahead: number;
-  tip: string;
-  mergedTips: string[];
-  cherry: string;
-  branchPatch: string;
-  mainPatches: string[];
-};
 export type ReapOptions = {
   dryRun: boolean;
   idleHours: number;
@@ -175,21 +168,19 @@ export function isClean(status: string[], scratchOk = false): boolean {
   return scratchOk || strayIgnored(status).length === 0;
 }
 
-export function landed(f: LandFacts): boolean {
-  const cherry = f.cherry.split("\n").filter(Boolean);
-  if (f.ahead === 0) return true;
-  if (f.mergedTips.includes(f.tip)) return true;
-  if (cherry.length > 0 && cherry.every((l) => l.startsWith("- "))) return true;
-  return f.branchPatch !== "" && f.mainPatches.includes(f.branchPatch);
-}
-
 function hold(reason: Reason, archive: boolean, close: boolean): Hold {
   return { archive, close, kind: "hold", reason };
 }
 
-export function autoAction({ done, over, clean, pushed }: AutoState): Action {
+export function autoAction({
+  done,
+  over,
+  clean,
+  pushed,
+  merged,
+}: AutoState): Action {
   if (!(done || over)) return { kind: "skip", why: "running" };
-  if (clean && pushed) return { kind: "remove" };
+  if (clean && (pushed || merged)) return { kind: "remove" };
   if (!clean) return hold(over ? "over-cap-dirty" : "dirty", true, true);
   return hold("unlanded-commits", false, true);
 }
@@ -269,68 +260,24 @@ function runBranch(wt: Worktree): string {
   return `${bot}/${wt.displayName}`;
 }
 
-async function allPushed(wt: Worktree): Promise<boolean> {
-  const refs = [wt.branch ? short(wt.branch) : "HEAD"];
-  if (await branchExists(runBranch(wt))) refs.push(runBranch(wt));
-  const unpushed = await Promise.all(
+async function runRefs(wt: Worktree): Promise<string[]> {
+  const refs = [await git(["rev-parse", "--abbrev-ref", "HEAD"], wt.path)];
+  for (const branch of [short(wt.branch), runBranch(wt)])
+    if (branch && (await branchExists(branch))) refs.push(branch);
+  return [...new Set(refs)];
+}
+
+async function unpushed(wt: Worktree): Promise<string[]> {
+  const refs = await runRefs(wt);
+  const out = await Promise.all(
     refs.map((r) => git(["rev-list", r, "--not", "--remotes"], wt.path)),
   );
-  return unpushed.every((out) => out === "");
+  return refs.filter((_, i) => out[i] !== "");
 }
 
-async function patchIds(cmd: string[]): Promise<string[]> {
-  const src = Bun.spawn(cmd, { cwd: mainCheckout, stdout: "pipe" });
-  const ids = Bun.spawn(["git", "patch-id", "--stable"], {
-    cwd: mainCheckout,
-    stdin: src.stdout,
-    stdout: "pipe",
-  });
-  const out = await new Response(ids.stdout).text();
-  return out
-    .split("\n")
-    .filter(Boolean)
-    .map((l) => l.split(" ")[0] ?? "");
-}
-
-async function mergedTips(branch: string): Promise<string[]> {
-  const cmd = [
-    "gh",
-    "pr",
-    "list",
-    "-R",
-    repoSlug,
-    "--head",
-    branch,
-    "--state",
-    "merged",
-    "--json",
-    "headRefOid",
-  ];
-  return (await json<{ headRefOid: string }[]>(cmd)).map((p) => p.headRefOid);
-}
-
-async function landFacts(branch: string): Promise<LandFacts> {
-  const ahead = Number(
-    await git(["rev-list", "--count", `origin/main..${branch}`]),
-  );
-  const tip = await git(["rev-parse", branch]);
-  const base = await git(["merge-base", "origin/main", branch]);
-  const cherry = await git(["cherry", "origin/main", branch]);
-  const [branchPatch = ""] = await patchIds(["git", "diff", base, branch]);
-  const mainPatches = await patchIds([
-    "git",
-    "log",
-    "-p",
-    `${base}..origin/main`,
-  ]);
-  return {
-    ahead,
-    branchPatch,
-    cherry,
-    mainPatches,
-    mergedTips: await mergedTips(branch),
-    tip,
-  };
+async function refLanded(wt: Worktree, ref: string): Promise<boolean> {
+  const tip = await git(["rev-parse", ref], wt.path);
+  return landed(await landFacts(tip, ref === "HEAD" ? null : ref));
 }
 
 async function decideAuto(
@@ -343,9 +290,15 @@ async function decideAuto(
   const over = overCap(ageHours, owner.role);
   const status = done || over ? await statusOf(wt) : [];
   const clean = isClean(status, true);
-  const ok = (done || over) && clean && (await allPushed(wt));
+  const open = (done || over) && clean ? await unpushed(wt) : null;
+  const pushed = open !== null && open.length === 0;
+  let merged = false;
+  if (open !== null && !pushed) {
+    const each = await Promise.all(open.map((ref) => refLanded(wt, ref)));
+    merged = each.every(Boolean);
+  }
   return {
-    action: autoAction({ clean, done, over, pushed: ok }),
+    action: autoAction({ clean, done, merged, over, pushed }),
     ageHours,
     owner,
     status,
@@ -359,7 +312,7 @@ async function decideOther(
   const ageHours = idleFor(wt, inv.terminals, now);
   const idle = ageHours > opts.idleHours;
   const status = idle ? await statusOf(wt) : [];
-  const done = idle && landed(await landFacts(short(wt.branch)));
+  const done = idle && (await refLanded(wt, short(wt.branch) || "HEAD"));
   return {
     action: otherAction({ clean: isClean(status), idle, landed: done }),
     ageHours,
