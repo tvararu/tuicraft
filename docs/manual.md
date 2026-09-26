@@ -591,10 +591,14 @@ refused this way before any sample reaches open ground (a column with one
 floor), the reason is `ambiguous ground column leaving start` instead: the
 start, not the destination, is the problem. A native path corner
 may sit up to 1.25 yards above the ground (the navmesh's climb plus one cell),
-but no other surface may be closer to it. A `goto` while a route is active
-stops the old route with a `movement_stopped` CONTROL event whose reason is
-`navigation_replaced`, then plans from the stopped pose. If that plan is
-refused, the character stays stopped.
+but no other surface may be closer to it. Each 0.5-yard step must clear a
+ray 0.25 yards above the ground, a ray at head height (1.6 yards) and a
+vertical ray at its end, or it refuses with `ground corridor collision`. On
+the native path, a step up or down a platform edge of at most 1 yard may
+instead clear the low ray at the higher floor's height. A `goto` while a
+route is active stops the old route with a `movement_stopped` CONTROL event
+whose reason is `navigation_replaced`, then plans from the stopped pose. If
+that plan is refused, the character stays stopped.
 
 With a _guid_, the route goes once to the ground under that observed
 creature's current position; `navigation --json` carries it as `target`. The

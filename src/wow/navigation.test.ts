@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { native, navigation } from "test/navigation-fixtures";
-import {
-  collisionFree,
-  createNavigation,
-  GroundRoute,
-  type NavPoint,
-} from "wow/navigation";
+import { createNavigation, GroundRoute, type NavPoint } from "wow/navigation";
 import { groundError } from "wow/navigation-native";
 
 const start: NavPoint = { x: 0, y: 0, z: 0 };
@@ -489,24 +484,5 @@ describe("ground destinations", () => {
       false,
     );
     expect(() => nav.clear(0, start, end)).toThrow(/unsupported map/);
-  });
-});
-
-describe("collisionFree", () => {
-  test("probes low, head-height and vertical rays", () => {
-    const rays: [number, number][] = [];
-    const from = { x: 0, y: 0, z: 0 };
-    const to = { x: 1, y: 0, z: 0 };
-    const ray = (a: NavPoint, b: NavPoint) => {
-      rays.push([a.z, b.z]);
-      return true;
-    };
-    expect(collisionFree(ray, from, to)).toBe(true);
-    expect(rays).toEqual([
-      [0.25, 0.25],
-      [1.6, 1.6],
-      [0.25, 1.6],
-    ]);
-    expect(collisionFree(() => false, from, to)).toBe(false);
   });
 });

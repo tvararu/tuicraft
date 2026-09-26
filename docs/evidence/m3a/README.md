@@ -14,8 +14,9 @@ Other records in this directory: slice 2, the funnel corner
 ([patched-namigator.md](patched-namigator.md) and
 [findheight-surface-above-hint.md](findheight-surface-above-hint.md));
 goto's corner and column refusals ([ground-policy.md](ground-policy.md));
-and Sunstrider Isle's refusals and ground floors
-([sunstrider-floors.md](sunstrider-floors.md)).
+Sunstrider Isle's refusals and ground floors
+([sunstrider-floors.md](sunstrider-floors.md)); and step edges and the low
+collision ray ([step-edges.md](step-edges.md)).
 
 ## Slice 1: ground-derived `goto` (issue #120), 2026-09-26
 

@@ -206,5 +206,7 @@ installed library, except in the last test. Transcript:
   ([findheight-surface-above-hint.md](findheight-surface-above-hint.md)).
   Past it, one Sunspire route stops at a stair riser the planner refuses
   (#350).
-- #315: the low collision ray refuses step downs within `WalkableClimb`.
+- The low collision ray at a step within `WalkableClimb` (#315) follows
+  the higher floor on the native corridor
+  ([step-edges.md](step-edges.md)).
 - `UNKNOWN_HEIGHT` still has no `nextStep` (#275).
