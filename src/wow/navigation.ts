@@ -10,6 +10,7 @@ import {
 
 export type NavPoint = { x: number; y: number; z: number };
 export type GroundSample = NavPoint & { orientation: number };
+export type NavDestination = { x: number; y: number; z?: number };
 export type NavigationOptions = { dataPath: string; libraryPath: string };
 export type Navigation = {
   plan: (mapId: number, from: NavPoint, to: NavPoint) => GroundRoute;
@@ -37,7 +38,8 @@ export type NavigationRefusal = "wait" | "pick_destination" | "stop";
 
 export function classifyNavigationRefusal(reason: string): NavigationRefusal {
   if (reason.includes("position disagrees with ground height")) return "wait";
-  if (reason.includes("ambiguous ground column")) return "pick_destination";
+  if (reason.includes("ambiguous ground column at destination"))
+    return "pick_destination";
   return "stop";
 }
 
@@ -142,9 +144,9 @@ export function createNavigation(
       validateNativeXY(to.x, to.y);
       const map = open(mapId, from);
       map.loadAdtAt(from.x, from.y);
-      checkGround(map, from);
+      checkGround(map, from, "start");
       map.loadAdtAt(to.x, to.y);
-      const z = uniqueHeight(map, to.x, to.y);
+      const z = uniqueHeight(map, to.x, to.y, "destination");
       return planRoute(map, from, { x: to.x, y: to.y, z });
     },
     height(mapId, x, y, from) {
@@ -169,8 +171,8 @@ export function createNavigation(
 
 function planRoute(map: NativeMap, from: NavPoint, to: NavPoint): GroundRoute {
   loadCorridor(map, from, to);
-  checkGround(map, from);
-  checkGround(map, to);
+  checkGround(map, from, "start");
+  checkGround(map, to, "destination");
   const points = map.findPath(from, to);
   if (points.length === 0) throw new Error("native path is empty");
   for (const point of points) validateNativePoint(point);
@@ -198,7 +200,7 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
   if (first === undefined) throw new Error("ground route has no points");
   validateNativePoint(first);
   map.loadAdtAt(first.x, first.y);
-  checkGround(map, first);
+  checkGround(map, first, "start");
   const initial = groundPoint(map, first, first.x, first.y);
   if (Math.abs(initial.z - first.z) > GROUND_ERROR)
     throw groundError("start is not on connected ground");
@@ -299,12 +301,14 @@ function checkRouteGround(
     (height) => height < point.z || height > point.z + MESH_HEIGHT,
   );
   if (!headroom || Math.abs(point.z - from.z) > WALKABLE_CLIMB)
-    throw groundError("ambiguous ground column");
+    throw groundError("ambiguous ground column at route");
 }
 
-function checkGround(map: NativeMap, point: NavPoint): void {
+type GroundSite = "start" | "destination";
+
+function checkGround(map: NativeMap, point: NavPoint, site: GroundSite): void {
   validateNativePoint(point);
-  const heights = groundHeights(map, point.x, point.y);
+  const heights = groundHeights(map, point.x, point.y, site);
   if (heights.some((height) => Math.abs(height - point.z) > GROUND_ERROR))
     throw groundError("position disagrees with ground height");
 }
@@ -333,8 +337,13 @@ function probeHeight(
   }
 }
 
-function uniqueHeight(map: NativeMap, x: number, y: number): number {
-  const first = groundHeights(map, x, y)[0];
+function uniqueHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  site?: GroundSite,
+): number {
+  const first = groundHeights(map, x, y, site)[0];
   if (first === undefined) throw groundError("ground height unavailable");
   return first;
 }
@@ -358,13 +367,20 @@ function continuousHeight(
   return match;
 }
 
-function groundHeights(map: NativeMap, x: number, y: number): number[] {
+function groundHeights(
+  map: NativeMap,
+  x: number,
+  y: number,
+  site?: GroundSite,
+): number[] {
   const heights = map.findHeights(x, y);
   const first = heights[0];
   if (first === undefined || !heights.every(Number.isFinite))
     throw groundError("ground height unavailable");
   if (heights.some((height) => Math.abs(height - first) > FLOOR_MERGE))
-    throw groundError("ambiguous ground column");
+    throw groundError(
+      site ? `ambiguous ground column at ${site}` : "ambiguous ground column",
+    );
   return heights;
 }
 

@@ -380,7 +380,24 @@ describe("ground destinations", () => {
     const nav = navigation(
       native({ findHeights: (x) => (x === 10 ? [0, 5] : [0]) }),
     );
-    expect(() => nav.planGround(530, start, end)).toThrow(/ambiguous/);
+    expect(() => nav.planGround(530, start, end)).toThrow(
+      "ambiguous ground column at destination",
+    );
+  });
+
+  test("names the start and route when those columns are ambiguous", () => {
+    const atStart = navigation(
+      native({ findHeights: (x) => (x === 0 ? [0, 5] : [0]) }),
+    );
+    expect(() => atStart.planGround(530, start, end)).toThrow(
+      "ambiguous ground column at start",
+    );
+    const midway = navigation(
+      native({ findHeights: (x) => (x > 4 && x < 6 ? [0, 1] : [0]) }),
+    );
+    expect(() => midway.planGround(530, start, end)).toThrow(
+      "ambiguous ground column at route",
+    );
   });
 
   test("does not replace invalid original ground or bypass native acceptance", () => {
@@ -492,8 +509,14 @@ describe("classifyNavigationRefusal", () => {
     expect(
       classifyNavigationRefusal("position disagrees with ground height"),
     ).toBe("wait");
-    expect(classifyNavigationRefusal("ambiguous ground column")).toBe(
-      "pick_destination",
+    expect(
+      classifyNavigationRefusal("ambiguous ground column at destination"),
+    ).toBe("pick_destination");
+    expect(classifyNavigationRefusal("ambiguous ground column at start")).toBe(
+      "stop",
+    );
+    expect(classifyNavigationRefusal("ambiguous ground column at route")).toBe(
+      "stop",
     );
     expect(classifyNavigationRefusal("ground corridor collision")).toBe("stop");
   });

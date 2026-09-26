@@ -6,6 +6,7 @@ import { bearing, distance, distance2d } from "wow/geometry";
 import {
   classifyNavigationRefusal,
   type GroundRoute,
+  type NavDestination,
   type NavigationRefusal,
   type NavPoint,
 } from "wow/navigation";
@@ -45,7 +46,7 @@ export type ControlState = {
 
 export type NavigationState = {
   active: boolean;
-  destination: NavPoint | undefined;
+  destination: NavDestination | undefined;
   remaining: number | undefined;
   owner: ControlOwner;
   blockedReason: string | undefined;
@@ -97,7 +98,7 @@ export class ControlRuntime extends ControlSync {
   }
 
   navigationError(
-    destination: NavPoint,
+    destination: NavDestination,
     reason: string,
     refusal?: NavigationRefusal,
   ): void {

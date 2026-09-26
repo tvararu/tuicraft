@@ -1,0 +1,103 @@
+import { describe, expect, jest, test } from "bun:test";
+import { setup } from "test/control-fixtures";
+import { must } from "test/must";
+import { controlMethods } from "wow/client-control";
+import { createNavigation, type NavPoint } from "wow/navigation";
+import type { NativeMap } from "wow/navigation-native";
+import { GameOpcode } from "wow/protocol/opcodes";
+import type { Runtimes } from "wow/runtime";
+import type { WorldConn } from "wow/world-conn";
+
+const MOTION = new Set<number>([
+  GameOpcode.MSG_MOVE_START_FORWARD,
+  GameOpcode.MSG_MOVE_SET_FACING,
+]);
+
+function ground(columns: (x: number, y: number) => number[]): NativeMap {
+  return {
+    loadAdtAt() {},
+    findHeights: columns,
+    findHeight: (from, x, y) =>
+      columns(x, y).find((z) => Math.abs(z - from.z) <= 2) ?? Number.NaN,
+    lineOfSight: () => true,
+    findPath: (from: NavPoint, to: NavPoint) => [from, to],
+    close() {},
+  };
+}
+
+function fixture(columns: (x: number, y: number) => number[]) {
+  const control = setup();
+  const navigation = createNavigation(
+    { dataPath: "data", libraryPath: "lib" },
+    () => ground(columns),
+  );
+  const override = jest.fn();
+  const rt = {
+    control: control.runtime,
+    navigation: () => navigation,
+    override,
+  } as unknown as Runtimes;
+  const handle = controlMethods({} as WorldConn, rt);
+  return { ...control, handle, override };
+}
+
+describe("goTo without Z", () => {
+  test("derives destination height from a unique column and walks there", () => {
+    jest.useFakeTimers();
+    try {
+      const f = fixture((x) => [70.34 + (x - 8709.46) / 10]);
+      const start = must(f.runtime.snapshot().pose);
+      f.handle.goTo(start.x + 10, start.y);
+      expect(f.override).toHaveBeenCalled();
+      const destination = must(f.runtime.navigationState().destination);
+      expect(destination.x).toBe(start.x + 10);
+      expect(destination.z).toBeCloseTo(71.34, 4);
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: true,
+        refusal: undefined,
+      });
+      f.advance(3000);
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: false,
+        remaining: 0,
+        blockedReason: undefined,
+      });
+      expect(f.runtime.snapshot().pose?.z).toBeCloseTo(71.34, 4);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("refuses an ambiguous column at pick_destination before any motion", () => {
+    const f = fixture((x) =>
+      x > 8715 ? [70.34, 80.34] : [70.34 + (x - 8709.46) / 100],
+    );
+    const start = must(f.runtime.snapshot().pose);
+    expect(() => f.handle.goTo(start.x + 10, start.y)).toThrow(
+      "pick_destination: ambiguous ground column",
+    );
+    expect(f.runtime.navigationState()).toMatchObject({
+      active: false,
+      destination: { x: start.x + 10, y: start.y },
+      refusal: "pick_destination",
+    });
+    expect(f.runtime.navigationState().destination).not.toHaveProperty("z");
+    expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
+    expect(f.runtime.snapshot().moving).toBe(false);
+  });
+
+  test("keeps an explicit Z on the grounded-point plan", () => {
+    const f = fixture(() => [70.34]);
+    const start = must(f.runtime.snapshot().pose);
+    expect(() => f.handle.goTo(start.x + 5, start.y, 90)).toThrow(
+      "wait: position disagrees with ground height",
+    );
+    expect(f.runtime.navigationState().destination).toEqual({
+      x: start.x + 5,
+      y: start.y,
+      z: 90,
+    });
+    f.handle.goTo(start.x + 5, start.y, 70.34);
+    expect(f.runtime.navigationState().active).toBe(true);
+  });
+});

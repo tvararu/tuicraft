@@ -308,7 +308,7 @@ test("navigationError stores refusal and navigate clears refusal", () => {
     refusal: "wait",
   });
 
-  runtime.navigationError(dest, "ambiguous ground column");
+  runtime.navigationError(dest, "ambiguous ground column at destination");
   expect(runtime.navigationState().refusal).toBe("pick_destination");
 
   runtime.navigationError(dest, "pathfind_find_height failed (UNKNOWN_HEIGHT)");

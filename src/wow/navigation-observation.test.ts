@@ -33,6 +33,18 @@ describe("nextStepFor", () => {
     );
   });
 
+  test("gives each ambiguous-column site its own advice", () => {
+    expect(nextStepFor("ambiguous ground column at destination")).toContain(
+      "Choose a destination with one ground height",
+    );
+    expect(nextStepFor("ambiguous ground column at start")).toContain(
+      "Move to open ground",
+    );
+    expect(nextStepFor("ambiguous ground column at route")).toContain(
+      "route crosses ground",
+    );
+  });
+
   test("other or missing reasons have no hint", () => {
     expect(nextStepFor(undefined)).toBeNull();
     expect(nextStepFor("rooted")).toBeNull();
@@ -51,6 +63,17 @@ describe("observeNavigation", () => {
       ...blocked,
       nextStep: "Choose a different route. Inspect the ground before moving.",
     });
+  });
+
+  test("carries the site-specific hint for a start refusal", () => {
+    const blocked = state({
+      blockedReason: "ambiguous ground column at start",
+      destination: { x: 1, y: 2 },
+      refusal: "stop",
+    });
+    expect(observeNavigation(blocked).nextStep).toContain(
+      "Move to open ground",
+    );
   });
 
   test("an unblocked state has a null hint", () => {

@@ -141,7 +141,11 @@ function parsePoint(
 
 export function parseGoto(
   tokens: string[],
-): Parsed<{ x: number; y: number; z: number }> {
+): Parsed<{ x: number; y: number; z?: number }> {
+  if (tokens.length === 2) {
+    const [x, y] = tokens.map(parseFiniteNumber);
+    if (x !== undefined && y !== undefined) return ok({ x, y });
+  }
   const point = parsePoint(tokens);
   return point ? ok(point) : fail("invalid goto");
 }

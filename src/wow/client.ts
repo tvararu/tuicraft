@@ -229,7 +229,7 @@ export type WorldHandle = {
     framing?: FramingVariant,
   ) => Promise<void>;
   getTacticsState: () => TacticsState;
-  goTo: (x: number, y: number, z: number) => void;
+  goTo: (x: number, y: number, z?: number) => void;
   getNavigationState: () => NavigationState;
   observeNavigation: () => NavigationObservation;
   onCombatEvent: (cb: (event: CombatEvent) => void) => Unsubscribe;

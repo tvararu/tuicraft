@@ -42,7 +42,7 @@ USAGE
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
-  tuicraft goto <x> <y> <z> [--json]  Walk a ground route
+  tuicraft goto <x> <y> [<z>] [--json]  Walk a ground route; Z defaults to the unique ground height
   tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
   tuicraft release-spirit     Request release from observed dead state

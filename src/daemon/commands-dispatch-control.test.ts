@@ -131,7 +131,7 @@ describe("dispatchCommand", () => {
     const handle = attachControl(createMockHandle());
     handle.getNavigationState.mockReturnValue({
       active: false,
-      blockedReason: "ambiguous ground column",
+      blockedReason: "ambiguous ground column at destination",
       destination: { x: 8713.8, y: -6625.3, z: 70 },
       owner: "none",
       refusal: "pick_destination",
@@ -148,7 +148,7 @@ describe("dispatchCommand", () => {
       },
     );
     const state = JSON.parse(socket.written().trim());
-    expect(state.blockedReason).toBe("ambiguous ground column");
+    expect(state.blockedReason).toBe("ambiguous ground column at destination");
     expect(state.refusal).toBe("pick_destination");
     expect(state.nextStep).toContain("one ground height");
     expect(state.nextStep).toContain("Do not guess Z");

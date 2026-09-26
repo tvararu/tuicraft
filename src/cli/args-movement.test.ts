@@ -139,6 +139,13 @@ describe("parseArgs", () => {
       y: 2,
       z: 3,
     });
+    expect(parseArgs(["goto", "1.5", "-2"])).toEqual({
+      mode: "goto",
+      x: 1.5,
+      y: -2,
+    });
+    expect(() => parseArgs(["goto", "1"])).toThrow("invalid goto");
+    expect(() => parseArgs(["goto", "1", "Infinity"])).toThrow("invalid goto");
     expect(() => parseArgs(["cast", "585"])).toThrow("invalid cast");
     expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow("invalid goto");
     expect(() => parseArgs(["fight"])).toThrow("invalid fight");

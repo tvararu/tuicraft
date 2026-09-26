@@ -77,7 +77,7 @@ export type CliAction =
       json?: true;
     }
   | { mode: "cycling"; json: boolean }
-  | { mode: "goto"; x: number; y: number; z: number; json?: true }
+  | { mode: "goto"; x: number; y: number; z?: number; json?: true }
   | { mode: "navigation"; json: boolean }
   | { mode: "recovery"; json: boolean }
   | { mode: "query_corpse"; json?: true }
