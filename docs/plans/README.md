@@ -62,3 +62,6 @@ Design and plan documents, oldest first. The sole roadmap is
 | [2026-09-25-dev-factory-research.md](2026-09-25-dev-factory-research.md) | Historical | Verbatim research reports behind the dev factory design |
 | [2026-09-25-pi-harness-design.md](2026-09-25-pi-harness-design.md) | Current | Embed the Pi agent runtime in tuicraft; linked from the roadmap |
 | [2026-09-25-pi-harness-spike/](2026-09-25-pi-harness-spike/README.md) | Current | Throwaway prototype code referenced by the Pi harness design |
+
+The factory lands each pull request as one squash commit.
+Squash commits carry Refs, PR and Co-authored-by trailers.
