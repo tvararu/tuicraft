@@ -11,8 +11,9 @@ comes from them.
 Other records in this directory: slice 2, the funnel corner
 ([funnel-corner.md](funnel-corner.md)); slice 3, bounded replanning
 ([replanning.md](replanning.md)); the namigator patches
-([patched-namigator.md](patched-namigator.md)); and goto's corner and column
-refusals ([ground-policy.md](ground-policy.md)).
+([patched-namigator.md](patched-namigator.md)); goto's corner and column
+refusals ([ground-policy.md](ground-policy.md)); and Sunstrider Isle's
+refusals and ground floors ([sunstrider-floors.md](sunstrider-floors.md)).
 
 ## Slice 1: ground-derived `goto` (issue #120), 2026-09-26
 
@@ -29,6 +30,12 @@ help while the character stands in that column. Before this change the same
 refusal was the bare `ambiguous ground column`, classified
 `pick_destination`, which would have sent an agent picking destination
 after destination from inside the building.
+
+The start rule has changed since (#138,
+[sunstrider-floors.md](sunstrider-floors.md)): a pose on a floor of a
+multi-floor column now plans. From this spawn, 99 of the 1681 grid
+destinations plan with the default namigator build; the rest refuse at the
+destination or along the route, not at the start.
 
 The character left the inn by a `walk-toward` leg east along the floor and
 a `face 4.7124` + `move forward 1500` leg down the ramp, ending at predicted
