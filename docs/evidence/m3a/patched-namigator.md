@@ -1,14 +1,15 @@
 # M3a: a patched namigator for corner heights
 
-Issue #151, 2026-09-26. This record covers two of the three patches that
+Issue #151, 2026-09-26. This record covers three of the four patches that
 are applied by default, in order: the corner-height patch below, then the
 boundary-ray patch (section "Second patch"), which was added after the
 planner-policy work in #162 exposed the remaining native refusals. The
 third default patch, `surface-above-hint.patch`, has its own record,
-[findheight-surface-above-hint.md](findheight-surface-above-hint.md). An
-opt-in patch for ADT heights on quad edges (section "Opt-in third patch")
-changes results of calls that already succeed, so the default build leaves
-it out. It follows #123 / PR #126,
+[findheight-surface-above-hint.md](findheight-surface-above-hint.md). The
+fourth, the patch for ADT heights on quad edges (section "ADT edges"),
+changes results of calls that already succeed. #151 kept it opt-in for that
+reason; a maintainer ruling made it a default patch (section "Ruling: ADT
+edges by default"). It follows #123 / PR #126,
 which traced goto's `UNKNOWN_HEIGHT` refusals at path corners to namigator
 `Map::FindHeight`. This record covers the patches, how to build them,
 offline before/after counts and live walks. The shared library in
@@ -23,13 +24,13 @@ and then
 apply to upstream namigator `54eae6957753c3ca47b73402df9f8d1d52a2721e`
 ([`UPSTREAM`](../../../vendor/namigator/UPSTREAM)), the revision that the
 installed library was built from. Both change only `Map::FindHeight` in
-`pathfind/Map.cpp`. The opt-in
+`pathfind/Map.cpp`.
 [`vendor/namigator/adt-edges.patch`](../../../vendor/namigator/adt-edges.patch)
-goes on top and changes `Map::GetADTHeight`.
+goes on top, after `surface-above-hint.patch`, and changes
+`Map::GetADTHeight`.
 `mise namigator:build` (`vendor/namigator/build.sh`) clones upstream into
 `tmp/namigator/src`, checks out that commit with the `recastnavigation` and
-`stormlib` submodules, applies the three default patches (and the ADT
-patch with `NAMIGATOR_ADT_EDGES=1`), builds the `libpathfind`, `utility`,
+`stormlib` submodules, applies the four default patches, builds the `libpathfind`, `utility`,
 `Detour` and `Recast` targets with CMake in Release, links
 `tmp/namigator/libnamigator.so` from those archives, and checks that
 `pathfind_find_height` is exported. Set `NAMIGATOR_REPO` to clone from a
@@ -224,7 +225,7 @@ destinations and 51 Sunstrider destinations still refuse:
 - One Sunstrider call ends 0.001 yards from a tile-border partial link at
   t = 0.9975, with the target off the mesh.
 
-## Opt-in third patch: ADT edges
+## ADT edges
 
 `adt-edges.patch` fixes class A in `GetADTHeight`. The quad index is
 clamped to 7. When none of the four triangles holds the point, the height
@@ -242,7 +243,8 @@ BVH hit, so a `findHeight` that already succeeded can return a different
 value, and a `findHeights` column that was already non-empty can gain an
 entry (section "Quad-edge points"). The PR #155 review found the new values
 match points 0.02 yards away, so this is a real fix of an edge
-discontinuity. Build it with `NAMIGATOR_ADT_EDGES=1 mise namigator:build`.
+discontinuity. `mise namigator:build` applies it by default (section
+"Ruling: ADT edges by default").
 
 Gating the ADT fallback to `FindHeight`'s own failure path, so that
 `FindHeights` stays unchanged, was built and measured too. It gives
@@ -465,3 +467,39 @@ Transcript:
 - The earlier live routes plan to the same points with both patches, and
   with the default build: (8730, -6660) from the funnel origin and
   (10380, -6320) from the spawn.
+
+## Ruling: ADT edges by default
+
+Maintainer ruling, 2026-09-26: `adt-edges.patch` is a default patch, and
+`soap create` points every new account at the repository's patched build
+(`mise namigator:build` installs it under
+`~/.local/share/tuicraft/namigator/<key>/`). This reverses the #151
+acceptance criterion that only failing `FindHeight` calls may change.
+
+The evidence is the Fairbreeze Village navigation diagnosis of the same day
+(throwaway accounts, eversong10 spawn at (8735, −6685, 70.5), map 530):
+
+- The spawn's northern routes pass the navmesh tile and ADT chunk corner
+  (8733.33, −6666.67). There `findHeights` is empty on the default build,
+  so goto to Halis, Marniel, Ardeyn and Degolien refused with
+  `UNKNOWN_HEIGHT`. With `adt-edges.patch` all four arrive live. A build
+  with only the patch's quad-index clamp gives exactly the default build's
+  result, so the plane-height fallback is what fixes the corner; the clamp
+  stays because it removes an out-of-bounds read.
+- The 1681-destination `planGround` grid from the spawn: 352 OK on the old
+  installed library, 910 on the three-patch build and 1132 with
+  `adt-edges.patch`. No OK route becomes a refusal between the builds, and
+  1 of the 910 routes changes its points. Every new refusal kind with the
+  patch (`path corner disagrees with connected ground`, `ground corridor
+  changes surface`, `ground corridor collision`) was `UNKNOWN_HEIGHT`
+  before.
+- An offline replay of every route that the M3a live records name keeps its
+  point hash and its refusal on all three builds, except two refusals on the
+  old library that now plan (a slice 1 destination and the inn start).
+
+`ZoneAndArea`, `navigation.height` and `navigation.stepHeight` also read
+`GetADTHeight`, and the grid does not measure them; heights change only on
+quad edges, by about 0.02 yards per the PR #155 review. The M3a live
+records ran on the old installed library, so they need a live re-proof on
+this build.
+

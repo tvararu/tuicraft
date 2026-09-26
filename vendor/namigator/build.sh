@@ -17,9 +17,7 @@ git -C "$src" submodule update -q --init --force recastnavigation stormlib
 git -C "$src" apply "$here/corner-height.patch"
 git -C "$src" apply "$here/boundary-rays.patch"
 git -C "$src" apply "$here/surface-above-hint.patch"
-if [ "${NAMIGATOR_ADT_EDGES:-0}" = 1 ]; then
-  git -C "$src" apply "$here/adt-edges.patch"
-fi
+git -C "$src" apply "$here/adt-edges.patch"
 
 cmake -S "$src" -B "$build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
