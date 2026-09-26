@@ -231,9 +231,11 @@ export function registerLootHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_LOOT_CLEAR_MONEY, () =>
     conn.rewards?.receiveLootMoneyCleared(),
   );
-  on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) =>
-    conn.rewards?.receiveItemPush(parseItemPushResult(r)),
-  );
+  on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) => {
+    const push = parseItemPushResult(r);
+    conn.rewards?.receiveItemPush(push);
+    conn.quests?.receiveItemPush(push);
+  });
   on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
     conn.rewards?.receiveInventoryFailure(parseInventoryChangeFailure(r)),
   );

@@ -419,6 +419,7 @@ errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error e
 :: Print the current offered dialog/giver, observed quest log, metadata queries, pending intent, unresolved (cancelled or reset) intents, errors, progress, and reward facts.
 A sent acceptance request is not an accepted quest. Acceptance and removal require authoritative same-lifetime quest-log observations.
 Log counters are server quest words, not inferred inventory counts. Unknown quest IDs stay unknown.
+Item objectives never appear in the log counters (AzerothCore sends no SMSG_QUESTUPDATE_ADD_ITEM). `items` lists each required item of a logged quest whose query is known, with the carried count read from the bags. Each item push for such an item waits in `itemPushes` until the bags hold its server total, then emits a QUEST `progress` event (source `inventory`) whose `lastProgress` is `{kind: "collect", questId, itemId, required, carried, pushed, totalCount, bag, slot}`. Query the quest first; pushes for unknown objectives are not correlated.
 A query with no reply remains unanswered, not missing. Metadata never authorizes quest mutation.
 
 `tuicraft talk` _guid_

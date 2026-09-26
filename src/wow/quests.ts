@@ -1,7 +1,9 @@
 import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { Entity, EntityLookup } from "wow/entity-store";
+import { readInventory } from "wow/inventory";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type { GossipMessage } from "wow/protocol/gossip";
+import type { ItemPushResult } from "wow/protocol/loot";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type {
   QuestUpdateAddItem,
@@ -19,6 +21,13 @@ import type {
   QuestgiverRequestItems,
   QuestgiverStatus,
 } from "wow/protocol/questgiver";
+import {
+  itemObjectives,
+  type QuestCollect,
+  type QuestItemObjective,
+  type QuestItemPush,
+  settleItemPushes,
+} from "wow/quest-items";
 import {
   type QuestLog,
   questLogChanges,
@@ -95,7 +104,9 @@ export type QuestProgressUpdate =
   | { kind: "item"; data: QuestUpdateAddItem }
   | { kind: "complete"; questId: number };
 
-export type QuestProgress = QuestProgressUpdate & { at: number };
+export type QuestProgress = (QuestProgressUpdate | QuestCollect) & {
+  at: number;
+};
 
 export type QuestState = {
   dialog: QuestDialog | undefined;
@@ -107,6 +118,8 @@ export type QuestState = {
   pending: (QuestIntent & { status: "unanswered" }) | undefined;
   lastError: QuestError | undefined;
   lastProgress: QuestProgress | undefined;
+  items: QuestItemObjective[];
+  itemPushes: QuestItemPush[];
   lastReward: (QuestgiverQuestComplete & { at: number }) | undefined;
   lastStatus: QuestgiverStatus | undefined;
 };
@@ -126,7 +139,7 @@ export type QuestEvent = {
     | "rewarded"
     | "status"
     | "error";
-  source: "request" | "packet" | "quest_log" | "lifecycle";
+  source: "request" | "packet" | "quest_log" | "inventory" | "lifecycle";
   state: QuestState;
   questId?: number;
 };
@@ -152,6 +165,7 @@ export class QuestRuntime {
   private pending: QuestState["pending"];
   private lastError: QuestError | undefined;
   private lastProgress: QuestProgress | undefined;
+  private itemPushes: QuestItemPush[] = [];
   private lastReward: QuestState["lastReward"];
   private lastStatus: QuestgiverStatus | undefined;
   private readonly deps: QuestDeps;
@@ -178,6 +192,8 @@ export class QuestRuntime {
       unresolved: this.unresolved,
       lastError: this.lastError,
       lastProgress: this.lastProgress,
+      items: this.itemObjectives(),
+      itemPushes: this.itemPushes,
       lastReward: this.lastReward,
       lastStatus: this.lastStatus,
     });
@@ -278,6 +294,7 @@ export class QuestRuntime {
     const sameEntity = entity === this.logEntity;
     this.log = next;
     this.logEntity = entity;
+    this.settleItems();
     if (
       sameEntity &&
       previous.slots.every((slot, i) => {
@@ -312,6 +329,7 @@ export class QuestRuntime {
     this.giver = undefined;
     this.pending = undefined;
     this.unresolved = [];
+    this.itemPushes = [];
     this.queries.clear();
   }
 
@@ -322,6 +340,27 @@ export class QuestRuntime {
       this.deps.getEntity,
       entity !== undefined && this.visibleQuestIds.get(entity) === true,
     );
+  }
+
+  private itemObjectives(): QuestItemObjective[] {
+    return itemObjectives(
+      this.log,
+      this.queries,
+      readInventory(this.deps.selfGuid(), this.deps.getEntity),
+    );
+  }
+
+  private settleItems(): void {
+    if (this.itemPushes.length === 0) return;
+    const { settled, waiting } = settleItemPushes(
+      this.itemPushes,
+      this.itemObjectives(),
+    );
+    this.itemPushes = waiting;
+    for (const collect of settled) {
+      this.lastProgress = { ...collect, at: this.deps.now() };
+      this.emit("progress", "inventory", collect.questId);
+    }
   }
 
   private active(): void {
@@ -421,6 +460,13 @@ export class QuestRuntime {
       "packet",
       questId,
     );
+  }
+
+  receiveItemPush(push: ItemPushResult): void {
+    if (this.disposed || push.guid !== this.deps.selfGuid()) return;
+    if (!this.itemObjectives().some((o) => o.itemId === push.itemId)) return;
+    this.itemPushes.push({ ...push, at: this.deps.now() });
+    this.settleItems();
   }
 
   receiveError(error: Omit<QuestError, "at">): void {

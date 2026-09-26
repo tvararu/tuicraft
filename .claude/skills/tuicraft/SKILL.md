@@ -311,6 +311,7 @@ Rules:
 - `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
 - Auto-accept quests enter the log on `select-quest` while their details stay open. Check the log first: `accept-quest` fails with `quest_already_in_log` for a quest already there.
 - Log flags/counters are server quest facts, not inferred inventory item counts. Initial/recreated log state does not fabricate acceptance.
+- Item objectives stay 0 in the log counters. Run `query-quest <id>` after accepting, then watch `quests --json` `items` (required vs carried) and QUEST `progress` events with source `inventory` (`lastProgress.kind` `collect`: item push total matched to the observed bags). `itemPushes` holds pushes the bags have not caught up with. Completion is still the log slot flag.
 - Unanswered query metadata stays unknown, not missing. Querying does not select a quest or permit mutation.
 - Reward indices are zero-based, at most 5, and must exist in the current offer. Use 0 when there are no selectable choices.
 - A server quest-complete reward notification establishes a reward fact. It does not prove that a requested inventory item was gained.
