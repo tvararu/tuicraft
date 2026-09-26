@@ -32,9 +32,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   package on its own (`tsc --noEmit`, then `tsc --noEmit -p packages/<p>`),
   or only the named package
 - `mise format [path]` — check formatting (`biome format`, default `packages/`)
-- `mise format:fix` — fix formatting (`biome format --write`)
+- `mise format:fix [path]` — fix formatting (`biome format --write`, default `packages/`)
 - `mise lint [path]` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
-- `mise lint:fix` — apply safe lint fixes and assist actions (`biome check --write`)
+- `mise lint:fix [path]` — apply safe lint fixes and assist actions
+  (`biome check --write`, default `packages/`)
 - `mise lint:docs` — check the docs agents read as current instructions
   for dated history and dead references (`bun packages/devtools/src/stale-docs.ts`)
 - `mise ci` — `mise ci:checks` (`typecheck`, `test:coverage`, `format`,
@@ -109,7 +110,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 ## Code Style
 
 - Strict TypeScript — `noUncheckedIndexedAccess`, `noUnusedLocals`,
-  `noUnusedParameters`, all strict flags on (see tsconfig.json)
+  `noUnusedParameters`, all strict flags on (see `tsconfig.base.json`, which the root
+  `tsconfig.json` and each package's `tsconfig.json` extend)
 - Never write comments, so never use `biome-ignore`; rule exceptions live as
   path overrides in `biome.json` (protocol bit flags, wire-order literals in
   `packages/core/src/wow/**`, the opcode table, test files and
@@ -165,7 +167,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   real ones except `tuicraft`, so plain `bun packages/cli/src/main.ts` there finds no
   config: `status` says the daemon is not running, and `start` or any
   daemon command fails with "No config found" after 30 seconds.
-- Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
+- Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory.
+  A test that needs a shell's code lives in that shell's package instead:
+  `party-store.test.ts` and `control-replan.test.ts` test core code but
+  import CLI formatters, so they live in `packages/cli/src/ui`
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`
 - `mise test packages/core/src/lib/errors.test.ts` runs a single file (args pass through to `bun test`)
@@ -295,7 +300,7 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   (`{ guid: r.packedGuidBig(), counter: r.uint32LE() }`). Never sort or
   reorder such keys; `useSortedKeys` is off for `packages/core/src/wow/**` for this reason
 
-## WorldHandle
+## Packages
 
 - The code is a Bun workspace (`packages/*`): `@tuicraft/core`
   (`packages/core`: `packages/core/src/wow`, the runtime helpers in
@@ -322,6 +327,9 @@ The maintainer must never find stale worktrees or idle agents in Orca.
 - Core imports nothing from another workspace package, and core runtime
   code imports no test support. Only `packages/harness` may import
   `@earendil-works/*`. biome enforces both.
+
+## WorldHandle
+
 - `packages/core/test-support/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
   `packages/cli/src/daemon/start.test.ts` spreads it and overrides only `closed` and
   `logout`, so add new WorldHandle methods to the shared mock only

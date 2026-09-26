@@ -97,7 +97,13 @@ depends = ["typecheck", "test:coverage", "format", "lint", "lint:docs"]
 [tasks.typecheck]
 description = "Type-check the whole repo and each package, or one package"
 usage = 'arg "[package]" help="core, cli, factory, devtools or harness; omit to check the repo and every package"'
-run = '[ -n "${usage_package:-}" ] && exec bun run tsc --noEmit -p "packages/${usage_package}"; bun run typecheck'
+run = '''
+case "${usage_package:-}" in
+  "") exec bun run typecheck ;;
+  core|cli|factory|devtools|harness) exec bun run tsc --noEmit -p "packages/${usage_package}" ;;
+  *) echo "usage: mise typecheck [package]: unknown package '${usage_package}'; valid names: core, cli, factory, devtools, harness" >&2; exit 2 ;;
+esac
+'''
 
 [tasks.format]
 description = "Check formatting"
