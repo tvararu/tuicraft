@@ -37,7 +37,7 @@ export function observeRemoteMovement(
   const source = "observer";
   conn.remoteMotion.observe(guid, { position, source, info, transition });
   conn.entityStore.setPosition(guid, position);
-  conn.combat?.observePosition(guid, position);
+  conn.combat?.observePosition(guid, position, undefined, "movement");
 }
 
 export function handleCompressedMoves(conn: WorldConn, r: PacketReader): void {

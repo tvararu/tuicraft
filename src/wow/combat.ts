@@ -8,6 +8,8 @@ import { type EntityLookup, isUnit, type Position } from "wow/entity-store";
 import {
   type CombatPose,
   MotionStore,
+  type ObservedPosition,
+  type PositionSource,
   type UnitMotion,
 } from "wow/motion-store";
 import type { AuraUpdate, AuraUpdateAll } from "wow/protocol/aura";
@@ -317,8 +319,13 @@ export class CombatRuntime {
     guid: bigint,
     position: Position,
     spline?: CreateSpline,
+    source?: PositionSource,
   ): void {
-    this.motions.observe(guid, position, spline);
+    this.motions.observe(guid, position, spline, source);
+  }
+
+  observedPosition(guid: bigint): ObservedPosition | undefined {
+    return this.motions.observation(guid);
   }
 
   applyInitialSpells(packet: InitialSpells): void {

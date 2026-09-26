@@ -1,15 +1,23 @@
 import type { ControlPose, ControlState } from "wow/control";
 import type { Entity, Position } from "wow/entity-store";
 import { bearing, distance2d, normalizeAngle } from "wow/geometry";
+import type { ObservedPosition, PositionSource } from "wow/motion-store";
 import type { RemotePose } from "wow/remote-motion";
 
 export const NEARBY_DEFAULT_RANGE = 100;
 
 export type NearbyOriginSource = ControlPose["source"] | "self_entity";
 
+export type NearbyPositionSource = PositionSource | "control";
+
+export type NearbyPositionKind = "observed" | "predicted";
+
 export type NearbyRow = {
   entity: Entity;
   position: Position | undefined;
+  positionSource: NearbyPositionSource | null;
+  positionKind: NearbyPositionKind | null;
+  positionObservedAt: number | null;
   distance: number | null;
   horizontalDistance: number | null;
   bearingRadians: number | null;
@@ -24,6 +32,7 @@ export type NearbyRow = {
 export type NearbySources = {
   control: Pick<ControlState, "selfGuid" | "pose">;
   entities: readonly Entity[];
+  observedPosition: (guid: bigint) => ObservedPosition | undefined;
   remotePoses: readonly RemotePose[];
   now: number;
 };
@@ -32,13 +41,58 @@ export type NearbyQuery = { all?: boolean };
 
 type Origin = ControlPose | Position;
 
+type Placement = Pick<
+  NearbyRow,
+  "position" | "positionSource" | "positionKind" | "positionObservedAt"
+>;
+
 type Measurement = Pick<
   NearbyRow,
   "distance" | "horizontalDistance" | "bearingRadians" | "turnRadians"
 >;
 
-function measure(
+function place(
   entity: Entity,
+  observation: ObservedPosition | undefined,
+): Placement {
+  if (!observation)
+    return {
+      position: entity.position,
+      positionSource: entity.position ? "update_object" : null,
+      positionKind: entity.position ? "observed" : null,
+      positionObservedAt: null,
+    };
+  const { pose, source, observedAt } = observation;
+  return {
+    position: {
+      mapId: pose.mapId,
+      x: pose.x,
+      y: pose.y,
+      z: pose.z,
+      orientation: pose.orientation ?? entity.position?.orientation ?? 0,
+    },
+    positionSource: source,
+    positionKind: pose.source === "predicted" ? "predicted" : "observed",
+    positionObservedAt: observedAt,
+  };
+}
+
+function placeSelf(
+  entity: Entity,
+  pose: ControlPose | undefined,
+  observation: ObservedPosition | undefined,
+): Placement {
+  if (!pose) return place(entity, observation);
+  return {
+    position: pose,
+    positionSource: "control",
+    positionKind: pose.source === "predicted" ? "predicted" : "observed",
+    positionObservedAt: pose.updatedAt,
+  };
+}
+
+function measure(
+  position: Position | undefined,
   isSelf: boolean,
   selfPos: Origin | undefined,
 ): Measurement {
@@ -53,16 +107,13 @@ function measure(
     if (selfPos) measurement.horizontalDistance = 0;
     return measurement;
   }
-  if (!(selfPos && entity.position && selfPos.mapId === entity.position.mapId))
+  if (!(selfPos && position && selfPos.mapId === position.mapId))
     return measurement;
-  const horizontalDistance = distance2d(entity.position, selfPos);
+  const horizontalDistance = distance2d(position, selfPos);
   measurement.horizontalDistance = horizontalDistance;
-  measurement.distance = Math.hypot(
-    horizontalDistance,
-    entity.position.z - selfPos.z,
-  );
+  measurement.distance = Math.hypot(horizontalDistance, position.z - selfPos.z);
   if (horizontalDistance > 0) {
-    const angle = bearing(selfPos, entity.position);
+    const angle = bearing(selfPos, position);
     const bearingRadians = angle < 0 ? angle + Math.PI * 2 : angle;
     measurement.bearingRadians = bearingRadians;
     const turn = bearingRadians - selfPos.orientation;
@@ -92,7 +143,7 @@ function compareNearby(a: NearbyRow, b: NearbyRow): number {
 function withinDefaultRange(row: NearbyRow, mapId: number): boolean {
   if (row.self) return true;
   if (row.distance !== null) return row.distance <= NEARBY_DEFAULT_RANGE;
-  return !row.entity.position || row.entity.position.mapId === mapId;
+  return !row.position || row.position.mapId === mapId;
 }
 
 export function queryNearby(
@@ -102,17 +153,24 @@ export function queryNearby(
   const { control, entities, now } = sources;
   const { selfGuid, pose } = control;
   const selfEntity = entities.find((e) => e.guid === selfGuid);
-  const selfPos = pose ?? selfEntity?.position;
+  const selfPlacement = selfEntity
+    ? placeSelf(selfEntity, pose, sources.observedPosition(selfGuid))
+    : undefined;
+  const selfPos = pose ?? selfPlacement?.position;
   const originSource = pose?.source ?? (selfPos ? "self_entity" : null);
   const originUpdatedAt = pose?.updatedAt ?? null;
   const poses = new Map(sources.remotePoses.map((p) => [p.guid, p]));
 
   const rows: NearbyRow[] = entities.map((entity) => {
     const isSelf = entity.guid === selfGuid;
+    const placement =
+      isSelf && selfPlacement
+        ? selfPlacement
+        : place(entity, sources.observedPosition(entity.guid));
     return {
       entity,
-      position: isSelf ? selfPos : entity.position,
-      ...measure(entity, isSelf, selfPos),
+      ...placement,
+      ...measure(placement.position, isSelf, selfPos),
       originSource,
       originUpdatedAt,
       preparedAt: now,
