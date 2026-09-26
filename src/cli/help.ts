@@ -54,6 +54,7 @@ USAGE
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
   tuicraft goto <x> <y> [<z>]|<guid> [--json]  Walk a ground route; Z defaults to the one ground floor
                             Several floors: refusal=pick_destination lists them; repeat with one as <z>
+                            Refused "at start" or "leaving start" (a platform or building): move to open ground first
                             A goto during a route replaces it (reason navigation_replaced)
                             <guid>: once to an observed creature; stops target_lost if it disappears
                             refusal=unreachable: the mesh cannot reach it; never retried

@@ -81,3 +81,31 @@ describe("ground floors at the start and destination", () => {
     ).toThrow("position disagrees with ground height");
   });
 });
+
+describe("route refusals from a multi-floor start", () => {
+  test("a drop off the start's platform before open ground names the start", () => {
+    const nav = navigation(
+      native({
+        findHeight: (_from, x) => (x >= 4 ? -2.4 : 0),
+        findHeights: (x) => (x < 8 ? [0, -2.4] : [-2.4]),
+      }),
+    );
+    expect(() => nav.planGround(530, start, end)).toThrow(
+      "ambiguous ground column leaving start",
+    );
+  });
+
+  test("a refusal after the route reaches open ground stays at route", () => {
+    const nav = navigation(
+      native({
+        findHeights: (x) => {
+          if (x < 2) return [0, -5];
+          return x > 5 && x < 7 ? [0, 1] : [0];
+        },
+      }),
+    );
+    expect(() => nav.planGround(530, start, end)).toThrow(
+      "ambiguous ground column at route",
+    );
+  });
+});

@@ -36,6 +36,11 @@ const CELL_HEIGHT = 0.25;
 const CORNER_RISE = WALKABLE_CLIMB + CELL_HEIGHT;
 const WALKABLE_SLOPE = Math.tan((50 * Math.PI) / 180);
 const SAFE_DROP = 13;
+const ROUTE_AMBIGUITY = "ambiguous ground column at route";
+const START_EXIT_AMBIGUITY = "ambiguous ground column leaving start";
+
+type GroundWalk = { points: NavPoint[]; leavingStart: boolean };
+type GroundStep = { point: NavPoint; heights: number[] };
 
 export type NavigationRefusal =
   | "wait"
@@ -114,9 +119,10 @@ export class GroundRoute {
     if (base === undefined) throw new Error("ground route distance missing");
     const ratio =
       span === 0 ? 0 : Math.min(1, Math.max(0, (travel - base) / span));
-    const x = start.x + (end.x - start.x) * ratio;
-    const y = start.y + (end.y - start.y) * ratio;
-    const point = groundPoint(this.map, start, x, y);
+    const { point } = groundPoint(this.map, start, {
+      x: start.x + (end.x - start.x) * ratio,
+      y: start.y + (end.y - start.y) * ratio,
+    });
     if (travel === 0) Object.assign(point, this.points[0]);
     return {
       ...point,
@@ -229,17 +235,18 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
   if (first === undefined) throw new Error("ground route has no points");
   validateNativePoint(first);
   map.loadAdtAt(first.x, first.y);
-  checkStart(map, first);
-  const initial = groundPoint(map, first, first.x, first.y);
+  const leavingStart = groundFloors(checkStart(map, first)).length > 1;
+  const ambiguity = leavingStart ? START_EXIT_AMBIGUITY : ROUTE_AMBIGUITY;
+  const initial = groundPoint(map, first, first, ambiguity).point;
   if (Math.abs(initial.z - first.z) > GROUND_ERROR)
     throw groundError("start is not on connected ground");
-  const points = [{ ...first }];
+  const walk: GroundWalk = { points: [{ ...first }], leavingStart };
   for (let i = 1; i < corners.length; i++) {
     const from = corners[i - 1];
     const to = corners[i];
     if (from === undefined || to === undefined)
       throw new Error("ground route corner missing");
-    const corner = stepCorner(map, points, from, to);
+    const corner = stepCorner(map, walk, from, to);
     const agrees =
       i < corners.length - 1
         ? meshCornerOnGround(map, corner, to.z)
@@ -247,12 +254,12 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
     if (!agrees)
       throw groundError("path corner disagrees with connected ground");
   }
-  return points;
+  return walk.points;
 }
 
 function stepCorner(
   map: NativeMap,
-  points: NavPoint[],
+  walk: GroundWalk,
   from: NavPoint,
   to: NavPoint,
 ): NavPoint {
@@ -263,18 +270,20 @@ function stepCorner(
   const count = Math.ceil(span / GROUND_STEP);
   for (let step = 1; step <= count; step++) {
     const ratio = step / count;
-    const tail = points.at(-1);
+    const tail = walk.points.at(-1);
     if (tail === undefined) throw new Error("ground route point missing");
-    points.push(
-      groundPoint(
-        map,
-        tail,
-        from.x + (to.x - from.x) * ratio,
-        from.y + (to.y - from.y) * ratio,
-      ),
-    );
+    const at = {
+      x: from.x + (to.x - from.x) * ratio,
+      y: from.y + (to.y - from.y) * ratio,
+    };
+    const ambiguity = walk.leavingStart
+      ? START_EXIT_AMBIGUITY
+      : ROUTE_AMBIGUITY;
+    const { point, heights } = groundPoint(map, tail, at, ambiguity);
+    walk.points.push(point);
+    walk.leavingStart &&= groundFloors(heights).length > 1;
   }
-  const corner = points.at(-1);
+  const corner = walk.points.at(-1);
   if (corner === undefined) throw new Error("ground route point missing");
   return corner;
 }
@@ -298,24 +307,25 @@ function meshCornerOnGround(
 function groundPoint(
   map: NativeMap,
   from: NavPoint,
-  x: number,
-  y: number,
-): NavPoint {
+  { x, y }: { x: number; y: number },
+  ambiguity = ROUTE_AMBIGUITY,
+): GroundStep {
   map.loadAdtAt(x, y);
   const point = { x, y, z: map.findHeight(from, x, y) };
-  checkRouteGround(map, point, from);
+  const heights = checkRouteGround(map, point, from, ambiguity);
   const back = map.findHeight(point, from.x, from.y);
   if (!Number.isFinite(back) || Math.abs(back - from.z) > GROUND_ERROR)
     throw groundError("ground corridor changes surface");
   checkCollision(map, from, point);
-  return point;
+  return { point, heights };
 }
 
 function checkRouteGround(
   map: NativeMap,
   point: NavPoint,
   from: NavPoint,
-): void {
+  ambiguity: string,
+): number[] {
   validateNativePoint(point);
   const heights = columnHeights(map, point.x, point.y);
   const others = heights.filter(
@@ -323,21 +333,23 @@ function checkRouteGround(
   );
   if (others.length === heights.length)
     throw groundError("position disagrees with ground height");
-  if (others.length === 0) return;
+  if (others.length === 0) return heights;
   if (
     !clearAbove(heights, point.z) ||
     Math.abs(point.z - from.z) > WALKABLE_CLIMB
   )
-    throw groundError("ambiguous ground column at route");
+    throw groundError(ambiguity);
+  return heights;
 }
 
-function checkStart(map: NativeMap, point: NavPoint): void {
+function checkStart(map: NativeMap, point: NavPoint): number[] {
   validateNativePoint(point);
   const heights = columnHeights(map, point.x, point.y);
   if (heights.every((height) => Math.abs(height - point.z) > GROUND_ERROR))
     throw groundError("position disagrees with ground height");
   if (!clearAbove(heights, point.z))
     throw groundError("ambiguous ground column at start");
+  return heights;
 }
 
 function checkDestination(map: NativeMap, point: NavPoint): void {
