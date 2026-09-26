@@ -32,12 +32,14 @@ each in a fresh `auto-*` worktree, from the runner clone
 runner's wrapper that `bun src/factory/main.ts setup wrapper --apply`
 installs, so the wrapper and its `omp-factory.yml` follow `main`. The wrapper
 passes that file as `--config` to factory roles, so they run with omp memory
-and autolearn off. Like Orca's own `omp` shell function, it passes
-`--extension "$ORCA_OMP_STATUS_EXTENSION"` to every launch when that file
-exists, so omp panes report working, idle and done to Orca once its "Agent
-status hooks" setting is on. Prompts are in `src/factory/prompts/`. Every
-role starts with `bun src/factory/main.ts precheck <role>` and stops on
-exit 1.
+and autolearn off, and with omp's git integration off: its status line
+otherwise runs `gh pr view` on every git change, one to seven GraphQL
+points a minute per running agent. Like Orca's own `omp` shell function,
+it passes `--extension "$ORCA_OMP_STATUS_EXTENSION"` to every launch when
+that file exists, so omp panes report working, idle and done to Orca once
+its "Agent status hooks" setting is on. Prompts are in
+`src/factory/prompts/`. Every role starts with `bun src/factory/main.ts
+precheck <role>` and stops on exit 1.
 
 Orca keeps its own copy of each role's prompt. Every reaper pass, run from
 the freshly reset runner clone, edits the prompt of any role automation whose
@@ -124,8 +126,13 @@ what a marker means.
 The worker, reviewer and merger prechecks share one read of the open
 issues: the first to run in a 30-second window saves it to `issues.json`
 in the factory state directory and the others reuse it, which keeps
-every-minute ticks inside GitHub's hourly GraphQL budget. `landings` and
-the reaper always read fresh.
+every-minute ticks inside GitHub's hourly GraphQL budget. The three
+automations start in the same second, so a fetch holds `issues.json.lock`
+and the prechecks that find it wait for that fetch instead of running
+their own; a lock older than a minute, left by a killed precheck, is
+taken over. `landings` and the reaper always read fresh. The read asks
+for at most 3 open linked PRs per issue, which is enough while an issue
+has one factory PR.
 
 - **Worker.** Takes the oldest Ready card with no live claim, moves it to In
   progress, keeps one workpad comment, live-tests on its own SOAP account,
