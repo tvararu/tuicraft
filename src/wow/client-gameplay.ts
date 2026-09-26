@@ -1,6 +1,7 @@
 import type { WorldHandle } from "wow/client";
 import { readExperience } from "wow/experience";
 import { useItem } from "wow/item-use";
+import { questCycleObjective } from "wow/quest-cycle";
 import type { Runtimes } from "wow/runtime";
 import type { WorldConn } from "wow/world-conn";
 import { selfGuid } from "wow/world-handlers";
@@ -193,6 +194,21 @@ export function cycleMethods(conn: WorldConn, rt: Runtimes) {
     async startCycle(guids, instruction, maxStarts) {
       rt.override();
       await cycle.start({ guids, instruction, maxStarts });
+    },
+    async startQuestCycle(questId, sources, instruction, maxStarts) {
+      const { objective, defaultMaxStarts } = await questCycleObjective(
+        conn,
+        rt,
+        questId,
+        sources,
+      );
+      rt.override();
+      await cycle.start({
+        guids: [],
+        instruction,
+        maxStarts: maxStarts ?? defaultMaxStarts,
+        objective,
+      });
     },
     async resumeCycle(instruction, maxStarts) {
       rt.override();

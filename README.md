@@ -144,6 +144,7 @@ tuicraft fight 0xabc conserve mana # extra words are the instruction
 tuicraft tactics [--json]  # outcome, target, vitals and last XP of the last run
 tuicraft cycle 0xa 0xb --max 3 --instruction stay alive # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
+tuicraft cycle --quest 8325    # pick quest targets itself until the log slot completes
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 [3]      # ground route; Z from the unique ground column when omitted
 tuicraft navigation --json # route state, refusal and conservative next step

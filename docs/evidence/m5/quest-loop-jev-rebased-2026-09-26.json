@@ -1,0 +1,1889 @@
+{
+ "outcome": {
+  "8325": "positive: objective completed by the loop (8/8 server kill credit, log flags=1, stopCause objective_complete) and turned in (reward item 20997, +30c, +100 xp). Needed 6 cycle runs (1 fresh + 3 resumes + 2 fresh) and one daemon reconnect because of the stuck-loot stop.",
+  "8326": "positive: objective completed by the loop (8/8 Lynx Collars, log flags=1, stopCause objective_complete) with supervisor travel only, and turned in (item 20994, +50c, +250 xp). Needed 6 cycle runs (2 fresh + 4 resumes) and one daemon reconnect."
+ },
+ "character": "Fgklhilldno",
+ "guid": "0xabf",
+ "account": "FAC6AB78BB3DE",
+ "buildCommit": "a9fe28e",
+ "rules": "Supervisor issued only inspections, travel, quest dialog verbs, cycle --quest / cycle --resume and daemon stop/start. forbiddenCommandsIssued 0: no fight/cast/attack/target/face-guid/cycle <guid>.",
+ "supervisorCommandCounts": {
+  "lifecycle": 6,
+  "inspect": 305,
+  "dialog": 12,
+  "objective": 12,
+  "travel": 187
+ },
+ "supervisorCommandCountsByQuest": {
+  "None": {
+   "lifecycle": 2,
+   "inspect": 2
+  },
+  "8325": {
+   "inspect": 92,
+   "dialog": 5,
+   "objective": 6,
+   "travel": 57,
+   "lifecycle": 2
+  },
+  "8326": {
+   "dialog": 7,
+   "inspect": 211,
+   "travel": 130,
+   "objective": 6,
+   "lifecycle": 2
+  }
+ },
+ "forbiddenCommandsIssued": 0,
+ "q8325": {
+  "jevDecisions": {
+   "fightRuns": 13,
+   "requests": 256,
+   "applied": 243,
+   "discarded": 0,
+   "appliedByAction": {
+    "wait": 153,
+    "move_forward": 60,
+    "spell:585:target": 25,
+    "face_target": 5
+   },
+   "distinctTargets": 8
+  },
+  "baseline": {
+   "questLogNonEmpty": [],
+   "experience": {
+    "level": 1,
+    "xp": 0,
+    "nextLevelXp": 400
+   },
+   "coinage": 0,
+   "occupiedSlots": [
+    [
+     255,
+     3,
+     53,
+     1
+    ],
+    [
+     255,
+     4,
+     20891,
+     1
+    ],
+    [
+     255,
+     6,
+     52,
+     1
+    ],
+    [
+     255,
+     7,
+     51,
+     1
+    ],
+    [
+     255,
+     15,
+     20981,
+     1
+    ],
+    [
+     255,
+     23,
+     20857,
+     4
+    ],
+    [
+     255,
+     24,
+     159,
+     2
+    ],
+    [
+     255,
+     25,
+     6948,
+     1
+    ]
+   ]
+  },
+  "accept": {
+   "selectQuestSentAt": 1790413809086,
+   "acceptedEventLoggedAt": 1790413809137,
+   "slot": 0,
+   "autoAccept": true
+  },
+  "cycleRuns": [
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --quest 8325 --json",
+    "cliStart": 1790413827985,
+    "cliEnd": 1790413838221,
+    "cliExit": 0,
+    "note": "8325 run 1",
+    "daemonEvent": "started",
+    "daemonStartedAt": 1790413828011,
+    "daemonStoppedAt": 1790413838219,
+    "stopCause": "loot_release_only_reconnect_required",
+    "stopDetail": null,
+    "startsUsed": 1,
+    "maxStarts": 16,
+    "resumes": 0,
+    "queue": [
+     {
+      "guid": "0xf130003baa08166c",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": false,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 0
+      }
+     ],
+     "items": []
+    }
+   },
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790413885131,
+    "cliEnd": 1790413885152,
+    "cliExit": 0,
+    "note": "resume 1 (no travel yet)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790413885151,
+    "daemonStoppedAt": 1790413885152,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003baa0816cc",
+     "distance": 55,
+     "reach": 50
+    },
+    "startsUsed": 0,
+    "maxStarts": 16,
+    "resumes": 1,
+    "queue": [
+     {
+      "guid": "0xf130003baa08166c",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": false,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 0
+      }
+     ],
+     "items": []
+    }
+   },
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790413907618,
+    "cliEnd": 1790413910859,
+    "cliExit": 0,
+    "note": "resume 2 after 1 face/move leg",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790413907640,
+    "daemonStoppedAt": 1790413910856,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003baa07ace1",
+     "distance": 53,
+     "reach": 50
+    },
+    "startsUsed": 3,
+    "maxStarts": 16,
+    "resumes": 2,
+    "queue": [
+     {
+      "guid": "0xf130003baa08166c",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa0816cc",
+      "status": "skipped",
+      "cause": "server_action_rejected:47",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "server_action_rejected:47"
+     },
+     {
+      "guid": "0xf130003baa07b538",
+      "status": "skipped",
+      "cause": "obstructed",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "obstructed"
+     },
+     {
+      "guid": "0xf130003baa07a53b",
+      "status": "skipped",
+      "cause": "obstructed",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "obstructed"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": false,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 1
+      }
+     ],
+     "items": []
+    }
+   },
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790413962739,
+    "cliEnd": 1790413964373,
+    "cliExit": 0,
+    "note": "resume 3 after legs to (10300,-6370.6)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790413962760,
+    "daemonStoppedAt": 1790413964371,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003baa07ad11",
+     "distance": 58,
+     "reach": 50
+    },
+    "startsUsed": 2,
+    "maxStarts": 16,
+    "resumes": 3,
+    "queue": [
+     {
+      "guid": "0xf130003baa08166c",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa0816cc",
+      "status": "skipped",
+      "cause": "server_action_rejected:47",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "server_action_rejected:47"
+     },
+     {
+      "guid": "0xf130003baa07b538",
+      "status": "skipped",
+      "cause": "obstructed",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "obstructed"
+     },
+     {
+      "guid": "0xf130003baa07a53b",
+      "status": "skipped",
+      "cause": "obstructed",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "obstructed"
+     },
+     {
+      "guid": "0xf130003baa07ace1",
+      "status": "skipped",
+      "cause": "height_unresolved",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "height_unresolved"
+     },
+     {
+      "guid": "0xf130003baa07acf4",
+      "status": "skipped",
+      "cause": "height_unresolved",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "height_unresolved"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": false,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 1
+      }
+     ],
+     "items": []
+    }
+   },
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --quest 8325 --json",
+    "cliStart": 1790414021466,
+    "cliEnd": 1790414027925,
+    "cliExit": 0,
+    "note": "fresh cycle --quest (untried pool within 50 yd empty)",
+    "daemonEvent": "started",
+    "daemonStartedAt": 1790414021507,
+    "daemonStoppedAt": 1790414027924,
+    "stopCause": "loot_denied:Previous loot window has not closed",
+    "stopDetail": null,
+    "startsUsed": 1,
+    "maxStarts": 16,
+    "resumes": 0,
+    "queue": [
+     {
+      "guid": "0xf130003baa0816cc",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": false,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 1
+      }
+     ],
+     "items": []
+    }
+   },
+   {
+    "quest": "8325",
+    "command": "tuicraft cycle --quest 8325 --json",
+    "cliStart": 1790414048293,
+    "cliEnd": 1790414091033,
+    "cliExit": 0,
+    "note": "fresh cycle --quest after daemon reconnect (stop/start)",
+    "daemonEvent": "started",
+    "daemonStartedAt": 1790414048321,
+    "daemonStoppedAt": 1790414091030,
+    "stopCause": "objective_complete",
+    "stopDetail": null,
+    "startsUsed": 6,
+    "maxStarts": 16,
+    "resumes": 0,
+    "queue": [
+     {
+      "guid": "0xf130003baa07b538",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa07ace1",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa07a53b",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa07acf4",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa07ad11",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003baa07ad21",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391218278444321",
+     "slotsTaken": [
+      0
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 0,
+     "coinageAfter": 0
+    },
+    "objectiveAtEnd": {
+     "questId": 8325,
+     "slot": 0,
+     "complete": true,
+     "kills": [
+      {
+       "entry": 15274,
+       "index": 0,
+       "required": 8,
+       "current": 8
+      }
+     ],
+     "items": []
+    }
+   }
+  ],
+  "perKillServerProgress": [
+   {
+    "loggedAt": 1790413838046,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 1,
+    "requiredCount": 8,
+    "guid": "0xf130003baa08166c",
+    "at": 1790413838045
+   },
+   {
+    "loggedAt": 1790414027752,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 2,
+    "requiredCount": 8,
+    "guid": "0xf130003baa0816cc",
+    "at": 1790414027752
+   },
+   {
+    "loggedAt": 1790414053864,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 3,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07b538",
+    "at": 1790414053864
+   },
+   {
+    "loggedAt": 1790414063668,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 4,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07ace1",
+    "at": 1790414063667
+   },
+   {
+    "loggedAt": 1790414070057,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 5,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07a53b",
+    "at": 1790414070057
+   },
+   {
+    "loggedAt": 1790414076078,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 6,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07acf4",
+    "at": 1790414076078
+   },
+   {
+    "loggedAt": 1790414085313,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 7,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07ad11",
+    "at": 1790414085313
+   },
+   {
+    "loggedAt": 1790414090817,
+    "questId": 8325,
+    "encodedNpcOrGoId": 15274,
+    "npcOrGoId": 15274,
+    "currentCount": 8,
+    "requiredCount": 8,
+    "guid": "0xf130003baa07ad21",
+    "at": 1790414090817
+   }
+  ],
+  "completion": {
+   "logSlotFlagsCompleteAt": 1790414090849,
+   "slot": {
+    "slot": 0,
+    "questId": 8325,
+    "flags": 1,
+    "counters": [
+     8,
+     0,
+     0,
+     0
+    ]
+   },
+   "cycleStopCause": "objective_complete",
+   "wallClockAcceptToComplete_ms": 281712,
+   "killsBySource": {
+    "run1 (cycle --quest)": 1,
+    "run5 (fresh cycle --quest, loot stuck)": 1,
+    "run6 (after reconnect)": 6
+   }
+  },
+  "travelBackToErona": "goto refused (ambiguous ground column) x1; face+move legs (10267,-6351)->(10292.6,-6358.9)->(10300.2,-6370.6)->(10304,-6376.5)->(10313.9,-6380)->(10324.2,-6377.6)->(10334.4,-6375.3)->(10341.2,-6367.3)->(10347.9,-6359.3); no refusals",
+  "turnIn": {
+   "gossipIcon": 4,
+   "selectQuestReply": "offer (no requestItems step)",
+   "offer": {
+    "choices": [
+     {
+      "itemId": 20997,
+      "count": 1,
+      "displayId": 33325
+     },
+     {
+      "itemId": 20998,
+      "count": 1,
+      "displayId": 33326
+     }
+    ],
+    "items": [],
+    "money": 30,
+    "experience": 100,
+    "honor": 0,
+    "honorMultiplier": 0,
+    "spellId": 0,
+    "spellCastId": 0,
+    "titleId": 0,
+    "talents": 0,
+    "arenaPoints": 0,
+    "reputationMask": 0,
+    "factions": [
+     {
+      "factionId": 911,
+      "valueId": 5,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     }
+    ]
+   },
+   "choseReward": 0,
+   "lastReward": {
+    "questId": 8325,
+    "experience": 100,
+    "money": 30,
+    "honor": 0,
+    "talents": 0,
+    "arenaPoints": 0,
+    "at": 1790414135822
+   },
+   "before": {
+    "experience": {
+     "level": 2,
+     "xp": 3,
+     "nextLevelXp": 900,
+     "lastXp": {
+      "victim": "0xf130003baa07ad21",
+      "total": 50,
+      "kind": "kill",
+      "at": 1790414090817
+     },
+     "lastLevelUp": {
+      "level": 2,
+      "healthDelta": 6,
+      "powerDeltas": [
+       55,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "statDeltas": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ],
+      "at": 1790414090817
+     }
+    },
+    "coinage": 0,
+    "occupiedSlots": [
+     [
+      255,
+      3,
+      53,
+      1
+     ],
+     [
+      255,
+      4,
+      20891,
+      1
+     ],
+     [
+      255,
+      6,
+      52,
+      1
+     ],
+     [
+      255,
+      7,
+      51,
+      1
+     ],
+     [
+      255,
+      15,
+      20981,
+      1
+     ],
+     [
+      255,
+      23,
+      20857,
+      4
+     ],
+     [
+      255,
+      24,
+      159,
+      2
+     ],
+     [
+      255,
+      25,
+      6948,
+      1
+     ],
+     [
+      255,
+      26,
+      20845,
+      5
+     ],
+     [
+      255,
+      27,
+      20846,
+      2
+     ],
+     [
+      255,
+      28,
+      21022,
+      1
+     ]
+    ]
+   },
+   "after": {
+    "experience": {
+     "level": 2,
+     "xp": 103,
+     "nextLevelXp": 900,
+     "lastXp": {
+      "victim": "0x0",
+      "total": 100,
+      "kind": "other",
+      "at": 1790414135822
+     },
+     "lastLevelUp": {
+      "level": 2,
+      "healthDelta": 6,
+      "powerDeltas": [
+       55,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "statDeltas": [
+       0,
+       0,
+       0,
+       1,
+       1
+      ],
+      "at": 1790414090817
+     }
+    },
+    "coinage": 30,
+    "occupiedSlots": [
+     [
+      255,
+      3,
+      53,
+      1
+     ],
+     [
+      255,
+      4,
+      20891,
+      1
+     ],
+     [
+      255,
+      6,
+      52,
+      1
+     ],
+     [
+      255,
+      7,
+      51,
+      1
+     ],
+     [
+      255,
+      15,
+      20981,
+      1
+     ],
+     [
+      255,
+      23,
+      20857,
+      4
+     ],
+     [
+      255,
+      24,
+      159,
+      2
+     ],
+     [
+      255,
+      25,
+      6948,
+      1
+     ],
+     [
+      255,
+      26,
+      20845,
+      5
+     ],
+     [
+      255,
+      27,
+      20846,
+      2
+     ],
+     [
+      255,
+      28,
+      21022,
+      1
+     ],
+     [
+      255,
+      29,
+      20997,
+      1
+     ]
+    ]
+   },
+   "diff": {
+    "xp": "3->103 (+100, level 2)",
+    "coinage": "0->30 (+30)",
+    "items": {
+     "added": "255/29 entry 20997 x1 (choice 0)"
+    },
+    "questRemovedFromLog": true
+   }
+  },
+  "result": "positive: objective completed by the loop (8/8 server kill credit, log flags=1, stopCause objective_complete) and turned in (reward item 20997, +30c, +100 xp). Needed 6 cycle runs (1 fresh + 3 resumes + 2 fresh) and one daemon reconnect because of the stuck-loot stop."
+ },
+ "q8326": {
+  "jevDecisions": {
+   "fightRuns": 12,
+   "requests": 432,
+   "applied": 419,
+   "discarded": 1,
+   "appliedByAction": {
+    "wait": 267,
+    "move_forward": 109,
+    "spell:585:target": 34,
+    "face_target": 4,
+    "spell:2050:self": 4,
+    "attack": 1
+   },
+   "distinctTargets": 12
+  },
+  "accept": {
+   "selectQuestSentAt": 1790414148445,
+   "acceptedEventLoggedAt": 1790414148490,
+   "slot": 0,
+   "autoAccept": true
+  },
+  "baseline": {
+   "experience": {
+    "level": 2,
+    "xp": 103,
+    "nextLevelXp": 900,
+    "lastXp": {
+     "victim": "0x0",
+     "total": 100,
+     "kind": "other",
+     "at": 1790414135822
+    },
+    "lastLevelUp": {
+     "level": 2,
+     "healthDelta": 6,
+     "powerDeltas": [
+      55,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "statDeltas": [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "at": 1790414090817
+    }
+   },
+   "coinage": 30,
+   "collars": 0,
+   "occupiedSlots": [
+    [
+     255,
+     3,
+     53,
+     1
+    ],
+    [
+     255,
+     4,
+     20891,
+     1
+    ],
+    [
+     255,
+     6,
+     52,
+     1
+    ],
+    [
+     255,
+     7,
+     51,
+     1
+    ],
+    [
+     255,
+     15,
+     20981,
+     1
+    ],
+    [
+     255,
+     23,
+     20857,
+     4
+    ],
+    [
+     255,
+     24,
+     159,
+     2
+    ],
+    [
+     255,
+     25,
+     6948,
+     1
+    ],
+    [
+     255,
+     26,
+     20845,
+     5
+    ],
+    [
+     255,
+     27,
+     20846,
+     2
+    ],
+    [
+     255,
+     28,
+     21022,
+     1
+    ],
+    [
+     255,
+     29,
+     20997,
+     1
+    ]
+   ]
+  },
+  "cycleRuns": [
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --quest 8326 --source 15366 --source 15372 --json",
+    "cliStart": 1790414167899,
+    "cliEnd": 1790414176957,
+    "cliExit": 0,
+    "note": "8326 run 1",
+    "daemonEvent": "started",
+    "daemonStartedAt": 1790414167938,
+    "daemonStoppedAt": 1790414176956,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003c0607af55",
+     "distance": 56,
+     "reach": 50
+    },
+    "startsUsed": 2,
+    "maxStarts": 16,
+    "resumes": 0,
+    "queue": [
+     {
+      "guid": "0xf130003c0607add1",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607a06e",
+      "status": "skipped",
+      "cause": "height_unresolved",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "height_unresolved"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391219821948369",
+     "slotsTaken": [
+      0,
+      1
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 30,
+     "coinageAfter": 30
+    },
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": false,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   },
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790414201899,
+    "cliEnd": 1790414208321,
+    "cliExit": 0,
+    "note": "resume after legs to (10311.9,-6438.8)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790414201921,
+    "daemonStoppedAt": 1790414208320,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003c0607aff3",
+     "distance": 54,
+     "reach": 50
+    },
+    "startsUsed": 1,
+    "maxStarts": 16,
+    "resumes": 1,
+    "queue": [
+     {
+      "guid": "0xf130003c0607add1",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607a06e",
+      "status": "skipped",
+      "cause": "height_unresolved",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "height_unresolved"
+     },
+     {
+      "guid": "0xf130003c0607af55",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391219821948757",
+     "slotsTaken": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 30,
+     "coinageAfter": 30
+    },
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": false,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   },
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790414223878,
+    "cliEnd": 1790414274750,
+    "cliExit": 0,
+    "note": "resume after legs to (10346,-6463.5)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790414223899,
+    "daemonStoppedAt": 1790414274748,
+    "stopCause": "loot_release_only_reconnect_required",
+    "stopDetail": null,
+    "startsUsed": 5,
+    "maxStarts": 16,
+    "resumes": 2,
+    "queue": [
+     {
+      "guid": "0xf130003c0607add1",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607a06e",
+      "status": "skipped",
+      "cause": "height_unresolved",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "height_unresolved"
+     },
+     {
+      "guid": "0xf130003c0607af55",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607aff3",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607b0cd",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607b09f",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0c07b059",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607afcf",
+      "status": "done",
+      "cause": null,
+      "loot": null,
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391219922612313",
+     "slotsTaken": [
+      0,
+      1,
+      2
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 30,
+     "coinageAfter": 30
+    },
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": false,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   },
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --quest 8326 --source 15366 --source 15372 --json",
+    "cliStart": 1790414345781,
+    "cliEnd": 1790414350965,
+    "cliExit": 0,
+    "note": "fresh cycle --quest after daemon reconnect",
+    "daemonEvent": "started",
+    "daemonStartedAt": 1790414345812,
+    "daemonStoppedAt": 1790414350963,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003c06007f0a",
+     "distance": 56,
+     "reach": 50
+    },
+    "startsUsed": 1,
+    "maxStarts": 16,
+    "resumes": 0,
+    "queue": [
+     {
+      "guid": "0xf130003c0c07ad14",
+      "status": "skipped",
+      "cause": "target_unreachable",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "target_unreachable"
+     }
+    ],
+    "lastLoot": null,
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": false,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   },
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790414369060,
+    "cliEnd": 1790414380464,
+    "cliExit": 0,
+    "note": "resume after legs to (10385.9,-6467.5)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790414369081,
+    "daemonStoppedAt": 1790414380462,
+    "stopCause": "objective_targets_out_of_reach",
+    "stopDetail": {
+     "nearest": "0xf130003c0607b109",
+     "distance": 52,
+     "reach": 50
+    },
+    "startsUsed": 1,
+    "maxStarts": 16,
+    "resumes": 1,
+    "queue": [
+     {
+      "guid": "0xf130003c0c07ad14",
+      "status": "skipped",
+      "cause": "target_unreachable",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "target_unreachable"
+     },
+     {
+      "guid": "0xf130003c06007f0a",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391219821477642",
+     "slotsTaken": [
+      0,
+      1
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 30,
+     "coinageAfter": 30
+    },
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": false,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   },
+   {
+    "quest": "8326",
+    "command": "tuicraft cycle --resume --json",
+    "cliStart": 1790414393010,
+    "cliEnd": 1790414416745,
+    "cliExit": 0,
+    "note": "resume after leg to (10383.4,-6456.3)",
+    "daemonEvent": "resumed",
+    "daemonStartedAt": 1790414393031,
+    "daemonStoppedAt": 1790414416743,
+    "stopCause": "objective_complete",
+    "stopDetail": null,
+    "startsUsed": 2,
+    "maxStarts": 16,
+    "resumes": 2,
+    "queue": [
+     {
+      "guid": "0xf130003c0c07ad14",
+      "status": "skipped",
+      "cause": "target_unreachable",
+      "loot": null,
+      "outcome": "blocked",
+      "reason": "target_unreachable"
+     },
+     {
+      "guid": "0xf130003c06007f0a",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c0607b109",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     },
+     {
+      "guid": "0xf130003c06078b7e",
+      "status": "done",
+      "cause": null,
+      "loot": "looted",
+      "outcome": "completed",
+      "reason": "server_kill_credit"
+     }
+    ],
+    "lastLoot": {
+     "guid": "17379391219821939582",
+     "slotsTaken": [
+      0
+     ],
+     "moneyTaken": 0,
+     "coinageBefore": 30,
+     "coinageAfter": 30
+    },
+    "objectiveAtEnd": {
+     "questId": 8326,
+     "slot": 0,
+     "complete": true,
+     "kills": [],
+     "items": [
+      {
+       "itemId": 20797,
+       "required": 8
+      }
+     ]
+    }
+   }
+  ],
+  "travelBetweenRuns": [
+   "legs Erona->(10314.4,-6393.3) before run 1",
+   "legs (10302.3,-6400.2)->(10311.9,-6438.8) after run1 out_of_reach 56yd",
+   "legs ->(10346,-6463.5) after resume1 out_of_reach 54yd",
+   "reconnect; legs (10341.9,-6502.3)->(10377.1,-6470.9) (5 height_unresolved refusals at (10348.6,-6490))",
+   "legs ->(10385.9,-6467.5) after fresh run out_of_reach 56yd (Jev had walked SW to (10347.6,-6484.3))",
+   "leg ->(10383.4,-6456.3) after resume out_of_reach 52yd"
+  ],
+  "perLootServerProgress_collarCarried": [
+   {
+    "loggedAt": 1790414173905,
+    "carried": 1
+   },
+   {
+    "loggedAt": 1790414208315,
+    "carried": 2
+   },
+   {
+    "loggedAt": 1790414230226,
+    "carried": 3
+   },
+   {
+    "loggedAt": 1790414238997,
+    "carried": 4
+   },
+   {
+    "loggedAt": 1790414247075,
+    "carried": 5
+   },
+   {
+    "loggedAt": 1790414264088,
+    "carried": 6
+   },
+   {
+    "loggedAt": 1790414380427,
+    "carried": 7
+   },
+   {
+    "loggedAt": 1790414402465,
+    "carried": 8
+   }
+  ],
+  "note_progress": "Item objective: progress from QUEST progress events with source=inventory (state.items[].carried); no QUESTUPDATE kill packet.",
+  "completion": {
+   "logSlotFlagsCompleteAt": 1790414402489,
+   "slot": {
+    "slot": 0,
+    "questId": 8326,
+    "flags": 1,
+    "counters": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "collarsInInventory": 8,
+   "cycleStopCause": "objective_complete",
+   "wallClockAcceptToComplete_ms": 253999
+  },
+  "turnIn": {
+   "requestItems": {
+    "items": [
+     {
+      "itemId": 20797,
+      "count": 8,
+      "displayId": 7061
+     }
+    ]
+   },
+   "requestReward": "sent; offer received",
+   "offer": {
+    "choices": [
+     {
+      "itemId": 20994,
+      "count": 1,
+      "displayId": 33322
+     },
+     {
+      "itemId": 20993,
+      "count": 1,
+      "displayId": 36955
+     },
+     {
+      "itemId": 20992,
+      "count": 1,
+      "displayId": 33319
+     }
+    ],
+    "items": [],
+    "money": 50,
+    "experience": 250,
+    "honor": 0,
+    "honorMultiplier": 0,
+    "spellId": 0,
+    "spellCastId": 0,
+    "titleId": 0,
+    "talents": 0,
+    "arenaPoints": 0,
+    "reputationMask": 0,
+    "factions": [
+     {
+      "factionId": 911,
+      "valueId": 5,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     }
+    ]
+   },
+   "choseReward": 0,
+   "lastReward": {
+    "questId": 8326,
+    "experience": 250,
+    "money": 50,
+    "honor": 0,
+    "talents": 0,
+    "arenaPoints": 0,
+    "at": 1790414487988
+   },
+   "before": {
+    "experience": {
+     "level": 2,
+     "xp": 557,
+     "nextLevelXp": 900,
+     "lastXp": {
+      "victim": "0xf130003c06078b7e",
+      "total": 44,
+      "kind": "kill",
+      "at": 1790414416652
+     }
+    },
+    "coinage": 30,
+    "occupiedSlots": [
+     [
+      255,
+      3,
+      53,
+      1
+     ],
+     [
+      255,
+      4,
+      20891,
+      1
+     ],
+     [
+      255,
+      6,
+      52,
+      1
+     ],
+     [
+      255,
+      7,
+      51,
+      1
+     ],
+     [
+      255,
+      15,
+      20981,
+      1
+     ],
+     [
+      255,
+      23,
+      20857,
+      4
+     ],
+     [
+      255,
+      24,
+      159,
+      2
+     ],
+     [
+      255,
+      25,
+      6948,
+      1
+     ],
+     [
+      255,
+      26,
+      20845,
+      5
+     ],
+     [
+      255,
+      27,
+      20846,
+      2
+     ],
+     [
+      255,
+      28,
+      21022,
+      1
+     ],
+     [
+      255,
+      29,
+      20997,
+      1
+     ],
+     [
+      255,
+      30,
+      20813,
+      9
+     ],
+     [
+      255,
+      31,
+      20797,
+      8
+     ],
+     [
+      255,
+      32,
+      21002,
+      1
+     ],
+     [
+      255,
+      33,
+      20812,
+      3
+     ],
+     [
+      255,
+      34,
+      21009,
+      1
+     ],
+     [
+      255,
+      35,
+      21021,
+      1
+     ]
+    ]
+   },
+   "after": {
+    "experience": {
+     "level": 2,
+     "xp": 807,
+     "nextLevelXp": 900,
+     "lastXp": {
+      "victim": "0x0",
+      "total": 250,
+      "kind": "other",
+      "at": 1790414487987
+     }
+    },
+    "coinage": 80,
+    "occupiedSlots": [
+     [
+      255,
+      3,
+      53,
+      1
+     ],
+     [
+      255,
+      4,
+      20891,
+      1
+     ],
+     [
+      255,
+      6,
+      52,
+      1
+     ],
+     [
+      255,
+      7,
+      51,
+      1
+     ],
+     [
+      255,
+      15,
+      20981,
+      1
+     ],
+     [
+      255,
+      23,
+      20857,
+      4
+     ],
+     [
+      255,
+      24,
+      159,
+      2
+     ],
+     [
+      255,
+      25,
+      6948,
+      1
+     ],
+     [
+      255,
+      26,
+      20845,
+      5
+     ],
+     [
+      255,
+      27,
+      20846,
+      2
+     ],
+     [
+      255,
+      28,
+      21022,
+      1
+     ],
+     [
+      255,
+      29,
+      20997,
+      1
+     ],
+     [
+      255,
+      30,
+      20813,
+      9
+     ],
+     [
+      255,
+      31,
+      20994,
+      1
+     ],
+     [
+      255,
+      32,
+      21002,
+      1
+     ],
+     [
+      255,
+      33,
+      20812,
+      3
+     ],
+     [
+      255,
+      34,
+      21009,
+      1
+     ],
+     [
+      255,
+      35,
+      21021,
+      1
+     ]
+    ]
+   },
+   "inventoryDiff": {
+    "removed": "255/31 entry 20797 x8 (Lynx Collars)",
+    "added": "255/31 entry 20994 x1 (choice 0)"
+   },
+   "backpackAtTurnIn": "13/16 occupied (slots 23-35); #222 inventory-full did not recur",
+   "followUp": "server pushed follow-up 8327 (enableNext, auto-accept): accepted+completed QUEST events at 1790414488013/14 without any accept from the supervisor; cancel-interaction closed the details dialog; 8327 remains in slot 0 flags=1"
+  },
+  "result": "positive: objective completed by the loop (8/8 Lynx Collars, log flags=1, stopCause objective_complete) with supervisor travel only, and turned in (item 20994, +50c, +250 xp). Needed 6 cycle runs (2 fresh + 4 resumes) and one daemon reconnect."
+ },
+ "failures": [
+  {
+   "command": "tuicraft cycle --quest 8325 --json",
+   "output": "{\"command\": \"cycle\", \"data\": null, \"error\": null, \"events\": [], \"kind\": \"intent\"}",
+   "observed": "cycling: stopCause loot_release_only_reconnect_required after 1 kill (0xf130003baa08166c, server_kill_credit). Log: loot_open_requested 1790413838194, loot_release_observed 1790413838219 with pending open still unanswered; corpse was ~25 yd away (nearby at 1790413885). loot --json afterwards: phase opening, pending {action:open,status:unanswered}, later invalidatedReason loot_source_unavailable. cycling.objective.kills[0].current stayed 0 while quest log counters were [1,0,0,0] (fixed on the next resume)."
+  },
+  {
+   "command": "tuicraft cycle --resume --json (8325 resume 2)",
+   "output": "intent",
+   "observed": "0xf130003baa0816cc skipped server_action_rejected:47 (SPELL_FAILED_LINE_OF_SIGHT per 3.3.5 enum [INFERENCE]); 0xf130003baa07b538 and 0xf130003baa07a53b skipped obstructed (each blocked within ~1 s)"
+  },
+  {
+   "command": "tuicraft cycle --resume --json (8325 resume 3)",
+   "output": "intent",
+   "observed": "0xf130003baa07ace1 and 0xf130003baa07acf4 skipped height_unresolved (blocked within ~1 s each); untried pool within 50 yd then empty"
+  },
+  {
+   "command": "tuicraft cycle --quest 8325 --json (fresh, 5th run)",
+   "output": "intent",
+   "observed": "killed 0xf130003baa0816cc then stopCause 'loot_denied:Previous loot window has not closed' (stuck pending open from run 1). Cleared only by stop/start."
+  },
+  {
+   "command": "tuicraft goto 10349.6 -6357.3 33.4 --json",
+   "output": "{\"command\":\"goto\",\"data\":null,\"error\":{\"message\":\"pick_destination: ambiguous ground column\",\"stage\":\"command\"},\"events\":[],\"kind\":\"error\"}"
+  },
+  {
+   "command": "tuicraft cycle --quest 8326 --source 15366 --source 15372 --json (run 1)",
+   "output": "intent",
+   "observed": "0xf130003c0607a06e skipped height_unresolved"
+  },
+  {
+   "command": "tuicraft cycle --resume --json (8326 resume 2)",
+   "output": "intent",
+   "observed": "4 kills looted, then 0xf130003c0607afcf: loot_open_requested 1790414274730, loot_release_observed 1790414274747 \u2192 stopCause loot_release_only_reconnect_required (corpse at z 59.1 vs self z ~49, 14-17 yd). Second occurrence of the same signature; reconnect needed again."
+  },
+  {
+   "command": "tuicraft cycle --quest 8326 --source 15366 --source 15372 --json (after reconnect)",
+   "output": "intent",
+   "observed": "0xf130003c0c07ad14 skipped target_unreachable; Jev walked the character ~35 yd SW away from the lynxes before the stop"
+  },
+  {
+   "note": "face/move legs refused (control.blockedReason) 20 times: {\"obstructed\": 3, \"height_unresolved\": 16, \"ambiguous ground column\": 1}"
+  },
+  {
+   "note": "cycling.lastLoot.guid is a decimal string (e.g. 17379391218278444321), not 0x hex as the skill says JSON GUIDs are"
+  }
+ ],
+ "notes": [
+  "category 'lifecycle' = start/stop (6: initial start, two stop+start reconnects forced by the stuck loot state, final stop). 'read'/'loot'/'status' polls are counted as inspect. Per-quest counts attribute commands to the quest active when issued ('None' = before/after both quests).",
+  "All cycle CLI calls ran with a 1200 s timeout in a background thread and returned normally (exit 0, kind=intent) when the daemon run ended.",
+  "Daemon reconnects (stop+start) were used twice because stopCause loot_release_only_reconnect_required left loot.pending.open unanswered, and the next run stopped with loot_denied:Previous loot window has not closed. The daemon session log is appended across restarts, so session.log covers the whole run.",
+  "goto refused once (pick_destination: ambiguous ground column, #138); all travel used face + move forward legs with heading offsets on refusal. Leg refusals observed via control.blockedReason: {\"obstructed\": 3, \"height_unresolved\": 16, \"ambiguous ground column\": 1}",
+  "cycling.objective.items[] for item objectives carries only itemId/required (no current count); progress was read from QUEST progress (source=inventory) state.items[].carried."
+ ],
+ "finalQuestLog": [
+  {
+   "slot": 0,
+   "questId": 8327,
+   "flags": 1,
+   "counters": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "expiresAtSeconds": 0
+  }
+ ],
+ "rawSources": "tmp/m5-loop2/journal.md, summary.json, session.log (gitignored)"
+}

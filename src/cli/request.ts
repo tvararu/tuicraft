@@ -66,8 +66,21 @@ function cycleArgs(
   action: Extract<Request, { mode: "cycle" | "cycle_resume" }>,
 ): Arg[] {
   const max = action.maxStarts ? ["--max", action.maxStarts] : [];
-  if (action.mode === "cycle")
-    return [...action.guids, ...max, "--instruction", action.instruction];
+  if (action.mode === "cycle") {
+    const quest = action.questId ? ["--quest", action.questId] : [];
+    const sources = (action.sources ?? []).flatMap((entry) => [
+      "--source",
+      entry,
+    ]);
+    return [
+      ...action.guids,
+      ...quest,
+      ...sources,
+      ...max,
+      "--instruction",
+      action.instruction,
+    ];
+  }
   const { instruction } = action;
   return [
     ...max,
