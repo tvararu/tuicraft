@@ -1,5 +1,6 @@
-import type { CombatCast, CombatOutcome } from "wow/combat";
+import type { CombatCast, CombatItem, CombatOutcome } from "wow/combat";
 import type { CooldownStore } from "wow/cooldown-store";
+import { buildUseItem } from "wow/protocol/item";
 import { GameOpcode } from "wow/protocol/opcodes";
 import {
   buildCancelCast,
@@ -56,19 +57,47 @@ export class CombatCasts {
     if (this.pendingCast || this.currentCast)
       throw new Error("cast_in_progress");
     if (!this.deps.learned.has(spellId)) throw new Error("unknown_spell");
-    const count = this.castCount;
-    this.castCount = (this.castCount + 1) & 0xff || 1;
+    const count = this.nextCount();
     this.deps.send(
       GameOpcode.CMSG_CAST_SPELL,
       buildCastSpell(count, spellId, targetGuid),
     );
+    return this.track(spellId, targetGuid === 0n ? undefined : targetGuid, {
+      count,
+    });
+  }
+
+  sendItem(spellId: number, item: CombatItem): CombatOutcome {
+    if (this.hasUncancelled()) throw new Error("cast_in_progress");
+    this.pendingCast = undefined;
+    this.currentCast = undefined;
+    const count = this.nextCount();
+    const { bag, slot, guid: itemGuid } = item;
+    this.deps.send(
+      GameOpcode.CMSG_USE_ITEM,
+      buildUseItem({ bag, slot, castCount: count, spellId, itemGuid }),
+    );
+    return this.track(spellId, undefined, { count, item });
+  }
+
+  private nextCount(): number {
+    const count = this.castCount;
+    this.castCount = (this.castCount + 1) & 0xff || 1;
+    return count;
+  }
+
+  private track(
+    spellId: number,
+    target: bigint | undefined,
+    extra: { count: number; item?: CombatItem },
+  ): CombatOutcome {
     const pending: CombatCast = {
       spellId,
-      target: targetGuid === 0n ? undefined : targetGuid,
+      target,
       startedAt: this.deps.now(),
       durationMs: 0,
       source: "pending",
-      count,
+      ...extra,
     };
     this.pendingCast = pending;
     this.lastCast = pending;
@@ -76,8 +105,9 @@ export class CombatCasts {
       kind: "cast",
       status: "sent",
       spellId,
-      target: pending.target,
+      target,
       at: this.deps.now(),
+      ...(extra.item && { item: extra.item }),
     };
   }
 
@@ -102,6 +132,7 @@ export class CombatCasts {
     const cancelRequested = matching
       ? this.pendingCast?.cancelRequested
       : undefined;
+    const item = matching ? this.pendingCast?.item : undefined;
     if (this.pendingCast && !matching) return undefined;
     this.pendingCast = undefined;
     this.currentCast = {
@@ -112,6 +143,7 @@ export class CombatCasts {
       durationMs: packet.timer,
       source: "server",
       count: packet.castCount,
+      ...(item && { item }),
     };
     this.lastCast = this.currentCast;
     this.deps.cooldowns.beginGlobal(packet.spellId);
@@ -121,6 +153,7 @@ export class CombatCasts {
       spellId: packet.spellId,
       target: packet.targets.objectGuid,
       at: this.deps.now(),
+      ...(item && { item }),
     };
   }
 
@@ -128,11 +161,13 @@ export class CombatCasts {
     const hadStart =
       this.currentCast?.spellId === packet.spellId &&
       this.currentCast.count === packet.extraCasts;
-    if (
+    const pending =
       this.pendingCast?.spellId === packet.spellId &&
-      this.pendingCast.count === packet.extraCasts
-    )
-      this.pendingCast = undefined;
+      this.pendingCast.count === packet.extraCasts;
+    const matched =
+      (pending && this.pendingCast) || (hadStart && this.currentCast);
+    const item = matched ? matched.item : undefined;
+    if (pending) this.pendingCast = undefined;
     if (hadStart) this.currentCast = undefined;
     if (!hadStart) this.deps.cooldowns.beginGlobal(packet.spellId);
     this.deps.cooldowns.predict(packet.spellId);
@@ -144,6 +179,7 @@ export class CombatCasts {
       spellId: packet.spellId,
       target: packet.targets.objectGuid,
       at: this.deps.now(),
+      ...(item && { item }),
     };
   }
 
@@ -166,6 +202,23 @@ export class CombatCasts {
       spellId,
       result,
       at: this.deps.now(),
+      ...(cast.item && { item: cast.item }),
+    };
+  }
+
+  rejectItem(itemGuid: bigint, result: number): CombatOutcome | undefined {
+    const cast = this.pendingCast;
+    const item = cast?.item;
+    if (!(cast && item && (itemGuid === item.guid || itemGuid === 0n)))
+      return undefined;
+    this.pendingCast = undefined;
+    return {
+      kind: "cast",
+      status: "failed",
+      spellId: cast.spellId,
+      inventoryResult: result,
+      at: this.deps.now(),
+      item,
     };
   }
 

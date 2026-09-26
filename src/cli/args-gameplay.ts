@@ -9,6 +9,7 @@ import {
   parseFight,
   parseGoto,
   parseGuidArg,
+  parseItemSlot,
   parseMove,
   parseOptionId,
   parseQuestId,
@@ -68,6 +69,13 @@ export function parseGameplay(
       return { mode: "spirit_healer", ...take(parseGuidArg(rest, true)) };
     case "resurrect":
       return { mode: "resurrect", ...take(parseResurrect(rest)) };
+    default:
+      return parseInteraction(cmd, rest);
+  }
+}
+
+function parseInteraction(cmd: string, rest: string[]): CliAction | undefined {
+  switch (cmd) {
     case "talk":
       return { mode: "talk", ...take(parseGuidArg(rest, true)) };
     case "query-quest":
@@ -92,6 +100,8 @@ export function parseGameplay(
       const slot = take(parseBoundedArg(rest, 0, 255, "invalid loot slot"));
       return { mode: "take_loot", slot };
     }
+    case "use":
+      return { mode: "use", ...take(parseItemSlot(rest)) };
     default:
       return undefined;
   }

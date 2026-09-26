@@ -260,6 +260,7 @@ export type WorldHandle = {
   takeLoot: (slot: number) => void;
   takeLootMoney: () => void;
   releaseLoot: () => void;
+  useItem: (bag: number, slot: number) => Promise<void>;
   onRewardsEvent: (cb: (event: RewardsEvent) => void) => Unsubscribe;
   startCycle: (
     guids: bigint[],

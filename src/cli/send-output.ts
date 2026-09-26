@@ -183,6 +183,7 @@ export function formatHumanIntent(command: string, lines: string[]): string[] {
   let inspection: string | undefined;
   if (LOOT.includes(command)) inspection = "loot";
   else if (RECOVERY.includes(command)) inspection = "recovery";
+  else if (command === "use") inspection = "combat";
   return [
     `Daemon accepted request. ${inspection ? `Check tuicraft ${inspection} for observed results.` : "No server result confirmed."}`,
   ];

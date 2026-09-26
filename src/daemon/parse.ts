@@ -100,6 +100,7 @@ export type IpcCommand =
   | { type: "take_loot"; slot: number }
   | { type: "take_money" }
   | { type: "release_loot" }
+  | { type: "use"; bag: number; slot: number }
   | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }

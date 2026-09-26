@@ -171,6 +171,7 @@ tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of a window you leave partly looted
+tuicraft use 255 29 [--json] # eat, drink or drink a potion from an inventory bag/slot
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health

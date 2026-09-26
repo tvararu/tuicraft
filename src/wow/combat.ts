@@ -19,6 +19,7 @@ import {
   type XpGain,
 } from "wow/protocol/combat";
 import type { LevelUpInfo } from "wow/protocol/experience";
+import type { InventoryChangeFailure } from "wow/protocol/inventory";
 import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type {
@@ -36,6 +37,13 @@ import type {
 } from "wow/protocol/spell";
 import type { SpellCatalog, SpellDefinition } from "wow/spell-catalog";
 
+export type CombatItem = {
+  entry: number;
+  bag: number;
+  slot: number;
+  guid: bigint;
+};
+
 export type CombatCast = {
   spellId: number;
   target: bigint | undefined;
@@ -44,6 +52,7 @@ export type CombatCast = {
   source: "server" | "pending";
   count: number;
   cancelRequested?: boolean;
+  item?: CombatItem;
 };
 
 export type CombatOutcome = {
@@ -56,6 +65,8 @@ export type CombatOutcome = {
   at: number;
   hits?: bigint[];
   misses?: { guid: bigint; reason: number; reflect?: number }[];
+  item?: CombatItem;
+  inventoryResult?: number;
 };
 
 export type CombatXp = {
@@ -238,6 +249,11 @@ export class CombatRuntime {
     this.emit("cast_sent");
   }
 
+  useItem(spellId: number, item: CombatItem): void {
+    this.lastOutcome = this.casts.sendItem(spellId, item);
+    this.emit("cast_sent");
+  }
+
   attack(targetGuid: bigint): void {
     if (targetGuid <= 0n || targetGuid > 0xffffffffffffffffn)
       throw new Error("invalid_guid");
@@ -343,6 +359,14 @@ export class CombatRuntime {
     if (!outcome) return;
     this.lastOutcome = outcome;
     this.emit("cast_failed", `cast_failed:${packet.result}`);
+  }
+
+  applyInventoryFailure(packet: InventoryChangeFailure): void {
+    if (packet.kind !== "error") return;
+    const outcome = this.casts.rejectItem(packet.item1, packet.result);
+    if (!outcome) return;
+    this.lastOutcome = outcome;
+    this.emit("cast_failed", `inventory_failed:${packet.result}`);
   }
 
   applySpellFailure(packet: SpellFailure): void {

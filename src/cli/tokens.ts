@@ -91,6 +91,20 @@ export function parseQuestId(tokens: string[]): Parsed<{ questId: number }> {
   return parsed.ok ? ok({ questId: parsed.value }) : parsed;
 }
 
+export function parseItemSlot(
+  tokens: string[],
+): Parsed<{ bag: number; slot: number }> {
+  const [rawBag, rawSlot] = tokens;
+  const bag =
+    tokens.length === 2 && rawBag !== undefined
+      ? parseUnsigned(rawBag, 0, 255)
+      : undefined;
+  const slot =
+    rawSlot === undefined ? undefined : parseUnsigned(rawSlot, 0, 255);
+  if (bag === undefined || slot === undefined) return fail("invalid item slot");
+  return ok({ bag, slot });
+}
+
 export function parseMove(
   tokens: string[],
 ): Parsed<{ direction: MovementDirection; durationMs: number }> {
