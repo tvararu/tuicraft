@@ -47,8 +47,9 @@ mkdir -p tmp && bun $F qa-changes $prev <sha> > tmp/qa-changes.json
 
 It prints JSON with `commits` (each with `source`, `prs` and `issues`),
 `prs` (with the `proof` section) and `issues` (with the `acceptance`
-criteria). It reads the `Refs:` and `PR:` trailers the merger adds, and asks
-GitHub (`commits/<sha>/pulls`) only for commits without them. A `null`
+criteria). Each PR lands as one squash commit whose `Refs:` and `PR:`
+trailers name its issues and PR; `qa-changes` reads them, and asks GitHub
+(`commits/<sha>/pulls`) only for commits without them. A `null`
 `acceptance` or `proof` means the section is missing: read the issue or PR
 itself (`gh issue view`, `gh pr view`).
 

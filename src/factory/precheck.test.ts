@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { paces } from "factory/config";
-import type { Issue, LabelEvent, Pr } from "factory/github";
+import type { Issue, LabelEvent } from "factory/github";
 import {
   decideMerger,
   decideQa,
@@ -8,51 +8,17 @@ import {
   decideWorker,
   inScope,
 } from "factory/precheck";
+import { issue, pr, theo } from "test/factory-fixtures";
 
 const pickWork = (issues: Issue[]) => decideWorker(issues, paces.default.wip);
 const pickReview = (issues: Issue[]) =>
   decideReviewer(issues, paces.default.reviewing);
 
-const theo: LabelEvent = {
-  actor: "tvararu",
-  at: "2026-09-25T10:00:00Z",
-  label: "ready",
-};
 const bot: LabelEvent = {
   actor: "OpenHubris",
   at: "2026-09-25T11:00:00Z",
   label: "ready",
 };
-
-function issue(
-  number: number,
-  labels: string[],
-  extra: Partial<Issue> = {},
-): Issue {
-  const base = {
-    author: "OpenHubris",
-    blockers: [],
-    events: [theo],
-    prs: [],
-    title: `issue ${number}`,
-  };
-  return { labels, number, ...base, ...extra };
-}
-
-function pr(extra: Partial<Pr> = {}): Pr {
-  const statuses = [
-    { name: "factory/ci", state: "SUCCESS" },
-    { name: "factory/review", state: "SUCCESS" },
-  ];
-  const base = {
-    branch: "factory/1-x",
-    draft: false,
-    head: "abc",
-    number: 100,
-    state: "OPEN",
-  };
-  return { ...base, decision: "APPROVED", statuses, ...extra };
-}
 
 describe("scope rule", () => {
   test("latest ready actor wins", () => {
@@ -245,6 +211,38 @@ describe("merger", () => {
       issue(6, ["agent:landing"]),
     ];
     expect(decideMerger(issues)).toEqual({ ok: false, why: "#6 is landing" });
+  });
+
+  test("skips needs:pm and open blocked-by, and lands past them", () => {
+    const issues = [
+      issue(2, ["agent:merging", "needs:pm"], { prs: [pr({ number: 20 })] }),
+      issue(3, ["agent:merging"], {
+        blockers: ["OPEN"],
+        prs: [pr({ number: 30 })],
+      }),
+      issue(4, ["agent:merging"], {
+        blockers: ["CLOSED"],
+        prs: [pr({ number: 40 })],
+      }),
+    ];
+    expect(decideMerger(issues, false)).toEqual({
+      ok: true,
+      out: { approval: "not-required", issue: 4, pr: 40 },
+    });
+  });
+
+  test("statuses on an older head do not count for the current head", () => {
+    const moved = pr({ checked: "abc", head: "def" });
+    expect(
+      decideMerger([issue(4, ["agent:merging"], { prs: [moved] })], false).ok,
+    ).toBe(false);
+  });
+
+  test("a stacked child whose base is still its parent branch waits", () => {
+    const child = pr({ base: "factory/3-parent" });
+    expect(
+      decideMerger([issue(4, ["agent:merging"], { prs: [child] })], false).ok,
+    ).toBe(false);
   });
 });
 

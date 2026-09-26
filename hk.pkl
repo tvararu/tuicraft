@@ -38,6 +38,7 @@ hooks {
         depends = List("wrap-body")
         check = #"""
           subject=$(sed -n '1p' "{{commit_msg_file}}")
+          case "$subject" in fixup!\ *|squash!\ *|amend!\ *) exit 0 ;; esac
           len=$(printf '%s' "$subject" | wc -c)
           if [ "$len" -gt 50 ]; then
             printf 'Commit subject exceeds 50 characters: %s\n' "$subject" >&2

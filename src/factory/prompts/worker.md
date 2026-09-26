@@ -136,22 +136,40 @@ Collect for the PR's Proof section:
   `WOW_PASSWORD_2` and `WOW_CHARACTER_2`; the JSON from `soap create` has
   `.account`, `.password` and `.character`. Delete both afterwards.
 
-## 7. Clean history
+## 7. History and stacks
 
-Every commit lands on `main` on its own (rebase-merge). Each commit is a
-Conventional Commit with a subject of 50 characters or fewer, passes the hk
-hooks and `mise ci` on its own. Use `git commit --fixup <sha>` and
-`git rebase -i --autosquash origin/main` (`GIT_SEQUENCE_EDITOR=true`). No
-WIP, "address review" or "fix typo" commits: fold rework into the commit it
-corrects. Check each commit with
-`git rebase -x "mise ci" origin/main`. Never bypass hooks.
+The PR lands on `main` as one squash commit whose subject is the PR title,
+so the commits inside the PR are not reviewed one by one. Commit in
+whatever steps help you; the hk hooks still run on every commit (they
+accept `fixup!` and `squash!` subjects). Never bypass hooks. Before hand-off,
+rebase onto `origin/main` (`git fetch origin && git rebase origin/main`)
+and run `mise ci` on the result.
+
+Stacked PR, when this issue needs another open PR's code: file the order
+as a blocked-by link from this issue to the parent's issue
+(`gh api -X POST repos/tvararu/tuicraft/issues/N/dependencies/blocked_by -F issue_id=<parent issue id>`,
+where the id comes from `gh api repos/tvararu/tuicraft/issues/<parent> --jq .id`),
+branch from the parent's branch, and open the PR with `--base <parent branch>`,
+so its diff shows only this issue's work. Put
+`Stacked-on: #<parent PR> <parent tip SHA>` in the PR body, naming the
+parent commit you built on; update it whenever you rebase onto a newer
+parent tip. Keep stacks to 2-3 PRs deep. Once the parent has landed, the
+merger rebases the child itself with
+`git rebase --onto origin/main <parent tip>`; do the same in a rework, set
+`gh pr edit <pr> --base main`, and drop the `Stacked-on:` line.
 
 ## 8. PR and hand-off
 
 1. `git push --force-with-lease -u origin factory/N-<slug>`
-2. Fresh: `gh pr create -R tvararu/tuicraft --base main --head factory/N-<slug> --title "<conventional subject>" --body-file <file>`.
-   Rework: `gh pr edit <pr> --body-file <file>`.
-   The body has `Fixes #N`, a short summary, and `## Proof` (step 6).
+2. Fresh: `gh pr create -R tvararu/tuicraft --base main --head factory/N-<slug> --title "<conventional subject>" --body-file <file>`
+   (`--base <parent branch>` for a stacked PR).
+   Rework: `gh pr edit <pr> --title "<conventional subject>" --body-file <file>`.
+   The title becomes the squash commit subject: a Conventional Commit of 50
+   characters or fewer, capitalised after the prefix, `feat:` only for
+   user-visible features. The body opens with one paragraph of 1-3
+   sentences saying why (the squash commit body), then `Fixes #N`, a short
+   summary, and `## Proof` (step 6). Check both with
+   `bun $F squash-message <pr>`; it must exit 0.
 3. Update the workpad: all criteria with pass/fail, link to the PR.
 4. `gh issue edit N -R tvararu/tuicraft --remove-label agent:working --add-label agent:review`
 5. `orca-ide worktree set --worktree active --issue N --workspace-status in-review --comment "PR #<pr> ready for review"`

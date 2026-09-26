@@ -1,3 +1,4 @@
+import { applyBounces, movedHeads, reviewedHead } from "factory/bounce";
 import {
   factoryStateDir,
   labels,
@@ -96,7 +97,12 @@ export function decideMerger(issues: Issue[], approval = pmApproval): Decision {
   const landing = issues.find((issue) => issue.labels.includes(labels.landing));
   if (landing) return { ok: false, why: `#${landing.number} is landing` };
   const merging = byPriority(
-    issues.filter((issue) => issue.labels.includes(labels.merging)),
+    issues.filter(
+      (issue) =>
+        issue.labels.includes(labels.merging) &&
+        !issue.labels.includes(labels.pm) &&
+        unblocked(issue),
+    ),
   );
   const pairs = merging.map((issue) => ({
     issue,
@@ -123,13 +129,11 @@ function reviewable(pr: Pr): boolean {
 }
 
 function landable(pr: Pr, approval: boolean): boolean {
-  const passed = (name: string) =>
-    pr.statuses.some((s) => s.name === name && s.state === "SUCCESS");
   return (
     reviewable(pr) &&
+    pr.base === "main" &&
     (!approval || pr.decision === "APPROVED") &&
-    passed("factory/ci") &&
-    passed("factory/review")
+    reviewedHead(pr)
   );
 }
 
@@ -148,8 +152,12 @@ async function qa(): Promise<Decision> {
   return decideQa(remote, stored);
 }
 
-const deciders: Record<Role, () => Promise<Decision>> = {
-  merger: async () => decideMerger(await fetchIssues()),
+const deciders: Record<Role, (dryRun: boolean) => Promise<Decision>> = {
+  merger: async (dryRun) => {
+    const issues = await fetchIssues();
+    await applyBounces(movedHeads(issues), dryRun);
+    return decideMerger(issues);
+  },
   qa,
   reviewer: async () => {
     const { reviewing } = paces[await readPace()];
@@ -164,7 +172,9 @@ const deciders: Record<Role, () => Promise<Decision>> = {
 export async function runPrecheck(args: string[]): Promise<number> {
   const role = args[0];
   if (!(role && Object.hasOwn(deciders, role))) {
-    console.error(`usage: precheck <${Object.keys(deciders).join("|")}>`);
+    console.error(
+      `usage: precheck <${Object.keys(deciders).join("|")}> [--dry-run]`,
+    );
     return 2;
   }
   try {
@@ -173,7 +183,7 @@ export async function runPrecheck(args: string[]): Promise<number> {
       console.error(`precheck ${role}: ${strayMessage(stray)}`);
       return 1;
     }
-    const decision = await deciders[role as Role]();
+    const decision = await deciders[role as Role](args.includes("--dry-run"));
     if (decision.ok) console.log(JSON.stringify(decision.out));
     else console.error(`precheck ${role}: ${decision.why}`);
     return decision.ok ? 0 : 1;

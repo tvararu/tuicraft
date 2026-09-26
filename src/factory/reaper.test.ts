@@ -3,8 +3,6 @@ import {
   autoAction,
   idleFor,
   isClean,
-  type LandFacts,
-  landed,
   otherAction,
   overCap,
   ownerOf,
@@ -169,62 +167,50 @@ describe("clean", () => {
   });
 });
 
-describe("landed", () => {
-  const facts: LandFacts = {
-    ahead: 2,
-    branchPatch: "p1",
-    cherry: "+ c1\n+ c2\n",
-    mainPatches: ["p9"],
-    mergedTips: [],
-    tip: "abc",
-  };
-
-  test("unlanded when no proof holds", () => {
-    expect(landed(facts)).toBe(false);
-  });
-
-  test("no commits beyond origin/main", () => {
-    expect(landed({ ...facts, ahead: 0, cherry: "" })).toBe(true);
-  });
-
-  test("merged PR only counts when its head is the local tip", () => {
-    expect(landed({ ...facts, mergedTips: ["old"] })).toBe(false);
-    expect(landed({ ...facts, mergedTips: ["old", "abc"] })).toBe(true);
-  });
-
-  test("cherry must be all minus lines", () => {
-    expect(landed({ ...facts, cherry: "- c1\n- c2\n" })).toBe(true);
-    expect(landed({ ...facts, cherry: "- c1\n+ c2\n" })).toBe(false);
-  });
-
-  test("squash merge matches the whole-branch patch id", () => {
-    expect(landed({ ...facts, mainPatches: ["p9", "p1"] })).toBe(true);
-    expect(landed({ ...facts, branchPatch: "", mainPatches: [""] })).toBe(
-      false,
-    );
-  });
-});
-
 describe("autoAction", () => {
   test("a running run within its cap is left alone", () => {
     expect(
-      autoAction({ clean: false, done: false, over: false, pushed: false }),
+      autoAction({
+        clean: false,
+        done: false,
+        merged: false,
+        over: false,
+        pushed: false,
+      }),
     ).toEqual({ kind: "skip", why: "running" });
   });
 
   test("done, clean and pushed is removed", () => {
     expect(
-      autoAction({ clean: true, done: true, over: false, pushed: true }),
+      autoAction({
+        clean: true,
+        done: true,
+        merged: false,
+        over: false,
+        pushed: true,
+      }),
     ).toEqual({ kind: "remove" });
   });
 
   test("dirty trees are archived, stopped and held", () => {
     const hold = { archive: true, close: true, kind: "hold" } as const;
     expect(
-      autoAction({ clean: false, done: true, over: false, pushed: true }),
+      autoAction({
+        clean: false,
+        done: true,
+        merged: false,
+        over: false,
+        pushed: true,
+      }),
     ).toEqual({ ...hold, reason: "dirty" });
     expect(
-      autoAction({ clean: false, done: false, over: true, pushed: true }),
+      autoAction({
+        clean: false,
+        done: false,
+        merged: false,
+        over: true,
+        pushed: true,
+      }),
     ).toEqual({ ...hold, reason: "over-cap-dirty" });
   });
 
@@ -232,6 +218,7 @@ describe("autoAction", () => {
     const action = autoAction({
       clean: true,
       done: true,
+      merged: false,
       over: true,
       pushed: false,
     });
@@ -241,6 +228,27 @@ describe("autoAction", () => {
       kind: "hold",
       reason: "unlanded-commits",
     });
+  });
+
+  test("a finished run whose deleted PR branch landed is removed (#251)", () => {
+    expect(
+      autoAction({
+        clean: true,
+        done: true,
+        merged: true,
+        over: false,
+        pushed: false,
+      }),
+    ).toEqual({ kind: "remove" });
+    expect(
+      autoAction({
+        clean: false,
+        done: true,
+        merged: true,
+        over: false,
+        pushed: false,
+      }),
+    ).toEqual({ archive: true, close: true, kind: "hold", reason: "dirty" });
   });
 });
 
