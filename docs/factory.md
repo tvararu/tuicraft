@@ -19,7 +19,9 @@ flowchart LR
 Roles are Orca automations running `omp` through `src/factory/omp-factory`,
 each in a fresh `auto-*` worktree, from the runner clone
 `~/.local/share/tuicraft-factory/runner` (follows `origin/main`). Prompts
-are in `src/factory/prompts/`. Every role starts with
+are in `src/factory/prompts/`. The wrapper also passes
+`--config src/factory/omp-factory.yml`, so factory roles run with omp memory
+and autolearn off. Every role starts with
 `bun src/factory/main.ts precheck <role>` and stops on exit 1.
 
 ## Labels

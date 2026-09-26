@@ -1,0 +1,9 @@
+memory:
+  backend: mnemopi
+mnemopi:
+  bank: tuicraft
+  scoping: global
+  autoRetain: false
+  llmMode: none
+autolearn:
+  enabled: true

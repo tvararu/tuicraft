@@ -46,6 +46,7 @@ prefix=${role^^}
 model_var="${prefix}_MODEL"
 thinking_var="${prefix}_THINKING"
 flags=(--max-time "$cap")
+flags+=(--config "$(dirname "$self")/omp-factory.yml")
 if [[ -n ${!model_var:-} ]]; then
   flags+=(--model "${!model_var}")
 fi
