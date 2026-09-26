@@ -79,6 +79,9 @@ export async function daemonSock(
   return {
     close: async () => {
       server.stop(true);
+      handle.close();
+      await handle.closed;
+      await log.flush();
       await unlink(sockPath).catch(() => {});
       await unlink(logFile).catch(() => {});
     },

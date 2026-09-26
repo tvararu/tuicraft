@@ -204,8 +204,6 @@ describe("fault paths", () => {
         await Bun.sleep(2500);
       }
       await daemon.close();
-      handle1.close();
-      await handle1.closed;
     }
   }, 90_000);
 
@@ -253,8 +251,6 @@ describe("fault paths", () => {
       expect(status).toEqual(["CONNECTED"]);
     } finally {
       await daemon.close();
-      handle1.close();
-      await handle1.closed;
     }
   }, 90_000);
 
@@ -314,8 +310,6 @@ describe("fault paths", () => {
       expect(say).toEqual(["OK"]);
     } finally {
       await daemon.close();
-      handle1.close();
-      await handle1.closed;
     }
   }, 60_000);
 });
@@ -396,6 +390,7 @@ describe("daemon IPC", () => {
       server.stop(true);
       handle.close();
       await handle.closed;
+      await log.flush();
       await unlink(sockPath).catch(() => {});
       await unlink(logFile).catch(() => {});
     }

@@ -14,10 +14,12 @@ describe("main CLI against a daemon socket", () => {
   let result: ReturnType<typeof startDaemonServer>;
   let exitSpy: ReturnType<typeof jest.fn>;
   let scratch: string[] = [];
+  let log: SessionLog | undefined;
 
   afterEach(async () => {
     exitSpy?.mockRestore();
     result?.cleanup();
+    await log?.flush();
     await Promise.all(
       scratch.map((dir) => rm(dir, { force: true, recursive: true })),
     );
@@ -38,7 +40,7 @@ describe("main CLI against a daemon socket", () => {
   ) {
     const xdg = await scratchDir("cli-main");
     sockPath = `${xdg}/tuicraft/sock`;
-    const log = new SessionLog(`${xdg}/session.jsonl`);
+    log = new SessionLog(`${xdg}/session.jsonl`);
     exitSpy = jest
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);

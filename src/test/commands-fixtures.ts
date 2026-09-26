@@ -201,6 +201,7 @@ export type IpcServer = {
 export function useIpcServer(): IpcServer {
   let exitSpy: ReturnType<typeof jest.fn> | undefined;
   let result: ReturnType<typeof startDaemonServer> | undefined;
+  let log: SessionLog | undefined;
   let logPath: string | undefined;
   const server = {
     start(opts?: { onActivity?: () => void }) {
@@ -208,7 +209,7 @@ export function useIpcServer(): IpcServer {
       server.sockPath = `${base}.sock`;
       logPath = `${base}.jsonl`;
       server.handle = attachControl(createMockHandle());
-      const log = new SessionLog(logPath);
+      log = new SessionLog(logPath);
       exitSpy = jest
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
@@ -226,6 +227,7 @@ export function useIpcServer(): IpcServer {
   afterEach(async () => {
     exitSpy?.mockRestore();
     result?.cleanup();
+    await log?.flush();
     if (logPath) {
       await Promise.all([
         rm(logPath, { force: true }),
