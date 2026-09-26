@@ -473,6 +473,8 @@ all event objects in `events[]`, including `events: []` when empty.
 | REWARDS               | Loot, inventory or reward event; payload in `data` |
 | PACKET                | Server packet the client failed to parse; `data` has `opcode` and `error` |
 
+Human `read`/`tail` lines give each gameplay event's key fact: `[combat] +40 XP (kill 0x...)`, `[combat] Smite (591) failed: out of range`, `[combat] auras: 17, 6788`, `[rewards] share of loot: 6 copper`, `[rewards] received item 6889 x2 (now 5)`, `[rewards] loot opened: 12 copper, slot 0 item 4775 x1`, `[tactics] outcome completed: server_kill_credit`. Per-step tactics lines (`activated`, `request`, `result`, `applied`) and predicted movement steps are left out of human output only. JSON events are unchanged; COMBAT cast events add `spellName` once spell data is loaded.
+
 The `channel` field appears on CHANNEL events only.
 
 Entity events include `guid`, `objectType`, `name`, and type-specific fields like `level`, `health`, `maxHealth`, `x`, `y`, `z`. Field updates are not emitted as events.

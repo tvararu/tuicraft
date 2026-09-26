@@ -265,7 +265,14 @@ describe("cycle IPC boundary", () => {
       append: jest.fn(() => Promise.resolve()),
     } as unknown as SessionLog;
     const state = createMockHandle().getCycleState();
-    onDomainEvent("cycle", { at: 1000, state, type: "started" }, events, log);
+    onDomainEvent(
+      "cycle",
+      { at: 1000, state, type: "started" },
+      {
+        events,
+        log,
+      },
+    );
     const drained = events.drain();
     expect(must(drained[0]).text).toBe("[cycle] started");
     expect(JSON.parse(must(drained[0]).json).type).toBe("CYCLE");

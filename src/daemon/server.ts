@@ -23,6 +23,11 @@ import { ignoreFailure } from "lib/ignore-failure";
 import { type Paths, resolvePaths } from "lib/paths";
 import { RingBuffer } from "lib/ring-buffer";
 import { SessionLog } from "lib/session-log";
+import {
+  formatCombatEventText,
+  formatRewardsEventText,
+  formatTacticsEventText,
+} from "ui/format-events";
 import type { WorldHandle } from "wow";
 import { type authHandshake, authWithRetry, worldSession } from "wow/session";
 
@@ -236,20 +241,24 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   handle.onGuildEvent((event) => onGuildEvent(event, events, log));
   handle.onDuelEvent((event) => onDuelEvent(event, events, log));
   handle.onControlEvent((event) => onControlEvent(event, events, log));
-  const domain = (tag: string) => (event: { type: string }) =>
-    onDomainEvent(tag, event, events, log);
-  handle.onCombatEvent(domain("combat"));
-  handle.onTacticsEvent(domain("tactics"));
-  handle.onCycleEvent(domain("cycle"));
-  handle.onRecoveryEvent(domain("recovery"));
-  handle.onQuestEvent(domain("quest"));
-  handle.onRewardsEvent(domain("rewards"));
+  const sink = { events, log };
+  handle.onCombatEvent((event) =>
+    onDomainEvent("combat", event, sink, formatCombatEventText),
+  );
+  handle.onTacticsEvent((event) =>
+    onDomainEvent("tactics", event, sink, formatTacticsEventText),
+  );
+  handle.onCycleEvent((event) => onDomainEvent("cycle", event, sink));
+  handle.onRecoveryEvent((event) => onDomainEvent("recovery", event, sink));
+  handle.onQuestEvent((event) => onDomainEvent("quest", event, sink));
+  handle.onRewardsEvent((event) =>
+    onDomainEvent("rewards", event, sink, formatRewardsEventText),
+  );
   handle.onPacketError((opcode, err) =>
     onDomainEvent(
       "packet",
       { error: err.message, opcode, type: "packet_error" },
-      events,
-      log,
+      sink,
     ),
   );
 
