@@ -65,6 +65,7 @@ export {
   formatGuildCommandError,
   GuildMemberStatus,
 } from "wow/protocol/guild";
+export { ROLL_VOTES, type RollVote } from "wow/protocol/loot";
 export { ChatType, PartyOperation, PartyResult } from "wow/protocol/opcodes";
 export type {
   QuestDisplayItem,

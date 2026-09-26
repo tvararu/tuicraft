@@ -24,8 +24,6 @@ export const STUBS: [opcode: number, label: string][] = [
   [GameOpcode.SMSG_SPELLHEALLOG, "Heal received"],
   [GameOpcode.SMSG_SPELLNONMELEEDAMAGELOG, "Spell damage"],
   [GameOpcode.SMSG_ENVIRONMENTAL_DAMAGE_LOG, "Environmental damage"],
-  [GameOpcode.SMSG_LOOT_START_ROLL, "Loot roll"],
-  [GameOpcode.SMSG_LOOT_ROLL_WON, "Won loot roll"],
   [GameOpcode.SMSG_EQUIPMENT_SET_LIST, "Equipment sets"],
   [GameOpcode.SMSG_TRADE_STATUS, "Trade window"],
   [GameOpcode.SMSG_TRADE_STATUS_EXTENDED, "Trade update"],

@@ -99,6 +99,11 @@ describe("loot arguments", () => {
       ["open-trainer", "0"],
       ["train", "0"],
       ["train", "1243", "extra"],
+      ["loot-roll", "0xa", "0"],
+      ["loot-roll", "0", "0", "need"],
+      ["loot-roll", "0xa", "-1", "need"],
+      ["loot-roll", "0xa", "0", "win"],
+      ["loot-roll", "0xa", "0", "need", "extra"],
     ])
       expect(() => parseArgs(args)).toThrow();
   });
@@ -191,6 +196,10 @@ describe("daemon JSON arguments", () => {
     [["release-loot"], { mode: "release_loot" }],
     [["open-trainer", "0xa"], { guid: 10n, mode: "open_trainer" }],
     [["train", "1243"], { mode: "train", spellId: 1243 }],
+    [
+      ["loot-roll", "0xa", "3", "greed"],
+      { guid: 10n, mode: "loot_roll", slot: 3, vote: "greed" },
+    ],
   ] satisfies [string[], CliAction][];
 
   for (const [args, action] of actions) {

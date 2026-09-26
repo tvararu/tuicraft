@@ -114,6 +114,14 @@ function walkArgs(action: Extract<Request, { mode: "walk_toward" }>): Arg[] {
   return [action.yards, target.x, target.y, target.z];
 }
 
+function vendorArgs(
+  action: Extract<Request, { mode: "train" | "sell" | "buy" }>,
+): Arg[] {
+  if (action.mode === "train") return [action.spellId];
+  if (action.mode === "buy") return [action.slot, action.count];
+  return [action.bag, action.slot, ...(action.count ? [action.count] : [])];
+}
+
 function requestArgs(action: Request): Arg[] {
   switch (action.mode) {
     case "move":
@@ -156,11 +164,11 @@ function requestArgs(action: Request): Arg[] {
     case "use":
       return [action.bag, action.slot];
     case "train":
-      return [action.spellId];
     case "sell":
-      return [action.bag, action.slot, ...(action.count ? [action.count] : [])];
     case "buy":
-      return [action.slot, action.count];
+      return vendorArgs(action);
+    case "loot_roll":
+      return [action.guid, action.slot, action.vote];
     case "resurrect":
       return [action.accept ? "accept" : "decline"];
     default:

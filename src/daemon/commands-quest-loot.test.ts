@@ -114,6 +114,12 @@ describe("loot IPC boundary", () => {
       guid: 0xffff_ffff_ffff_ffffn,
       type: "open_loot",
     });
+    expect(parseIpcCommand("LOOT_ROLL 0xa 3 pass")).toEqual({
+      guid: 10n,
+      slot: 3,
+      type: "loot_roll",
+      vote: "pass",
+    });
     expect(parseIpcCommand("TAKE_LOOT 255")).toEqual({
       slot: 255,
       type: "take_loot",
@@ -126,6 +132,9 @@ describe("loot IPC boundary", () => {
       "TAKE_LOOT 0 extra",
       "TAKE_MONEY extra",
       "RELEASE_LOOT 1",
+      "LOOT_ROLL 0xa 0",
+      "LOOT_ROLL 0 0 need",
+      "LOOT_ROLL 0xa 0 greedy",
     ])
       expect(parseIpcCommand(line)?.type).toBe("invalid");
   });
@@ -177,6 +186,27 @@ describe("loot IPC boundary", () => {
     );
     expect(socket.written()).toBe("ERR Loot slot was not offered\n\n");
     expect(handle.sendInCurrentMode).not.toHaveBeenCalled();
+  });
+
+  test("a refused loot roll is an error", async () => {
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      rollLoot: () => {
+        throw new Error("No pending loot roll for that GUID and slot");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { guid: 10n, slot: 0, type: "loot_roll", vote: "need" },
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
+    );
+    expect(socket.written()).toBe(
+      "ERR No pending loot roll for that GUID and slot\n\n",
+    );
   });
 
   test("release-only opening remains unanswered in serialized loot inspection", async () => {

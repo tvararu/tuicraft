@@ -177,7 +177,25 @@ export function formatRewardsState(state: NamedRewardsState): string[] {
   }
   if (pending) lines.push(`Request: ${pending.action} ${pending.status}`);
   lines.push(`Carried coinage: ${show(state.inventory.coinage)}`);
-  return [...lines, ...formatLootErrors(state)];
+  return [...lines, ...formatRolls(state), ...formatLootErrors(state)];
+}
+
+function formatRolls({ rolls }: NamedRewardsState): string[] {
+  const lines = rolls.pending.map((roll) => {
+    const answer = roll.choice ? `answered ${roll.choice}` : "unanswered";
+    const corpse = roll.corpseGuid
+      ? ` corpse ${formatGuid(roll.corpseGuid)}`
+      : "";
+    return `Roll ${formatGuid(roll.guid)} slot ${roll.slot}: item ${roll.itemId} x${roll.count}${corpse}, ${Math.ceil(roll.remainingMs / 1000)} s left, allowed ${roll.allowed.join("/")}, ${answer}`;
+  });
+  const { last } = rolls;
+  if (last?.outcome === "won")
+    lines.push(
+      `Last roll: item ${last.itemId} won by ${last.mine ? "you" : formatGuid(last.winner ?? 0n)} (${last.winnerChoice} ${last.rolled})`,
+    );
+  if (last?.outcome === "all_passed")
+    lines.push(`Last roll: item ${last.itemId} passed by everyone`);
+  return lines;
 }
 
 export function formatExperienceState(state: ExperienceState): string[] {

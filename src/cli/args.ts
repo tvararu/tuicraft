@@ -12,6 +12,7 @@ import type {
   FramingVariant,
   GotoTarget,
   MovementDirection,
+  RollVote,
   WalkTarget,
 } from "wow";
 
@@ -127,6 +128,13 @@ export type CliAction =
   | { mode: "sell"; bag: number; slot: number; count?: number; json?: true }
   | { mode: "buy"; slot: number; count: number; json?: true }
   | { mode: "repair"; json?: true }
+  | {
+      mode: "loot_roll";
+      guid: bigint;
+      slot: number;
+      vote: RollVote;
+      json?: true;
+    }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -198,6 +206,7 @@ const SUBCOMMANDS = new Set([
   "sell",
   "buy",
   "repair",
+  "loot-roll",
 ]);
 
 const FIXED = new Map<string, CliAction>([

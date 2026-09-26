@@ -185,6 +185,10 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
         slot,
       );
     },
+    rollLoot(guid, slot, vote) {
+      rt.override();
+      rewards.rolls.roll(guid, slot, vote);
+    },
     onRewardsEvent(cb) {
       return conn.events.rewards.subscribe(cb);
     },

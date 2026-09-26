@@ -306,6 +306,7 @@ export function createMockHandle(): MockHandle {
       (instruction: string | undefined, maxStarts: number | undefined) =>
         cycle.resume({ instruction, maxStarts }),
     ),
+    rollLoot: jest.fn(),
     selectGossipOption: jest.fn(),
     selectQuest: jest.fn(),
     selectTarget: jest.fn(),
