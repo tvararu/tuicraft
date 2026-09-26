@@ -11,7 +11,11 @@ export const ATTACK_SWING_ERRORS = [
 export type AttackSwingError = (typeof ATTACK_SWING_ERRORS)[number][1];
 
 export type AttackStart = { attacker: bigint; victim: bigint };
-export type AttackStop = { attacker: bigint; victim: bigint; dead: number };
+export type AttackStop = {
+  attacker: bigint;
+  victim: bigint | undefined;
+  dead: number | undefined;
+};
 
 export type XpGain = {
   victim: bigint;
@@ -33,11 +37,10 @@ export function parseAttackStart(r: PacketReader): AttackStart {
 }
 
 export function parseAttackStop(r: PacketReader): AttackStop {
-  return {
-    attacker: r.packedGuidBig(),
-    victim: r.packedGuidBig(),
-    dead: r.uint32LE(),
-  };
+  const attacker = r.packedGuidBig();
+  if (r.remaining === 0)
+    return { attacker, victim: undefined, dead: undefined };
+  return { attacker, victim: r.packedGuidBig(), dead: r.uint32LE() };
 }
 
 export function parseXpGain(r: PacketReader): XpGain {
