@@ -43,6 +43,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   signed off, deletes that ref, and fails the push if signoff fails
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts
   ./src/test/live-quest.ts ./src/test/live-remote-motion.ts`); needs two game accounts via `WOW_*` (see Testing)
+- `mise namigator:build` — build `libnamigator.so` from the pinned upstream
+  commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
 - `bun src/factory/main.ts <precheck|qa-changes|soap|reap|setup>` — the dev
   factory CLI (design: `docs/plans/2026-09-25-dev-factory-design.md`).
   Automations and the reaper run it from the runner clone,

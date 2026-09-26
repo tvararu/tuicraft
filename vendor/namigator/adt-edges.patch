@@ -1,0 +1,93 @@
+diff --git a/pathfind/Map.cpp b/pathfind/Map.cpp
+index 74f249c..92b02ed 100644
+--- a/pathfind/Map.cpp
++++ b/pathfind/Map.cpp
+@@ -90,6 +90,27 @@ float random_between_0_and_1() {
+     return static_cast<float>(dis(gen));
+ }
+ 
++// the interpolation of dtClosestHeightPointTriangle(), without its test that
++// the point lies inside the triangle
++float PlaneHeight(const float* p, const float* a, const float* b,
++                  const float* c)
++{
++    float v0[3], v1[3], v2[3];
++    dtVsub(v0, c, a);
++    dtVsub(v1, b, a);
++    dtVsub(v2, p, a);
++    auto denom = v0[0] * v1[2] - v0[2] * v1[0];
++    auto u = v1[2] * v2[0] - v1[0] * v2[2];
++    auto v = v0[0] * v2[2] - v0[2] * v2[0];
++    if (denom < 0)
++    {
++        denom = -denom;
++        u = -u;
++        v = -v;
++    }
++    return a[1] + (v0[1] * u + v1[1] * v) / denom;
++}
++
+ float SurfaceY(const dtNavMeshQuery& query, dtPolyRef ref, const float* pos)
+ {
+     float closest[3];
+@@ -725,10 +746,12 @@ bool Map::GetADTHeight(const Tile* tile, float x, float y, float& height,
+     auto constexpr quadWidth = MeshSettings::AdtChunkSize / 8;
+ 
+     // quad coordinates
+-    auto const quadX = static_cast<int>((northwestY - y) / quadWidth);
+-    auto const quadY = static_cast<int>((northwestX - x) / quadWidth);
+-
+-    assert(quadX < 8 && quadY < 8);
++    // a point on the tile's south or east edge divides to exactly 8, which
++    // is the edge of the last quad rather than a ninth quad
++    auto const quadX =
++        (std::min)(static_cast<int>((northwestY - y) / quadWidth), 7);
++    auto const quadY =
++        (std::min)(static_cast<int>((northwestX - x) / quadWidth), 7);
+ 
+     // if there is an ADT hole here, do not consider ADT height
+     if (tile->m_quadHoles[quadX][quadY])
+@@ -770,22 +793,30 @@ bool Map::GetADTHeight(const Tile* tile, float x, float y, float& height,
+ 
+     float h;
+ 
+-    // this if-statement will ensure that at most one of these calls will
+-    // succeed, which is what we want
+-    if (dtClosestHeightPointTriangle(p, a, b, c, h) ||
+-        dtClosestHeightPointTriangle(p, b, e, c, h) ||
+-        dtClosestHeightPointTriangle(p, c, e, d, h) ||
+-        dtClosestHeightPointTriangle(p, a, c, d, h))
++    // take the first triangle that holds the point
++    if (!dtClosestHeightPointTriangle(p, a, b, c, h) &&
++        !dtClosestHeightPointTriangle(p, b, e, c, h) &&
++        !dtClosestHeightPointTriangle(p, c, e, d, h) &&
++        !dtClosestHeightPointTriangle(p, a, c, d, h))
+     {
+-        height = h;
+-        if (area)
+-            *area = tile->m_areaId;
+-        if (zone)
+-            *zone = tile->m_zoneId;
+-        return true;
++        // dtClosestHeightPointTriangle() has no tolerance, so a point on a
++        // triangle or quad edge can round outside all four.  the four
++        // triangles are the wedges around the centre c, so take the plane of
++        // the wedge holding the point; adjacent planes agree on shared edges.
++        auto const dx = p[0] - c[0];
++        auto const dz = p[2] - c[2];
++        if (std::fabs(dz) >= std::fabs(dx))
++            h = dz < 0 ? PlaneHeight(p, a, b, c) : PlaneHeight(p, c, e, d);
++        else
++            h = dx > 0 ? PlaneHeight(p, b, e, c) : PlaneHeight(p, a, c, d);
+     }
+ 
+-    return false;
++    height = h;
++    if (area)
++        *area = tile->m_areaId;
++    if (zone)
++        *zone = tile->m_zoneId;
++    return true;
+ }
+ 
+ bool Map::FindNextZ(const Tile* tile, float x, float y, float zHint,
