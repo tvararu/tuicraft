@@ -997,8 +997,14 @@ item spell id and `item` (`entry`, `bag`, `slot`, `guid`), with `status`
 `auras`, and `self.health`/`self.power` show the recovery. The stack count drops
 in `inventory --json`, and `loot --json` keeps the raw `lastInventoryError`.
 Food and drink cannot be used in combat; potions can. Sending the use stops a
-running `fight` or `cycle` like other manual actions, and otherwise leaves
-movement and auto-attack alone. A refused `use` leaves a running fight alone.
+running `fight` or `cycle` like other manual actions, but the way a Jev failure
+stop does: the fight's movement stops and auto-attack stays on the target if it
+is alive and attacking the character (`tactics.defense: auto_attack`, with
+`lastStopReason: manual_override`), so drinking a potion mid-fight keeps you
+swinging. A spell the fight was casting is cancelled so the item goes through.
+Re-run `fight` to hand the target back to Jev. Outside a fight the use leaves
+movement, casts and auto-attack alone, and a cast in progress refuses it with
+`cast_in_progress`. A refused `use` leaves a running fight alone.
 
 `tuicraft logs`
 :: Print the raw JSONL session log to stdout. Does not accept `--json`.
