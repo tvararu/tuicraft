@@ -443,7 +443,8 @@ export class RecoveryRuntime {
       packet.delayMs === undefined
         ? this.delay?.readyAt
         : receivedAt + packet.delayMs;
-    return { ...packet, receivedAt, readyAt, response };
+    const name = packet.name || this.deps.getEntity(packet.guid)?.name || "";
+    return { ...packet, name, receivedAt, readyAt, response };
   }
 
   private reclaimState(life: PlayerLife): RecoveryReclaim {

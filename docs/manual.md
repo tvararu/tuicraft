@@ -426,6 +426,8 @@ This command takes no corpse GUID. The server finds the authenticated player's c
 
 `tuicraft resurrect` `accept`|`decline`
 :: Answer the current unanswered resurrection offer once. It requires observed dead or ghost state. A known future offer delay blocks `accept`, not `decline`. `OK` is request intent; confirm observed `life=alive` after an accept.
+Human `recovery` shows the offer as `Resurrection offer: Fgklhcnkmic (0xa47), accept or decline with tuicraft resurrect accept|decline`, then `Resurrection accept allowed:` with `yes`, `no (wait N ms)`, `no (answered)` or the blocking life state, or `Resurrection offer: none`. A release throws the offer away, so check before releasing.
+In `--json`, `resurrection.name` comes from the packet or, when the packet leaves it empty (as it does for players), from the observed caster; it stays `""` when neither is known.
 
 Guided corpse run:
 

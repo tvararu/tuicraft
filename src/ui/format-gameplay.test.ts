@@ -146,6 +146,39 @@ describe("formatRecoveryState", () => {
     expect(output).toContain("Corpse distance: 184.15 yards");
     expect(output).toContain("Request: spirit-healer unanswered");
     expect(output).toContain("Reclaim request allowed: no");
+    expect(output).toContain("Resurrection offer: none");
+  });
+
+  test("shows a pending resurrection offer with its readiness", () => {
+    const offer = {
+      delayMs: 0,
+      guid: 0xa47n,
+      name: "Fgklhcnkmic",
+      readyAt: 2000,
+      receivedAt: 1000,
+      reserved: 0,
+      response: "unanswered" as const,
+      sickness: 0,
+    };
+    const lines = (overrides: Partial<RecoveryState>, now: number) =>
+      formatRecoveryState(
+        { ...handle.getRecoveryState(), life: "dead", ...overrides },
+        now,
+      ).join("\n");
+    expect(lines({ resurrection: offer }, 2500)).toContain(
+      "Resurrection offer: Fgklhcnkmic (0xa47), accept or decline with tuicraft resurrect accept|decline\nResurrection accept allowed: yes",
+    );
+    expect(lines({ resurrection: offer }, 1500)).toContain(
+      "Resurrection accept allowed: no (wait 500 ms)",
+    );
+    const answered = lines(
+      { resurrection: { ...offer, name: "", response: "accept_requested" } },
+      2500,
+    );
+    expect(answered).toContain(
+      "Resurrection offer: unknown caster 0xa47, accept requested",
+    );
+    expect(answered).toContain("Resurrection accept allowed: no (answered)");
   });
 });
 

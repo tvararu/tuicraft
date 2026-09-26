@@ -1,4 +1,5 @@
 import { formatGuid } from "ui/format";
+import { formatResurrectionOffer } from "ui/format-recovery";
 import type {
   CycleLootRecord,
   CycleState,
@@ -58,7 +59,10 @@ export function formatCycleState(state: CycleState): string[] {
   return lines;
 }
 
-export function formatRecoveryState(state: RecoveryState): string[] {
+export function formatRecoveryState(
+  state: RecoveryState,
+  now = Date.now(),
+): string[] {
   const { corpse, reclaim, request } = state;
   const reason = reclaim.reason ? ` (${reclaim.reason})` : "";
   const lines = [
@@ -75,6 +79,7 @@ export function formatRecoveryState(state: RecoveryState): string[] {
   if (reclaim.remainingMs !== undefined)
     lines.push(`Reclaim delay: ${reclaim.remainingMs} ms`);
   if (request) lines.push(`Request: ${request.action} ${request.status}`);
+  lines.push(...formatResurrectionOffer(state, now));
   return lines;
 }
 
