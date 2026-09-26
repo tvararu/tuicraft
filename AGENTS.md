@@ -258,9 +258,16 @@ Theo must never find stale worktrees or idle agents in Orca.
   `close`, so add new WorldHandle methods to the shared mock only
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
-- Clear event callbacks before socket teardown — `entityStore.clear()` in the
-  socket close handler fires disappear for every entity, so `onEntityEvent`
-  must be unset first
+- `WorldHandle` `on*` hooks are multi-subscriber: each returns an
+  unsubscribe function and all of them are backed by `conn.events`
+  (`src/wow/world-events.ts`, built on `lib/emitter`). Emit through
+  `conn.events.<name>.emit(...)`, never a setter. Every listener gets the
+  event; a listener that throws during packet dispatch is reported through
+  `onPacketError` with the dispatching opcode, and elsewhere the error is
+  rethrown once delivery finishes
+- `cleanupSession` clears `conn.events` before socket teardown —
+  `entityStore.clear()` in the socket close handler fires disappear for every
+  entity, so subscribers must be detached first
 - All event handlers (chat, group, entity) must both push to the ring buffer
   and call `log.append()` — follow existing handlers when adding new event types
 
