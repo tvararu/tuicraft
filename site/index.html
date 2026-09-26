@@ -93,45 +93,6 @@
         animation-delay: 0.08s;
       }
 
-      .install {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        padding: 0.875rem 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 3rem;
-        position: relative;
-        overflow-x: auto;
-        animation-delay: 0.16s;
-      }
-      .install::before {
-        content: "$";
-        color: var(--muted);
-        flex-shrink: 0;
-      }
-      .install code {
-        flex: 1;
-        white-space: nowrap;
-        color: var(--gold);
-        font-size: 0.85rem;
-      }
-      .install button {
-        background: none;
-        border: 1px solid var(--border);
-        color: var(--muted);
-        padding: 0.2rem 0.5rem;
-        cursor: pointer;
-        font-family: var(--mono);
-        font-size: 0.75rem;
-        flex-shrink: 0;
-        transition: all 0.15s;
-      }
-      .install button:hover {
-        color: var(--amber);
-        border-color: var(--amber);
-      }
-
       .features {
         list-style: none;
         margin-bottom: 3rem;
@@ -179,21 +140,6 @@
       and is designed to be both human and LLM friendly.
     </p>
 
-    <div class="install reveal">
-      <code>curl -fsSL tuicraft.vararu.org/install.sh | sh</code>
-      <button
-        onclick="
-          navigator.clipboard
-            .writeText('curl -fsSL tuicraft.vararu.org/install.sh | sh')
-            .then(() => {
-              this.textContent = 'copied!';
-              setTimeout(() => (this.textContent = 'copy'), 2000);
-            })
-        "
-      >
-        copy
-      </button>
-    </div>
 
     <ul class="features reveal">
       <li>
@@ -224,7 +170,6 @@
 
     <nav class="links reveal">
       <a href="https://github.com/tvararu/tuicraft">GitHub</a>
-      <a href="https://github.com/tvararu/tuicraft/releases">Releases</a>
     </nav>
   </body>
 </html>
