@@ -22,6 +22,7 @@ import {
   type MovementInfo,
   type TransportInfo,
 } from "wow/protocol/movement";
+import type { RouteSession } from "wow/route-session";
 
 export const MAX_DURATION_MS = 10_000;
 
@@ -66,6 +67,9 @@ export class ControlCore {
   protected mode: ControlMode = "none";
   protected route: GroundRoute | undefined;
   protected routeDistance = 0;
+  protected session: RouteSession | undefined;
+  protected replanTimer: ReturnType<typeof setTimeout> | undefined;
+  protected sampleFailure = false;
   protected walk: DirectedWalk | undefined;
   protected navigation: NavigationState = {
     active: false,
