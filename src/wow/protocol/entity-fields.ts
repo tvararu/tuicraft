@@ -146,6 +146,8 @@ export const PLAYER_FIELDS = {
   PACK_SLOT_1: { offset: UNIT_END + 0x00_de, size: 32, type: "u64" },
   KEYRING_SLOT_1: { offset: UNIT_END + 0x01_5c, size: 64, type: "u64" },
   CURRENCYTOKEN_SLOT_1: { offset: UNIT_END + 0x01_9c, size: 64, type: "u64" },
+  XP: { offset: UNIT_END + 0x01_e6, size: 1, type: "u32" },
+  NEXT_LEVEL_XP: { offset: UNIT_END + 0x01_e7, size: 1, type: "u32" },
   COINAGE: { offset: UNIT_END + 0x03_fe, size: 1, type: "u32" },
 } as const satisfies Record<string, FieldDef>;
 

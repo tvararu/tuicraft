@@ -15,7 +15,6 @@ export const STUBS: [opcode: number, label: string][] = [
   [GameOpcode.MSG_RAID_READY_CHECK, "Ready check"],
   [GameOpcode.MSG_RAID_READY_CHECK_CONFIRM, "Ready check confirm"],
   [GameOpcode.MSG_RAID_READY_CHECK_FINISHED, "Ready check finished"],
-  [GameOpcode.SMSG_LEVELUP_INFO, "Level up"],
   [GameOpcode.SMSG_AREA_TRIGGER_MESSAGE, "Area trigger message"],
   [GameOpcode.SMSG_SERVER_FIRST_ACHIEVEMENT, "Server first achievement"],
   [GameOpcode.SMSG_ACHIEVEMENT_EARNED, "Achievement earned"],

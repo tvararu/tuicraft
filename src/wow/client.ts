@@ -41,6 +41,7 @@ import type {
   EncounterCycleRuntime,
 } from "wow/encounter-cycle";
 import type { Entity, EntityEvent, EntityStore } from "wow/entity-store";
+import type { ExperienceState } from "wow/experience";
 import type { FramingVariant } from "wow/framing";
 import type { FriendEntry, FriendEvent, FriendStore } from "wow/friend-store";
 import type { GuildEvent, GuildRoster, GuildStore } from "wow/guild-store";
@@ -261,6 +262,7 @@ export type WorldHandle = {
   cancelInteraction: () => void;
   onQuestEvent: (cb: (event: QuestEvent) => void) => Unsubscribe;
   getInventoryState: () => InventoryState;
+  getExperienceState: () => ExperienceState;
   getRewardsState: () => RewardsState;
   openLoot: (guid: bigint) => void;
   takeLoot: (slot: number) => void;

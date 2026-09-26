@@ -29,6 +29,7 @@ const INSPECTIONS = new Map<string, IpcCommand>(
       "recovery",
       "quests",
       "inventory",
+      "experience",
       "loot",
     ] as const
   ).flatMap((view): [string, IpcCommand][] => [

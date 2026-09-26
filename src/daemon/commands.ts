@@ -24,6 +24,7 @@ import {
 } from "ui/format-control";
 import {
   formatCycleState,
+  formatExperienceState,
   formatInventoryState,
   formatRecoveryState,
   formatRewardsState,
@@ -245,6 +246,10 @@ const HANDLERS: Handlers = {
     handle.sendEmote(cmd.message);
     return acknowledge(socket);
   },
+  experience: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getExperienceState(), formatExperienceState),
+  experience_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getExperienceState(), json),
   face: (cmd, { handle, socket }) =>
     reply(socket, () => handle.face(cmd.orientation), ok),
   face_guid: (cmd, { handle, socket }) =>

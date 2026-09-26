@@ -122,6 +122,13 @@ export function createMockHandle(): WorldHandle & {
     getCombatState: jest.fn(() => combat.snapshot()),
     getControlState: jest.fn((): ControlState => controlState),
     getCycleState: jest.fn(() => cycle.snapshot()),
+    getExperienceState: jest.fn(() => ({
+      lastLevelUp: undefined,
+      lastXp: undefined,
+      level: undefined,
+      nextLevelXp: undefined,
+      xp: undefined,
+    })),
     getFriends: jest.fn((): FriendEntry[] => []),
     getIgnored: jest.fn((): IgnoreEntry[] => []),
     getInventoryState: jest.fn(() => rewards.snapshot().inventory),

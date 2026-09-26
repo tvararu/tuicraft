@@ -92,6 +92,8 @@ export type IpcCommand =
   | { type: "cancel_interaction" }
   | { type: "inventory" }
   | { type: "inventory_json" }
+  | { type: "experience" }
+  | { type: "experience_json" }
   | { type: "loot" }
   | { type: "loot_json" }
   | { type: "open_loot"; guid: bigint }

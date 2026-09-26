@@ -1,5 +1,7 @@
 import type { WorldConn, WorldHandle } from "wow/client";
+import { readExperience } from "wow/experience";
 import type { Runtimes } from "wow/runtime";
+import { selfGuid } from "wow/world-handlers";
 
 export function combatMethods(conn: WorldConn, rt: Runtimes) {
   const { combat, tactics, recovery } = rt;
@@ -138,6 +140,13 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
   return {
     getInventoryState() {
       return rewards.snapshot().inventory;
+    },
+    getExperienceState() {
+      return readExperience(
+        selfGuid(conn),
+        (guid) => conn.entityStore.get(guid),
+        rt.combat.snapshot(),
+      );
     },
     getRewardsState() {
       return rewards.snapshot();

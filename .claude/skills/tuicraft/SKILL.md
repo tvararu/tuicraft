@@ -25,7 +25,7 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `loot`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
 - Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
@@ -86,7 +86,7 @@ It prints one envelope per event and nothing for empty polls:
 `start --json` returns `data.socket: "responsive"` and `data.started: true|false`.
 These values describe the daemon socket, not world-session health.
 
-Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` show human
+Without `--json`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` show human
 summaries. Use `--json` for all fields and automated parsing. A human action
 acknowledgment means that the daemon accepted a request. It does not confirm
 that the server completed the action. `fight` and `cycle` reply when the
@@ -294,6 +294,7 @@ Rules:
 - Unanswered query metadata stays unknown, not missing. Querying does not select a quest or permit mutation.
 - Reward indices are zero-based, at most 5, and must exist in the current offer. Use 0 when there are no selectable choices.
 - A server quest-complete reward notification establishes a reward fact. It does not prove that a requested inventory item was gained.
+- Prove a turn-in's actual gains by comparing `inventory --json` (items, `coinage`) and `experience --json` (`xp`, `level`) before and after. `lastXp` and `lastLevelUp` are notices, not field changes.
 - Abandonment slots are zero-based 0–24. An unknown or empty slot cannot authorize abandonment. The log must later show removal.
 - `cancel-interaction` revokes current authorization and requests close. The old pending intent remains uncertain.
 - Pending cancel blocks another mutation until observed close or a confirmed world reset. A late error/menu is not sufficient.
