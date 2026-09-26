@@ -1,24 +1,36 @@
 import { homedir } from "node:os";
 
-const repo = { name: "tuicraft", owner: "tvararu" } as const;
+export const repo = { name: "tuicraft", owner: "tvararu" } as const;
 export const repoSlug = `${repo.owner}/${repo.name}`;
-export const pm = "tvararu";
+export const maintainer = "tvararu";
 export const bot = "OpenHubris";
-export const pmApproval = false;
+export const maintainerApproval = false;
 export const mainCheckout = `${homedir()}/code/tuicraft`;
 export const runner = `${homedir()}/.local/share/tuicraft-factory/runner`;
 
-export const labels = {
-  landing: "agent:landing",
-  merging: "agent:merging",
-  pm: "needs:pm",
-  qa: "qa:found",
-  ready: "ready",
-  review: "agent:review",
-  reviewing: "agent:reviewing",
-  rework: "agent:rework",
-  working: "agent:working",
+export const board = {
+  field: "PVTSSF_lAHOABkwu84BktxOzhjdZBs",
+  options: {
+    backlog: "f75ad846",
+    blocked: "6433a477",
+    done: "98236657",
+    "in-progress": "47fc9ee4",
+    "in-review": "aba860b9",
+    ready: "e18bf179",
+  },
+  project: "PVT_kwHOABkwu84BktxO",
 } as const;
+
+export type BoardStatus = keyof typeof board.options;
+
+export function isBoardStatus(value: string): value is BoardStatus {
+  return Object.hasOwn(board.options, value);
+}
+
+export function statusOf(optionId: string): BoardStatus | null {
+  const entry = Object.entries(board.options).find(([, id]) => id === optionId);
+  return entry && isBoardStatus(entry[0]) ? entry[0] : null;
+}
 
 export type Role = "worker" | "reviewer" | "merger" | "qa";
 

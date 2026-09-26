@@ -2,13 +2,11 @@ import { readlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import {
   automationNames,
-  labels,
   mainCheckout,
   type PaceLevel,
   paces,
   type Role,
   readPace,
-  repoSlug,
   runner,
 } from "factory/config";
 import { json, must } from "factory/exec";
@@ -16,8 +14,6 @@ import merger from "factory/prompts/merger.md" with { type: "text" };
 import qa from "factory/prompts/qa.md" with { type: "text" };
 import reviewer from "factory/prompts/reviewer.md" with { type: "text" };
 import worker from "factory/prompts/worker.md" with { type: "text" };
-
-export type Label = { name: string; color: string; description: string };
 
 export type Spec = {
   name: string;
@@ -48,50 +44,6 @@ const provider = "omp";
 export const baseBranch = "origin/main";
 const precheckTimeout = 60;
 
-export const desiredLabels: Label[] = [
-  {
-    color: "0E8A16",
-    description: "The maintainer wants this worked on",
-    name: labels.ready,
-  },
-  {
-    color: "FBCA04",
-    description: "A factory worker owns the issue",
-    name: labels.working,
-  },
-  {
-    color: "1D76DB",
-    description: "PR waits for factory review",
-    name: labels.review,
-  },
-  {
-    color: "0052CC",
-    description: "A factory reviewer has the PR",
-    name: labels.reviewing,
-  },
-  {
-    color: "D93F0B",
-    description: "Reviewer or merger wants changes",
-    name: labels.rework,
-  },
-  {
-    color: "5319E7",
-    description: "Reviewed, waiting for the merger",
-    name: labels.merging,
-  },
-  {
-    color: "6F42C1",
-    description: "The merger is landing this issue",
-    name: labels.landing,
-  },
-  {
-    color: "B60205",
-    description: "The maintainer must decide something",
-    name: labels.pm,
-  },
-  { color: "C5DEF5", description: "Filed by factory QA", name: labels.qa },
-];
-
 const roles: [Role, string][] = [
   ["worker", worker],
   ["reviewer", reviewer],
@@ -107,11 +59,6 @@ export function desiredAutomations(enable: boolean, level: PaceLevel): Spec[] {
     prompt,
     rrule: level.schedules[role],
   }));
-}
-
-export function missingLabels(desired: Label[], existing: string[]): Label[] {
-  const have = new Set(existing);
-  return desired.filter((label) => !have.has(label.name));
 }
 
 function diff(spec: Spec, current: Automation): string[] {
@@ -188,41 +135,10 @@ function describe(step: Step): string {
   return `create  ${name} "${rrule}" ${enable ? "enabled" : "disabled"}`;
 }
 
-async function existingLabels(): Promise<string[]> {
-  const cmd = [
-    "gh",
-    "label",
-    "list",
-    "-R",
-    repoSlug,
-    "--json",
-    "name",
-    "--limit",
-    "500",
-  ];
-  const listed = await json<{ name: string }[]>(cmd);
-  return listed.map(({ name }) => name);
-}
-
 export async function existingAutomations(): Promise<Automation[]> {
   const cmd = ["orca-ide", "automations", "list", "--json"];
   const listed = await json<{ result: { automations: Automation[] } }>(cmd);
   return listed.result.automations;
-}
-
-async function setupLabels(apply: boolean): Promise<number> {
-  const missing = missingLabels(desiredLabels, await existingLabels());
-  for (const { name, color, description } of desiredLabels) {
-    const create = missing.some((label) => label.name === name);
-    console.log(
-      create ? `create  ${name} #${color} "${description}"` : `ok      ${name}`,
-    );
-  }
-  const commands = missing.map(({ name, color, description }) => [
-    ...["gh", "label", "create", name, "-R", repoSlug],
-    ...["--color", color, "--description", description],
-  ]);
-  return execute(commands, apply);
 }
 
 async function setupAutomations(
@@ -270,13 +186,11 @@ async function setupWrapper(apply: boolean): Promise<number> {
   return execute(cmd ? [cmd] : [], apply);
 }
 
-const targets = ["labels", "automations", "wrapper"].join("|");
-const usage = `usage: setup <${targets}> [--apply] [--enable]`;
+const usage = "usage: setup <automations|wrapper> [--apply] [--enable]";
 
 export function runSetup(args: string[]): Promise<number> {
   const [target, ...flags] = args;
   const apply = flags.includes("--apply");
-  if (target === "labels") return setupLabels(apply);
   if (target === "wrapper") return setupWrapper(apply);
   if (target === "automations")
     return setupAutomations(apply, flags.includes("--enable"));

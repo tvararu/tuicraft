@@ -1,6 +1,15 @@
 import { basename } from "node:path";
-import { bot, labels, mainCheckout, pm, repoSlug } from "factory/config";
-import { json, must } from "factory/exec";
+import { setItemStatus } from "factory/board";
+import type { BoardItem, OpenIssue } from "factory/board-items";
+import {
+  type BoardStatus,
+  board,
+  bot,
+  mainCheckout,
+  repoSlug,
+} from "factory/config";
+import { must } from "factory/exec";
+import { graphql, obj, str } from "factory/gql";
 import { strayFix } from "factory/repo-guard";
 
 export type Reason = "dirty" | "unlanded-commits" | "over-cap-dirty";
@@ -10,18 +19,47 @@ export type Held = {
   ageHours: number;
   reason: Reason;
   archive: string | null;
+  issue: number | null;
 };
-export type ReportIssue = { number: number; title: string; body: string };
-export type ReportPlan = {
-  create: { title: string; body: string }[];
-  update: ReportIssue[];
-  close: { number: number; comment: string }[];
+export type Draft = {
+  item: string;
+  id: string;
+  title: string;
+  body: string;
+  status: BoardStatus | null;
+};
+export type DraftText = { title: string; body: string };
+export type DraftUpdate = DraftText & {
+  item: string;
+  id: string;
+  content: boolean;
+  status: boolean;
+};
+export type DraftPlan = {
+  create: DraftText[];
+  update: DraftUpdate[];
+  delete: { item: string; title: string }[];
 };
 
 const titlePattern = /^Reaper: (\S+) held \(/;
+const issuePattern = /factory\/(\d+)-/;
+
+const createMutation = `mutation($project:ID!,$title:String!,$body:String!){
+  created:addProjectV2DraftIssue(input:{projectId:$project,title:$title,body:$body}){projectItem{id}}}`;
+
+const updateMutation = `mutation($id:ID!,$title:String!,$body:String!){
+  updateProjectV2DraftIssue(input:{draftIssueId:$id,title:$title,body:$body}){draftIssue{id}}}`;
+
+const deleteMutation = `mutation($project:ID!,$item:ID!){
+  deleteProjectV2Item(input:{projectId:$project,itemId:$item}){deletedItemId}}`;
 
 export function heldName(title: string): string | null {
   return title.match(titlePattern)?.[1] ?? null;
+}
+
+export function issueOf(branch: string): number | null {
+  const match = branch.match(issuePattern);
+  return match ? Number(match[1]) : null;
 }
 
 export function reportTitle(h: Held): string {
@@ -40,41 +78,17 @@ function fixFor(h: Held): string {
 
 export function reportBody(h: Held): string {
   return [
-    `@${pm}: the reaper will not remove the worktree \`${h.name}\`.`,
+    `The reaper will not remove the worktree \`${h.name}\`.`,
     "",
     `- Owner: ${h.owner}`,
     `- Reason: ${h.reason}`,
     `- Archive: ${h.archive ? `\`${h.archive}\`` : "none"}`,
+    ...(h.issue === null ? [] : [`- Issue: #${h.issue}`]),
     "",
     `What to do: ${fixFor(h)}`,
     "",
-    "The reaper closes this issue on its first pass after the worktree is gone or no longer held.",
-    "",
+    "The reaper deletes this card on its first pass after the worktree is gone or no longer held.",
   ].join("\n");
-}
-
-export function planReport(held: Held[], issues: ReportIssue[]): ReportPlan {
-  const open = new Map<string, ReportIssue>();
-  for (const issue of issues) {
-    const name = heldName(issue.title);
-    if (name && !open.has(name)) open.set(name, issue);
-  }
-  const plan: ReportPlan = { close: [], create: [], update: [] };
-  for (const h of held) {
-    const want = { body: reportBody(h), title: reportTitle(h) };
-    const issue = open.get(h.name);
-    if (!issue) plan.create.push(want);
-    else if (issue.title !== want.title || issue.body !== want.body)
-      plan.update.push({ ...want, number: issue.number });
-  }
-  const names = new Set(held.map((h) => h.name));
-  for (const [name, issue] of open)
-    if (!names.has(name))
-      plan.close.push({
-        comment: `\`${name}\` is no longer held: the worktree was removed or the reaper no longer needs to keep it.`,
-        number: issue.number,
-      });
-  return plan;
 }
 
 export const strayName = basename(mainCheckout);
@@ -85,7 +99,7 @@ export function strayTitle(): string {
 
 export function strayBody(value: string): string {
   return [
-    `@${pm}: the reaper did nothing, because the main repository's shared config sets \`core.worktree\`.`,
+    "The reaper did nothing, because the main repository's shared config sets `core.worktree`.",
     "",
     `- Repository: \`${mainCheckout}\``,
     `- Value: \`${value}\``,
@@ -94,77 +108,70 @@ export function strayBody(value: string): string {
     "",
     `What to do: check that tree for work you want, then run \`${strayFix()}\`. The reaper never fixes it itself.`,
     "",
-    "The reaper closes this issue on its first pass after the setting is gone.",
-    "",
+    "The reaper deletes this card on its first pass after the setting is gone.",
   ].join("\n");
 }
 
-export function planStray(value: string, issues: ReportIssue[]): ReportPlan {
-  const want = { body: strayBody(value), title: strayTitle() };
-  const issue = issues.find((i) => heldName(i.title) === strayName);
-  const plan: ReportPlan = { close: [], create: [], update: [] };
-  if (!issue) plan.create.push(want);
-  else if (issue.title !== want.title || issue.body !== want.body)
-    plan.update.push({ ...want, number: issue.number });
+function updateFor(draft: Draft, text: DraftText): DraftUpdate | null {
+  const body = draft.body.replaceAll("\r\n", "\n").trimEnd();
+  const content = draft.title !== text.title || body !== text.body;
+  const status = draft.status !== "blocked";
+  if (!(content || status)) return null;
+  return { ...text, content, id: draft.id, item: draft.item, status };
+}
+
+function reconcile(
+  want: Map<string, DraftText>,
+  drafts: Draft[],
+  keepOthers: boolean,
+): DraftPlan {
+  const plan: DraftPlan = { create: [], delete: [], update: [] };
+  const matched = new Set<string>();
+  for (const draft of drafts) {
+    const name = heldName(draft.title);
+    if (name === null) continue;
+    const text = want.get(name);
+    if (text === undefined || matched.has(name)) {
+      if (text !== undefined || !keepOthers)
+        plan.delete.push({ item: draft.item, title: draft.title });
+      continue;
+    }
+    matched.add(name);
+    const update = updateFor(draft, text);
+    if (update) plan.update.push(update);
+  }
+  for (const [name, text] of want)
+    if (!matched.has(name)) plan.create.push(text);
   return plan;
 }
 
-async function openReports(): Promise<ReportIssue[]> {
-  const list = await json<(ReportIssue & { author: { login: string } })[]>([
-    "gh",
-    "issue",
-    "list",
-    "-R",
-    repoSlug,
-    "--state",
-    "open",
-    "--limit",
-    "1000",
-    "--json",
-    "number,title,body,author",
-  ]);
-  return list
-    .filter((i) => i.author.login === bot && heldName(i.title))
-    .map(({ number, title, body }) => ({ body, number, title }));
+export function planDrafts(held: Held[], drafts: Draft[]): DraftPlan {
+  const want = new Map<string, DraftText>();
+  for (const h of held)
+    if (!want.has(h.name))
+      want.set(h.name, { body: reportBody(h), title: reportTitle(h) });
+  return reconcile(want, drafts, false);
 }
 
-export async function report(held: Held[]): Promise<void> {
-  await apply(planReport(held, await openReports()));
+export function planStray(value: string, drafts: Draft[]): DraftPlan {
+  const text = { body: strayBody(value), title: strayTitle() };
+  return reconcile(new Map([[strayName, text]]), drafts, true);
 }
 
-export async function reportStray(value: string): Promise<void> {
-  await apply(planStray(value, await openReports()));
+export function reaperDrafts(items: BoardItem[]): Draft[] {
+  return items.flatMap(({ item, status, draft }) =>
+    draft && heldName(draft.title) !== null ? [{ ...draft, item, status }] : [],
+  );
 }
 
-async function apply(plan: ReportPlan): Promise<void> {
-  for (const { title, body } of plan.create)
-    await must([
-      "gh",
-      "issue",
-      "create",
-      "-R",
-      repoSlug,
-      "--title",
-      title,
-      "--body",
-      body,
-      "--label",
-      labels.pm,
-    ]);
-  for (const { number, title, body } of plan.update)
-    await must([
-      "gh",
-      "issue",
-      "edit",
-      String(number),
-      "-R",
-      repoSlug,
-      "--title",
-      title,
-      "--body",
-      body,
-    ]);
-  for (const { number, comment } of plan.close)
+export function legacyReports(issues: OpenIssue[]): number[] {
+  return issues
+    .filter((i) => i.author === bot && heldName(i.title) !== null)
+    .map((i) => i.number);
+}
+
+export async function closeReports(numbers: number[]): Promise<void> {
+  for (const number of numbers)
     await must([
       "gh",
       "issue",
@@ -173,6 +180,24 @@ async function apply(plan: ReportPlan): Promise<void> {
       "-R",
       repoSlug,
       "--comment",
-      comment,
+      "Reaper holds are now draft cards on the project board; this issue is no longer used.",
     ]);
+}
+
+export async function applyDrafts(plan: DraftPlan): Promise<void> {
+  for (const { title, body } of plan.create) {
+    const data = await graphql(createMutation, {
+      body,
+      project: board.project,
+      title,
+    });
+    const item = obj(obj(data["created"])["projectItem"]);
+    await setItemStatus(str(item["id"]), "blocked");
+  }
+  for (const { id, item, title, body, content, status } of plan.update) {
+    if (content) await graphql(updateMutation, { body, id, title });
+    if (status) await setItemStatus(item, "blocked");
+  }
+  for (const { item } of plan.delete)
+    await graphql(deleteMutation, { item, project: board.project });
 }

@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+  type Draft,
   type Held,
   heldName,
-  planReport,
+  issueOf,
+  legacyReports,
+  planDrafts,
   planStray,
-  type ReportIssue,
   reportBody,
   reportTitle,
   strayBody,
@@ -12,95 +14,112 @@ import {
   strayTitle,
 } from "factory/reaper-report";
 
-describe("planReport", () => {
-  const a: Held = {
-    ageHours: 14,
-    archive: "/x/alpha.patch",
-    name: "alpha",
-    owner: "maintainer",
-    reason: "dirty",
-  };
-  const b: Held = {
-    ageHours: 4,
-    archive: null,
-    name: "beta",
-    owner: "reaper:worker",
-    reason: "unlanded-commits",
-  };
-  const issueFor = (h: Held, number: number): ReportIssue => ({
-    body: reportBody(h),
-    number,
-    title: reportTitle(h),
-  });
+const a: Held = {
+  ageHours: 14,
+  archive: "/x/alpha.patch",
+  issue: null,
+  name: "alpha",
+  owner: "maintainer",
+  reason: "dirty",
+};
+const b: Held = {
+  ageHours: 4,
+  archive: null,
+  issue: 103,
+  name: "beta",
+  owner: "reaper:worker",
+  reason: "unlanded-commits",
+};
+const draftFor = (h: Held, n: number): Draft => ({
+  body: reportBody(h),
+  id: `DI_${n}`,
+  item: `PVTI_${n}`,
+  status: "blocked",
+  title: reportTitle(h),
+});
+const empty = { create: [], delete: [], update: [] };
 
+describe("report text", () => {
   test("the title round-trips the worktree name", () => {
     expect(heldName(reportTitle(a))).toBe("alpha");
     expect(heldName("Replace the permanent reaper report issue")).toBeNull();
   });
 
-  test("the body names the worktree, reason, archive and a fix", () => {
+  test("the body names the hold and a fix without mentioning anyone", () => {
     const body = reportBody(a);
-    expect(body).toContain("@tvararu");
+    expect(body).not.toContain("@");
     expect(body).toContain("`alpha`");
-    expect(body).toContain("dirty");
     expect(body).toContain("/x/alpha.patch");
     expect(body).toContain("What to do:");
+    expect(body).toContain("deletes this card");
+    expect(body).not.toContain("- Issue:");
   });
 
-  test("a newly held worktree opens one issue", () => {
-    expect(planReport([a], [])).toEqual({
-      close: [],
+  test("a branch that names an issue links it", () => {
+    expect(issueOf("refs/heads/factory/103-factory-project-board")).toBe(103);
+    expect(issueOf("OpenHubris/auto-work-run-177")).toBeNull();
+    expect(reportBody(b)).toContain("- Issue: #103");
+  });
+});
+
+describe("planDrafts", () => {
+  test("a newly held worktree creates one draft", () => {
+    expect(planDrafts([a, { ...a, reason: "over-cap-dirty" }], [])).toEqual({
+      ...empty,
       create: [{ body: reportBody(a), title: reportTitle(a) }],
-      update: [],
     });
   });
 
   test("a worktree still held the same way changes nothing", () => {
-    expect(planReport([{ ...a, ageHours: 40 }], [issueFor(a, 7)])).toEqual({
-      close: [],
-      create: [],
-      update: [],
-    });
+    const draft = { ...draftFor(a, 1), body: `${reportBody(a)}\n` };
+    expect(planDrafts([{ ...a, ageHours: 40 }], [draft])).toEqual(empty);
   });
 
-  test("a changed reason edits the existing issue instead of opening one", () => {
+  test("a changed reason or body edits the draft in place", () => {
     const moved: Held = { ...a, reason: "over-cap-dirty" };
-    expect(planReport([moved], [issueFor(a, 7)])).toEqual({
-      close: [],
-      create: [],
-      update: [
-        { body: reportBody(moved), number: 7, title: reportTitle(moved) },
-      ],
-    });
+    expect(planDrafts([moved], [draftFor(a, 1)]).update).toEqual([
+      {
+        body: reportBody(moved),
+        content: true,
+        id: "DI_1",
+        item: "PVTI_1",
+        status: false,
+        title: reportTitle(moved),
+      },
+    ]);
+    const linked = planDrafts([{ ...a, issue: 7 }], [draftFor(a, 1)]);
+    expect(linked.update[0]?.body).toContain("- Issue: #7");
   });
 
-  test("a worktree no longer held closes its issue", () => {
-    const plan = planReport([b], [issueFor(a, 7), issueFor(b, 8)]);
+  test("a draft moved out of Blocked goes back without an edit", () => {
+    const draft = { ...draftFor(a, 1), status: "ready" as const };
+    expect(planDrafts([a], [draft]).update).toMatchObject([
+      { content: false, item: "PVTI_1", status: true },
+    ]);
+  });
+
+  test("drafts for released worktrees and duplicates are deleted", () => {
+    const plan = planDrafts(
+      [b],
+      [draftFor(a, 1), draftFor(b, 2), draftFor(b, 3)],
+    );
     expect(plan.create).toEqual([]);
     expect(plan.update).toEqual([]);
-    expect(plan.close.map((c) => c.number)).toEqual([7]);
-    expect(plan.close[0]?.comment).toContain("`alpha`");
+    expect(plan.delete.map((d) => d.item)).toEqual(["PVTI_1", "PVTI_3"]);
   });
 
-  test("issues without a reaper title are left alone", () => {
-    const other = { body: "", number: 9, title: "Factory: reaper report" };
-    expect(planReport([], [other])).toEqual({
-      close: [],
-      create: [],
-      update: [],
-    });
+  test("drafts without a reaper title are left alone", () => {
+    const other = { ...draftFor(a, 1), title: "Try sizes on cards" };
+    expect(planDrafts([], [other])).toEqual(empty);
   });
 });
 
 describe("planStray", () => {
-  const dirty: ReportIssue = {
-    body: "",
-    number: 7,
-    title: "Reaper: alpha held (dirty)",
-  };
-  const stray = (value: string, number: number): ReportIssue => ({
+  const stray = (value: string, n: number): Draft => ({
     body: strayBody(value),
-    number,
+    id: `DI_${n}`,
+    item: `PVTI_${n}`,
+    status: "blocked",
     title: strayTitle(),
   });
 
@@ -108,31 +127,44 @@ describe("planStray", () => {
     const body = strayBody("/wt/run-26");
     expect(body).toContain("`/wt/run-26`");
     expect(body).toContain("config --unset core.worktree");
+    expect(body).not.toContain("@");
   });
 
-  test("opens one issue and leaves other held reports open", () => {
-    expect(planStray("/wt/run-26", [dirty])).toEqual({
-      close: [],
+  test("creates one draft and keeps other hold drafts", () => {
+    expect(planStray("/wt/run-26", [draftFor(a, 1)])).toEqual({
+      ...empty,
       create: [{ body: strayBody("/wt/run-26"), title: strayTitle() }],
-      update: [],
     });
   });
 
-  test("an unchanged value changes nothing; a new value edits the issue", () => {
-    const open = stray("/wt/run-26", 9);
-    expect(planStray("/wt/run-26", [open]).update).toEqual([]);
-    expect(planStray("/wt/run-27", [open])).toEqual({
-      close: [],
-      create: [],
-      update: [
-        { body: strayBody("/wt/run-27"), number: 9, title: strayTitle() },
-      ],
-    });
+  test("an unchanged value changes nothing; a new value edits the draft", () => {
+    const card = stray("/wt/run-26", 9);
+    expect(planStray("/wt/run-26", [card])).toEqual(empty);
+    expect(planStray("/wt/run-27", [card]).update).toMatchObject([
+      { body: strayBody("/wt/run-27"), content: true, item: "PVTI_9" },
+    ]);
   });
 
-  test("the next normal pass closes it", () => {
-    const plan = planReport([], [stray("/wt/run-26", 9)]);
-    expect(plan.close.map((c) => c.number)).toEqual([9]);
+  test("the next normal pass deletes it", () => {
+    const plan = planDrafts([], [stray("/wt/run-26", 9)]);
+    expect(plan.delete.map((d) => d.item)).toEqual(["PVTI_9"]);
     expect(heldName(strayTitle())).toBe(strayName);
+  });
+});
+
+describe("legacyReports", () => {
+  test("only the bot's reaper issues are closed", () => {
+    const issue = (number: number, author: string, title: string) => ({
+      author,
+      labels: [],
+      number,
+      title,
+    });
+    const issues = [
+      issue(1, "OpenHubris", reportTitle(a)),
+      issue(2, "tvararu", reportTitle(b)),
+      issue(3, "OpenHubris", "Factory: reaper report"),
+    ];
+    expect(legacyReports(issues)).toEqual([1]);
   });
 });

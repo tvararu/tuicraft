@@ -187,11 +187,11 @@ another large branch of plausible agent-written code would not solve that.
 
 Every change reaches `main` through a pull request with green `signoff/ci`,
 `factory/ci` and `factory/review` statuses, and lands as one squash commit. The
-[dev factory](factory.md) takes issues the maintainer labels
-`ready` through a worker, a reviewer and a merger. Work from outside the
-factory goes through the same reviewer and merger: an issue with
+[dev factory](factory.md) takes issues the maintainer moves to Ready on the
+project board through a worker, a reviewer and a merger. Work from outside
+the factory goes through the same reviewer and merger: an issue with
 `## Acceptance criteria`, a `factory/<N>-<slug>` branch, a PR with `Fixes #N`
-and a `## Proof` section, then `agent:review` on the issue. The procedure is in
+and a `## Proof` section, then the issue's card in In review. The procedure is in
 [AGENTS.md](../AGENTS.md) under Commits. There are no releases. A merged PR does
 not accept a milestone; that stays the maintainer's call.
 

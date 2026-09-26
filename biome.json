@@ -151,6 +151,16 @@
   "plugins": ["./config/biome.grit"],
   "overrides": [
     {
+      "includes": ["src/factory/config.ts"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/**/*.test.ts", "src/test/**"],
       "linter": {
         "rules": {
