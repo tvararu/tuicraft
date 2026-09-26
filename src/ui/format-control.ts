@@ -1,5 +1,10 @@
 import { formatGuid } from "ui/format";
-import type { ControlEvent, ControlPose, ControlState } from "wow";
+import {
+  type ControlEvent,
+  type ControlPose,
+  type ControlState,
+  nextStepFor,
+} from "wow";
 
 function formatPoseObj(pose: ControlPose): Record<string, unknown> {
   return {
@@ -11,16 +16,6 @@ function formatPoseObj(pose: ControlPose): Record<string, unknown> {
     y: pose.y,
     z: pose.z,
   };
-}
-
-export function nextStepFor(reason: string | undefined): string | null {
-  if (reason === "obstructed")
-    return "Choose a different route. Inspect the ground before moving.";
-  if (reason === "height_unresolved")
-    return "Choose a different short heading or a known grounded waypoint. Do not retry this heading.";
-  if (reason?.includes("ambiguous ground column"))
-    return "Choose a destination with one ground height. Do not guess Z.";
-  return null;
 }
 
 export function formatControlStateObj(

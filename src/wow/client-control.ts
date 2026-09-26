@@ -6,6 +6,7 @@ import {
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
+import { observeNavigation } from "wow/navigation-observation";
 import { queryNearby } from "wow/nearby";
 import type { Runtimes } from "wow/runtime";
 import type { WorldConn } from "wow/world-conn";
@@ -156,6 +157,9 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
     },
     getNavigationState() {
       return control.navigationState();
+    },
+    observeNavigation() {
+      return observeNavigation(control.navigationState());
     },
     onControlEvent(cb) {
       return conn.events.control.subscribe(cb);

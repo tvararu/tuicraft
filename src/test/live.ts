@@ -499,6 +499,22 @@ describe("gameplay guards while alive", () => {
     }
   }, 20_000);
 
+  test("idle navigation observation carries no next step", async () => {
+    const auth1 = await authHandshake(config1);
+    const handle1 = await worldSession(config1, auth1);
+
+    try {
+      expect(handle1.observeNavigation()).toEqual({
+        ...handle1.getNavigationState(),
+        nextStep: null,
+      });
+      expect(handle1.observeNavigation().active).toBe(false);
+    } finally {
+      handle1.close();
+      await handle1.closed;
+    }
+  }, 20_000);
+
   test("recovery and loot refuse while alive", async () => {
     const auth1 = await authHandshake(config1);
     const handle1 = await worldSession(config1, auth1);

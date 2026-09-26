@@ -13,6 +13,7 @@ import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import { observeNavigation } from "wow/navigation-observation";
 import { type NearbyQuery, queryNearby } from "wow/nearby";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
@@ -168,6 +169,9 @@ export function createMockHandle(): MockHandle {
     leaveChannel: jest.fn(),
     leaveGroup: jest.fn(),
     move: jest.fn(),
+    observeNavigation: jest.fn(() =>
+      observeNavigation(handle.getNavigationState()),
+    ),
     onCombatEvent(cb) {
       return events.combat.subscribe(cb);
     },
