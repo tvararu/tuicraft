@@ -1,0 +1,44 @@
+
+$ tuicraft start  # 00:19:39.607407159
+CONNECTED
+[exit 0]
+
+$ tuicraft control --json  # 00:19:42.854578800
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-0.39278510212898254,"source":"server","updatedAt":1790381979787,"x":8764.7099609375,"y":-6683.06982421875,"z":69.78932189941406},"requestedTarget":null,"selfGuid":"0xa02","serverPose":{"mapId":530,"orientation":-0.39278510212898254,"source":"server","updatedAt":1790381979787,"x":8764.7099609375,"y":-6683.06982421875,"z":69.78932189941406},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
+
+$ tuicraft goto 8709.46 -6671.76 --json  # 00:19:42.909009624
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+[exit 0]
+
+$ tuicraft navigation --json  # 00:19:52.209858012
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
+
+$ tuicraft control --json  # 00:19:52.255000116
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.939679243574849,"source":"predicted","updatedAt":1790381991241,"x":8709.46,"y":-6671.76,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa02","serverPose":{"mapId":530,"orientation":-0.39278510212898254,"source":"server","updatedAt":1790381979787,"x":8764.7099609375,"y":-6683.06982421875,"z":69.78932189941406},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
+
+$ tuicraft goto 8801.13 -6550.23 --json  # 00:19:54.824286672
+{"command":"goto","data":null,"error":{"message":"stop: pathfind_find_height failed (UNKNOWN_HEIGHT)","stage":"command"},"events":[],"kind":"error"}
+[exit 1]
+
+$ tuicraft navigation --json  # 00:19:54.869237321
+{"command":"navigation","data":{"active":false,"destination":{"x":8801.13,"y":-6550.23},"owner":"none","blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","refusal":"stop","nextStep":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
+
+$ tuicraft control --json  # 00:19:54.911094875
+{"command":"control","data":{"blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.939679243574849,"source":"predicted","updatedAt":1790381991241,"x":8709.46,"y":-6671.76,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa02","serverPose":{"mapId":530,"orientation":-0.39278510212898254,"source":"server","updatedAt":1790381979787,"x":8764.7099609375,"y":-6683.06982421875,"z":69.78932189941406},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
+
+$ tuicraft stop  # 00:19:54.948110689
+OK
+[exit 0]
+
+$ tuicraft start  # 00:19:56.988143883
+CONNECTED
+[exit 0]
+
+$ tuicraft control --json  # 00:20:00.230996837
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.9396791458129883,"source":"server","updatedAt":1790381997163,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa02","serverPose":{"mapId":530,"orientation":2.9396791458129883,"source":"server","updatedAt":1790381997163,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+[exit 0]
