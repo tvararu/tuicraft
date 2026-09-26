@@ -16,6 +16,7 @@ import {
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
+import { observedTargetPosition } from "wow/observed-target";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { QuestRuntime } from "wow/quests";
 import { RecoveryRuntime } from "wow/recovery";
@@ -189,7 +190,7 @@ function findObservedTarget(
   conn: WorldConn,
   parts: Pick<RuntimeParts, "control" | "combat">,
   guid: bigint,
-): { x: number; y: number; z: number } {
+): NavPoint {
   const entity = conn.entityStore.get(guid);
   if (!entity || guid === selfGuid(conn))
     throw new Error("target_not_observed");
@@ -200,21 +201,7 @@ function findObservedTarget(
     entity.objectType === ObjectType.PLAYER
       ? parts.combat.unit(guid)
       : undefined;
-  if (unit?.motion?.unsupportedReason)
-    throw new Error(unit.motion.unsupportedReason);
-  if (
-    unit?.motion &&
-    (Date.now() - unit.motion.observedAt < 0 ||
-      Date.now() - unit.motion.observedAt > 5000)
-  )
-    throw new Error("target_stale");
-  const position = unit?.serverPose ?? entity.position;
-  if (
-    !(position && [position.x, position.y, position.z].every(Number.isFinite))
-  )
-    throw new Error("target_not_observed");
-  if (position.mapId !== self.mapId) throw new Error("target_map_changed");
-  return { x: position.x, y: position.y, z: position.z };
+  return observedTargetPosition(entity, unit, self.mapId);
 }
 
 function disposeParts(
