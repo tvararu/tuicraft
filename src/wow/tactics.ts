@@ -174,6 +174,10 @@ export class TacticsLoop {
     this.end(reason, false);
   }
 
+  stopAndDefend(reason: string): void {
+    this.end(reason, true);
+  }
+
   private end(reason: string, defend: boolean): void {
     const run = this.run;
     if (!run) return;

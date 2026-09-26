@@ -103,6 +103,7 @@ USAGE
                             Opening fails closed after a release-only reply (3 s) or a gone corpse
   tuicraft use <bag> <slot> [--json]  Use a carried item (food, drink, potion) from inventory --json
                             Refuses empty slots and items with no use spell; check combat
+                            Mid-fight: stops the fight, keeps auto-attack on a live attacker
   tuicraft trainer [--json]  Trainer offer: spell, rank, cost, level, state; last training outcome
   tuicraft open-trainer <guid>  Request an observed trainer's spell list
   tuicraft train <spell-id>  Learn an available offered spell

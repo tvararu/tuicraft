@@ -176,8 +176,8 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
     useItem(bag, slot) {
       const inventory = () => rewards.snapshot().inventory;
       const override = () => {
+        tactics.stopAndDefend("manual_override");
         cycle.stop("manual_override");
-        tactics.stop("manual_override");
       };
       return useItem(
         { inventory, templates: items, combat, override },

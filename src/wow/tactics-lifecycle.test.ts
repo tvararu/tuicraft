@@ -60,6 +60,24 @@ test("start blocked on the decide loop still resolves on external stop", async (
   result.resolve(judgment());
 });
 
+test("stopAndDefend ends the run through defense instead of halting", async () => {
+  const result = Promise.withResolvers<JevActionResult>();
+  const f = fixture({ select: () => result.promise });
+  const running = f.tactics.start(context);
+  await f.requested;
+  f.tactics.stopAndDefend("manual_override");
+  await running;
+  expect(f).toMatchObject({ defenses: 1, halts: 0 });
+  expect(f.tactics.snapshot()).toMatchObject({
+    status: "idle",
+    lastStopReason: "manual_override",
+    defense: "auto_attack",
+  });
+  f.tactics.stopAndDefend("manual_override");
+  expect(f.defenses).toBe(1);
+  result.resolve(judgment());
+});
+
 test("replacement cannot overlap a pending provider call or activate after stop", async () => {
   const result = Promise.withResolvers<JevActionResult>();
   let calls = 0;
