@@ -13,6 +13,7 @@ const INSPECTIONS = [
   "inventory",
   "experience",
   "loot",
+  "group",
 ] as const;
 
 const LOCAL = [

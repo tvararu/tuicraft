@@ -98,6 +98,8 @@ export type IpcCommand =
   | { type: "experience_json" }
   | { type: "loot" }
   | { type: "loot_json" }
+  | { type: "group" }
+  | { type: "group_json" }
   | { type: "open_loot"; guid: bigint }
   | { type: "take_loot"; slot: number }
   | { type: "take_money" }

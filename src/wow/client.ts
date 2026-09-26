@@ -42,6 +42,7 @@ import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { InventoryState } from "wow/inventory";
 import type { NavigationObservation } from "wow/navigation-observation";
 import type { NearbyQuery, NearbyRow } from "wow/nearby";
+import type { PartyChange, PartyLoot, PartyState } from "wow/party-store";
 import type { WhoResult } from "wow/protocol/chat";
 import { Language } from "wow/protocol/opcodes";
 import type { QuestEvent, QuestState } from "wow/quests";
@@ -100,6 +101,8 @@ export type GroupEvent =
         online: boolean;
       }>;
       leader: string;
+      change: PartyChange;
+      loot: PartyLoot | null;
     }
   | { type: "group_destroyed" }
   | { type: "kicked" }
@@ -177,6 +180,7 @@ export type WorldHandle = {
   acceptInvite: () => void;
   declineInvite: () => void;
   onGroupEvent: (cb: (event: GroupEvent) => void) => Unsubscribe;
+  getPartyState: () => PartyState;
   onEntityEvent: (cb: (event: EntityEvent) => void) => Unsubscribe;
   onPacketError: (cb: (opcode: number, err: Error) => void) => Unsubscribe;
   getNearbyEntities: () => Entity[];

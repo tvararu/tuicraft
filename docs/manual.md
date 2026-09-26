@@ -8,7 +8,7 @@ WoW 3.3.5a chat client
 tuicraft
 tuicraft send [-s | -w <name> | -y | -g | -p] <message> [--wait N] [--json]
 tuicraft [-w <name> | -y | -g | -p] <message> [--wait N] [--json]
-tuicraft who [filter] [--json]
+tuicraft who [filter] [--json] | group [--json]
 tuicraft setup [--account NAME] [--password PASS] [--character NAME] [flags]
 tuicraft start [--json] | status [--json] | stop [--json]
 tuicraft read [--wait N] [--json]
@@ -118,6 +118,27 @@ stay unread for the next `read`.
 
 `tuicraft who` [_filter_] [`--json`]
 : Who query. Optional name/class/level filter.
+
+`tuicraft group` [`--json`]
+: Print the current party: whether you are in a group, the leader, the loot
+method and threshold (and master looter) from the last `SMSG_GROUP_LIST`, and
+each other member's online state, health, max health and level. While the
+member is in view these come from its observed unit (`source: "unit"`, printed
+`in view`); out of range the server sends party stats instead
+(`source: "party_stats"`, printed with their age). Human output reads
+`Group: 2 members`, `Leader: Xia`, `Loot: round_robin, threshold uncommon`,
+`Member Bob (0xa40): online, health 79/217, level 10, 3s ago`, or
+`Group: none`. With `--json`, `data` has `inGroup`, `leader`, `loot`
+(`method`, `masterLooter`, `threshold`, or `null` before a list arrives) and
+`members[]` (`name`, `guid`, `online`, `health`, `maxHealth`, `level`,
+`statsAt`, `source`); unobserved values are `null`. `members` lists the other members,
+not you. Party chat stays `tuicraft party <message>`.
+
+Human `read` prints group list changes: `[group] Joined a group led by Xia:
+Bob`, `[group] Bob joined the group`, `[group] Bob left the group`, and
+`[group] You are no longer in a group`, next to the existing invite, leader
+and disband lines. `GROUP_LIST` events add `formed`, `added`, `removed` and
+`loot`.
 
 `tuicraft setup` [*flags*]
 : Configure account credentials. With no flags, runs an interactive wizard.

@@ -7,13 +7,13 @@ import {
   formatEntityEventObj,
   formatFriendEvent,
   formatFriendEventObj,
-  formatGroupEvent,
   formatIgnoreEvent,
   formatIgnoreEventObj,
   jsonSafe,
 } from "ui/format";
 import { formatMessage, formatMessageObj } from "ui/format-chat";
 import { formatControlEvent, formatControlEventObj } from "ui/format-control";
+import { formatGroupEvent } from "ui/format-group";
 import {
   type ChatMessage,
   type ControlEvent,
@@ -51,11 +51,15 @@ function formatGroupEventObj(event: GroupEvent): Record<string, unknown> {
       return { name: event.name, type: "GROUP_INVITE_DECLINED" };
     case "group_list":
       return {
+        added: event.change.added,
+        formed: event.change.formed,
         leader: event.leader,
+        loot: jsonSafe(event.loot),
         members: event.members.map((m) => ({
           name: m.name,
           online: m.online,
         })),
+        removed: event.change.removed,
         type: "GROUP_LIST",
       };
     case "member_stats":
