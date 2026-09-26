@@ -44,6 +44,23 @@ describe("parseAttackStop", () => {
     );
     expect(result).toEqual({ attacker: 0x17n, victim: 0x64n, dead: 1 });
   });
+
+  test("a captured victimless stop reads only the attacker", () => {
+    expect(parseAttackStop(reader([0x03, 0x52, 0x0a]))).toEqual({
+      attacker: 0xa52n,
+      victim: undefined,
+      dead: undefined,
+    });
+  });
+
+  test("a captured full stop keeps victim and dead flag", () => {
+    const body = Buffer.from("df878307233d30f1034a0a00000000", "hex");
+    expect(parseAttackStop(reader([...body]))).toEqual({
+      attacker: 0xf130003d23078387n,
+      victim: 0xa4an,
+      dead: 0,
+    });
+  });
 });
 
 describe("parseXpGain", () => {

@@ -159,6 +159,24 @@ describe("combat observations", () => {
     });
   });
 
+  test("a victimless attack stop clears the pending swing as failed", () => {
+    const { combat } = setup();
+    combat.attack(0xf1300000000000ffn);
+    combat.applyAttackStop({
+      attacker: 1n,
+      victim: undefined,
+      dead: undefined,
+    });
+    const state = combat.snapshot();
+    expect(state.pendingAttack).toBeUndefined();
+    expect(state.attacking).toBe(false);
+    expect(state.lastOutcome).toMatchObject({
+      kind: "attack",
+      status: "failed",
+    });
+    expect(state.lastOutcome?.target).toBeUndefined();
+  });
+
   test("spline predictions preserve observed provenance and disappear clears motion", () => {
     const { combat, advance } = setup();
     combat.observePosition(2n, {

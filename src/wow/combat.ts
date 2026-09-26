@@ -453,7 +453,7 @@ export class CombatRuntime {
       this.attackTarget = undefined;
       this.lastOutcome = {
         kind: "attack",
-        status: packet.dead ? "succeeded" : "interrupted",
+        status: stopStatus(packet),
         target: packet.victim,
         at: this.deps.now(),
       };
@@ -510,4 +510,9 @@ export class CombatRuntime {
     if (reason !== undefined) event.reason = reason;
     this.events.emit(event);
   }
+}
+
+function stopStatus(packet: AttackStop): CombatOutcome["status"] {
+  if (packet.victim === undefined) return "failed";
+  return packet.dead ? "succeeded" : "interrupted";
 }
