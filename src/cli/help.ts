@@ -79,6 +79,8 @@ USAGE
                             OK/slot removal is not stored gain
                             Item-push slot 0xFFFFFFFF means stacking, not a bag slot
                             Opening fails closed after a release-only reply (3 s) or a gone corpse
+  tuicraft use <bag> <slot> [--json]  Use a carried item (food, drink, potion) from inventory --json
+                            Refuses empty slots and items with no use spell; check combat
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)

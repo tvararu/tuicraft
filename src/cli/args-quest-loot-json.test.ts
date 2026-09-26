@@ -99,6 +99,30 @@ describe("loot arguments", () => {
     ])
       expect(() => parseArgs(args)).toThrow();
   });
+
+  test("use takes a uint8 bag and slot and nothing else", () => {
+    expect(parseArgs(["use", "255", "29"])).toEqual({
+      bag: 255,
+      mode: "use",
+      slot: 29,
+    });
+    expect(parseArgs(["use", "19", "0", "--json"])).toEqual({
+      bag: 19,
+      json: true,
+      mode: "use",
+      slot: 0,
+    });
+    for (const args of [
+      ["use"],
+      ["use", "255"],
+      ["use", "256", "29"],
+      ["use", "255", "256"],
+      ["use", "255", "-1"],
+      ["use", "255", "1.5"],
+      ["use", "255", "29", "extra"],
+    ])
+      expect(() => parseArgs(args)).toThrow("invalid item slot");
+  });
 });
 
 describe("daemon JSON arguments", () => {

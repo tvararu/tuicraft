@@ -9,6 +9,7 @@ import {
   parseFight,
   parseGoto,
   parseGuidArg,
+  parseItemSlot,
   parseMove,
   parseOptionId,
   parseQuestId,
@@ -137,6 +138,8 @@ function parseIndexed(verb: string, tokens: string[]): IpcCommand | undefined {
         parseBoundedArg(tokens, 0, 255, "invalid loot slot"),
         (slot) => ({ slot, type: "take_loot" }),
       );
+    case "USE":
+      return from(parseItemSlot(tokens), (at) => ({ ...at, type: "use" }));
     default:
       return;
   }

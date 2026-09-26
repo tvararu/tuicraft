@@ -62,6 +62,19 @@ export function inspectionLine(action: Inspection): string {
   return `${action.mode.toUpperCase()}${action.json ? "_JSON" : ""}`;
 }
 
+function cycleArgs(
+  action: Extract<Request, { mode: "cycle" | "cycle_resume" }>,
+): Arg[] {
+  const max = action.maxStarts ? ["--max", action.maxStarts] : [];
+  if (action.mode === "cycle")
+    return [...action.guids, ...max, "--instruction", action.instruction];
+  const { instruction } = action;
+  return [
+    ...max,
+    ...(instruction === undefined ? [] : ["--instruction", instruction]),
+  ];
+}
+
 function requestArgs(action: Request): Arg[] {
   switch (action.mode) {
     case "move":
@@ -89,17 +102,9 @@ function requestArgs(action: Request): Arg[] {
           : [];
       return [...framing, action.guid, action.instruction];
     }
-    case "cycle": {
-      const max = action.maxStarts ? ["--max", action.maxStarts] : [];
-      return [...action.guids, ...max, "--instruction", action.instruction];
-    }
-    case "cycle_resume": {
-      const max = action.maxStarts ? ["--max", action.maxStarts] : [];
-      const { instruction } = action;
-      const words =
-        instruction === undefined ? [] : ["--instruction", instruction];
-      return [...max, ...words];
-    }
+    case "cycle":
+    case "cycle_resume":
+      return cycleArgs(action);
     case "goto":
       return [action.x, action.y, action.z];
     case "query_quest":
@@ -113,6 +118,8 @@ function requestArgs(action: Request): Arg[] {
     case "abandon_quest":
     case "take_loot":
       return [action.slot];
+    case "use":
+      return [action.bag, action.slot];
     case "resurrect":
       return [action.accept ? "accept" : "decline"];
     default:

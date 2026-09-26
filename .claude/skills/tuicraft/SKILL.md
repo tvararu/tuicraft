@@ -29,7 +29,7 @@ Use `--json` with these daemon-backed commands:
 - Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
-- Recovery, quest, and loot actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`.
+- Recovery, quest, loot, and item actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
 `logs` prints the raw session log. `skill` prints the raw reference document.
@@ -360,6 +360,17 @@ Rules:
 - Action and inspection errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONEY, RELEASE_LOOT.
+
+## Using carried items
+
+    tuicraft use <bag> <slot> [--json]
+
+- Take `bag` and `slot` from an occupied row of `inventory --json` (bag 255 for backpack slots 23–38, 19–22 for equipped bags). Both are decimal 0–255.
+- The daemon queries the item template, then sends `CMSG_USE_ITEM` with the item's on-use spell on self. It refuses `unknown_slot`, `slot_unobserved`, `empty_slot`, `item_entry_unobserved`, `unknown_item`, `no_use_spell`, `slot_changed`, `item_query_timeout`, and `cast_in_progress`.
+- `OK` is intent. Read the result in `combat --json`: `lastOutcome` is `kind: "cast"` with the item spell id and `item` (`entry`, `bag`, `slot`, `guid`); `status: "succeeded"`, or `"failed"` with a spell `result` or an `inventoryResult` (60 is "not in combat"). Then check `auras` (for example Food, 5005), `self.health`/`self.power`, and the stack count in `inventory --json`.
+- Eat and drink out of combat; potions work in combat. Sending the use stops a running `fight` or `cycle` (manual override; a refused `use` does not) and otherwise leaves movement and auto-attack alone. Moving stands you up and ends food and drink.
+
+IPC: USE.
 
 ## Sending Messages
 

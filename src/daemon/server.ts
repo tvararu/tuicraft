@@ -130,6 +130,7 @@ const PREEMPTED_BY_HALT = new Set<IpcCommand["type"]>([
   "take_loot",
   "take_money",
   "release_loot",
+  "use",
   "read_wait",
   "read_wait_json",
   "tail_wait",

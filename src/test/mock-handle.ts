@@ -323,6 +323,7 @@ export function createMockHandle(): MockHandle {
       events.tactics.emit(event);
     },
     uninvite: jest.fn(),
+    useItem: jest.fn(async () => {}),
     walkToward: jest.fn(async () => {
       throw new Error("mock_walk_unavailable");
     }),

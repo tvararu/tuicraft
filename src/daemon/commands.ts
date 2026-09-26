@@ -421,6 +421,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.selectTarget(cmd.guid), ok),
   unimplemented: (cmd, { socket }) =>
     send(socket, [`UNIMPLEMENTED ${cmd.feature}`]),
+  use: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.useItem(cmd.bag, cmd.slot), ok),
   walk_toward: (cmd, { handle, socket, abort }) =>
     reply(socket, () => handle.walkToward(cmd.target, cmd.yards, abort), json),
   whisper: (cmd, { handle, socket }) => {

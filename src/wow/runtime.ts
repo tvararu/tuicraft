@@ -10,6 +10,7 @@ import {
   type FactionTemplateCatalog,
   loadFactionTemplates,
 } from "wow/faction-template";
+import { ItemTemplates } from "wow/item-use";
 import { type JevSelect, selectJevAction } from "wow/jev";
 import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
 import {
@@ -34,6 +35,7 @@ export type Runtimes = {
   recovery: RecoveryRuntime;
   quests: QuestRuntime;
   rewards: RewardsRuntime;
+  items: ItemTemplates;
   cycle: EncounterCycleRuntime;
   prepareCatalog: () => Promise<void>;
   navigation: () => Navigation;
@@ -58,6 +60,7 @@ type RuntimeParts = {
   recovery: RecoveryRuntime;
   quests: QuestRuntime;
   rewards: RewardsRuntime;
+  items: ItemTemplates;
   cycle: EncounterCycleRuntime;
 };
 
@@ -227,6 +230,7 @@ function disposeParts(
   quests.dispose();
   rewards.dispose();
   combat.dispose();
+  parts.items.dispose();
   cycle.dispose();
   lazy.navigation?.close();
 }
@@ -242,7 +246,7 @@ function createSupportRuntimes(
   conn: WorldConn,
   runtimeDeps: RuntimeDeps,
   parts: Pick<RuntimeParts, "control" | "tactics">,
-): Pick<RuntimeParts, "recovery" | "quests" | "rewards" | "cycle"> {
+): Pick<RuntimeParts, "recovery" | "quests" | "rewards" | "items" | "cycle"> {
   const { control, tactics } = parts;
   const recovery = new RecoveryRuntime({
     ...runtimeDeps,
@@ -253,6 +257,8 @@ function createSupportRuntimes(
   conn.quests = quests;
   const rewards = new RewardsRuntime(runtimeDeps);
   conn.rewards = rewards;
+  const items = new ItemTemplates(runtimeDeps);
+  conn.itemTemplates = items;
   const cycle = new EncounterCycleRuntime({
     tactics,
     rewards,
@@ -261,7 +267,7 @@ function createSupportRuntimes(
     now: runtimeDeps.now,
   });
   conn.cycle = cycle;
-  return { recovery, quests, rewards, cycle };
+  return { recovery, quests, rewards, items, cycle };
 }
 
 function createCombat(

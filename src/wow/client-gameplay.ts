@@ -1,5 +1,6 @@
 import type { WorldHandle } from "wow/client";
 import { readExperience } from "wow/experience";
+import { useItem } from "wow/item-use";
 import type { Runtimes } from "wow/runtime";
 import type { WorldConn } from "wow/world-conn";
 import { selfGuid } from "wow/world-handlers";
@@ -137,7 +138,7 @@ export function questRewardMethods(rt: Runtimes) {
 }
 
 export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
-  const { rewards } = rt;
+  const { rewards, items, combat, cycle, tactics } = rt;
   return {
     getInventoryState() {
       return rewards.snapshot().inventory;
@@ -167,6 +168,18 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
     releaseLoot() {
       rt.override();
       rewards.close();
+    },
+    useItem(bag, slot) {
+      const inventory = () => rewards.snapshot().inventory;
+      const override = () => {
+        cycle.stop("manual_override");
+        tactics.stop("manual_override");
+      };
+      return useItem(
+        { inventory, templates: items, combat, override },
+        bag,
+        slot,
+      );
     },
     onRewardsEvent(cb) {
       return conn.events.rewards.subscribe(cb);

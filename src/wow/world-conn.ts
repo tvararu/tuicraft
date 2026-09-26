@@ -8,6 +8,7 @@ import type { EntityStore } from "wow/entity-store";
 import type { FriendStore } from "wow/friend-store";
 import type { GuildStore } from "wow/guild-store";
 import type { IgnoreStore } from "wow/ignore-store";
+import type { ItemTemplates } from "wow/item-use";
 import type { ChatMessage as RawChatMessage } from "wow/protocol/chat";
 import type { AccumulatorBuffer, OpcodeDispatch } from "wow/protocol/world";
 import type { QuestRuntime } from "wow/quests";
@@ -51,6 +52,7 @@ export type WorldConn = {
   recovery?: RecoveryRuntime;
   quests?: QuestRuntime;
   rewards?: RewardsRuntime;
+  itemTemplates?: ItemTemplates;
   cycle?: EncounterCycleRuntime;
   tactics?: TacticsLoop;
 };

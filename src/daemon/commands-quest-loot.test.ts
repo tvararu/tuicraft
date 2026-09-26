@@ -130,6 +130,35 @@ describe("loot IPC boundary", () => {
       expect(parseIpcCommand(line)?.type).toBe("invalid");
   });
 
+  test("USE carries a uint8 bag and slot to the handle", async () => {
+    expect(parseIpcCommand("USE 255 29")).toEqual({
+      bag: 255,
+      slot: 29,
+      type: "use",
+    });
+    for (const line of ["USE", "USE 255", "USE 256 1", "USE 1 2 3"])
+      expect(parseIpcCommand(line)).toEqual({
+        reason: "invalid item slot",
+        type: "invalid",
+      });
+    const handle = Object.assign(attachControl(createMockHandle()), {
+      useItem: async () => {
+        throw new Error("no_use_spell");
+      },
+    });
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { bag: 255, slot: 26, type: "use" },
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
+    );
+    expect(socket.written()).toBe("ERR no_use_spell\n\n");
+  });
+
   test("unoffered loot is an error, not a success or chat action", async () => {
     const handle = Object.assign(attachControl(createMockHandle()), {
       takeLoot: () => {

@@ -25,7 +25,7 @@ tuicraft select-option <id> [code] | select-quest <id> | accept-quest
 tuicraft complete-quest <id> | request-reward | choose-reward <index>
 tuicraft abandon-quest <slot> | cancel-interaction
 tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <guid>
-tuicraft take-loot <slot> | take-money | release-loot
+tuicraft take-loot <slot> | take-money | release-loot | use <bag> <slot>
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
 tuicraft logs | record [--since MS] | skill | help | version
@@ -221,7 +221,7 @@ HALT on one IPC socket interrupts pending work and drops older queued
 RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
-HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT commands as well.
+HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE commands as well.
 Metadata queries and inventory/loot inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
 An enemy already attacking can continue after `halt`; stopping client actions
 does not disengage combat.
@@ -532,6 +532,24 @@ Loot mutations use the manual override path. Readonly inventory/loot inspections
 All acknowledgements are intent only. Action and inspection errors exit with status 1.
 Human mode prints `ERR`; JSON mode returns an error envelope.
 
+`tuicraft use` _bag_ _slot_
+:: Use a carried item, such as food, drink or a potion, from the bag/slot shown in
+`inventory --json` (bag 255 for backpack slots 23–38, 19–22 for equipped bags).
+Both values are decimal integers from 0 through 255. The daemon asks the server
+for the item template once, then sends `CMSG_USE_ITEM` with the item's on-use
+spell on self. It refuses `unknown_slot`, `slot_unobserved`, `empty_slot`,
+`item_entry_unobserved`, `unknown_item`, `no_use_spell`, `slot_changed`,
+`item_query_timeout` and `cast_in_progress`. `OK` is intent only.
+The result appears in `combat --json`: `lastOutcome` has `kind: "cast"`, the
+item spell id and `item` (`entry`, `bag`, `slot`, `guid`), with `status`
+`succeeded`, or `failed` with a spell cast `result` or an inventory error
+`inventoryResult` (60 means not usable in combat). Food and drink auras appear in
+`auras`, and `self.health`/`self.power` show the recovery. The stack count drops
+in `inventory --json`, and `loot --json` keeps the raw `lastInventoryError`.
+Food and drink cannot be used in combat; potions can. Sending the use stops a
+running `fight` or `cycle` like other manual actions, and otherwise leaves
+movement and auto-attack alone. A refused `use` leaves a running fight alone.
+
 `tuicraft logs`
 :: Print the raw JSONL session log to stdout. Does not accept `--json`.
 
@@ -606,7 +624,7 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
-`cancel-interaction`, `open-loot`, `take-loot`, `take-money`, and `release-loot`.
+`cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, and `use`.
 `logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
 `help`, `version`, interactive mode, and internal daemon mode.
 

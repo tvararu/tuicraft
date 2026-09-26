@@ -14,6 +14,7 @@ import {
 import { parseLevelUpInfo } from "wow/protocol/experience";
 import { parseGossipMessage } from "wow/protocol/gossip";
 import { parseInventoryChangeFailure } from "wow/protocol/inventory";
+import { parseItemQueryResponse } from "wow/protocol/item";
 import {
   parseItemPushResult,
   parseLootMoneyNotify,
@@ -236,8 +237,13 @@ export function registerLootHandlers(conn: WorldConn): void {
     conn.rewards?.receiveItemPush(push);
     conn.quests?.receiveItemPush(push);
   });
-  on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) =>
-    conn.rewards?.receiveInventoryFailure(parseInventoryChangeFailure(r)),
+  on(GameOpcode.SMSG_INVENTORY_CHANGE_FAILURE, (r) => {
+    const packet = parseInventoryChangeFailure(r);
+    conn.rewards?.receiveInventoryFailure(packet);
+    conn.combat?.applyInventoryFailure(packet);
+  });
+  on(GameOpcode.SMSG_ITEM_QUERY_SINGLE_RESPONSE, (r) =>
+    conn.itemTemplates?.receive(parseItemQueryResponse(r)),
   );
 }
 

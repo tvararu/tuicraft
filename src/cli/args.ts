@@ -108,6 +108,7 @@ export type CliAction =
   | { mode: "take_loot"; slot: number; json?: true }
   | { mode: "take_money"; json?: true }
   | { mode: "release_loot"; json?: true }
+  | { mode: "use"; bag: number; slot: number; json?: true }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -167,6 +168,7 @@ const SUBCOMMANDS = new Set([
   "take-loot",
   "take-money",
   "release-loot",
+  "use",
 ]);
 
 const FIXED = new Map<string, CliAction>([
