@@ -185,4 +185,15 @@ describe("OpcodeDispatch", () => {
     d.on(0x42, () => {});
     expect(d.has(0x42)).toBe(true);
   });
+
+  test("on() refuses a second handler and keeps the first", () => {
+    const d = new OpcodeDispatch();
+    const seen: string[] = [];
+    d.on(0x42, () => seen.push("first"));
+    expect(() => d.on(0x42, () => seen.push("second"))).toThrow(
+      "Opcode 0x42 already has a handler; compose in its owner",
+    );
+    d.handle(0x42, new PacketReader(new Uint8Array(0)));
+    expect(seen).toEqual(["first"]);
+  });
 });
