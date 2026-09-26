@@ -36,6 +36,7 @@ export function readSelfField(
     offset === PLAYER_FIELDS.COINAGE.offset ||
     offset === PLAYER_FIELDS.XP.offset ||
     offset === PLAYER_FIELDS.NEXT_LEVEL_XP.offset ||
+    offset === PLAYER_FIELDS.CHARACTER_POINTS2.offset ||
     offset === UNIT_FIELDS.LEVEL.offset ||
     SELF_RANGES.some(
       (range) => offset >= range.offset && offset < range.offset + range.size,

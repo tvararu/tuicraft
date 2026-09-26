@@ -7,7 +7,11 @@ import {
   MATRON_ARENA,
 } from "test/trainer-fixtures";
 import type { Entity } from "wow/entity-store";
-import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
+import {
+  ObjectType,
+  PLAYER_FIELDS,
+  UNIT_FIELDS,
+} from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader } from "wow/protocol/packet";
 import {
@@ -99,6 +103,47 @@ describe("trainer offer", () => {
     expect(() => f.runtime.list(MATRON_ARENA)).toThrow(
       "not an observed trainer",
     );
+  });
+
+  test("a new primary profession needs a free profession point", () => {
+    const f = fixture();
+    f.listed();
+    const jewelcrafting = {
+      spellId: 25_245,
+      usable: 0,
+      cost: 9,
+      talentPointCost: 0,
+      firstRank: 1,
+      requiredLevel: 5,
+      requiredSkill: 0,
+      requiredSkillValue: 0,
+      requiredSpells: [0, 0, 0],
+    };
+    f.runtime.receiveList({
+      guid: MATRON_ARENA,
+      trainerType: 2,
+      spells: [
+        jewelcrafting,
+        { ...jewelcrafting, spellId: 25_246, firstRank: 0 },
+      ],
+      greeting: "",
+    });
+    const states = () =>
+      f.runtime.snapshot().offer?.spells.map((s) => [s.spellId, s.state]);
+    expect(states()).toEqual([
+      [25_245, "no_profession_slot"],
+      [25_246, "available"],
+    ]);
+    const sent = f.sent.length;
+    expect(() => f.runtime.train(25_245)).toThrow(
+      "Spell is no_profession_slot",
+    );
+    expect(f.sent).toHaveLength(sent);
+    f.self.rawFields.set(PLAYER_FIELDS.CHARACTER_POINTS2.offset, 1);
+    expect(states()).toEqual([
+      [25_245, "available"],
+      [25_246, "available"],
+    ]);
   });
 });
 
