@@ -1,0 +1,49 @@
+{
+  "issue": 215,
+  "account": "FAC6AB73EC643",
+  "character": "Fgklhdomged",
+  "preset": "fresh",
+  "map": 530,
+  "giverGuids": {
+    "matronArena": "0xf130003bb40049ee",
+    "magistrixErona": "0xf130003bae004980"
+  },
+  "journal": "tmp/m215/journal.md, commands.log and packets-fix.txt (gitignored, not committed)",
+  "before": {
+    "binary": "origin/main 208db93",
+    "steps": [
+      { "at": 1790394138363, "cmd": "talk 0xf130003bb40049ee", "distanceYd": 2.6, "dialog": { "kind": "gossip", "menuId": 6649, "titleTextId": 9007, "options": [{ "optionIndex": 0, "icon": 3, "text": "I require priest training." }] } },
+      { "at": 1790394142673, "cmd": "select-option 0", "read": "[system] [tuicraft] Trainer window is not yet implemented", "pending": { "action": "selectOption", "guid": "0xf130003bb40049ee", "optionId": 0, "at": 1790394142693, "status": "unanswered" } },
+      { "at": 1790394208513, "cmd": "talk 0xf130003bae004980", "distanceYd": 2.38, "output": "ERR quest_reply_unanswered" },
+      { "at": 1790394218532, "cmd": "talk 0xf130003bae004980", "output": "ERR quest_reply_unanswered", "pending": "unchanged" },
+      { "at": 1790394222326, "cmd": "cancel-interaction", "result": "pending moved to uncertain; only now could a giver be used" }
+    ]
+  },
+  "after": {
+    "binary": "branch runtime source (277a1aa) plus an uncommitted TUICRAFT_PACKET_DUMP patch used only to capture packets",
+    "trainer": [
+      { "at": 1790394259275, "cmd": "talk 0xf130003bb40049ee", "dialog": { "kind": "gossip", "menuId": 6649, "options": [{ "optionIndex": 0, "icon": 3 }] } },
+      { "at": 1790394260815, "cmd": "select-option 0", "read": ["[quest] intent", "[quest] window unsupported_window:trainer"], "pending": null, "unresolved": [], "lastError": { "kind": "unsupported_window", "at": 1790394260848, "window": "trainer", "guid": "0xf130003bb40049ee" } },
+      { "at": 1790394282326, "cmd": "talk 0xf130003bae004980", "note": "no cancel-interaction since the trainer option", "dialog": { "kind": "gossip", "menuId": 11902, "titleTextId": 16703, "quests": [{ "questId": 8325, "icon": 2 }] } }
+    ],
+    "expiry": [
+      { "at": 1790394302103, "cmd": "talk 0xf130003bae004980", "position": "10382 -6379.56 37.69, Erona 36.02 yd", "output": "OK intent" },
+      { "at": 1790394302123, "cmd": "talk 0xf130003bae004980", "output": "ERR quest_reply_unanswered: talk 0xf130003bae004980 unanswered for 0.0s; it expires as no_reply after 5s, or run cancel-interaction" },
+      { "at": 1790394307147, "event": "QUEST expired (lifecycle) detail no_reply", "afterMs": 5025 },
+      { "at": 1790394308165, "cmd": "read", "read": ["[quest] expired no_reply"], "pending": null, "unresolved": [{ "action": "talk", "guid": "0xf130003bae004980", "at": 1790394302122, "reason": "no_reply" }] },
+      { "at": 1790394321635, "cmd": "talk 0xf130003bae004980", "distanceYd": 2.38, "note": "no cancel-interaction since the ignored talk", "dialog": { "kind": "gossip", "menuId": 11902 } }
+    ]
+  },
+  "packets": [
+    { "line": 385, "at": 1790394259293, "op": ">17b CMSG_GOSSIP_HELLO", "body": "ee4900b43b0030f1" },
+    { "line": 386, "at": 1790394259310, "op": "17d SMSG_GOSSIP_MESSAGE", "bytes": 62, "note": "menu 6649, one option icon 3" },
+    { "line": 398, "at": 1790394260835, "op": ">17c CMSG_GOSSIP_SELECT_OPTION", "body": "ee4900b43b0030f1f919000000000000" },
+    { "line": 399, "at": 1790394260848, "op": "1b1 SMSG_TRAINER_LIST", "bytes": 247, "note": "13 ms after the select; no SMSG_GOSSIP_COMPLETE followed" },
+    { "line": 907, "at": 1790394302122, "op": ">17b CMSG_GOSSIP_HELLO", "body": "804900ae3b0030f1", "note": "out of range; the next 7 s held no gossip or quest opcode" }
+  ],
+  "failuresAndWorkarounds": [
+    "goto refused most mid-isle starts with ambiguous ground column (#138); the route used a face/move waypoint chain",
+    "walk-toward the trainer returned target_stale (#136)"
+  ],
+  "outcome": "positive"
+}

@@ -340,11 +340,12 @@ export function onControlEvent(
   log.append(obj as LogEntry).catch(ignoreFailure);
 }
 
-export function onDomainEvent<E extends { type: string }>(
+export function onDomainEvent<E extends { type: string; detail?: string }>(
   tag: string,
   event: E,
   sink: { events: RingBuffer<EventEntry>; log: SessionLog },
-  text: (event: E) => string | undefined = (e) => `[${tag}] ${e.type}`,
+  text: (event: E) => string | undefined = (e) =>
+    `[${tag}] ${e.type}${e.detail === undefined ? "" : ` ${e.detail}`}`,
 ): void {
   const { events, log } = sink;
   const obj: Record<string, unknown> = {

@@ -27,7 +27,7 @@ describe("cancelling an unanswered quest request", () => {
     expect(bodies).toEqual([capturedCancel.talk, "", ""]);
     expect(runtime.snapshot().pending).toBeUndefined();
     expect(runtime.snapshot().unresolved).toEqual([
-      { action: "talk", at: 1000, guid: ERONA_GUID },
+      { action: "talk", at: 1000, guid: ERONA_GUID, reason: "cancelled" },
     ]);
   });
 

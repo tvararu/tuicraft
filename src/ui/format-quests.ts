@@ -231,8 +231,13 @@ export function formatQuestEventText(event: QuestEvent): string {
       return `[quest] intent${action ? ` ${action}` : ""}${quest}`;
     }
     default:
-      return questId === undefined
-        ? `[quest] ${type}`
-        : `[quest] ${type} ${named(state, questId)}`;
+      return plainText(event);
   }
+}
+
+function plainText({ detail, questId, state, type }: QuestEvent): string {
+  const suffix = detail === undefined ? "" : ` ${detail}`;
+  return questId === undefined
+    ? `[quest] ${type}${suffix}`
+    : `[quest] ${type} ${named(state, questId)}${suffix}`;
 }

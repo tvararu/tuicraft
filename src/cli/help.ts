@@ -74,6 +74,7 @@ USAGE
   tuicraft choose-reward <index>  Choose offered reward (zero-based 0-5)
   tuicraft abandon-quest <slot>  Request log-slot abandonment (zero-based 0-24)
   tuicraft cancel-interaction  Request close; wait for observed close
+                            Unanswered requests expire after 5s (no_reply)
                             OK is intent, not accepted/completed/rewarded state
   tuicraft inventory [--json]  Observed carried items, coinage and unknown fields
   tuicraft experience [--json]  Observed level and XP fields, last XP gain and level-up notices

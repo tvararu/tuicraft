@@ -336,7 +336,9 @@ Rules:
 - A coded option needs exactly one code argument. Quote spaces. Omitted code and empty code differ. Embedded NUL and extra arguments are rejected.
 - IPC uses `SELECT_OPTION <id> <JSON-string-or-null>`. Null or absence means no code. `""` means empty code.
 - JSON escapes prevent code text, including line breaks, from injecting another IPC command. Do not send raw unencoded code text.
-- Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` is not permission to retry.
+- Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` names the pending action and GUID; it is not permission to retry. Wait for the reply, or for the 5 s bound, or run `cancel-interaction`.
+- An unanswered request expires after 5 s: QUEST `expired no_reply`, `unresolved` gains it with `reason: "no_reply"`, and the next verb works. A late reply after that is stale; `talk` again.
+- Choosing a trainer, vendor, bank or flight-master option answers with QUEST `window unsupported_window:<kind>` and `lastError.kind` `unsupported_window`. tuicraft cannot use those windows; move on to the next giver.
 - `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
 - Auto-accept quests enter the log on `select-quest` while their details stay open. Check the log first: `accept-quest` fails with `quest_already_in_log` for a quest already there.
 - Advance by `quests --json` `.data.dialog.kind`: `gossip`/`list` → `select-quest <id>` (or `select-option <id>`); `details` → `accept-quest`; `requestItems` → `request-reward`; `offer` → `choose-reward <index>` (0 without choices).

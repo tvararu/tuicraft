@@ -2,7 +2,6 @@ import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { Entity, EntityLookup } from "wow/entity-store";
 import { readInventory } from "wow/inventory";
 import { ObjectType } from "wow/protocol/entity-fields";
-import type { GossipMessage } from "wow/protocol/gossip";
 import type { ItemPushResult } from "wow/protocol/loot";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type {
@@ -14,11 +13,7 @@ import {
   type QuestQueryResponse,
 } from "wow/protocol/quest-query";
 import type {
-  QuestgiverOfferReward,
   QuestgiverQuestComplete,
-  QuestgiverQuestDetails,
-  QuestgiverQuestList,
-  QuestgiverRequestItems,
   QuestgiverStatus,
 } from "wow/protocol/questgiver";
 import {
@@ -41,41 +36,20 @@ import {
   completeRequest,
   expectedDialog,
   positiveId,
+  QUEST_REPLY_TIMEOUT_MS,
+  type QuestAction,
+  type QuestDialog,
+  type QuestIntent,
   type QuestRequest,
+  type QuestUnresolvedReason,
+  type QuestWindow,
   questIdsVisible,
   requestRewardRequest,
   selectOptionRequest,
   selectQuestRequest,
   talkRequest,
+  unansweredError,
 } from "wow/quests-requests";
-
-export type QuestDialog =
-  | { kind: "gossip"; data: GossipMessage }
-  | { kind: "list"; data: QuestgiverQuestList }
-  | { kind: "details"; data: QuestgiverQuestDetails }
-  | { kind: "requestItems"; data: QuestgiverRequestItems }
-  | { kind: "offer"; data: QuestgiverOfferReward };
-
-export type QuestAction =
-  | "talk"
-  | "selectOption"
-  | "selectQuest"
-  | "accept"
-  | "complete"
-  | "requestReward"
-  | "chooseReward"
-  | "abandon"
-  | "cancel";
-
-export type QuestIntent = {
-  action: QuestAction;
-  at: number;
-  guid?: bigint;
-  questId?: number;
-  optionId?: number;
-  rewardIndex?: number;
-  slot?: number;
-};
 
 export type QuestQuery =
   | { questId: number; status: "unanswered"; sentAt: number }
@@ -93,10 +67,13 @@ export type QuestError = {
     | "log_full"
     | "quest_failed"
     | "failed"
-    | "timer_failed";
+    | "timer_failed"
+    | "unsupported_window";
   at: number;
   questId?: number;
   reason?: number;
+  window?: QuestWindow;
+  guid?: bigint;
 };
 
 export type QuestProgressUpdate =
@@ -114,7 +91,7 @@ export type QuestState = {
   log: QuestLog;
   queries: QuestQuery[];
   lastIntent: QuestIntent | undefined;
-  unresolved: QuestIntent[];
+  unresolved: (QuestIntent & { reason: QuestUnresolvedReason })[];
   pending: (QuestIntent & { status: "unanswered" }) | undefined;
   lastError: QuestError | undefined;
   lastProgress: QuestProgress | undefined;
@@ -138,10 +115,13 @@ export type QuestEvent = {
     | "removed"
     | "rewarded"
     | "status"
-    | "error";
+    | "error"
+    | "expired"
+    | "window";
   source: "request" | "packet" | "quest_log" | "inventory" | "lifecycle";
   state: QuestState;
   questId?: number;
+  detail?: string;
 };
 
 export type QuestDeps = {
@@ -161,7 +141,8 @@ export class QuestRuntime {
   private readonly visibleQuestIds = new WeakMap<Entity, boolean>();
   private readonly queries = new Map<number, QuestQuery>();
   private lastIntent: QuestIntent | undefined;
-  private unresolved: QuestIntent[] = [];
+  private unresolved: QuestState["unresolved"] = [];
+  private expiry: ReturnType<typeof setTimeout> | undefined;
   private pending: QuestState["pending"];
   private lastError: QuestError | undefined;
   private lastProgress: QuestProgress | undefined;
@@ -182,6 +163,11 @@ export class QuestRuntime {
   }
 
   snapshot(): QuestState {
+    this.expire();
+    return this.state();
+  }
+
+  private state(): QuestState {
     return structuredClone({
       dialog: this.dialog,
       giver: this.giver,
@@ -260,9 +246,11 @@ export class QuestRuntime {
   cancel(): void {
     this.active();
     if (this.pending?.action === "cancel")
-      throw new Error("quest_cancel_unanswered");
+      throw new Error(
+        `quest_cancel_unanswered: waiting for the server to close the dialog; it expires as no_reply after ${QUEST_REPLY_TIMEOUT_MS / 1000}s`,
+      );
     this.deps.send(GameOpcode.CMSG_QUESTGIVER_CANCEL);
-    this.leaveUnresolved();
+    this.leaveUnresolved("cancelled");
     this.dialog = undefined;
     this.lastIntent = {
       action: "cancel",
@@ -270,6 +258,7 @@ export class QuestRuntime {
       guid: this.giver,
     };
     this.pending = { ...this.lastIntent, status: "unanswered" };
+    this.arm();
     this.emit("intent", "request");
   }
 
@@ -315,7 +304,7 @@ export class QuestRuntime {
       this.dialog !== undefined ||
       this.giver !== undefined ||
       this.pending !== undefined;
-    this.leaveUnresolved();
+    this.leaveUnresolved("reset");
     this.dialog = undefined;
     this.giver = undefined;
     this.pending = undefined;
@@ -325,6 +314,7 @@ export class QuestRuntime {
   dispose(): void {
     this.disposed = true;
     this.events.clear();
+    clearTimeout(this.expiry);
     this.dialog = undefined;
     this.giver = undefined;
     this.pending = undefined;
@@ -365,22 +355,67 @@ export class QuestRuntime {
 
   private active(): void {
     if (this.disposed) throw new Error("quests_disposed");
+    this.expire();
   }
 
   private emit(
     type: QuestEvent["type"],
     source: QuestEvent["source"],
     questId?: number,
+    detail?: string,
   ): void {
     if (this.events.size > 0)
-      this.events.emit({ type, source, questId, state: this.snapshot() });
+      this.events.emit({ type, source, questId, detail, state: this.state() });
+  }
+
+  private arm(): void {
+    clearTimeout(this.expiry);
+    this.expiry = setTimeout(() => this.expire(), QUEST_REPLY_TIMEOUT_MS + 25);
+    this.expiry.unref?.();
+  }
+
+  private expire(): void {
+    const pending = this.pending;
+    if (
+      this.disposed ||
+      !pending ||
+      this.deps.now() - pending.at < QUEST_REPLY_TIMEOUT_MS
+    )
+      return;
+    this.leaveUnresolved("no_reply");
+    this.pending = undefined;
+    if (pending.action !== "abandon") {
+      this.dialog = undefined;
+      this.giver = undefined;
+    }
+    this.emit("expired", "lifecycle", pending.questId, "no_reply");
+  }
+
+  receiveWindow(guid: bigint, window: QuestWindow): void {
+    if (this.disposed) return;
+    this.expire();
+    if (this.giver !== guid) return;
+    const answered =
+      this.pending?.action === "talk" ||
+      this.pending?.action === "selectOption";
+    if (answered) this.pending = undefined;
+    this.dialog = undefined;
+    this.giver = undefined;
+    this.lastError = {
+      kind: "unsupported_window",
+      at: this.deps.now(),
+      window,
+      guid,
+    };
+    this.emit("window", "packet", undefined, `unsupported_window:${window}`);
   }
 
   private send({ opcode, body, intent }: QuestRequest): void {
-    if (this.pending) throw new Error("quest_reply_unanswered");
+    if (this.pending) throw unansweredError(this.pending, this.deps.now());
     this.deps.send(opcode, body);
     this.lastIntent = { ...intent, at: this.deps.now() };
     this.pending = { ...this.lastIntent, status: "unanswered" };
+    this.arm();
     if (intent.action !== "abandon") {
       this.dialog = undefined;
       this.giver = intent.guid;
@@ -391,6 +426,7 @@ export class QuestRuntime {
 
   openDialog(dialog: QuestDialog): void {
     if (this.disposed) return;
+    this.expire();
     const expected = this.pending;
     const wrongQuest =
       expected?.questId !== undefined &&
@@ -419,7 +455,7 @@ export class QuestRuntime {
     this.dialog = undefined;
     this.giver = undefined;
     if (this.pending?.action !== "abandon") {
-      this.leaveUnresolved();
+      this.leaveUnresolved("closed");
       this.pending = undefined;
     }
     this.emit("closed", "packet");
@@ -482,10 +518,10 @@ export class QuestRuntime {
     this.emit("error", "packet", error.questId);
   }
 
-  private leaveUnresolved(): void {
+  private leaveUnresolved(reason: QuestUnresolvedReason): void {
     if (!this.pending || this.pending.action === "cancel") return;
     const { status: _status, ...intent } = this.pending;
-    this.unresolved.push(intent);
+    this.unresolved.push({ ...intent, reason });
   }
 
   private resolve(action: QuestAction, questId: number): void {

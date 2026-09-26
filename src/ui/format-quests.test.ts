@@ -96,8 +96,8 @@ describe("text quests", () => {
         ],
         log: log(slot(0, 8326)),
         unresolved: [
-          { action: "accept", at: 1, questId: 8326 },
-          { action: "talk", at: 2, guid: GIVER },
+          { action: "accept", at: 1, questId: 8326, reason: "cancelled" },
+          { action: "talk", at: 2, guid: GIVER, reason: "no_reply" },
         ],
       }),
     );
@@ -259,6 +259,15 @@ describe("quest read lines", () => {
       ...overrides,
     });
   }
+
+  test("append a bound or window detail", () => {
+    expect(event({ detail: "no_reply", type: "expired" })).toBe(
+      "[quest] expired no_reply",
+    );
+    expect(
+      event({ detail: "unsupported_window:trainer", type: "window" }),
+    ).toBe("[quest] window unsupported_window:trainer");
+  });
 
   test("name the quest and its facts", () => {
     expect(event({ questId: 8325, type: "accepted" })).toBe(

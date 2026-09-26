@@ -18,6 +18,9 @@ const ERONA = 15_278;
 const QUEST = 8325;
 const SUNSTRIDER_START = ".go xyz 10349.6 -6357.29 33.4026 530";
 const OUT_OF_REACH = ".go xyz 10382 -6379.56 37.69 530";
+const ARENA = 15_284;
+const NEAR_ARENA = ".go xyz 10369.5 -6429.4 38.6 530";
+const TRAINER_ICON = 3;
 
 async function reachErona(handle: WorldHandle) {
   await waitUntil(() => handle.getQuestState().log.complete);
@@ -87,6 +90,65 @@ describe("quest dialog", () => {
       expect(handle.getQuestState().unresolved).toMatchObject([
         { action: "talk", guid: erona.guid },
       ]);
+    } finally {
+      handle.close();
+      await handle.closed;
+    }
+  }, 60_000);
+
+  test("a trainer window answers the option and the next giver talks", async () => {
+    const handle = await worldSession(config1, await authHandshake(config1));
+    try {
+      await reachErona(handle);
+      handle.sendWhisper(config1.character, NEAR_ARENA);
+      await waitUntil(() =>
+        handle.getNearbyEntities().some((e) => e.entry === ARENA),
+      );
+      await Bun.sleep(2000);
+      const arena = must(
+        handle.getNearbyEntities().find((e) => e.entry === ARENA),
+      );
+      handle.talk(arena.guid);
+      await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");
+      const menu = must(handle.getQuestState().dialog);
+      if (menu.kind !== "gossip") throw new Error(menu.kind);
+      const training = must(
+        menu.data.options.find((option) => option.icon === TRAINER_ICON),
+      );
+      handle.selectGossipOption(training.optionIndex);
+      await waitUntil(() => handle.getQuestState().pending === undefined);
+      expect(handle.getQuestState().lastError).toMatchObject({
+        guid: arena.guid,
+        kind: "unsupported_window",
+        window: "trainer",
+      });
+      const erona = await reachErona(handle);
+      handle.talk(erona.guid);
+      await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");
+    } finally {
+      handle.close();
+      await handle.closed;
+    }
+  }, 60_000);
+
+  test("an ignored talk expires as no_reply and the next talk works", async () => {
+    const handle = await worldSession(config1, await authHandshake(config1));
+    try {
+      const erona = await reachErona(handle);
+      handle.sendWhisper(config1.character, OUT_OF_REACH);
+      await Bun.sleep(3000);
+      handle.talk(erona.guid);
+      expect(() => handle.talk(erona.guid)).toThrow("cancel-interaction");
+      await waitUntil(() => handle.getQuestState().pending === undefined);
+      expect(handle.getQuestState().unresolved.at(-1)).toMatchObject({
+        action: "talk",
+        guid: erona.guid,
+        reason: "no_reply",
+      });
+      handle.sendWhisper(config1.character, SUNSTRIDER_START);
+      await Bun.sleep(3000);
+      handle.talk(erona.guid);
+      await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");
     } finally {
       handle.close();
       await handle.closed;
