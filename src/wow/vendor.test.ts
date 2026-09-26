@@ -260,6 +260,50 @@ describe("buying", () => {
     expect(() => f.runtime.buy(29)).toThrow("not offered");
   });
 
+  test("a listed-0 good bounds its charge by gold pricing", () => {
+    const f = fixture();
+    const good = {
+      slot: 1,
+      itemId: 5051,
+      displayId: 0,
+      stock: null,
+      price: 0,
+      maxDurability: 0,
+      buyCount: 1,
+    };
+    f.runtime.list(MARNIEL);
+    f.runtime.receiveInventory({
+      guid: MARNIEL,
+      items: [
+        { ...good, extendedCost: 0 },
+        { ...good, slot: 2, itemId: 29_434, extendedCost: 2_587 },
+      ],
+      emptyReason: undefined,
+    });
+    f.runtime.buy(1, 3);
+    expect(f.runtime.snapshot().pending).toMatchObject({
+      minPrice: 0,
+      maxPrice: 2,
+    });
+    f.runtime.receiveBuyItem({
+      vendorGuid: MARNIEL,
+      slot: 1,
+      stock: null,
+      count: 3,
+    });
+    f.runtime.buy(2, 3);
+    f.runtime.receiveBuyItem({
+      vendorGuid: MARNIEL,
+      slot: 2,
+      stock: null,
+      count: 3,
+    });
+    expect(f.runtime.snapshot().lastOutcome).toMatchObject({
+      status: "confirmed",
+      request: { itemId: 29_434, minPrice: 0, maxPrice: 0 },
+    });
+  });
+
   test("buy failures and bag errors name the reason", () => {
     const f = fixture();
     f.listed();

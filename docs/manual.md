@@ -923,7 +923,9 @@ unlimited), `buyCount`, `maxDurability`, `displayId` and `extendedCost`.
 and `moneyDelta`. A buy `request.count` counts purchases, not items; one
 purchase gives the good's `buyCount` items. A buy request's `minPrice` and
 `maxPrice` bound the copper charged: `price * count` up to
-`price * count + count - 1`, equal for a single purchase.
+`price * count + count - 1`, equal for a single purchase. A good listed at 0
+copper that has an `extendedCost` has `maxPrice` 0; one without can still
+cost up to `count - 1` copper.
 
 `tuicraft open-vendor` _guid_
 :: Ask an observed creature with the vendor NPC flag for its goods

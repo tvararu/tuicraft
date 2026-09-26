@@ -271,7 +271,9 @@ export class VendorRuntime {
       itemId: good.itemId,
       count,
       minPrice: good.price * count,
-      maxPrice: good.price * count + (good.price > 0 ? count - 1 : 0),
+      maxPrice:
+        good.price * count +
+        (good.price > 0 || good.extendedCost === 0 ? count - 1 : 0),
       answer: undefined,
     });
   }
