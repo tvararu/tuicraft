@@ -108,10 +108,14 @@ progress; `needs:pm` without `ready` → Blocked; `agent:review`,
 `agent:reviewing`, `agent:merging` or `agent:landing` → In review;
 `agent:rework` or `ready` → Ready. An issue with no other label (none,
 or only `qa:found` or `p1`) keeps its Status, or goes to Backlog if it is
-not on the board yet.
-It then removes the legacy labels from every issue, deletes them from the
-repo, and closes the open `Reaper: … held` issues with a comment. Later
-runs find nothing to migrate.
+not on the board yet. It then removes the legacy labels from every issue,
+deletes them from the repo, and closes the open `Reaper: … held` issues
+with a comment. Later runs find nothing to migrate.
+
+Orca keeps its own copy of each role's prompt, so run
+`bun src/factory/main.ts setup automations --apply` from the runner clone
+once the change lands. Until then the old prompts look for labels that no
+longer exist and stop without changing anything.
 
 ## Landing
 
