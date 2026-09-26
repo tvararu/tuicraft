@@ -39,11 +39,12 @@ function runtimeFor(gitDir: string): string {
 async function launch(
   cwd: string,
   prompt: string,
-  xdg: Record<string, string> = {},
+  extra: Record<string, string> = {},
 ): Promise<Launch> {
   const env = gitEnv();
   delete env["XDG_CONFIG_HOME"];
   delete env["XDG_STATE_HOME"];
+  delete env["ORCA_OMP_STATUS_EXTENSION"];
   const proc = Bun.spawn([launcher, prompt], {
     cwd,
     env: {
@@ -51,7 +52,7 @@ async function launch(
       HOME: home,
       PATH: `${home}/bin:${Bun.env["PATH"]}`,
       XDG_RUNTIME_DIR: `${home}/run`,
-      ...xdg,
+      ...extra,
     },
     stderr: "pipe",
     stdout: "pipe",
@@ -194,5 +195,31 @@ describe("omp-factory", () => {
     await launch(other, "[factory:qa] go");
     await expect(stat(dead)).rejects.toThrow();
     expect((await stat(`${live}/.factory-gitdir`)).isDirectory()).toBe(true);
+  });
+
+  test("passes Orca's omp status extension to role and plain launches", async () => {
+    const extension = `${home}/orca-agent-status.ts`;
+    await writeFile(extension, "export default function () {}\n");
+    for (const prompt of ["[factory:qa] go", "plain prompt"]) {
+      const plain = (await launch(other, prompt)).args;
+      const { args } = await launch(other, prompt, {
+        ORCA_OMP_STATUS_EXTENSION: extension,
+      });
+      const at = args.indexOf("--extension");
+      expect(args[at + 1]).toBe(extension);
+      expect(args.toSpliced(at, 2)).toEqual(plain);
+      expect(args.at(-1)).toBe(prompt);
+    }
+  });
+
+  test("adds no extension when Orca's file is missing", async () => {
+    const missing = { ORCA_OMP_STATUS_EXTENSION: `${home}/missing.ts` };
+    for (const prompt of ["[factory:qa] go", "plain prompt"]) {
+      const plain = (await launch(other, prompt)).args;
+      expect((await launch(other, prompt, missing)).args).toEqual(plain);
+    }
+    expect((await launch(other, "plain prompt")).args).toEqual([
+      "plain prompt",
+    ]);
   });
 });

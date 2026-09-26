@@ -31,8 +31,12 @@ each in a fresh `auto-*` worktree, from the runner clone
 runner's wrapper that `bun src/factory/main.ts setup wrapper --apply`
 installs, so the wrapper and its `omp-factory.yml` follow `main`. The wrapper
 passes that file as `--config` to factory roles, so they run with omp memory
-and autolearn off. Prompts are in `src/factory/prompts/`. Every role starts
-with `bun src/factory/main.ts precheck <role>` and stops on exit 1.
+and autolearn off. Like Orca's own `omp` shell function, it passes
+`--extension "$ORCA_OMP_STATUS_EXTENSION"` to every launch when that file
+exists, so omp panes report working, idle and done to Orca once its "Agent
+status hooks" setting is on. Prompts are in `src/factory/prompts/`. Every
+role starts with `bun src/factory/main.ts precheck <role>` and stops on
+exit 1.
 
 Orca keeps its own copy of each role's prompt. Every reaper pass, run from
 the freshly reset runner clone, edits the prompt of any role automation whose
