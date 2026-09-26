@@ -143,6 +143,7 @@ export function fakeLoot(config: {
       lastRelease,
       loot,
       pending: undefined,
+      rolls: { last: undefined, pending: [] },
     };
   }
 

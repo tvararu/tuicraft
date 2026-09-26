@@ -127,3 +127,109 @@ function readItem(r: PacketReader): LootItem {
     slotType,
   };
 }
+
+export const ROLL_VOTES = ["pass", "need", "greed", "disenchant"] as const;
+export type RollVote = (typeof ROLL_VOTES)[number];
+
+export type LootStartRoll = {
+  guid: bigint;
+  mapId: number;
+  slot: number;
+  itemId: number;
+  randomSuffix: number;
+  randomPropertyId: number;
+  count: number;
+  countdownMs: number;
+  voteMask: number;
+};
+export type LootRollNotice = {
+  guid: bigint;
+  slot: number;
+  player: bigint;
+  itemId: number;
+  randomSuffix: number;
+  randomPropertyId: number;
+  rollNumber: number;
+  vote: number;
+  autoPass: boolean;
+};
+export type LootRollWon = {
+  guid: bigint;
+  slot: number;
+  itemId: number;
+  randomSuffix: number;
+  randomPropertyId: number;
+  winner: bigint;
+  rollNumber: number;
+  vote: number;
+};
+export type LootAllPassed = {
+  guid: bigint;
+  slot: number;
+  itemId: number;
+  randomPropertyId: number;
+  randomSuffix: number;
+};
+
+export function buildLootRoll(
+  guid: bigint,
+  slot: number,
+  vote: RollVote,
+): Uint8Array {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  w.uint32LE(slot);
+  w.uint8(ROLL_VOTES.indexOf(vote));
+  return w.finish();
+}
+
+export function parseLootStartRoll(r: PacketReader): LootStartRoll {
+  return {
+    guid: r.uint64LE(),
+    mapId: r.uint32LE(),
+    slot: r.uint32LE(),
+    itemId: r.uint32LE(),
+    randomSuffix: r.uint32LE(),
+    randomPropertyId: r.uint32LE() | 0,
+    count: r.uint32LE(),
+    countdownMs: r.uint32LE(),
+    voteMask: r.uint8(),
+  };
+}
+
+export function parseLootRoll(r: PacketReader): LootRollNotice {
+  return {
+    guid: r.uint64LE(),
+    slot: r.uint32LE(),
+    player: r.uint64LE(),
+    itemId: r.uint32LE(),
+    randomSuffix: r.uint32LE(),
+    randomPropertyId: r.uint32LE() | 0,
+    rollNumber: r.uint8(),
+    vote: r.uint8(),
+    autoPass: r.uint8() !== 0,
+  };
+}
+
+export function parseLootRollWon(r: PacketReader): LootRollWon {
+  return {
+    guid: r.uint64LE(),
+    slot: r.uint32LE(),
+    itemId: r.uint32LE(),
+    randomSuffix: r.uint32LE(),
+    randomPropertyId: r.uint32LE() | 0,
+    winner: r.uint64LE(),
+    rollNumber: r.uint8(),
+    vote: r.uint8(),
+  };
+}
+
+export function parseLootAllPassed(r: PacketReader): LootAllPassed {
+  return {
+    guid: r.uint64LE(),
+    slot: r.uint32LE(),
+    itemId: r.uint32LE(),
+    randomPropertyId: r.uint32LE() | 0,
+    randomSuffix: r.uint32LE(),
+  };
+}

@@ -5,6 +5,8 @@ import {
   type GotoTarget,
   type MovementDirection,
   parseFramingVariant,
+  ROLL_VOTES,
+  type RollVote,
   type WalkTarget,
 } from "wow";
 
@@ -232,6 +234,21 @@ export function parseBuy(
   if (slot === undefined) return fail("invalid vendor slot");
   const count = parseUnsigned(rawCount, 1, 255);
   return count === undefined ? fail("invalid buy count") : ok({ count, slot });
+}
+
+export function parseLootRoll(
+  tokens: string[],
+): Parsed<{ guid: bigint; slot: number; vote: RollVote }> {
+  const [rawGuid, rawSlot, vote] = tokens;
+  if (tokens.length !== 3 || rawGuid === undefined || rawSlot === undefined)
+    return fail("invalid loot roll");
+  const guid = parseGuid(rawGuid);
+  if (guid === undefined || guid === 0n) return fail("invalid guid");
+  const slot = parseUnsigned(rawSlot, 0, MAX_UINT32);
+  if (slot === undefined) return fail("invalid loot slot");
+  const choice = ROLL_VOTES.find((name) => name === vote);
+  if (!choice) return fail("invalid roll vote");
+  return ok({ guid, slot, vote: choice });
 }
 
 export function parseOptionId(raw: string | undefined): number | undefined {

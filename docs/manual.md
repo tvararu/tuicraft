@@ -31,6 +31,7 @@ tuicraft take-loot <slot> | take-money | release-loot | use <bag> <slot>
 tuicraft trainer [--json] | open-trainer <guid> | train <spell-id>
 tuicraft vendor [--json] | open-vendor <guid> | sell <bag> <slot> [count]
 tuicraft buy <vendor-slot> [count] | repair
+tuicraft loot-roll <guid> <slot> need|greed|pass
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
 tuicraft logs | record [--since MS] | skill | help | version
@@ -782,6 +783,13 @@ If no full response follows in that time, as with an out-of-range rejection, the
 An opening whose corpse despawns or leaves view fails the same way with `loot_source_unavailable`, and one interrupted by your own death or a world change with `self_unavailable`.
 Human `loot` prints `Last open failed:` with the reason. The next `open-loot` clears it and needs no reconnect. There is no automatic retry.
 
+`tuicraft loot-roll` _guid_ _slot_ `need`|`greed`|`pass`
+:: Answer a pending group loot roll. In a party on group loot, the first open of a corpse starts a roll for every item at or above the threshold (uncommon by default). Each eligible member near the corpse gets it, whether or not they opened the corpse.
+Such items show `slotType` 1 in the loot offer and cannot be taken directly. `loot --json` lists them in `rolls.pending`, each with the server's roll `guid`, `corpseGuid` when known, `slot`, `itemId`, `count`, `countdownMs`, `remainingMs`, `allowed` roll types, your sent `choice`, and the observed `votes` of every member.
+_guid_ is the roll `guid`, or the `corpseGuid` if one is shown. AzerothCore sends a roll id, not the corpse, so `corpseGuid` is only known once your own loot window for that corpse lists the item as rolling. A member who did not open the corpse must use the roll `guid`.
+The command refuses a roll that is not pending, one you already answered, and a roll type that is not in `allowed`. OK is intent. The server answers with vote and roll notices, then `rolls.last` records `won` with the `winner`, `mine`, the winning `rolled` number and `winnerChoice`, or `all_passed`; `myChoice` is what you answered. The winner's item goes straight to their bags; confirm it with `inventory`.
+Unanswered rolls resolve when the server's countdown (60 s) ends, as passes. Rolls disappear from `pending` 30 s after their countdown if no result arrives. Human `loot` prints each pending roll and the last result. REWARDS events `loot_roll_started`, `loot_roll_requested`, `loot_roll_observed`, `loot_roll_won` and `loot_roll_all_passed` carry the same state.
+
 Loot mutations use the manual override path. Readonly inventory/loot inspections do not change control ownership.
 
 `tuicraft trainer` [`--json`]
@@ -973,7 +981,7 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
 `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`,
-`use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, and `repair`.
+`loot-roll`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, and `repair`.
 `logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
 `help`, `version`, interactive mode, and internal daemon mode.
 

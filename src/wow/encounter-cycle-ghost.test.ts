@@ -225,6 +225,7 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
       lastItemPush: undefined,
       lastMoneyNotice: undefined,
       lastRelease: undefined,
+      rolls: { last: undefined, pending: [] },
       disposed: false,
     });
     const listeners = new Emitter<[RewardsEvent]>();

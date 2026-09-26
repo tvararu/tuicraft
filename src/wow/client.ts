@@ -47,6 +47,7 @@ import type { NavigationObservation } from "wow/navigation-observation";
 import type { NearbyQuery, NearbyRow } from "wow/nearby";
 import type { PartyChange, PartyLoot, PartyState } from "wow/party-store";
 import type { WhoResult } from "wow/protocol/chat";
+import type { RollVote } from "wow/protocol/loot";
 import { Language } from "wow/protocol/opcodes";
 import type { QuestEvent, QuestState } from "wow/quests";
 import type { RecoveryEvent, RecoveryState } from "wow/recovery";
@@ -274,6 +275,7 @@ export type WorldHandle = {
   takeLootMoney: () => void;
   releaseLoot: () => void;
   useItem: (bag: number, slot: number) => Promise<void>;
+  rollLoot: (guid: bigint, slot: number, vote: RollVote) => void;
   onRewardsEvent: (cb: (event: RewardsEvent) => void) => Unsubscribe;
   startCycle: (
     guids: bigint[],
