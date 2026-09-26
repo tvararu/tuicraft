@@ -179,6 +179,7 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
       control.selectTarget(guid);
     },
     halt() {
+      rt.defense.disarm("halt");
       rt.tactics.stop("halt");
       rt.cycle.stop("halt");
       rt.recovery.clearSpiritHealer("halt");

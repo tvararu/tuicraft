@@ -191,6 +191,24 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
   } satisfies Partial<WorldHandle>;
 }
 
+export function defenseMethods(conn: WorldConn, rt: Runtimes) {
+  const { defense } = rt;
+  return {
+    armDefense(instruction) {
+      defense.arm(instruction);
+    },
+    disarmDefense() {
+      defense.disarm("command");
+    },
+    getDefenseState() {
+      return defense.snapshot();
+    },
+    onDefenseEvent(cb) {
+      return conn.events.defense.subscribe(cb);
+    },
+  } satisfies Partial<WorldHandle>;
+}
+
 export function cycleMethods(conn: WorldConn, rt: Runtimes) {
   const { cycle } = rt;
   return {

@@ -78,6 +78,7 @@ export type { QuestDialog, QuestIntent } from "wow/quests-requests";
 export type { RecoveryEvent, RecoveryState } from "wow/recovery";
 export type { RemotePose } from "wow/remote-motion";
 export type { RewardsEvent, RewardsState } from "wow/rewards";
+export type { DefenseEvent, DefenseState } from "wow/self-defense";
 export type { SpellDefinition } from "wow/spell-catalog";
 export {
   DEFAULT_FIGHT_INSTRUCTION,

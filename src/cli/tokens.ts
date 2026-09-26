@@ -426,3 +426,15 @@ export function parseCycleResume(tokens: string[]): Parsed<CycleResumeArgs> {
   if (!instruction.ok) return instruction;
   return ok({ instruction: instruction.value, maxStarts });
 }
+
+export type DefendArgs = { enabled: boolean; instruction?: string };
+
+export function parseDefend(tokens: string[]): Parsed<DefendArgs> {
+  const [state, ...words] = tokens;
+  if (state === "off")
+    return words.length === 0 ? ok({ enabled: false }) : fail("invalid defend");
+  if (state !== "on") return fail("invalid defend");
+  const instruction = oneLine(words.join(" "));
+  if (!instruction.ok) return instruction;
+  return ok({ enabled: true, instruction: instruction.value });
+}

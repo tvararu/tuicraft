@@ -74,6 +74,9 @@ export type IpcCommand =
     }
   | { type: "cycle_resume"; instruction?: string; maxStarts?: number }
   | { type: "cycling" }
+  | { type: "defend"; enabled: boolean; instruction?: string }
+  | { type: "defense" }
+  | { type: "defense_json" }
   | { type: "cycling_json" }
   | { type: "goto"; target: GotoTarget }
   | { type: "navigation" }

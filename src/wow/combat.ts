@@ -121,6 +121,7 @@ export type CombatEventType =
   | "cast_interrupted"
   | "attack_started"
   | "attack_stopped"
+  | "attacked"
   | "aura"
   | "xp"
   | "level_up"
@@ -185,6 +186,12 @@ export class CombatRuntime {
     if (!this.incomingAttackers.has(guid)) return false;
     const entity = this.deps.getEntity(guid);
     return !(isUnit(entity) && entity.health === 0);
+  }
+
+  attackers(): bigint[] {
+    return [...this.incomingAttackers].filter((guid) =>
+      this.isAttackingSelf(guid),
+    );
   }
 
   snapshot(selected = this.deps.selectedGuid()): CombatState {
@@ -445,6 +452,7 @@ export class CombatRuntime {
       this.emit("attack_started");
     } else if (packet.victim === this.deps.selfGuid()) {
       this.incomingAttackers.add(packet.attacker);
+      this.emit("attacked");
     }
   }
 

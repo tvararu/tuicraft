@@ -1,5 +1,6 @@
 import { describe, expect, jest, test } from "bun:test";
-import { dispatchCommand, type EventEntry, writeLines } from "daemon/commands";
+import { dispatchCommand, type EventEntry } from "daemon/commands";
+import { writeLines } from "daemon/event-wait";
 import { RingBuffer } from "lib/ring-buffer";
 import {
   attachControl,

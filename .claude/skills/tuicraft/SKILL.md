@@ -47,9 +47,9 @@ Without separate directories the second `start` finds the first daemon and repor
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`, `vendor`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `defense`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`, `vendor`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
-- Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
+- Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `defend`, `goto`.
 - Recovery, quest, loot, item, trainer, and vendor actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, `repair`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
@@ -241,6 +241,9 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft cycle --resume [--instruction ...] [--max N] [--json]
     tuicraft cycle --quest <logged-quest-id> [--source <creature-entry>...] [--max N] [--json]
     tuicraft cycling [--json]
+    tuicraft defend on [instruction...]
+    tuicraft defend off
+    tuicraft defense [--json]
     tuicraft goto <x> <y> [<grounded-z>] | <observed-creature-guid>
     tuicraft navigation [--json]
 
@@ -263,6 +266,7 @@ Rules:
 - Inspect `cycling --json` for `phase`, per-target `queue` status/cause/loot, `instruction`, `startsUsed`, `resumes`, `lastRecovery`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `target_death_unconfirmed`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_denied:release_only`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
 - `lastLoot.slotsTaken` records requested slots, `moneyTaken` records offered money, and before/after coinage is observed when known. None of these proves item storage. Check raw inventory slot/count changes before claiming a gain.
 - `cycle --resume` continues a stopped cycle from the first target at or after `currentIndex` that is still `queued`: a fight halted mid-way is fought again, a `done` target (halt during loot) is not. `--instruction` replaces the instruction for the remaining targets (omit it to keep the old one); `--max` sets the cap for the resumed run, and `startsUsed` restarts at 0. It works after any stop cause, emits a `resumed` CYCLE event, increments `resumes`, and fails with `cycle_active` or `cycle_nothing_to_resume`. While dead or a ghost it recovers first even with no queued target left (then stops `queue_exhausted`), so a failed recovery on the last target can be resumed. It repairs nothing else: after a non-`halt` stop, check `nearby` and `recovery` before resuming.
+- `defend on [instruction...]` arms opt-in self-defence (off by default, not persisted). While armed, if a live creature attacks the character, the character is alive, and nothing owns combat or movement (no cycle, fight/tactics run, manual movement lease or route), it engages the attacker: Jev tactics with the instruction when a Jev key is set, otherwise face and auto-attack. `halt` ends it and disarms it (`disarmReason: "halt"`; re-arm with `defend on`). A manual command, `cycle`, or `cycle --resume` ends it with `manual_override`, and `fight` ends it with `replaced`. It then leaves that attacker alone while the attacker keeps attacking, so it never fights a new owner. `defend off` disarms with reason `command`. DEFENSE events: `armed`, `started` (`attacker`), `stopped` (`attacker`, `reason`), `disarmed` (`reason`). `defense --json` shows `armed`, `mode`, `active`, `engagements`, `yielded`, `lastStop`, `disarmReason`. `record` counts them under `defense`.
 - Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`, in `data.state`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes two or three finite coordinates. It is not a named-place planner. Without Z, the daemon takes the destination height from the native ground column; a multi-floor column refuses with `refusal=pick_destination` before any movement, so pick other coordinates. With Z, it must match the one ground height there. Prefer the two-coordinate form over copying `nearby` Z. A new `goto` during an active route redirects it: the old route stops with CONTROL `movement_stopped` reason `navigation_replaced` and the new route plans from the stopped pose. A refused redirect leaves the character stopped.
@@ -273,7 +277,7 @@ Rules:
 - `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column at destination`, choose a destination with one ground height. `ambiguous ground column at start` (for example inside a building) needs a move to open ground first; `at route` needs another destination or waypoint. `refusal=unreachable` means the navigation mesh cannot reach that destination; choose another one and never retry it. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. `JEV_ENDPOINT_URL` (fallback `TYPESAFE_ENDPOINT_URL`) overrides the Jev endpoint. `JEV_FAULT` (`delay:<ms>`, `http:<status>`, `transport`) injects test faults and shows as `fault` in `tactics --json`; never set it for real play. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables and the environment variables.
 
-IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLE_RESUME, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
+IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLE_RESUME, CYCLING, CYCLING_JSON, DEFEND on|off, DEFENSE, DEFENSE_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
 
 ## Ordinary death recovery
 
@@ -311,7 +315,7 @@ IPC: RECOVERY, RECOVERY_JSON, QUERY_CORPSE, RELEASE_SPIRIT, RECLAIM_CORPSE, SPIR
 
 - Prints one JSON object (not an envelope; no daemon needed; rejects `--json`) derived from the CYCLE, TACTICS and RECOVERY events in the session log at or after `--since` epoch ms.
 - `cycles[]`: one entry per `cycle` start or `cycle --resume`, with `kind`, `instruction`, per-target `status`/`cause`/`outcome`/`loot`, `recoveries`, `startsUsed`, `stopCause`, `stopDetail`.
-- Totals: `fights` (runs started, outcomes by status and reason, lone `fight` runs included), `completions` (`targetsDone`, `serverKillCredit`), `blocked` (`targetsSkipped`, `skipsByCause`, and `cycleStops` for any stop other than `queue_exhausted`, `max_starts_reached`, `halt`, `manual_override`), `recoveries` (`deaths`, `recovered`, `byOutcome`), `interventions[]` (`halt`, `manual_override`, `resume`, `instruction_change` with `at` and `scope`), `staleActions` (discarded Jev results by reason).
+- Totals: `fights` (runs started, outcomes by status and reason, lone `fight` runs included), `completions` (`targetsDone`, `serverKillCredit`), `blocked` (`targetsSkipped`, `skipsByCause`, and `cycleStops` for any stop other than `queue_exhausted`, `max_starts_reached`, `halt`, `manual_override`), `recoveries` (`deaths`, `recovered`, `byOutcome`), `interventions[]` (`halt`, `manual_override`, `resume`, `instruction_change` with `at` and `scope` `cycle`, `fight` or `defense`), `staleActions` (discarded Jev results by reason), `defense` (`armed`, `started`, `stoppedByReason`, `disarmedByReason`).
 - `latency`: `loopRatePerSec` (requests per active tactics second, with `meanRequestMs` and `p95RequestMs`) and `decisionRatePerSec` (requests that offered any candidate other than `wait`/`cancel`, counted in `decisionRequests`, per active second; `appliedDecisions` and `appliedWaits` alongside). Quote both together; the loop rate alone is not the decision cadence.
 - A target resumed across runs counts once. GM and chat commands are not in these events; record them yourself.
 

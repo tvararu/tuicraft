@@ -21,6 +21,7 @@ import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import type { RemotePose } from "wow/remote-motion";
 import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
+import { SelfDefense } from "wow/self-defense";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 import { type VendorEvent, VendorRuntime } from "wow/vendor";
 import { createWorldEvents } from "wow/world-events";
@@ -103,7 +104,22 @@ export function createMockHandle(): MockHandle {
   });
   const unanswered = () => ({ name: null, quality: null });
 
+  const defense = new SelfDefense({
+    alive: () => true,
+    attack: () => {},
+    attackers: () => [],
+    face: () => {},
+    jev: () => false,
+    now: runtimeDeps.now,
+    owner: () => undefined,
+    tactics: {
+      snapshot: () => tacticsState,
+      start: async () => {},
+      stop: () => {},
+    },
+  });
   const events = createWorldEvents();
+  defense.onEvent((event) => events.defense.emit(event));
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -118,6 +134,7 @@ export function createMockHandle(): MockHandle {
     activateSpiritHealer: jest.fn(),
     addFriend: jest.fn(),
     addIgnore: jest.fn(),
+    armDefense: jest.fn((instruction: string) => defense.arm(instruction)),
     attack: jest.fn(),
     buyItem: jest.fn(),
     cancelCast: jest.fn(),
@@ -129,12 +146,14 @@ export function createMockHandle(): MockHandle {
     completeQuest: jest.fn(),
     declineGuildInvite: jest.fn(),
     declineInvite: jest.fn(),
+    disarmDefense: jest.fn(() => defense.disarm("command")),
     face: jest.fn(),
     faceGuid: jest.fn(),
     getChannel: jest.fn(),
     getCombatState: jest.fn(() => combat.snapshot()),
     getControlState: jest.fn((): ControlState => controlState),
     getCycleState: jest.fn(() => cycle.snapshot()),
+    getDefenseState: jest.fn(() => defense.snapshot()),
     getExperienceState: jest.fn(() => ({
       lastLevelUp: undefined,
       lastXp: undefined,
@@ -204,6 +223,9 @@ export function createMockHandle(): MockHandle {
     },
     onCycleEvent(cb) {
       return cycle.onEvent(cb);
+    },
+    onDefenseEvent(cb) {
+      return events.defense.subscribe(cb);
     },
     onDuelEvent(cb) {
       return events.duel.subscribe(cb);
