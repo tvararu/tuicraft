@@ -9,8 +9,9 @@ import {
   appearBeside,
   daemonSock,
   dist2d,
-  type GpsFix,
-  parseGps,
+  gps,
+  SUNSTRIDER_SPAWN,
+  standAt,
   waitForEntityEvent,
   waitForGroupEvent,
   waitUntil,
@@ -168,13 +169,17 @@ describe("fault paths", () => {
     const auth1 = await authHandshake(config1);
     const handle1 = await worldSession(config1, auth1);
     const daemon = await daemonSock(handle1, "teleport");
-    const chat: ChatMessage[] = [];
     const control: ControlEvent[] = [];
-    handle1.onMessage((m) => chat.push(m));
     handle1.onControlEvent((e) => control.push(e));
 
-    let before: GpsFix | undefined;
+    let restore: (() => Promise<void>) | undefined;
     try {
+      const excursion = await standAt(
+        handle1,
+        config1.character,
+        SUNSTRIDER_SPAWN,
+      );
+      restore = excursion.restore;
       await Bun.sleep(2000);
       const hpA = handle1.getCombatState().self.health;
       await Bun.sleep(5000);
@@ -182,21 +187,11 @@ describe("fault paths", () => {
       expect(stateA.attacking).toBe(false);
       expect(stateA.self.health).toBe(hpA);
 
-      chat.length = 0;
-      handle1.sendWhisper(config1.character, ".gps");
-      await Bun.sleep(2500);
-      before = parseGps(chat);
-      expect(before).toBeDefined();
-
       handle1.sendWhisper(config1.character, ".tele FairbreezeVillage");
       await Bun.sleep(8000);
 
-      chat.length = 0;
-      handle1.sendWhisper(config1.character, ".gps");
-      await Bun.sleep(2500);
-      const after = parseGps(chat);
-      expect(after).toBeDefined();
-      expect(dist2d(must(before), must(after))).toBeGreaterThan(100);
+      const after = await gps(handle1, config1.character);
+      expect(dist2d(excursion.start, after)).toBeGreaterThan(100);
 
       expect(control.some((e) => e.type === "control_error")).toBe(false);
 
@@ -205,13 +200,7 @@ describe("fault paths", () => {
       const move = await sendToSocket("MOVE forward 500", daemon.sock);
       expect(move).toEqual(["OK"]);
     } finally {
-      if (before) {
-        handle1.sendWhisper(
-          config1.character,
-          `.go xyz ${before.x} ${before.y} ${before.z} ${before.map}`,
-        );
-        await Bun.sleep(2500);
-      }
+      await restore?.();
       await daemon.close();
     }
   }, 90_000);
@@ -225,7 +214,14 @@ describe("fault paths", () => {
     handle1.onMessage((m) => chat.push(m));
     handle1.onControlEvent((e) => control.push(e));
 
+    let restore: (() => Promise<void>) | undefined;
     try {
+      const excursion = await standAt(
+        handle1,
+        config1.character,
+        SUNSTRIDER_SPAWN,
+      );
+      restore = excursion.restore;
       await Bun.sleep(2000);
       const vitals = handle1.getCombatState().self;
       expect(vitals.health).toBe(vitals.maxHealth);
@@ -235,20 +231,12 @@ describe("fault paths", () => {
       await Bun.sleep(2500);
       expect(chat.some((m) => /froze player/.test(m.message))).toBe(true);
 
-      chat.length = 0;
-      handle1.sendWhisper(config1.character, ".gps");
-      await Bun.sleep(2500);
-      const held = parseGps(chat);
-      expect(held).toBeDefined();
+      const held = await gps(handle1, config1.character);
       const moveHeld = await sendToSocket("MOVE forward 500", daemon.sock);
       expect(moveHeld[0]).not.toMatch(/^ERR internal/);
       await Bun.sleep(1000);
-      chat.length = 0;
-      handle1.sendWhisper(config1.character, ".gps");
-      await Bun.sleep(2500);
-      const heldAfter = parseGps(chat);
-      expect(heldAfter).toBeDefined();
-      expect(dist2d(must(held), must(heldAfter))).toBeLessThan(1.5);
+      const heldAfter = await gps(handle1, config1.character);
+      expect(dist2d(held, heldAfter)).toBeLessThan(1.5);
 
       handle1.sendWhisper(config1.character, ".unfreeze");
       await Bun.sleep(2500);
@@ -259,6 +247,7 @@ describe("fault paths", () => {
       const status = await sendToSocket("STATUS", daemon.sock);
       expect(status).toEqual(["CONNECTED"]);
     } finally {
+      await restore?.();
       await daemon.close();
     }
   }, 90_000);

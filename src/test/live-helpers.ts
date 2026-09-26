@@ -9,15 +9,35 @@ import type {
   GroupEvent,
   WorldHandle,
 } from "wow/client";
+import type { Position } from "wow/entity-store";
 
-export type GpsFix = { map: number; x: number; y: number; z: number };
+export type GpsFix = {
+  map: number;
+  x: number;
+  y: number;
+  z: number;
+  orientation: number;
+};
 
-type GpsPos = { x: number; y: number; z: number };
+export type Spot = Omit<GpsFix, "orientation"> & { orientation?: number };
+
+export const SUNSTRIDER_SPAWN: Spot = {
+  map: 530,
+  orientation: 5.316_05,
+  x: 10_349.6,
+  y: -6357.29,
+  z: 33.4026,
+};
+
+type GpsPos = Omit<GpsFix, "map">;
 
 function parseGpsPos(msg: string): GpsPos | undefined {
-  const posMatch = msg.match(/X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+)/);
+  const posMatch = msg.match(
+    /X: (-?[\d.]+) Y: (-?[\d.]+) Z: (-?[\d.]+) Orientation: (-?[\d.]+)/,
+  );
   if (!posMatch) return undefined;
   return {
+    orientation: Number.parseFloat(must(posMatch[4])),
     x: Number.parseFloat(must(posMatch[1])),
     y: Number.parseFloat(must(posMatch[2])),
     z: Number.parseFloat(must(posMatch[3])),
@@ -30,7 +50,7 @@ function parseGpsMap(msg: string): number | undefined {
   return Number.parseInt(must(mapMatch[1]), 10);
 }
 
-export function parseGps(messages: ChatMessage[]): GpsFix | undefined {
+function parseGps(messages: ChatMessage[]): GpsFix | undefined {
   let map: number | undefined;
   let pos: GpsPos | undefined;
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -43,8 +63,63 @@ export function parseGps(messages: ChatMessage[]): GpsFix | undefined {
   return { map, ...pos };
 }
 
-export function dist2d(a: GpsFix, b: GpsFix): number {
+export function dist2d(a: Spot, b: Spot): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+export function near(
+  pose: Position | undefined,
+  spot: Spot,
+  yards: number,
+): boolean {
+  return (
+    pose?.mapId === spot.map &&
+    Math.hypot(pose.x - spot.x, pose.y - spot.y) < yards
+  );
+}
+
+export function goXyz({ map, x, y, z, orientation }: Spot): string {
+  return [".go xyz", x, y, z, map, orientation]
+    .filter((part) => part !== undefined)
+    .join(" ");
+}
+
+export async function gps(handle: WorldHandle, self: string): Promise<GpsFix> {
+  const chat: ChatMessage[] = [];
+  const unsubscribe = handle.onMessage((m) => chat.push(m));
+  try {
+    handle.sendWhisper(self, ".gps");
+    await waitUntil(() => parseGps(chat) !== undefined);
+    return must(parseGps(chat));
+  } finally {
+    unsubscribe();
+  }
+}
+
+function returnTo(
+  handle: WorldHandle,
+  self: string,
+  home: GpsFix,
+): () => Promise<void> {
+  return async () => {
+    handle.sendWhisper(self, goXyz(home));
+    await Bun.sleep(2500);
+  };
+}
+
+export async function standAt(
+  handle: WorldHandle,
+  self: string,
+  spot: Spot,
+): Promise<{ start: GpsFix; restore: () => Promise<void> }> {
+  const home = await gps(handle, self);
+  handle.sendWhisper(self, goXyz(spot));
+  await waitUntil(() => near(handle.getControlState().serverPose, spot, 1));
+  const start = await gps(handle, self);
+  if (start.map !== spot.map || dist2d(start, spot) >= 1) {
+    throw new Error(`${goXyz(spot)} left the character at ${goXyz(start)}`);
+  }
+  return { restore: returnTo(handle, self, home), start };
 }
 
 export async function appearBeside(
@@ -52,20 +127,10 @@ export async function appearBeside(
   self: string,
   target: string,
 ): Promise<() => Promise<void>> {
-  const chat: ChatMessage[] = [];
-  handle.onMessage((m) => chat.push(m));
-  handle.sendWhisper(self, ".gps");
-  await Bun.sleep(2500);
-  const home = must(parseGps(chat));
+  const home = await gps(handle, self);
   handle.sendWhisper(self, `.appear ${target}`);
   await Bun.sleep(2500);
-  return async () => {
-    handle.sendWhisper(
-      self,
-      `.go xyz ${home.x} ${home.y} ${home.z} ${home.map}`,
-    );
-    await Bun.sleep(2500);
-  };
+  return returnTo(handle, self, home);
 }
 
 export async function daemonSock(

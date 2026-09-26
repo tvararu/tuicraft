@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { parseGps, waitUntil } from "test/live-helpers";
+import { type Spot, standAt, waitUntil } from "test/live-helpers";
 import { must } from "test/must";
 import { authHandshake } from "wow/auth";
-import { type ChatMessage, worldSession } from "wow/client";
+import { worldSession } from "wow/client";
 
 const config1 = {
   account: Bun.env["WOW_ACCOUNT_1"] ?? "",
@@ -15,24 +15,21 @@ const config1 = {
 
 const MARNIEL_AMBERLIGHT = 15_397;
 const REFRESHING_SPRING_WATER = 159;
-const BESIDE_MARNIEL = ".go xyz 8703.9 -6640.7 72.75 530";
+const BESIDE_MARNIEL: Spot = { map: 530, x: 8703.9, y: -6640.7, z: 72.75 };
 
 test("vendor: buy water and sell it back, each confirmed by coinage", async () => {
   const handle = await worldSession(config1, await authHandshake(config1));
-  const chat: ChatMessage[] = [];
-  handle.onMessage((m) => chat.push(m));
-  handle.sendWhisper(config1.character, ".gps");
-  await Bun.sleep(2500);
-  const home = must(parseGps(chat));
   const settled = (action: string) =>
     waitUntil(() => {
       const { lastOutcome, pending } = handle.getVendorState();
       return pending === undefined && lastOutcome?.action === action;
     });
+  let restore: (() => Promise<void>) | undefined;
   try {
     handle.sendWhisper(config1.character, ".modify money 100");
     await waitUntil(() => (handle.getInventoryState().coinage ?? 0) >= 100);
-    handle.sendWhisper(config1.character, BESIDE_MARNIEL);
+    const excursion = await standAt(handle, config1.character, BESIDE_MARNIEL);
+    restore = excursion.restore;
     await waitUntil(() =>
       handle.getNearbyEntities().some((e) => e.entry === MARNIEL_AMBERLIGHT),
     );
@@ -71,11 +68,7 @@ test("vendor: buy water and sell it back, each confirmed by coinage", async () =
     expect(sold).toMatchObject({ status: "confirmed" });
     expect(must(sold.moneyDelta)).toBeGreaterThan(0);
   } finally {
-    handle.sendWhisper(
-      config1.character,
-      `.go xyz ${home.x} ${home.y} ${home.z} ${home.map}`,
-    );
-    await Bun.sleep(2500);
+    await restore?.();
     handle.close();
     await handle.closed;
   }
