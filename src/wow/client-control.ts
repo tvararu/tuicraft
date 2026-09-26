@@ -216,6 +216,7 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
           control: control.snapshot(),
           entities: conn.entityStore.all(),
           now: Date.now(),
+          observedPosition: (guid) => rt.combat.observedPosition(guid),
           remotePoses: conn.remoteMotion.all(),
         },
         query,

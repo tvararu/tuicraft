@@ -292,6 +292,7 @@ export function createMockHandle(): MockHandle {
           control: handle.getControlState(),
           entities: handle.getNearbyEntities(),
           now: Date.now(),
+          observedPosition: (guid) => combat.observedPosition(guid),
           remotePoses: handle.getRemotePoses(),
         },
         query,

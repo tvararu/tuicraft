@@ -1,6 +1,5 @@
 import { formatGuid } from "ui/format";
 import {
-  type Entity,
   type GameObjectEntity,
   type NearbyRow,
   ObjectType,
@@ -19,10 +18,10 @@ function objectTypeName(type: ObjectType): string {
   }
 }
 
-function formatPosition(position: Entity["position"]): string {
-  return position
-    ? ` at ${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}`
-    : "";
+function formatPosition({ position, positionKind }: NearbyRow): string {
+  if (!position) return "";
+  const predicted = positionKind === "predicted" ? " (predicted)" : "";
+  return ` at ${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}${predicted}`;
 }
 
 function formatSpatial(p: NearbyRow): string {
@@ -51,12 +50,12 @@ export function formatNearbyLine(p: NearbyRow): string {
     const kind = objectTypeName(entity.objectType);
     const level = unit.level > 0 ? `, level ${unit.level}` : "";
     const hp = `HP ${unit.health}/${unit.maxHealth}`;
-    const pos = formatPosition(p.position);
+    const pos = formatPosition(p);
     return `${name} (${kind}${level}) ${hp}${pos} ${guid}${spatial}`;
   }
   if (entity.objectType === ObjectType.GAMEOBJECT) {
     const name = entity.name ?? "Unknown";
-    const pos = formatPosition(p.position);
+    const pos = formatPosition(p);
     return `${name} (GameObject)${pos} ${guid}${spatial}`;
   }
   return `Entity ${guid} (${objectTypeName(entity.objectType)})${spatial}`;
@@ -97,10 +96,26 @@ function formatRemotePose(
   };
 }
 
+function formatRowPosition(p: NearbyRow): Record<string, unknown> {
+  const { position, positionObservedAt } = p;
+  if (!position) return {};
+  return {
+    mapId: position.mapId,
+    orientation: position.orientation,
+    positionAgeMs:
+      positionObservedAt === null ? null : p.preparedAt - positionObservedAt,
+    positionKind: p.positionKind,
+    positionObservedAt,
+    positionSource: p.positionSource,
+    x: position.x,
+    y: position.y,
+    z: position.z,
+  };
+}
+
 export function formatNearbyObj(p: NearbyRow): Record<string, unknown> {
   const {
     entity,
-    position,
     self,
     distance,
     horizontalDistance,
@@ -141,13 +156,7 @@ export function formatNearbyObj(p: NearbyRow): Record<string, unknown> {
   if (entity.objectType === ObjectType.GAMEOBJECT) {
     obj["gameObjectType"] = (entity as GameObjectEntity).gameObjectType;
   }
-  if (position) {
-    obj["x"] = position.x;
-    obj["y"] = position.y;
-    obj["z"] = position.z;
-    obj["mapId"] = position.mapId;
-    obj["orientation"] = position.orientation;
-  }
+  Object.assign(obj, formatRowPosition(p));
   if (p.remotePose)
     obj["remotePose"] = formatRemotePose(p.remotePose, p.preparedAt);
   return obj;

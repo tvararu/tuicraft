@@ -143,12 +143,17 @@ function registerMeleeHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_LEVELUP_INFO, (r) =>
     conn.combat?.applyLevelUp(parseLevelUpInfo(r)),
   );
-  on(GameOpcode.SMSG_MONSTER_MOVE, (r) =>
-    conn.combat?.applyMonsterMove(
-      parseMonsterMove(r),
-      conn.control?.currentMapId() ?? 0,
-    ),
-  );
+  on(GameOpcode.SMSG_MONSTER_MOVE, (r) => {
+    const move = parseMonsterMove(r);
+    const mapId = conn.control?.currentMapId() ?? 0;
+    const orientation = conn.entityStore.get(move.guid)?.position?.orientation;
+    conn.entityStore.setPosition(move.guid, {
+      mapId,
+      ...move.start,
+      orientation: orientation ?? 0,
+    });
+    conn.combat?.applyMonsterMove(move, mapId);
+  });
 }
 
 export function registerQuestHandlers(conn: WorldConn): void {

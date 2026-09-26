@@ -45,6 +45,7 @@ function sources(
     control: { pose: selfPose, selfGuid: SELF },
     entities,
     now: NOW,
+    observedPosition: () => undefined,
     remotePoses,
   };
 }

@@ -33,9 +33,11 @@ JSONL envelopes from `tail --json` for scripting
 halt through the CLI. `control` separates the current pose (server-observed
 or predicted) from the last server observation, and requested selection from
 the observed target. Relogin confirms ordinary movement.
-`nearby` reports 3D/XY distance and facing from the current pose, and
-`nearby --json` adds each other player's received movement (`remotePose`):
-exact flags, mover time and age, never extrapolated.
+`nearby` reports 3D/XY distance and facing from the current pose, placing
+chased creatures along their latest monster-move path, and
+`nearby --json` marks each position's source, observation time and whether
+it is predicted. It adds each other player's received movement
+(`remotePose`): exact flags, mover time and age, never extrapolated.
 Ground refusals give conservative next steps, not automatic detours.
 Combat, routing, and cycle commands also exist.
 
@@ -121,7 +123,7 @@ tuicraft read --wait 5     # read unread events (XP, loot, cast failures), wait 
 tuicraft send "/roll" --wait 5 # events after the roll; older unread stay
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
-tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin; JSON remotePose for players
+tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin; JSON position source/age, remotePose for players
 tuicraft move forward 1000 [--json] # walk 1-10000ms (default 1000); left/right strafe; needs navigation data; ERR <reason> if it cannot start
 tuicraft face 1.57         # facing in radians; turning and moving keep auto-attack running
 tuicraft face-guid 0xabc   # face a currently observed entity on this map, e.g. to keep meleeing it

@@ -30,7 +30,7 @@ USAGE
   tuicraft target <guid>     Request target (uint64 hex/decimal; 0 clears)
   tuicraft halt              Cancel motion, cast, attack, tactics, cycle
                             Drop older queued mutations on this socket; not sent requests
-  tuicraft nearby [--all] [--json]  Nearby 3D/XY distance and facing from current pose; JSON adds remotePose (flags, age) for other players
+  tuicraft nearby [--all] [--json]  Nearby 3D/XY distance and facing from current pose; JSON adds position source/age and remotePose (flags, age) for other players
   tuicraft combat [--json]   Combat summary: vitals, target, auras, cooldowns
   tuicraft spells [--json]   Learned spellbook
                             After reconnect, run once if all learned spells appear in unknownLearned

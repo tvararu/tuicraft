@@ -18,8 +18,17 @@ export type UnitMotion = {
   unsupportedReason?: string;
 };
 
+export type PositionSource = "update_object" | "movement" | "monster_move";
+
+export type ObservedPosition = {
+  pose: CombatPose;
+  source: PositionSource;
+  observedAt: number;
+};
+
 type Motion = {
   observed: CombatPose;
+  source: PositionSource;
   trajectory?: SplineTrajectory;
   startedAt: number;
   unsupportedReason?: string;
@@ -33,10 +42,16 @@ export class MotionStore {
     this.now = now;
   }
 
-  observe(guid: bigint, position: Position, spline?: CreateSpline): void {
+  observe(
+    guid: bigint,
+    position: Position,
+    spline?: CreateSpline,
+    source: PositionSource = "update_object",
+  ): void {
     const now = this.now();
     this.set(guid, {
       observed: { ...position, source: "server", updatedAt: now },
+      source,
       trajectory: spline && createTrajectory(spline, position.orientation),
       startedAt: now - (spline?.elapsed ?? 0),
       unsupportedReason:
@@ -56,11 +71,16 @@ export class MotionStore {
       updatedAt: now,
     };
     if (packet.kind === "stop") {
-      this.motions.set(packet.guid, { observed, startedAt: now });
+      this.motions.set(packet.guid, {
+        observed,
+        source: "monster_move",
+        startedAt: now,
+      });
       return;
     }
     this.set(packet.guid, {
       observed,
+      source: "monster_move",
       trajectory: pathTrajectory(packet),
       startedAt: now,
       unsupportedReason:
@@ -93,6 +113,16 @@ export class MotionStore {
   serverPose(guid: bigint): CombatPose | undefined {
     const observed = this.motions.get(guid)?.observed;
     return observed ? { ...observed } : undefined;
+  }
+
+  observation(guid: bigint): ObservedPosition | undefined {
+    const motion = this.motions.get(guid);
+    if (!motion) return undefined;
+    return {
+      pose: this.pose(guid) ?? { ...motion.observed },
+      source: motion.source,
+      observedAt: motion.observed.updatedAt,
+    };
   }
 
   motion(guid: bigint): UnitMotion | undefined {

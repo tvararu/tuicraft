@@ -195,7 +195,10 @@ Its 3D distance is zero even if neither position is known. Its XY
 distance is `null` only if neither position is known. `originSource`
 identifies `predicted`, `server`, or fallback `self_entity`;
 `originUpdatedAt` is `null` for the fallback.
-Other entities use last observed positions. The result does
+Other entities use their latest observed position: a creature that
+`SMSG_MONSTER_MOVE` sent running is placed along its server path, the
+same position the tactics observation uses, and `positionKind` says
+`predicted` for that. The result does
 not verify a route. Move in bounded legs and read a new observation.
 
 IPC verbs on the daemon socket. The socket is `$XDG_RUNTIME_DIR/tuicraft/sock` when `XDG_RUNTIME_DIR` is set, else `${TMPDIR:-/tmp}/tuicraft-<uid>/sock`. The `nc` examples below use:
@@ -704,6 +707,10 @@ Rules:
 | `z` | World Z coordinate in yards. |
 | `mapId` | The map **this client was on when the entity was parsed**, stamped onto every entity by `handleUpdateObject`. It is not a per-entity property the server states, so do not treat it as authority for where an entity is. It differs from the player's current map only for entities left over from a previous map. |
 | `orientation` | Facing angle in radians. |
+| `positionSource` | Where the position came from: `update_object` (spawn or object update), `movement` (a player's `MSG_MOVE_*` broadcast), `monster_move` (`SMSG_MONSTER_MOVE`, including compressed moves), or `control` (the self row's control pose). |
+| `positionKind` | `observed` for a position the server sent, `predicted` for one sampled along the last monster-move path (or the self row's predicted pose). A finished path stays `predicted` at its end until a new observation. |
+| `positionObservedAt` | Local ms time of the observation behind the position, or `null` when unknown. |
+| `positionAgeMs` | Milliseconds since `positionObservedAt`, or `null`. |
 | `gameObjectType` | Numeric GameObject type (e.g. 11 transport, 19 mailbox), present on gameobjects. Initialized to `0` at create time until `CMSG_GAMEOBJECT_QUERY` resolves. |
 | `remotePose` | Other players only, when movement was received. Last received pose, never extrapolated: `x`, `y`, `z`, `orientation`, `mapId`, exact `flags` and `extraFlags` (unknown bits kept, `null` if the block had none), `moverTime` (mover's clock), `receivedAt` (local ms), `ageMs`, `source` (`observer`, `create`, `update`), `motion` (`moving`, `stationary`, or `null`) and `invalid` (`null`, or why the pose is not usable ground movement: flag problems, transport/flying/falling/swimming/spline modes, `teleport`, `knockback`, `time_skipped`, `malformed`, `transfer`, `map_changed`, `dead`). The last five keep the old position and `receivedAt`. |
 
