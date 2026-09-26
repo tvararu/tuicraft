@@ -63,7 +63,9 @@ describe("nextStepFor", () => {
     expect(hint).toContain("Move about 10 yards off this spot");
     expect(hint).toContain("nearer grounded waypoint");
     expect(
-      nextStepFor("replan_refused: pathfind_find_height failed (UNKNOWN_HEIGHT)"),
+      nextStepFor(
+        "replan_refused: pathfind_find_height failed (UNKNOWN_HEIGHT)",
+      ),
     ).toContain("refused a new route from the stopped pose");
   });
 
