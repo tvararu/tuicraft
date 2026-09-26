@@ -45,6 +45,7 @@ USAGE
   tuicraft cycle --quest <id> [--source <entry>...] [--max N] [--json]  Pick targets from a logged quest's objectives until the log slot completes
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
   tuicraft goto <x> <y> [<z>] [--json]  Walk a ground route; Z defaults to the unique ground height
+                            A goto during a route replaces it (reason navigation_replaced)
   tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
   tuicraft release-spirit     Request release from observed dead state

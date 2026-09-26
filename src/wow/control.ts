@@ -253,8 +253,8 @@ export class ControlRuntime extends ControlSync {
     this.emit("target_requested");
   }
 
-  halt(): void {
-    this.stopMoving("halt", true);
+  halt(reason = "halt"): void {
+    this.stopMoving(reason, true);
   }
 
   dispose(): void {

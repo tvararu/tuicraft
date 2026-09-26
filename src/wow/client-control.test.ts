@@ -31,7 +31,7 @@ function fixture(columns: (x: number, y: number) => number[]) {
     { dataPath: "data", libraryPath: "lib" },
     () => ground(columns),
   );
-  const override = jest.fn();
+  const override = jest.fn((reason?: string) => control.runtime.halt(reason));
   const rt = {
     control: control.runtime,
     navigation: () => navigation,
@@ -99,5 +99,55 @@ describe("goTo without Z", () => {
     });
     f.handle.goTo(start.x + 5, start.y, 70.34);
     expect(f.runtime.navigationState().active).toBe(true);
+  });
+});
+
+describe("goTo redirect", () => {
+  test("replacing an active route stops it with navigation_replaced and plans from the stopped pose", () => {
+    jest.useFakeTimers();
+    try {
+      const f = fixture(() => [70.34]);
+      const start = must(f.runtime.snapshot().pose);
+      f.handle.goTo(start.x + 20, start.y);
+      f.advance(1000);
+      const midway = must(f.runtime.snapshot().pose);
+      expect(midway.x).toBeGreaterThan(start.x + 6);
+      f.events.length = 0;
+      f.handle.goTo(midway.x, start.y + 10);
+      expect(f.override).toHaveBeenLastCalledWith("navigation_replaced");
+      expect(
+        f.events.map((event) => [event.type, event.reason ?? null]),
+      ).toContainEqual(["movement_stopped", "navigation_replaced"]);
+      expect(f.events.at(-2)?.type).toBe("movement_started");
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: true,
+        destination: { x: midway.x, y: start.y + 10 },
+      });
+      expect(must(f.runtime.navigationState().remaining)).toBeCloseTo(
+        Math.hypot(midway.y - (start.y + 10), 0),
+        1,
+      );
+      f.advance(3000);
+      expect(f.runtime.navigationState()).toMatchObject({
+        active: false,
+        remaining: 0,
+      });
+      expect(f.runtime.snapshot().pose).toMatchObject({
+        x: midway.x,
+        y: start.y + 10,
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("an idle goto halts with the ordinary reason", () => {
+    const f = fixture(() => [70.34]);
+    const start = must(f.runtime.snapshot().pose);
+    f.handle.goTo(start.x + 5, start.y);
+    expect(f.override).toHaveBeenLastCalledWith(undefined);
+    expect(
+      f.events.some((event) => event.reason === "navigation_replaced"),
+    ).toBe(false);
   });
 });

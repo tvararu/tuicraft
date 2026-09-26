@@ -41,7 +41,7 @@ export type Runtimes = {
   navigation: () => Navigation;
   observedTarget: (guid: bigint) => NavPoint;
   halt: () => void;
-  override: () => void;
+  override: (reason?: string) => void;
   dispose: (sendStop: boolean) => void;
 };
 
@@ -310,10 +310,10 @@ export function createRuntimes(
   };
   const { combat, actions } = createCombat(conn, runtimeDeps, lazy, control);
   const prepareCatalog = (): Promise<void> => loadCatalog(config, lazy, combat);
-  function rawHalt(): void {
+  function rawHalt(reason = "halt"): void {
     if (lazy.disposed) return;
     control.setMode("none");
-    control.halt();
+    control.halt(reason);
     combat.halt();
   }
   const tactics = createTactics(conn, config, {
@@ -342,11 +342,11 @@ export function createRuntimes(
     prepareCatalog,
     navigation: getNavigation,
     observedTarget: (guid) => findObservedTarget(conn, parts, guid),
-    halt: rawHalt,
-    override(): void {
+    halt: () => rawHalt(),
+    override(reason): void {
       cycle.stop("manual_override");
       tactics.stop("manual_override");
-      rawHalt();
+      rawHalt(reason);
     },
     dispose(sendStop: boolean): void {
       if (lazy.disposed) return;

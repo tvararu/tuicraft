@@ -91,3 +91,53 @@ on account FAC6AB7908B33, deleted afterwards. The transcript is
   `control_error`.
 - After relogin, the server pose was
   (8764.7099609375, -6683.06982421875, 69.78932189941406).
+
+## Slice 4: repeat and redirect (issue #124), 2026-09-26
+
+Transcript: [repeat-redirect-transcript.txt](repeat-redirect-transcript.txt).
+Every `goto` below omitted Z (slice 1). After each arrival the daemon was
+stopped and started again, and `control --json` read the server login pose.
+
+### One known route, three times
+
+The route runs from A = (8709.46, -6671.76) to B = (8764.71, -6683.07),
+56.4 yards over open ground south of the Fairbreeze inn. Between runs the
+character walked back from B to A along the same route, and those returns
+also arrived and were relogged. Each run ended with `navigation --json`
+reading `active: false, remaining: 0, blockedReason: null`. Its CONTROL
+events were exactly `facing_changed`, `movement_started`,
+`control_changed`, `movement_stopped` (reason `arrived`) and
+`control_changed` (`arrived`).
+
+| Run    | Relogin pose after arrival (server)                    |
+| ------ | ------------------------------------------------------ |
+| 1 A→B  | (8764.7099609375, -6683.06982421875, 69.78932189941406) |
+| 1 B→A  | (8709.4599609375, -6671.759765625, 70.33597564697266)   |
+| 2 A→B  | (8764.7099609375, -6683.06982421875, 69.78932189941406) |
+| 2 B→A  | (8709.4599609375, -6671.759765625, 70.33597564697266)   |
+| 3 A→B  | (8764.7099609375, -6683.06982421875, 69.78932189941406) |
+| 3 B→A  | (8709.4599609375, -6671.759765625, 70.33597564697266)   |
+
+The `remaining` values fell by about 7 yards per 1-second poll in every
+run. That matches the observed run speed of 7.
+
+### Redirect mid-route
+
+From A, `goto 8764.71 -6683.07` started toward B. `navigation --json`
+read `remaining` 45.87 and then 35.35. Then
+`goto 8744.35 -6687.06` replaced it. The CONTROL events, with the pose in
+each event, were:
+
+| Event              | Reason                | Pose                              |
+| ------------------ | --------------------- | --------------------------------- |
+| `movement_started` |                       | (8709.46, -6671.76, 70.34)        |
+| `movement_stopped` | `navigation_replaced` | (8730.5065, -6676.0682, 69.7542)  |
+| `facing_changed`   |                       | (8730.5065, -6676.0682, 69.7542)  |
+| `movement_started` |                       | (8730.5065, -6676.0682, 69.7542)  |
+| `movement_stopped` | `arrived`             | (8744.35, -6687.06, 69.9506)      |
+
+The new route started from the stopped pose. Its first `remaining`,
+17.6766, equals the horizontal distance from (8730.5065, -6676.0682) to
+the new destination. The run then read `remaining` 10.67 and 3.66, then
+`active: false, remaining: 0`. The relogin pose was
+(8744.349609375, -6687.06005859375, 69.95060729980469), `source: "server"`.
