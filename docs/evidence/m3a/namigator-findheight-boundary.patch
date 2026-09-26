@@ -1,0 +1,40 @@
+--- a/pathfind/Map.cpp	2026-09-26 00:17:30.978104519 +0000
++++ b/pathfind/Map.cpp	2026-09-26 00:17:30.978328627 +0000
+@@ -11,6 +11,7 @@
+ #include "utility/Ray.hpp"
+ 
+ #include <algorithm>
++#include <cfloat>
+ #include <cassert>
+ #include <cmath>
+ #include <cstdint>
+@@ -846,9 +847,26 @@
+     // if we reach here, it means we have a path and know the poly ref for
+     // the poly where the ray hit.  so let's use that reference and query
+     // the height at the requested x,y.
+-    if (m_navQuery.getPolyHeight(hit.path[hit.pathCount - 1], recastTarget,
+-                                 &z) != DT_SUCCESS)
+-        return false;
++    auto const endRef = hit.path[hit.pathCount - 1];
++    if (m_navQuery.getPolyHeight(endRef, recastTarget, &z) != DT_SUCCESS)
++    {
++        // raycast() reports the ray end as inside the final polygon when the
++        // target lies on that polygon's boundary (dtIntersectSegmentPoly2D is
++        // boundary-inclusive, hit.t == FLT_MAX), but getPolyHeight() gates on
++        // dtPointInPolygon(), which is half-open and rejects some boundary
++        // vertices/edges.  When the ray did reach the target, read the height
++        // at the closest point of that polygon, which is the target itself.
++        if (hit.t != FLT_MAX)
++            return false;
++
++        float closest[3];
++        if (dtStatusFailed(m_navQuery.closestPointOnPoly(endRef, recastTarget,
++                                                         closest, nullptr)) ||
++            dtVdist2DSqr(closest, recastTarget) > 1e-6f)
++            return false;
++
++        z = closest[1];
++    }
+ 
+     auto const tile = GetTile(x, y);
+ 
