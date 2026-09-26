@@ -219,7 +219,7 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft cycle --resume [--instruction ...] [--max N] [--json]
     tuicraft cycle --quest <logged-quest-id> [--source <creature-entry>...] [--max N] [--json]
     tuicraft cycling [--json]
-    tuicraft goto <x> <y> [<grounded-z>]
+    tuicraft goto <x> <y> [<grounded-z>] | <observed-creature-guid>
     tuicraft navigation [--json]
 
 Rules:
@@ -245,9 +245,10 @@ Rules:
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes two or three finite coordinates. It is not a named-place planner. Without Z, the daemon takes the destination height from the native ground column; a multi-floor column refuses with `refusal=pick_destination` before any movement, so pick other coordinates. With Z, it must match the one ground height there. Prefer the two-coordinate form over copying `nearby` Z. A new `goto` during an active route redirects it: the old route stops with CONTROL `movement_stopped` reason `navigation_replaced` and the new route plans from the stopped pose. A refused redirect leaves the character stopped.
 - `goto` needs one ground height at the start and the destination. Along the route it accepts surfaces overhead (more than 1.6 yards up) or below, and refuses surfaces within 1.6 yards above and steps over 1 yard (`ambiguous ground column at route`).
+- `goto <guid>` plans once to the ground under an observed creature and does not follow it. If the creature disappears (despawn or out of range) during the route, it stops with `blockedReason=target_lost`; nothing replans. Pick a current target from `nearby --json` before trying again.
 - JSON GUIDs are `0x` hex. Predicted poses use `source=predicted`.
 - `spells` requires spell data. `fight` requires spell/faction data and a Jev key. `goto` requires navigation data and its native library. Missing prerequisites return ERR; inspection errors also exit with status 1. Do not retry as if the request succeeded. With `--json`, the error is an envelope on stdout.
-- `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column at destination`, choose a destination with one ground height. `ambiguous ground column at start` (for example inside a building) needs a move to open ground first; `at route` needs another destination or waypoint. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
+- `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column at destination`, choose a destination with one ground height. `ambiguous ground column at start` (for example inside a building) needs a move to open ground first; `at route` needs another destination or waypoint. `refusal=unreachable` means the navigation mesh cannot reach that destination; choose another one and never retry it. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. `JEV_ENDPOINT_URL` (fallback `TYPESAFE_ENDPOINT_URL`) overrides the Jev endpoint. `JEV_FAULT` (`delay:<ms>`, `http:<status>`, `transport`) injects test faults and shows as `fault` in `tactics --json`; never set it for real play. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables and the environment variables.
 
 IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLE_RESUME, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.

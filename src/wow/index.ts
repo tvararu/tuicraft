@@ -4,6 +4,7 @@ export type {
   ChatMode,
   ClientConfig,
   DuelEvent,
+  GotoTarget,
   GroupEvent,
   WalkTarget,
   WorldHandle,

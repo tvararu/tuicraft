@@ -159,7 +159,11 @@ describe("daemon JSON arguments", () => {
         mode: "cycle",
       },
     ],
-    [["goto", "1.5", "2", "3"], { mode: "goto", x: 1.5, y: 2, z: 3 }],
+    [
+      ["goto", "1.5", "2", "3"],
+      { mode: "goto", target: { kind: "point", x: 1.5, y: 2, z: 3 } },
+    ],
+    [["goto", "0xa"], { mode: "goto", target: { guid: 10n, kind: "guid" } }],
     [["query-corpse"], { mode: "query_corpse" }],
     [["release-spirit"], { mode: "release_spirit" }],
     [["reclaim-corpse"], { mode: "reclaim_corpse" }],
@@ -202,9 +206,7 @@ describe("daemon JSON arguments", () => {
     expect(parseArgs(["goto", "1", "--json", "2", "3"])).toEqual({
       json: true,
       mode: "goto",
-      x: 1,
-      y: 2,
-      z: 3,
+      target: { kind: "point", x: 1, y: 2, z: 3 },
     });
     expect(parseArgs(["move", "forward", "--json"])).toEqual({
       direction: "forward",

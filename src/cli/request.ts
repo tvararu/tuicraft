@@ -1,5 +1,6 @@
 import type { CliAction } from "cli/args";
 import { formatGuid } from "ui/format";
+import type { GotoTarget } from "wow";
 
 const INSPECTIONS = [
   "control",
@@ -89,6 +90,13 @@ function cycleArgs(
   ];
 }
 
+function gotoArgs(target: GotoTarget): Arg[] {
+  if (target.kind === "guid") return [target.guid];
+  return target.z === undefined
+    ? [target.x, target.y]
+    : [target.x, target.y, target.z];
+}
+
 function requestArgs(action: Request): Arg[] {
   switch (action.mode) {
     case "move":
@@ -120,9 +128,7 @@ function requestArgs(action: Request): Arg[] {
     case "cycle_resume":
       return cycleArgs(action);
     case "goto":
-      return action.z === undefined
-        ? [action.x, action.y]
-        : [action.x, action.y, action.z];
+      return gotoArgs(action.target);
     case "query_quest":
     case "select_quest":
     case "complete_quest":

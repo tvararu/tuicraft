@@ -44,8 +44,10 @@ USAGE
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
   tuicraft cycle --quest <id> [--source <entry>...] [--max N] [--json]  Pick targets from a logged quest's objectives until the log slot completes
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
-  tuicraft goto <x> <y> [<z>] [--json]  Walk a ground route; Z defaults to the unique ground height
+  tuicraft goto <x> <y> [<z>]|<guid> [--json]  Walk a ground route; Z defaults to the unique ground height
                             A goto during a route replaces it (reason navigation_replaced)
+                            <guid>: once to an observed creature; stops target_lost if it disappears
+                            refusal=unreachable: the mesh cannot reach it; never retried
   tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
   tuicraft release-spirit     Request release from observed dead state

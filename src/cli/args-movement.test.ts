@@ -135,16 +135,18 @@ describe("parseArgs", () => {
     );
     expect(parseArgs(["goto", "1.5", "2", "3"])).toEqual({
       mode: "goto",
-      x: 1.5,
-      y: 2,
-      z: 3,
+      target: { kind: "point", x: 1.5, y: 2, z: 3 },
     });
     expect(parseArgs(["goto", "1.5", "-2"])).toEqual({
       mode: "goto",
-      x: 1.5,
-      y: -2,
+      target: { kind: "point", x: 1.5, y: -2 },
     });
-    expect(() => parseArgs(["goto", "1"])).toThrow("invalid goto");
+    expect(parseArgs(["goto", "0x2a"])).toEqual({
+      mode: "goto",
+      target: { guid: 42n, kind: "guid" },
+    });
+    expect(() => parseArgs(["goto", "0"])).toThrow("invalid goto");
+    expect(() => parseArgs(["goto", "1.5"])).toThrow("invalid goto");
     expect(() => parseArgs(["goto", "1", "Infinity"])).toThrow("invalid goto");
     expect(() => parseArgs(["cast", "585"])).toThrow("invalid cast");
     expect(() => parseArgs(["goto", "1", "2", "NaN"])).toThrow("invalid goto");
