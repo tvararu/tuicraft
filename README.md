@@ -324,6 +324,9 @@ with `quest_already_in_log`.
 The IPC representation uses JSON to preserve spaces without command injection.
 `complete-quest`, `request-reward`, and `choose-reward` require the corresponding
 offered dialog. Reward indices and abandonment slots are zero-based.
+Collect objectives are not in the log counters: after `query-quest`, `quests`
+reports `items` (required vs carried) and correlates each item push with the
+observed bags as a `collect` progress event.
 `OK` is intent only. Acceptance/progress/removal require observed log changes,
 and rewards require a server reward notification. Unanswered metadata is unknown,
 not missing. `cancel-interaction` requests closure and does not immediately unlock

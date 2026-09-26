@@ -54,7 +54,8 @@ USAGE
                             Near a killer: plan an exit, flee after OK, then inspect observed life
   tuicraft quests [--json]    Offered dialog, quest log, pending and unresolved mutations
   tuicraft talk <guid>        Request a conversation with an observed giver
-  tuicraft query-quest <id>   Request quest metadata (not authorization)
+  tuicraft query-quest <id>   Request quest metadata (not authorization);
+                            needed to correlate collected quest items
   tuicraft select-option <id> [code]  Choose an offered gossip option
                             Quote one code argument; omitted differs from empty
   tuicraft select-quest <id>  Choose a quest from the offered menu
