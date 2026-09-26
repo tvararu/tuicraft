@@ -274,8 +274,7 @@ export function fakeControl(
       if (!pose) return;
       if (refusalsRemaining > 0) {
         refusalsRemaining--;
-        stopAfter(100, "height_unresolved");
-        return;
+        throw new Error("height_unresolved");
       }
       stopAfter(durationMs, config.stopReason ?? "lease");
       if (direction !== "forward") return;

@@ -128,7 +128,7 @@ tuicraft send "/roll" --wait 5 # events after the roll; older unread stay
 tuicraft tail              # continuous event stream
 tuicraft control [--json]  # current vs server pose, requested vs observed target, refusal
 tuicraft nearby [--all] [--json] # nearest first: 3D/XY yards, facing, origin; JSON remotePose for players
-tuicraft move forward 1000 [--json] # walk 1-10000ms (default 1000); left/right strafe
+tuicraft move forward 1000 [--json] # walk 1-10000ms (default 1000); left/right strafe; needs navigation data; ERR <reason> if it cannot start
 tuicraft face 1.57         # facing in radians
 tuicraft face-guid 0xabc   # face a currently observed entity on this map
 tuicraft walk-toward 3 0xabc # direct bounded leg toward one sampled GUID

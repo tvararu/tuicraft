@@ -20,6 +20,7 @@ export type Navigation = {
     to: { x: number; y: number },
   ) => GroundRoute;
   height: (mapId: number, x: number, y: number, from?: NavPoint) => number;
+  stepHeight: (mapId: number, x: number, y: number, from: NavPoint) => number;
   clear: (mapId: number, from: NavPoint, to: NavPoint) => boolean;
   close: () => void;
 };
@@ -33,6 +34,8 @@ const MESH_HEIGHT = 1.6;
 const WALKABLE_CLIMB = 1;
 const CELL_HEIGHT = 0.25;
 const CORNER_RISE = WALKABLE_CLIMB + CELL_HEIGHT;
+const WALKABLE_SLOPE = Math.tan((50 * Math.PI) / 180);
+const SAFE_DROP = 13;
 
 export type NavigationRefusal =
   | "wait"
@@ -166,6 +169,13 @@ export function createNavigation(
       if (from) map.loadAdtAt(from.x, from.y);
       map.loadAdtAt(x, y);
       return from ? connectedHeight(map, x, y, from) : uniqueHeight(map, x, y);
+    },
+    stepHeight(mapId, x, y, from) {
+      validateNativeXY(x, y);
+      const map = open(mapId, from);
+      map.loadAdtAt(from.x, from.y);
+      map.loadAdtAt(x, y);
+      return stepHeight(map, x, y, from);
     },
     clear(mapId, from, to) {
       const map = open(mapId, from, to);
@@ -335,6 +345,19 @@ function connectedHeight(
   return continuousHeight(map, x, y, from.z) ?? uniqueHeight(map, x, y);
 }
 
+function stepHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  from: NavPoint,
+): number {
+  const reachable = reachableHeight(map, x, y, from);
+  if (reachable !== undefined) return reachable;
+  const h = probeHeight(map, x, y, from);
+  if (Number.isFinite(h)) return h;
+  return uniqueHeight(map, x, y);
+}
+
 function probeHeight(
   map: NativeMap,
   x: number,
@@ -372,10 +395,27 @@ function continuousHeight(
         Number.isFinite(height) &&
         Math.abs(height - referenceZ) <= GROUND_ERROR,
     );
-  if (matches.length !== 1) return undefined;
-  const match = matches[0];
-  if (match === undefined) return undefined;
-  return match;
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+export function withinStep(from: NavPoint, to: NavPoint): boolean {
+  const reach = CELL_HEIGHT + distance2d(from, to) * WALKABLE_SLOPE;
+  const rise = to.z - from.z;
+  return rise <= reach && rise >= -Math.max(reach, SAFE_DROP);
+}
+
+function reachableHeight(
+  map: NativeMap,
+  x: number,
+  y: number,
+  from: NavPoint,
+): number | undefined {
+  let best: number | undefined;
+  for (const z of map.findHeights(x, y)) {
+    if (!withinStep(from, { x, y, z })) continue;
+    if (best === undefined || z > best) best = z;
+  }
+  return best;
 }
 
 function groundHeights(

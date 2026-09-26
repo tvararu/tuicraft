@@ -3,6 +3,7 @@ import { unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { sendToSocket } from "cli/ipc";
 import { startDaemonServer } from "daemon/server";
+import { readConfig } from "lib/config";
 import { SessionLog } from "lib/session-log";
 import {
   appearBeside,
@@ -31,6 +32,13 @@ const port = Number.parseInt(process.env["WOW_PORT"] ?? "3724", 10);
 
 const language = Number.parseInt(process.env["WOW_LANGUAGE"] ?? "1", 10);
 
+const navigation = await readConfig()
+  .then((cfg) => ({
+    navigationDataDir: cfg.navigation_data_dir,
+    navigationLibrary: cfg.navigation_library,
+  }))
+  .catch(() => ({}));
+
 const config1 = {
   account: process.env["WOW_ACCOUNT_1"] ?? "",
   character: process.env["WOW_CHARACTER_1"] ?? "",
@@ -38,6 +46,7 @@ const config1 = {
   language,
   password: process.env["WOW_PASSWORD_1"] ?? "",
   port,
+  ...navigation,
 };
 
 const config2 = {

@@ -14,7 +14,7 @@ const HEARTBEAT_MS = 500;
 const ROUTE_HEARTBEAT_MS = 100;
 const STEP_MS = 100;
 const STEP_YARDS = 0.5;
-const HALT_BLOCKERS = new Set(["obstructed", "height_unresolved"]);
+const HALT_BLOCKERS = new Set(["obstructed", "height_unresolved", "too_steep"]);
 
 const DIR_START: Record<MovementDirection, number> = {
   forward: GameOpcode.MSG_MOVE_START_FORWARD,
@@ -149,9 +149,32 @@ export class ControlDrive extends ControlCore {
       return;
     }
     const heading = predicted.orientation + DIR_HEADING[this.direction];
-    const newX = predicted.x + Math.cos(heading) * speed * dt;
-    const newY = predicted.y + Math.sin(heading) * speed * dt;
-    this.integrateGroundStep(predicted, newX, newY, now);
+    const { x, y } = predicted;
+    const advance = speed * dt;
+    for (let moved = 0; moved < advance; ) {
+      moved = Math.min(advance, moved + STEP_YARDS);
+      const nextX = x + Math.cos(heading) * moved;
+      const nextY = y + Math.sin(heading) * moved;
+      if (!this.integrateGroundStep(predicted, nextX, nextY, now)) return;
+    }
+  }
+
+  protected refuseBlockedStart(direction: MovementDirection): void {
+    const pose = this.requirePose();
+    const heading = pose.orientation + DIR_HEADING[direction];
+    const step = groundStep(
+      this.deps,
+      pose,
+      {
+        x: pose.x + Math.cos(heading) * STEP_YARDS,
+        y: pose.y + Math.sin(heading) * STEP_YARDS,
+      },
+      false,
+    );
+    if (step.ok) return;
+    this.blockedReason = step.reason;
+    this.emit("control_changed", step.reason);
+    throw new Error(step.reason);
   }
 
   private integrateRoute(

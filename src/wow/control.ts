@@ -244,6 +244,7 @@ export class ControlRuntime extends ControlSync {
       return;
     }
     this.guardMove(direction);
+    this.refuseBlockedStart(direction);
     if (this.moving) this.stopMoving("direction_change", true);
     this.startMoving(direction, durationMs);
   }
