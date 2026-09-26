@@ -103,6 +103,12 @@ describe("targetReason", () => {
     ).toBe("target_not_pve_creature");
   });
 
+  test("reports a target that is not in view as unobserved", () => {
+    expect(targetReason(world(TEMPLATES.hostile), 3n, state)).toBe(
+      "target_unobserved",
+    );
+  });
+
   test("refuses an unknown relation unless the creature attacks the character", () => {
     expect(targetReason(world(99), 2n, state)).toBe(
       "unverified_hostile_relation",

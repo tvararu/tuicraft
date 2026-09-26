@@ -338,7 +338,10 @@ hostile if either side is hostile, otherwise neutral, and unknown without
 faction data. Hostile and neutral creatures are engaged. A friendly creature is
 refused with `target_friendly`, a player with `target_not_pve_creature`, and an
 unknown relation with `unverified_hostile_relation`, unless the creature is
-currently attacking the character. `tactics --json` reports the classification
+currently attacking the character. A GUID with no entity in view, never seen or
+gone after it left view, is refused with `target_unobserved` (a `cycle` skips it
+with that cause); move closer or re-read `nearby`. It says nothing about
+whether the GUID is a creature. `tactics --json` reports the classification
 as `lastOutcome.observation.targetRelation`: `hostile`, `neutral`, `friendly`
 or `unknown`. Inspect `tactics.lastOutcome.observation.unavailable` for spell
 reasons.

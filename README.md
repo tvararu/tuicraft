@@ -288,8 +288,10 @@ zero fields in a complete server CREATE. Unknown or nonzero forms disable spells
 not necessarily melee. `fight` engages hostile and neutral creatures. It
 refuses friendly ones (`target_friendly`), players (`target_not_pve_creature`)
 and an unknown faction relation (`unverified_hostile_relation`), except that a
-creature attacking the character is always fair game. `tactics --json` reports
-the relation as `lastOutcome.observation.targetRelation`. A structural lack of
+creature attacking the character is always fair game. A target that is not in
+view (never seen, or left view) fails with `target_unobserved`: move closer or
+re-read `nearby`. `tactics --json` reports the relation as
+`lastOutcome.observation.targetRelation`. A structural lack of
 supported combat actions stops with a reason; cooldown and server-response waits
 do not. A fight in which the target takes no damage and the separation does not
 close by at least 1 yd for 30 s blocks with `no_progress` (a `cycle` skips the
