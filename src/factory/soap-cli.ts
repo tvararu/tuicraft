@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { roleCapHours } from "factory/config";
 import {
@@ -11,21 +10,20 @@ import {
   sweep,
 } from "factory/soap";
 
-const usage = `usage: soap create <${presets.join("|")}> [--dir <path>] [--owner <label>] [--gm <level>]
+const usage = `usage: soap create <${presets.join("|")}> [--owner <label>] [--gm <level>]
        soap delete <ACCOUNT>
        soap sweep [--hours N]
        soap list`;
 
 const options = {
-  dir: { type: "string" },
   gm: { type: "string" },
   hours: { type: "string" },
   owner: { type: "string" },
 } as const;
 
-type CreateArgs = { preset: string; dir?: string; owner?: string; gm?: string };
+type CreateArgs = { preset: string; owner?: string; gm?: string };
 
-async function create({ preset, dir, owner, gm }: CreateArgs): Promise<number> {
+async function create({ preset, owner, gm }: CreateArgs): Promise<number> {
   if (!presets.includes(preset as Preset)) throw new Error(usage);
   const level = gm === undefined ? undefined : Number(gm);
   if (
@@ -34,7 +32,6 @@ async function create({ preset, dir, owner, gm }: CreateArgs): Promise<number> {
   )
     throw new Error(`invalid --gm: ${gm} (1 or 2)`);
   const session = await createAccount({
-    dir: dir && resolve(dir),
     gm: level,
     owner,
     preset: preset as Preset,

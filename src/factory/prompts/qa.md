@@ -76,13 +76,19 @@ something a user can see (commands, output, TUI, gameplay). Commits with
 Create your account and character:
 
 ```sh
-acct=$(bun $F soap create eversong10)
-eval "$(printf '%s' "$acct" | jq -r '.env|to_entries[]|"export \(.key)=\(.value)"')"
+bun $F soap create eversong10
 ```
 
 Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
-`max80` (level 80, Dalaran). Use `.claude/skills/tuicraft/SKILL.md` and
-`docs/manual.md` for commands. Run:
+`max80` (level 80, Dalaran). The JSON it prints has `.account`,
+`.character` and `.wrapper`, the executable `tmp/tc-<ACCOUNT>`. Run every
+tuicraft command for that character through it (`tmp/tc-<ACCOUNT> start`,
+`tmp/tc-<ACCOUNT> who`): it runs `bun src/main.ts` with the account's own
+config, socket and session log, names the character on stderr, and refuses
+to run if its daemon would log in anyone else. `omp-factory` gives this run
+XDG directories of its own without the default tuicraft config, so plain
+`bun src/main.ts` logs in nobody. Use `.claude/skills/tuicraft/SKILL.md`
+and `docs/manual.md` for commands. Run:
 
 - the core loop: start the daemon, log in, read events, `who`, say and
   whisper to your own character, nearby entities, stop the daemon;
@@ -94,8 +100,9 @@ Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
 Filter playerbot chat; invite only factory characters by exact name. Record
 each command and its output. TUI screens: capture them with a detached tmux
 session at a fixed size and `tmux capture-pane -p`. At the end, always stop
-the daemon and run
-`bun $F soap delete "$(printf '%s' "$acct" | jq -r .account)"`.
+the daemon (`tmp/tc-<ACCOUNT> stop`) and run `bun $F soap delete <ACCOUNT>`,
+which also deletes the wrapper and the account's directories, session log
+included.
 
 ## 5. File findings
 
