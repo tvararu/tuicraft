@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { setup } from "test/control-fixtures";
 import { must } from "test/must";
+import {
+  formatControlEventObj,
+  formatControlStateObj,
+} from "ui/format-control";
 import { GroundRoute, type NavPoint } from "wow/navigation";
 import { groundError, type NativeMap } from "wow/navigation-native";
+import { observeNavigation } from "wow/navigation-observation";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { REPLAN_LIMITS, RouteSession } from "wow/route-session";
 
@@ -87,6 +92,30 @@ describe("bounded replanning", () => {
           event.type === "control_changed" && event.reason === "replanned",
       ),
     ).toBe(true);
+  });
+
+  test("a mid-walk ground refusal awaiting its replan gives no manual advice", () => {
+    const s = scene();
+    s.runtime.navigate(s.route(s.origin), s.destination, (from) => {
+      s.ground.failing = false;
+      return s.route(from);
+    });
+    s.advance(300);
+    s.advance(140);
+    const control = [
+      formatControlStateObj(s.runtime.snapshot()),
+      ...s.events.map(formatControlEventObj),
+    ];
+    expect(control.map((obj) => obj.blockedReason)).toContain(UNKNOWN);
+    expect(control.map((obj) => obj.nextStep)).toEqual(control.map(() => null));
+    const navigation = observeNavigation(s.runtime.navigationState());
+    expect(navigation).toMatchObject({
+      blockedReason: UNKNOWN,
+      replan: { pending: true },
+    });
+    expect(navigation.nextStep).toContain("Wait for navigation");
+    s.advance(REPLAN_LIMITS.delayMs);
+    expect(s.runtime.navigationState().active).toBe(true);
   });
 
   test("a refused replan is a terminal stop with its reason and counts", () => {

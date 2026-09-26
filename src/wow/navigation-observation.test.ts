@@ -57,18 +57,6 @@ describe("nextStepFor", () => {
     );
   });
 
-  test("a planner UNKNOWN_HEIGHT refusal asks for a short move or a nearer waypoint", () => {
-    const hint = nextStepFor("pathfind_find_height failed (UNKNOWN_HEIGHT)");
-    expect(hint).toContain("Do not repeat this goto unchanged");
-    expect(hint).toContain("Move about 10 yards off this spot");
-    expect(hint).toContain("nearer grounded waypoint");
-    expect(
-      nextStepFor(
-        "replan_refused: pathfind_find_height failed (UNKNOWN_HEIGHT)",
-      ),
-    ).toContain("refused a new route from the stopped pose");
-  });
-
   test("other or missing reasons have no hint", () => {
     expect(nextStepFor(undefined)).toBeNull();
     expect(nextStepFor("rooted")).toBeNull();
@@ -98,6 +86,21 @@ describe("observeNavigation", () => {
     expect(observeNavigation(blocked).nextStep).toContain(
       "Move to open ground",
     );
+  });
+
+  test("a planner UNKNOWN_HEIGHT refusal asks for a short move or a nearer waypoint", () => {
+    const unknown = "pathfind_find_height failed (UNKNOWN_HEIGHT)";
+    const hint = observeNavigation(
+      state({ blockedReason: unknown, refusal: "stop" }),
+    ).nextStep;
+    expect(hint).toContain("Do not repeat this goto unchanged");
+    expect(hint).toContain("Move about 10 yards off this spot");
+    expect(hint).toContain("nearer grounded waypoint");
+    expect(
+      observeNavigation(
+        state({ blockedReason: `replan_refused: ${unknown}`, refusal: "stop" }),
+      ).nextStep,
+    ).toContain("refused a new route from the stopped pose");
   });
 
   test("an unblocked state has a null hint", () => {

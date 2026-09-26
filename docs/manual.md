@@ -630,7 +630,9 @@ and the destination. When that spot is near the pose, every destination from
 the pose fails the same way. Do not repeat the `goto` unchanged: move about 10
 yards off the spot with `face` and `move forward`, then plan again, or choose
 a nearer grounded waypoint. When several destinations fail this way from one
-pose, move first.
+pose, move first. Only `navigation` gives this advice: in `control` and
+CONTROL events the same reason can also be a route sample that failed
+mid-walk, which replans itself, so their `nextStep` stays `null`.
 `nextStep` is advice, not a verified detour or an automatic retry.
 
 `tuicraft recovery` [`--json`]
