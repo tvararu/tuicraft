@@ -1,4 +1,5 @@
 import type { CombatOutcome, CombatState, CombatUnit } from "wow/combat";
+import type { NavigationState } from "wow/control";
 import { bearing, distance } from "wow/geometry";
 import type { TacticsFrame } from "wow/tactics";
 
@@ -43,6 +44,12 @@ export function auraObservation(
   aura: CombatState["auras"][number],
 ): Record<string, unknown> {
   return { ...aura, caster: hex(aura.caster) };
+}
+
+export function navigationObservation(
+  state: NavigationState,
+): Record<string, unknown> {
+  return { ...state, target: hex(state.target) };
 }
 
 export function outcomeObservation(

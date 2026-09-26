@@ -10,6 +10,7 @@ import {
   auraObservation,
   facing,
   hex,
+  navigationObservation,
   outcomeObservation,
   separation,
   timeoutOutcome,
@@ -118,7 +119,7 @@ export class CombatActions {
         lastXp: state.lastXp
           ? { ...state.lastXp, victim: hex(state.lastXp.victim) }
           : null,
-        navigation: this.deps.control.navigationState(),
+        navigation: navigationObservation(this.deps.control.navigationState()),
         rejections: this.rejections.observation(),
       },
       candidates,
