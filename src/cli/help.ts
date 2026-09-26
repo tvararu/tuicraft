@@ -200,5 +200,7 @@ FILES
   <run>/pid                      Daemon pidfile
                                  <run> = $XDG_RUNTIME_DIR/tuicraft if set,
                                  else \${TMPDIR:-/tmp}/tuicraft-<uid>
-  $XDG_STATE_HOME/tuicraft/session.log  Session log (default ~/.local/state)`;
+  $XDG_STATE_HOME/tuicraft/session.log  Session log (default ~/.local/state)
+  For two characters at once, give each its own XDG_CONFIG_HOME,
+  XDG_RUNTIME_DIR and XDG_STATE_HOME.`;
 }
