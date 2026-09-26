@@ -11,6 +11,7 @@ test("help text includes all subcommands", () => {
     "read",
     "tail",
     "logs",
+    "record",
     "start",
     "stop",
     "status",

@@ -28,11 +28,12 @@ tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <g
 tuicraft take-loot <slot> | take-money | release-loot
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
-tuicraft logs | skill | help | version
+tuicraft logs | record [--since MS] | skill | help | version
 ```
 
 All daemon-backed commands above accept optional `--json`, including mutating
-gameplay actions. `logs` and `skill` keep their raw output and reject `--json`.
+gameplay actions. `logs` and `skill` keep their raw output and reject `--json`;
+`record` always prints JSON and rejects `--json`.
 
 ## Description
 
@@ -513,6 +514,33 @@ Human mode prints `ERR`; JSON mode returns an error envelope.
 
 `tuicraft logs`
 :: Print the raw JSONL session log to stdout. Does not accept `--json`.
+
+`tuicraft record` [`--since` _epoch-ms_]
+:: Print one JSON session record derived from the session log, from the first
+entry at or after `--since` (default: the whole log). It reads the CYCLE,
+TACTICS and RECOVERY events the daemon already logs; nothing in it is
+hand-written. Needs no daemon and does not accept `--json`. Fields:
+`window` (`from`, `to`, `durationMs`) and `entries`; `cycles`, one entry per
+`cycle` start or `cycle --resume` with `instruction`, per-target `status`,
+`cause`, `outcome` and `loot`, `recoveries`, `startsUsed`, `stopCause` and
+`stopDetail`; `fights` (tactics runs started and outcomes by status and
+reason, including lone `fight` runs); `completions` (`targetsDone`,
+`serverKillCredit`); `blocked` (`targetsSkipped`, `skipsByCause`, and
+`cycleStops` for every stop other than `queue_exhausted`,
+`max_starts_reached`, `halt` or `manual_override`); `recoveries` (`deaths`
+counted per transition to dead, `recovered`, `byOutcome`); `interventions`
+(`halt`, `manual_override`, `resume`, `instruction_change`, each with `at`
+and `scope` `cycle` or `fight`); `staleActions` (Jev results discarded, by
+reason such as `stale_age`, `aborted`, `unavailable`); and `latency`.
+`latency` gives two rates that must be quoted together: `loopRatePerSec`,
+Jev requests per second of active tactics time (`activeMs`, from each run's
+`started` to `stopped`), with `meanRequestMs` and `p95RequestMs`; and
+`decisionRatePerSec`, requests that offered any candidate other than `wait`
+and `cancel` (`decisionRequests`) per active second. `appliedDecisions`
+(applied actions other than `wait`, including `cancel`) and `appliedWaits` are
+reported alongside. A target resumed across
+runs counts once. GM or chat commands are not in these events; record them
+separately.
 
 `tuicraft skill`
 : Print the raw SKILL.md reference for AI agents. Includes command usage, event types, and integration examples. Does not accept `--json`.

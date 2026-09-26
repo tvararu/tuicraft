@@ -36,6 +36,7 @@ const LOCAL = [
   "nearby",
   "skill",
   "logs",
+  "record",
 ] as const;
 
 export type Inspection = Extract<
