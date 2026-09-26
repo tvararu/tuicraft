@@ -162,8 +162,8 @@ tuicraft query-quest 42    # request metadata, not permission to accept
 tuicraft select-option 0   # choose an offered gossip option; optional quoted code
 tuicraft select-quest 42   # choose only a currently offered quest
 tuicraft accept-quest      # request acceptance of current offered details
-tuicraft complete-quest 42 # request completion of an offered quest
-tuicraft request-reward    # request the current reward offer
+tuicraft complete-quest 42 # same complete request select-quest sends for a returnable quest
+tuicraft request-reward    # Continue on a requestItems dialog; opens the reward offer
 tuicraft choose-reward 0   # choose an offered reward (zero-based 0-5)
 tuicraft abandon-quest 0   # request abandonment of a log slot (zero-based 0-24)
 tuicraft cancel-interaction # request dialog close; wait for observed closure
@@ -342,6 +342,15 @@ offered quest. Quote a code as one shell argument. Empty code differs from no co
 Auto-accept quests enter the log on `select-quest`; `accept-quest` then fails
 with `quest_already_in_log`.
 The IPC representation uses JSON to preserve spaces without command injection.
+Advance each step by `quests --json` `.data.dialog.kind`: `gossip`/`list` →
+`select-quest <id>`; `details` → `accept-quest`; `requestItems` →
+`request-reward`; `offer` → `choose-reward <index>`. To turn in an item quest
+(for example 8326): `talk <giver>`, `select-quest 8326` (opens `requestItems`),
+`request-reward` (opens `offer`), `choose-reward 0`. `complete-quest` sends the
+same complete request `select-quest` sends for a returnable quest; on a
+`requestItems` dialog it only re-sends that dialog. Many quests are accepted as
+soon as `select-quest` opens their `details`, so check the log before
+`accept-quest`.
 `complete-quest`, `request-reward`, and `choose-reward` require the corresponding
 offered dialog. Reward indices and abandonment slots are zero-based.
 Collect objectives are not in the log counters: after `query-quest`, `quests`
