@@ -253,3 +253,31 @@ A release-only loot reply on the eighth wyrm was now failed closed
 cycle still stopped as `loot_denied:release_only` rather than
 `objective_complete`, even though the slot was already complete. One
 8326 resume skipped three targets with `jev_timeout`.
+
+## Unanswered requests no longer block other givers (#215)
+
+Record: [quest-reply-bound-2026-09-26.json](quest-reply-bound-2026-09-26.json),
+outcome `positive`. Character Fgklhdomged (own `fresh` account), CLI verbs
+only, no GM.
+
+1. **Before, on `main` `208db93`.** Matron Arena's only option, "I require
+   priest training." (icon 3), drew SMSG_TRAINER_LIST 13 ms later and
+   nothing else. `pending` stayed `selectOption` `unanswered`, and two
+   `talk`s to Erona at 2.38 yd, 10 s apart, both failed with a bare
+   `ERR quest_reply_unanswered` until `cancel-interaction`.
+2. **Trainer window.** On the fix, the same option gave `[quest] window
+   unsupported_window:trainer` in `read`, no `pending`, `unresolved` empty,
+   and `lastError` `{kind: unsupported_window, window: trainer, guid:
+   Arena}`. The next `talk` to Erona opened her gossip with no
+   `cancel-interaction` in between.
+3. **Silent talk.** From 36 yd the server ignored `talk` (no gossip or quest
+   packet in the next 7 s). A second `talk` failed with `quest_reply_unanswered:
+   talk 0xf130003bae004980 unanswered for 0.0s; it expires as no_reply after
+   5s, or run cancel-interaction`. After 5025 ms `read` showed `[quest]
+   expired no_reply`, `pending` was gone and `unresolved` held the talk with
+   `reason: no_reply` (the #147 rule). Back in range, `talk` opened the
+   gossip without `cancel-interaction`.
+
+`src/wow/quest-reply-bound.test.ts` replays the captured gossip, select,
+trainer list and hello packets; `src/test/live-quest.ts` repeats both cases
+under `mise test:live`.

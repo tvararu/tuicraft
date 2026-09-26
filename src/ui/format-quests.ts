@@ -230,11 +230,14 @@ export function formatQuestEventText(event: QuestEvent): string {
       const quest = questId === undefined ? "" : ` ${named(state, questId)}`;
       return `[quest] intent${action ? ` ${action}` : ""}${quest}`;
     }
-    default: {
-      const detail = event.detail === undefined ? "" : ` ${event.detail}`;
-      return questId === undefined
-        ? `[quest] ${type}${detail}`
-        : `[quest] ${type} ${named(state, questId)}${detail}`;
-    }
+    default:
+      return plainText(event);
   }
+}
+
+function plainText({ detail, questId, state, type }: QuestEvent): string {
+  const suffix = detail === undefined ? "" : ` ${detail}`;
+  return questId === undefined
+    ? `[quest] ${type}${suffix}`
+    : `[quest] ${type} ${named(state, questId)}${suffix}`;
 }
