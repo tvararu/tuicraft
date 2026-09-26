@@ -83,6 +83,10 @@ export function formatRecoveryState(
   if (reclaim.remainingMs !== undefined)
     lines.push(`Reclaim delay: ${reclaim.remainingMs} ms`);
   if (request) lines.push(`Request: ${request.action} ${request.status}`);
+  if (state.spiritHealerConfirm)
+    lines.push(
+      `Spirit healer confirm: ${formatGuid(state.spiritHealerConfirm.guid)}`,
+    );
   lines.push(...formatResurrectionOffer(state, now));
   return lines;
 }

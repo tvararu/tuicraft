@@ -8,6 +8,7 @@ import {
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
   parseResurrectRequest,
+  parseSpiritHealerConfirm,
 } from "wow/protocol/death";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { PacketReader } from "wow/protocol/packet";
@@ -450,4 +451,32 @@ test("an offer without a packet name takes the observed caster's name", () => {
     name: "Fgklhcnkmic",
   });
   expect(f.runtime.snapshot().resurrection?.name).toBe("Fgklhcnkmic");
+});
+
+describe("spirit-healer confirmation", () => {
+  const captured = "f109005b190030f1";
+
+  test("a ghost keeps the gossip confirmation until life returns", () => {
+    const f = fixture(1, 0x10);
+    f.runtime.receiveSpiritHealerConfirm(
+      parseSpiritHealerConfirm(new PacketReader(bytes(captured))),
+    );
+    expect(f.runtime.snapshot().spiritHealerConfirm).toEqual({
+      guid: 0xf13000195b0009f1n,
+      receivedAt: 1000,
+    });
+    expect(f.events.at(-1)?.type).toBe("spirit_healer_confirm_observed");
+    expect(f.sent).toEqual([]);
+    f.life(100, 0);
+    expect(f.runtime.snapshot().spiritHealerConfirm).toBeUndefined();
+  });
+
+  test("a living character ignores a confirmation", () => {
+    const f = fixture(100, 0);
+    f.runtime.receiveSpiritHealerConfirm(
+      parseSpiritHealerConfirm(new PacketReader(bytes(captured))),
+    );
+    expect(f.runtime.snapshot().spiritHealerConfirm).toBeUndefined();
+    expect(f.events).toEqual([]);
+  });
 });

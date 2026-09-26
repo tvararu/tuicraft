@@ -9,6 +9,7 @@ import {
   parseCorpseReclaimDelay,
   parseDeathReleaseLocation,
   parseResurrectRequest,
+  parseSpiritHealerConfirm,
 } from "wow/protocol/death";
 import { PacketReader } from "wow/protocol/packet";
 
@@ -64,6 +65,12 @@ describe("corpse and recovery responses", () => {
     expect(
       parseCorpseReclaimDelay(new PacketReader(bytes("30 75 00 00"))),
     ).toEqual({ delayMs: 30_000 });
+  });
+
+  test("captured spirit-healer confirmation carries the raw healer GUID", () => {
+    expect(
+      parseSpiritHealerConfirm(new PacketReader(bytes("f109005b190030f1"))),
+    ).toEqual({ guid: 0xf13000195b0009f1n });
   });
 
   test("spirit-healer marker clearing is distinct from a location at zero", () => {

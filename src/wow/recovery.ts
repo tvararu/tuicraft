@@ -15,6 +15,7 @@ import {
   type CorpseReclaimDelay,
   type DeathReleaseLocation,
   type ResurrectRequest,
+  type SpiritHealerConfirm,
 } from "wow/protocol/death";
 import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
@@ -93,6 +94,10 @@ export type SpiritHealerCleared = {
   reason: "timeout" | "halt";
 };
 
+export type RecoverySpiritHealerConfirm = SpiritHealerConfirm & {
+  receivedAt: number;
+};
+
 export type RecoveryState = PlayerLifeState & {
   selfGuid: bigint;
   epoch: number;
@@ -104,6 +109,7 @@ export type RecoveryState = PlayerLifeState & {
   resurrection: RecoveryResurrection | undefined;
   request: RecoveryRequest | undefined;
   spiritHealerCleared: SpiritHealerCleared | undefined;
+  spiritHealerConfirm: RecoverySpiritHealerConfirm | undefined;
   disposed: boolean;
 };
 
@@ -121,6 +127,7 @@ export type RecoveryEvent = {
     | "reclaim_requested"
     | "spirit_healer_requested"
     | "spirit_healer_cleared"
+    | "spirit_healer_confirm_observed"
     | "resurrection_response_requested";
   at: number;
   state: RecoveryState;
@@ -167,6 +174,7 @@ export class RecoveryRuntime {
       }
     | undefined;
   private spiritHealerCleared: SpiritHealerCleared | undefined;
+  private spiritHealerConfirm: RecoverySpiritHealerConfirm | undefined;
   private offer:
     | {
         packet: ResurrectRequest;
@@ -213,6 +221,9 @@ export class RecoveryRuntime {
       request: request ? { ...request } : undefined,
       spiritHealerCleared: this.spiritHealerCleared
         ? { ...this.spiritHealerCleared }
+        : undefined,
+      spiritHealerConfirm: this.spiritHealerConfirm
+        ? { ...this.spiritHealerConfirm }
         : undefined,
       disposed: this.disposed,
     };
@@ -437,6 +448,14 @@ export class RecoveryRuntime {
     this.emit("resurrection_offered");
   }
 
+  receiveSpiritHealerConfirm(packet: SpiritHealerConfirm): void {
+    if (this.disposed) return;
+    this.observeLife();
+    if (this.unavailable || !dead(this.life().life)) return;
+    this.spiritHealerConfirm = { ...packet, receivedAt: this.deps.now() };
+    this.emit("spirit_healer_confirm_observed");
+  }
+
   dispose(): void {
     this.disposed = true;
     this.events.clear();
@@ -483,6 +502,7 @@ export class RecoveryRuntime {
     this.offer = undefined;
     this.request = undefined;
     this.spiritHealerPending = undefined;
+    this.spiritHealerConfirm = undefined;
   }
 
   private resurrectionState(): RecoveryResurrection | undefined {
