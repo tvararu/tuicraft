@@ -24,6 +24,8 @@ export function nextStepFor(reason: string | undefined): string | null {
     return "The requested Z is not on a floor at this destination. Repeat the goto with one of floors as Z. Do not guess Z.";
   if (reason === "target_lost")
     return "The destination creature is no longer observed. Choose a currently observed target; the route was not retried.";
+  if (reason === "pathfind_find_height failed (UNKNOWN_HEIGHT)")
+    return "The planner lost the ground between this pose and the destination. Do not repeat this goto unchanged. Move about 10 yards off this spot with face and move forward, then plan again, or choose a nearer grounded waypoint. When several destinations fail this way from one pose, move first.";
   if (reason && classifyNavigationRefusal(reason) === "unreachable")
     return "The navigation mesh cannot reach this destination. Choose another destination; do not retry this one.";
   if (reason === "replan_no_progress")

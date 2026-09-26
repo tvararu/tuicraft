@@ -624,6 +624,13 @@ waypoint. All three stop.
 the destination: native `UNKNOWN_PATH`, a path that ends away from the
 requested point, or a path that omits it. Choose another destination; the
 daemon never retries it.
+A `goto` refused with `pathfind_find_height failed (UNKNOWN_HEIGHT)`
+(`refusal=stop`) means the planner lost the ground somewhere between the pose
+and the destination. When that spot is near the pose, every destination from
+the pose fails the same way. Do not repeat the `goto` unchanged: move about 10
+yards off the spot with `face` and `move forward`, then plan again, or choose
+a nearer grounded waypoint. When several destinations fail this way from one
+pose, move first.
 `nextStep` is advice, not a verified detour or an automatic retry.
 
 `tuicraft recovery` [`--json`]
