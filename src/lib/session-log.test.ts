@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { unlink } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { ignoreFailure } from "lib/ignore-failure";
 import { SessionLog } from "lib/session-log";
 
 const TEST_LOG = "./tmp/test-session.log";
 
 afterEach(async () => {
-  try {
-    await unlink(TEST_LOG);
-  } catch {}
+  await rm(TEST_LOG, { force: true });
 });
 
 describe("SessionLog", () => {
@@ -28,5 +27,18 @@ describe("SessionLog", () => {
     await log.append({ message: "2", sender: "B", type: "SAY" });
     const lines = (await Bun.file(TEST_LOG).text()).trim().split("\n");
     expect(lines).toHaveLength(2);
+  });
+
+  test("flush waits for unawaited appends and keeps their order", async () => {
+    const log = new SessionLog(TEST_LOG);
+    for (const message of ["1", "2", "3"])
+      log.append({ message, sender: "A", type: "SAY" }).catch(ignoreFailure);
+    await log.flush();
+    const lines = (await Bun.file(TEST_LOG).text()).trim().split("\n");
+    expect(lines.map((line) => JSON.parse(line).message)).toEqual([
+      "1",
+      "2",
+      "3",
+    ]);
   });
 });
