@@ -12,6 +12,11 @@ import {
 } from "wow/navigation";
 import { buildSetSelection } from "wow/protocol/movement";
 import { GameOpcode } from "wow/protocol/opcodes";
+import {
+  type Replanner,
+  type ReplanState,
+  RouteSession,
+} from "wow/route-session";
 
 export type MovementDirection = "forward" | "backward" | "left" | "right";
 
@@ -52,6 +57,7 @@ export type NavigationState = {
   blockedReason: string | undefined;
   refusal: NavigationRefusal | undefined;
   target?: bigint;
+  replan?: ReplanState;
 };
 
 export type ControlEventType =
@@ -117,7 +123,12 @@ export class ControlRuntime extends ControlSync {
     this.emit("control_error", reason);
   }
 
-  navigate(route: GroundRoute, destination: NavPoint, target?: bigint): void {
+  navigate(
+    route: GroundRoute,
+    destination: NavPoint,
+    replan?: Replanner,
+    target?: bigint,
+  ): void {
     this.guardMove("forward");
     this.stopMoving("navigation_replaced", true);
     const origin = route.points[0];
@@ -125,42 +136,16 @@ export class ControlRuntime extends ControlSync {
     if (origin === undefined) throw new Error("navigation_route_empty");
     if (distance(origin, pose) > 1e-6)
       throw new Error("navigation_origin_changed");
-    if (route.length === 0) {
-      this.navigation = {
-        active: false,
-        destination,
-        remaining: 0,
-        owner: "none",
-        blockedReason: undefined,
-        refusal: undefined,
-        target,
-      };
-      return;
-    }
-    this.applyFacing(route.sample(0).orientation);
-    this.route = route;
-    this.routeDistance = 0;
-    this.navigation = {
-      active: true,
-      destination: { ...destination },
-      remaining: route.length,
-      owner: this.mode === "none" ? "manual" : this.mode,
-      blockedReason: undefined,
-      refusal: undefined,
-      target,
-    };
-    this.startMoving(
-      "forward",
-      Math.min(
-        MAX_DURATION_MS,
-        (route.length / (this.runSpeed ?? Number.NaN)) * 1000,
-      ),
-    );
+    this.session = replan
+      ? new RouteSession(replan, route, this.deps.now())
+      : undefined;
+    this.startRoute(route, destination, target);
   }
 
   observeDisappear(guid: bigint): void {
-    if (this.route && this.navigation.target === guid)
-      this.stopMoving("target_lost", true);
+    if (this.navigation.target !== guid) return;
+    if (this.route) this.stopMoving("target_lost", true);
+    else this.cancelReplan("target_lost");
   }
 
   walkActive(): boolean {

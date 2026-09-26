@@ -52,6 +52,7 @@ USAGE
                             A goto during a route replaces it (reason navigation_replaced)
                             <guid>: once to an observed creature; stops target_lost if it disappears
                             refusal=unreachable: the mesh cannot reach it; never retried
+                            A mid-walk ground refusal or correction replans (max 4 plans, 60 s, 2 yd progress)
   tuicraft navigation [--json]  Navigation state and refusal next step
   tuicraft recovery [--json]  Observed life, corpse, delay and request state
   tuicraft release-spirit     Request release from observed dead state

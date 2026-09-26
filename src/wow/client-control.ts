@@ -140,7 +140,12 @@ function navigateTo(rt: Runtimes, target: GotoTarget): void {
     }
     if (destination === undefined) throw new Error("invalid_destination");
     const { route, resolved } = planDestination(navigation, pose, destination);
-    rt.control.navigate(route, resolved, guid);
+    rt.control.navigate(
+      route,
+      resolved,
+      (origin) => navigation.plan(pose.mapId, origin, resolved),
+      guid,
+    );
   } catch (error) {
     const raw = error instanceof Error ? error.message : "navigation_failed";
     const refusal = classifyNavigationRefusal(raw);
