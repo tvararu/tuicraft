@@ -139,7 +139,7 @@ describe("editCommand", () => {
 });
 
 describe("timerDropIn", () => {
-  test("keeps a boot trigger alongside the pace interval", () => {
+  test("keeps a boot trigger and exact firing alongside the interval", () => {
     expect(timerDropIn(7)).toBe(
       [
         "[Timer]",
@@ -147,6 +147,7 @@ describe("timerDropIn", () => {
         "OnUnitActiveSec=",
         "OnBootSec=7min",
         "OnUnitActiveSec=7min",
+        "AccuracySec=1s",
         "",
       ].join("\n"),
     );
@@ -155,11 +156,13 @@ describe("timerDropIn", () => {
 
 describe("timerCheck", () => {
   const boot = "OnBootUSec=10min";
-  const every = "OnUnitActiveUSec=5min";
+  const every = "OnUnitActiveUSec=1min";
+  const exact = "AccuracyUSec=1s";
 
   function shown(state: string, ...timers: string[]): string {
     return [
       `SubState=${state}`,
+      exact,
       ...timers.map((t) => `TimersMonotonic={ ${t} ; next_elapse=5min }`),
     ].join("\n");
   }
@@ -167,7 +170,7 @@ describe("timerCheck", () => {
   test("reads the interval from OnUnitActiveSec, not the boot trigger", () => {
     expect(timerCheck("default", shown("waiting", boot, every))).toEqual({
       drift: [],
-      interval: "5min",
+      interval: "1min",
     });
   });
 
@@ -188,11 +191,20 @@ describe("timerCheck", () => {
   });
 
   test("the interval must match the pace unless paused", () => {
-    const slow = shown("waiting", boot, "OnUnitActiveUSec=10min");
-    expect(timerCheck("default", slow).drift).toEqual(["want 5min"]);
+    const slow = shown("waiting", boot, "OnUnitActiveUSec=5min");
+    expect(timerCheck("default", slow).drift).toEqual(["want 1min"]);
     expect(timerCheck("pause", slow).drift).toEqual([]);
     expect(timerCheck("pause", shown("waiting", boot)).drift).toEqual([
       "want an interval",
     ]);
+  });
+
+  test("systemd's default one-minute accuracy is drift unless paused", () => {
+    const coarse = shown("waiting", boot, every).replace(
+      exact,
+      "AccuracyUSec=1min",
+    );
+    expect(timerCheck("max", coarse).drift).toEqual(["accuracy 1min, want 1s"]);
+    expect(timerCheck("pause", coarse).drift).toEqual([]);
   });
 });

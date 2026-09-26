@@ -238,7 +238,7 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   Commit and push before you stop.
 - Factory runs never create worktrees; subagents work inside the run's own
   worktree.
-- The reaper (`tuicraft-factory-reaper.timer`, every 5 minutes) is the
+- The reaper (`tuicraft-factory-reaper.timer`, every minute) is the
   backstop. It removes finished or over-time `auto-*` runs, and removes
   other worktrees only when they have landed on `main`, are clean, and have
   been idle for more than 12 hours. It never deletes a dirty tree: it

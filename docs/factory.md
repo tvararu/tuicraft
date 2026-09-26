@@ -152,13 +152,17 @@ what a marker means.
   with the `qa` label; auto-add puts them in Backlog. Every agent files as
   OpenHubris, so the label is what shows that QA found an issue. No other
   role adds, removes or reacts to it.
-- **Reaper** (systemd timer, 5 min). First syncs the role prompts (above),
-  logging a failed edit and carrying on. Then removes finished or over-cap
-  `auto-*` worktrees that are clean and pushed or landed, and other
-  worktrees that are landed, clean and idle over 12 h. Dirty trees are
-  archived to `tmp/worktree-archive-<date>/`. Each hold is one draft card in
-  Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
-  reaper deletes it once the hold clears.
+- **Reaper** (systemd timer, every minute). First syncs the role prompts
+  (above), logging a failed edit and carrying on. Then removes finished or
+  over-cap `auto-*` worktrees that are clean and pushed or landed, and other
+  worktrees that are landed, clean and idle over 12 h. A run is finished
+  when Orca marks it `completed` or `failed`, or when it is
+  `dispatch_failed` and its terminals and worktree have been quiet for
+  2 minutes: Orca's dispatcher gives up on any run still working after
+  300 s, and a working omp agent redraws its status line every second.
+  Dirty trees are archived to `tmp/worktree-archive-<date>/`. Each hold is
+  one draft card in Blocked, `Reaper: <worktree> held (<reason>)`, saying
+  what to do; the reaper deletes it once the hold clears.
 
   A run it removes died if it ended without finishing: Orca marked it
   `failed`, or `dispatch_failed` with its terminals quiet for 10 min, or it
@@ -259,6 +263,7 @@ retargets the child to `main` and the merger runs
 | Reviewer | every 3 min, 3 in flight | every min, 6 |
 | Merger | every 10 min | every 3 min |
 | QA | every 30 min | every 15 min |
+| Reaper timer | every min | every min |
 
 `pause` disables `work`, `review` and `merge` and leaves `qa` and the
 reaper timer running at their current schedules. `default` or `max` ends
@@ -272,8 +277,10 @@ caps and schedules.
 empty `On*Sec=` line in systemd clears every trigger of the timer, so the
 drop-in clears both and sets `OnBootSec=` and `OnUnitActiveSec=` to the
 reaper interval: without the boot trigger the timer has no next run after
-a reboot. Plain `mise factory:pace` reports the timer as drift when its
-interval does not match the level, when it has no boot trigger, or when
-it has no next run and no run in progress.
+a reboot. It also sets `AccuracySec=1s`: at systemd's default of 1 minute
+a 1-minute timer fires every 1 to 2 minutes. Plain `mise factory:pace`
+reports the timer as drift when its interval does not match the level,
+when its accuracy is not 1 s, when it has no boot trigger, or when it has
+no next run and no run in progress.
 
 Run caps: worker 3 h, QA 2 h, reviewer and merger 1 h.

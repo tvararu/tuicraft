@@ -286,7 +286,7 @@ code:
 | Reviews in flight (`agent:reviewing`) cap | 3 | 6 |
 | `merge` schedule | `*/10` | `*/3` |
 | `qa` schedule | `*/30` | `*/15` |
-| Reaper timer | 5 min | 5 min |
+| Reaper timer | 1 min | 1 min |
 
 The active level is persisted in `~/.config/tuicraft-factory/pace`;
 `default` applies when the file is absent. The worker and reviewer
@@ -299,10 +299,11 @@ automations edit --id <id> --trigger <rrule> --enabled`, a partial
 `automation.update`, so `setupDecision: run` survives; recreating an
 automation would lose it), writes the timer drop-in
 `~/.config/systemd/user/tuicraft-factory-reaper.timer.d/pace.conf` with a
-boot trigger and the reaper interval, then reloads systemd and restarts the
-timer. `mise factory:pace` alone prints the level and the live schedules
-read back from Orca and systemd, and flags a schedule that does not match
-the level, a reaper timer with no boot trigger or no next run, or an
+boot trigger, the reaper interval and `AccuracySec=1s`, then reloads
+systemd and restarts the timer. `mise factory:pace` alone prints the level
+and the live schedules read back from Orca and systemd, and flags a
+schedule that does not match the level, a reaper timer with coarser
+accuracy, no boot trigger or no next run, or an
 automation that lost `setupDecision: run`, its precheck,
 `--base-branch origin/main` or `enabled`. Use `max` in quiet weeks with
 usage to spare and for overnight pushes.
@@ -340,7 +341,7 @@ visible in Orca's sidebar, which clips names after about 20 characters:
 
 | Worktree | Owner | Where the owner is recorded | Owner removes it when |
 |---|---|---|---|
-| `auto-<automation>-run-N-<ts>` | Reaper | The automation run's `workspaceId` (`orca-ide automations runs --json`) | The run is `completed` or `failed`, a `dispatch_failed` run's terminals have been quiet for 10 minutes, or it is past its role's time cap |
+| `auto-<automation>-run-N-<ts>` | Reaper | The automation run's `workspaceId` (`orca-ide automations runs --json`) | The run is `completed` or `failed`, a `dispatch_failed` run's terminals have been quiet for 2 minutes, or it is past its role's time cap |
 | Created by an agent with `orca-ide worktree create` (mostly the coordinator) | The agent that created it | Orca lineage: `parentWorktreeId` is the creator's worktree and `cliProvenance.kind` is `created-by-cli` | Its work is integrated on `main`, or its PR is merged |
 | Created by Theo in the Orca app | Theo | No `cliProvenance` ([INFERENCE]; check on Theo's first new worktree in phase 1) | Theo decides |
 | Main checkout (`~/code/tuicraft`) | Theo | `isMainWorktree` | Never |
@@ -368,14 +369,14 @@ which is why the flag must be explicit. Factory runs never create worktrees
   forgets.
 
 **The reaper is the backstop for every tuicraft worktree except the main
-checkout.** A systemd user timer runs it every 5 minutes, from the main
+checkout.** A systemd user timer runs it every minute, from the main
 checkout, never from a worktree it might delete. Each pass:
 
 1. `auto-*` worktrees. When the run is `completed` or `failed`, or is
    older than its role's time cap (worker 3 h, QA 2 h, reviewer and merger
    1 h; Theo left the choice to the factory, 2026-09-25, tune from phase 1
    run times). A `dispatch_failed` run also counts as finished once all its
-   terminals and the worktree have been quiet for 10 minutes: from
+   terminals and the worktree have been quiet for 2 minutes: from
    2026-09-26 Orca marked every QA run `dispatch_failed` with error
    `timeout` although its agent started, worked and went idle, and a
    running omp agent redraws its status line every second, so a quiet

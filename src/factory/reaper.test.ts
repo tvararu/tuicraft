@@ -122,8 +122,8 @@ describe("run state", () => {
   test("a dispatch_failed run is done once its terminals go quiet", () => {
     const failed = { status: "dispatch_failed", workspaceId: "x" };
     expect(runDone(failed, 0)).toBe(false);
-    expect(runDone(failed, 9 / 60)).toBe(false);
-    expect(runDone(failed, 10 / 60)).toBe(true);
+    expect(runDone(failed, 1.9 / 60)).toBe(false);
+    expect(runDone(failed, 2 / 60)).toBe(true);
   });
 
   test("age prefers dispatchedAt, accepts ISO strings, falls back to creation", () => {

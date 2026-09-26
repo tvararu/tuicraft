@@ -28,13 +28,15 @@ const timer = "tuicraft-factory-reaper.timer";
 const dropIn = `${homedir()}/.config/systemd/user/${timer}.d/pace.conf`;
 const activeSec = /OnUnitActiveUSec=(\S+)/;
 const bootSec = /OnBootUSec=/;
+const accuracyUSec = /^AccuracyUSec=(\S+)$/m;
 const subState = /^SubState=(\S+)$/m;
+const accuracy = "1s";
 const scheduled = ["waiting", "running"];
 const paused = pausedRoles.map((role) => automationNames[role]);
 
 export function timerDropIn(minutes: number): string {
   const every = `${minutes}min`;
-  return `[Timer]\nOnBootSec=\nOnUnitActiveSec=\nOnBootSec=${every}\nOnUnitActiveSec=${every}\n`;
+  return `[Timer]\nOnBootSec=\nOnUnitActiveSec=\nOnBootSec=${every}\nOnUnitActiveSec=${every}\nAccuracySec=${accuracy}\n`;
 }
 
 export function timerCheck(
@@ -44,9 +46,14 @@ export function timerCheck(
   const interval = props.match(activeSec)?.[1] ?? null;
   const want =
     pace === "pause" ? interval : `${levelOf(pace).reaperMinutes}min`;
+  const slack = props.match(accuracyUSec)?.[1] ?? "unknown";
   const state = props.match(subState)?.[1] ?? "unknown";
   const checks: [string, boolean][] = [
     [`want ${want ?? "an interval"}`, interval === null || interval !== want],
+    [
+      `accuracy ${slack}, want ${accuracy}`,
+      pace !== "pause" && slack !== accuracy,
+    ],
     ["no boot trigger", !bootSec.test(props)],
     [`no next run (${state})`, !scheduled.includes(state)],
   ];
@@ -103,6 +110,8 @@ async function timerOk(pace: Pace): Promise<boolean> {
     timer,
     "-p",
     "TimersMonotonic",
+    "-p",
+    "AccuracyUSec",
     "-p",
     "SubState",
   ]);

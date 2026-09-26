@@ -64,7 +64,7 @@ export type PaceLevel = {
 
 export const paces: Record<Level, PaceLevel> = {
   default: {
-    reaperMinutes: 5,
+    reaperMinutes: 1,
     reviewing: 3,
     schedules: {
       merger: "*/10 * * * *",
@@ -75,7 +75,7 @@ export const paces: Record<Level, PaceLevel> = {
     wip: 3,
   },
   max: {
-    reaperMinutes: 5,
+    reaperMinutes: 1,
     reviewing: 6,
     schedules: {
       merger: "*/3 * * * *",
@@ -114,7 +114,7 @@ export async function readPace(file = paceFile()): Promise<Pace> {
 
 export const idleHours = 12;
 
-export const stalledRunQuietHours = 10 / 60;
+export const stalledRunQuietHours = 2 / 60;
 
 export function factoryConfigDir(): string {
   return `${homedir()}/.config/tuicraft-factory`;
