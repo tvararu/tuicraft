@@ -1,12 +1,18 @@
 import { describe, expect, jest, test } from "bun:test";
-import type { JevActionRequest, JevActionResult } from "wow/jev";
+import {
+  type JevActionRequest,
+  type JevActionResult,
+  type JevSelect,
+  selectJevAction,
+} from "wow/jev";
+import { JevTransportError } from "wow/jev-failure";
 import {
   createFaultSelect,
   faultMarker,
   type JevFault,
   parseJevFault,
 } from "wow/jev-fault";
-import { type TacticsEvent, TacticsLoop } from "wow/tactics";
+import { type TacticsEvent, TacticsLoop, TRANSPORT_LIMIT } from "wow/tactics";
 
 const mockRequest: JevActionRequest = {
   instruction: "defeat target",
@@ -57,6 +63,7 @@ describe("parseJevFault", () => {
       "delay",
       "delay:-1",
       "http:99",
+      "http:200",
       "503",
       "network",
       "transport@0",
@@ -81,17 +88,30 @@ describe("createFaultSelect", () => {
     apiKey: "key",
     signal: new AbortController().signal,
   });
-  const base = async () => mockResult;
+  const base: JevSelect = async (_request, { fetch }) => {
+    await fetch?.("");
+    return mockResult;
+  };
 
-  test("throws HTTP status error", async () => {
-    const select = createFaultSelect({ kind: "http", status: 503 }, base);
-    await expect(select(mockRequest, options())).rejects.toThrow(
-      "TypeSafe HTTP 503",
+  test("fails through the real client's HTTP classification", async () => {
+    const busy = createFaultSelect(
+      { kind: "http", status: 503 },
+      selectJevAction,
+    );
+    await expect(busy(mockRequest, options())).rejects.toBeInstanceOf(
+      JevTransportError,
+    );
+    const unpaid = createFaultSelect(
+      { kind: "http", status: 402 },
+      selectJevAction,
+    );
+    await expect(unpaid(mockRequest, options())).rejects.toThrow(
+      "jev_unavailable: HTTP 402 payment_required",
     );
   });
 
   test("throws transport error", async () => {
-    const select = createFaultSelect({ kind: "transport" }, base);
+    const select = createFaultSelect({ kind: "transport" }, selectJevAction);
     await expect(select(mockRequest, options())).rejects.toThrow(
       "fetch failed",
     );
@@ -148,10 +168,13 @@ describe("TacticsLoop fault integration", () => {
   };
 
   function faultLoop(fault: JevFault, maxResultAgeMs?: number) {
+    const base =
+      fault.kind === "delay" ? async () => mockResult : selectJevAction;
     const loop = new TacticsLoop({
       apiKey: "key",
       maxResultAgeMs,
-      select: createFaultSelect(fault, async () => mockResult),
+      minIntervalMs: 0,
+      select: createFaultSelect(fault, base),
       fault: faultMarker(fault),
       prepare: async () => {},
       activate: () => {},
@@ -206,25 +229,73 @@ describe("TacticsLoop fault integration", () => {
     expect(loop.snapshot().lastStopReason).toBe("halt");
   });
 
-  test("HTTP status failure yields transport error", async () => {
-    const { loop, events } = faultLoop({ kind: "http", status: 503 });
-    await loop.start(context);
+  test("a refused key ends the run at once as jev_unavailable", async () => {
+    const { loop, events } = faultLoop({ kind: "http", status: 402 });
+    const reason = "jev_unavailable: HTTP 402 payment_required";
+    await expect(loop.start(context)).rejects.toThrow(reason);
     const transport = events.filter((e) => e.type === "transport");
-    expect(transport).toHaveLength(1);
+    expect(transport.map((e) => e.type === "transport" && e.error)).toEqual([
+      reason,
+    ]);
+    expect(loop.snapshot()).toMatchObject({
+      fault: "http:402",
+      status: "idle",
+      lastStopReason: "failed",
+      lastOutcome: { status: "failed", reason },
+    });
+  });
+
+  test("repeated server errors end the run as jev_unavailable", async () => {
+    const { loop, events } = faultLoop({ kind: "http", status: 503 });
+    await expect(loop.start(context)).rejects.toThrow(
+      `jev_unavailable: transport TypeSafe HTTP 503 (${TRANSPORT_LIMIT} in a row)`,
+    );
+    const transport = events.filter((e) => e.type === "transport");
+    expect(transport).toHaveLength(TRANSPORT_LIMIT);
     expect(transport[0]?.error).toBe("TypeSafe HTTP 503");
-    expect(loop.snapshot().fault).toBe("http:503");
-    expect(loop.snapshot().status).toBe("idle");
     expect(loop.snapshot().lastStopReason).toBe("failed");
   });
 
-  test("transport network failure yields transport error", async () => {
+  test("repeated network failures end the run as jev_unavailable", async () => {
     const { loop, events } = faultLoop({ kind: "transport" });
-    await loop.start(context);
+    await expect(loop.start(context)).rejects.toThrow(
+      "jev_unavailable: transport fetch failed",
+    );
     const transport = events.filter((e) => e.type === "transport");
-    expect(transport).toHaveLength(1);
     expect(transport[0]?.error).toBe("fetch failed");
     expect(loop.snapshot().fault).toBe("transport:network");
-    expect(loop.snapshot().status).toBe("idle");
     expect(loop.snapshot().lastStopReason).toBe("failed");
+  });
+
+  test("a transport failure short of the limit keeps the fight going", async () => {
+    let calls = 0;
+    let hit = false;
+    const loop = new TacticsLoop({
+      apiKey: "key",
+      minIntervalMs: 0,
+      select: async () => {
+        calls++;
+        if (calls < TRANSPORT_LIMIT)
+          throw new JevTransportError("fetch failed");
+        return mockResult;
+      },
+      prepare: async () => {},
+      activate: () => {},
+      observe: () => ({
+        ...frame,
+        outcome: hit ? { status: "completed", reason: "killed" } : undefined,
+      }),
+      execute: () => {
+        hit = true;
+      },
+      halt: () => {},
+      defend: () => "none",
+    });
+    await loop.start(context);
+    expect(calls).toBe(TRANSPORT_LIMIT);
+    expect(loop.snapshot().lastOutcome).toMatchObject({
+      status: "completed",
+      reason: "killed",
+    });
   });
 });

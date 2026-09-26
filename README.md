@@ -267,6 +267,9 @@ summaries; QUEST lines in `read` name the quest, counts, reward and error
 reason. Control actions report daemon request acceptance, not server success;
 `fight` replies when the run ends with its outcome
 (`completed: server_kill_credit, XP 60`), and `cycle` says it ended.
+When Jev is unavailable (a refused key such as HTTP 402 `billing_error`, or
+repeated network failures) they reply `ERR jev_unavailable: <cause>` and exit
+1, and a cycle keeps its queue `queued` for `cycle --resume`.
 Use `--json` for the full observed state and for scripts.
 
 ## Gameplay notes

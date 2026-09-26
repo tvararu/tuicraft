@@ -1,5 +1,7 @@
 import { abortReason, isAbort } from "lib/abort";
+import { messageOf } from "lib/errors";
 import { buildFraming, type FramingVariant } from "wow/framing";
+import { httpFailure, JevTransportError } from "wow/jev-failure";
 
 const SYSTEMONE_URL = "https://api.typesafe.ai/v1/systemone";
 const DEFAULT_MODEL = "jev-latest";
@@ -94,10 +96,10 @@ async function post(body: string, options: JevActionOptions): Promise<unknown> {
   } catch (error) {
     if (options.signal.aborted || isAbort(error))
       throw abortReason(options.signal, error);
-    throw error;
+    throw new JevTransportError(messageOf(error), { cause: error });
   }
   if (options.signal.aborted) throw abortReason(options.signal);
-  if (!response.ok) throw new Error(`TypeSafe HTTP ${response.status}`);
+  if (!response.ok) throw await httpFailure(response);
   try {
     return await response.json();
   } catch (error) {

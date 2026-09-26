@@ -24,14 +24,10 @@ function parseKind(spec: string): JevFault | undefined {
   const number = Number(value);
   if (kind === "delay" && Number.isSafeInteger(number) && number >= 0)
     return { kind, delayMs: number };
-  if (kind === "http" && Number.isInteger(number) && inStatusRange(number))
-    return { kind, status: number };
+  const status = Number.isInteger(number) && number >= 400 && number <= 599;
+  if (kind === "http" && status) return { kind, status: number };
   if (spec === "transport") return { kind: "transport" };
   return undefined;
-}
-
-function inStatusRange(status: number): boolean {
-  return status >= 100 && status <= 599;
 }
 
 export function faultMarker(fault: JevFault): string {
@@ -56,10 +52,14 @@ export function createFaultSelect(
 }
 
 function faultySelect(fault: JevFault, baseSelect: JevSelect): JevSelect {
-  if (fault.kind === "http")
-    return () => Promise.reject(new Error(`TypeSafe HTTP ${fault.status}`));
-  if (fault.kind === "transport")
-    return () => Promise.reject(new TypeError("fetch failed"));
+  if (fault.kind === "http") {
+    const fetch = async () => new Response(null, { status: fault.status });
+    return (request, options) => baseSelect(request, { ...options, fetch });
+  }
+  if (fault.kind === "transport") {
+    const fetch = () => Promise.reject(new TypeError("fetch failed"));
+    return (request, options) => baseSelect(request, { ...options, fetch });
+  }
   return async (request, options) => {
     const started = performance.now();
     const detached = new AbortController().signal;
