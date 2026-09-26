@@ -40,13 +40,13 @@ export type Issue = {
 
 const reviewState = `status{context(name:"factory/review"){state createdAt}}`;
 
-const query = `query($q:String!,$cursor:String){search(type:ISSUE,query:$q,first:50,after:$cursor){
+const query = `query($q:String!,$cursor:String){search(type:ISSUE,query:$q,first:40,after:$cursor){
   pageInfo{hasNextPage endCursor} nodes{... on Issue{
   number author{login} blockedBy(first:20){nodes{state}}
   projectItems(first:20){nodes{project{id}
     fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{optionId updatedAt}}}}
   comments(last:40){nodes{databaseId body createdAt}}
-  closedByPullRequestsReferences(first:5,includeClosedPrs:false){nodes{
+  closedByPullRequestsReferences(first:3,includeClosedPrs:false){nodes{
     number state baseRefName headRefName headRefOid reviewDecision isDraft
     history:commits(last:30){nodes{commit{oid ${reviewState}}}}
     timelineItems(itemTypes:HEAD_REF_FORCE_PUSHED_EVENT,last:30){nodes{

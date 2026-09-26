@@ -2,3 +2,5 @@ memory:
   backend: "off"
 autolearn:
   enabled: false
+git:
+  enabled: false
