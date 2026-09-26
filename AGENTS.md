@@ -203,17 +203,9 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   push to `main`; it integrates by cherry-picking commits in order, never by
   merging. Note that `git cherry-pick --continue` opens an editor, so pass
   `-c core.editor=true`.
-- The ten `gameplay-*` worktrees from the Astra run were removed on
-  2026-09-21, but their uncommitted work was archived first, to
-  `tmp/worktree-archive-2026-09-21/`. `tmp/` is gitignored, so **that archive
-  exists on disk only and is pushed nowhere**. It holds ten `<name>.patch`
-  files plus `MANIFEST.txt` giving each one's base commit (`903c3a3` or
-  `1e73c0b`). Some of it exists in no commit at all —
-  `src/wow/remote-motion.test.ts`, 338 lines, lives only inside
-  `gameplay-quests.patch`. Restore one with:
-
-      git worktree add --detach <dir> <base-sha-from-manifest>
-      git -C <dir> apply --binary tmp/worktree-archive-2026-09-21/<name>.patch
+- `tmp/` is ephemeral: keep nothing there that matters, and accept that
+  it can be lost. The 2026-09-21 archive of the Astra run's `gameplay-*`
+  worktrees was deleted on 2026-09-26 at the maintainer's request.
 
 ## Worktree lifecycle
 
