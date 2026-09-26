@@ -185,6 +185,12 @@ tuicraft skill             # print SKILL.md for AI agents
 tuicraft version           # print version
 ```
 
+Config, socket and session log follow `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`
+and `XDG_STATE_HOME` (see Files in `docs/manual.md` for the fallbacks). To run
+two characters at once, give each its own three `XDG_*` directories and
+prefix its commands with them, for example
+`XDG_CONFIG_HOME=~/tc/a/config XDG_RUNTIME_DIR=~/tc/a/run XDG_STATE_HOME=~/tc/a/state tuicraft start`.
+
 The GUIDs in these examples are placeholders. Copy current creature GUIDs from
 `nearby --json` before `fight` or `cycle`; `target` also accepts a stale GUID
 and `control --json` separates the sent request from the observed selection.

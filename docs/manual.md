@@ -982,6 +982,34 @@ is set, otherwise `<tmpdir>/tuicraft-<uid>`, where _tmpdir_ is `$TMPDIR` or
 `${XDG_STATE_HOME:-~/.local/state}/tuicraft/session.log`
 : Persistent JSONL session log.
 
+To find the socket for raw IPC under either layout:
+
+```sh
+SOCK="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/tuicraft/sock}"
+SOCK="${SOCK:-${TMPDIR:-/tmp}/tuicraft-$(id -u)/sock}"
+echo "STATUS" | nc -U "$SOCK"
+```
+
+### Two characters at once
+
+One daemon serves one character. To play two, give each character its own
+`XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR` and `XDG_STATE_HOME`. Each then has its
+own config, socket, pidfile and session log. Prefix every command for that
+character with its variables:
+
+```sh
+A="XDG_CONFIG_HOME=$HOME/tc/a/config XDG_RUNTIME_DIR=$HOME/tc/a/run XDG_STATE_HOME=$HOME/tc/a/state"
+B="XDG_CONFIG_HOME=$HOME/tc/b/config XDG_RUNTIME_DIR=$HOME/tc/b/run XDG_STATE_HOME=$HOME/tc/b/state"
+env $A tuicraft setup --account ACC_A --password PASS_A --character NameA
+env $B tuicraft setup --account ACC_B --password PASS_B --character NameB
+env $A tuicraft start && env $B tuicraft start
+env $A tuicraft send "/invite NameB"
+env $B tuicraft send "/accept"
+```
+
+Without separate directories, the second `start` reaches the first daemon and
+prints `Daemon is already running.`
+
 ## Testing
 
 `mise test` runs the unit suite. `mise test:live` runs `src/test/live.ts`
