@@ -1,4 +1,4 @@
-import { expect, jest, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { must } from "test/must";
 import { context, fixture, frame, judgment } from "test/tactics-fixtures";
 import type { JevActionResult } from "wow/jev";
@@ -128,6 +128,8 @@ test("provider failure terminates explicitly without hidden retries", async () =
   await f.tactics.start(context);
   await f.stopped;
   expect(f.actions).toEqual([]);
+  expect(f.defenses).toBe(1);
+  expect(f.halts).toBe(0);
   expect(f.events.filter((event) => event.type === "request")).toHaveLength(1);
   expect(f.tactics.snapshot()).toMatchObject({
     status: "idle",
@@ -136,30 +138,6 @@ test("provider failure terminates explicitly without hidden retries", async () =
       reason: "Malformed TypeSafe Choice response",
     },
   });
-});
-
-test("provider timeout halts even if the provider ignores abort", async () => {
-  jest.useFakeTimers();
-  const result = Promise.withResolvers<JevActionResult>();
-  const f = fixture({ requestTimeoutMs: 500, select: () => result.promise });
-  try {
-    const running = f.tactics.start(context);
-    await f.requested;
-    jest.advanceTimersByTime(500);
-    await running;
-    await f.stopped;
-    expect(f.halts).toBe(1);
-    expect(f.tactics.snapshot().lastOutcome).toEqual({
-      status: "failed",
-      reason: "jev_timeout",
-    });
-    result.resolve(judgment());
-    await Promise.resolve();
-    expect(f.actions).toEqual([]);
-  } finally {
-    f.tactics.dispose();
-    jest.useRealTimers();
-  }
 });
 
 test("wait-only frames skip inference until useful choices appear", async () => {

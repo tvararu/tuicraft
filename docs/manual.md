@@ -270,11 +270,21 @@ Jev may choose directional movement during a fight under a renewable lease:
 `wait` holds the current direction, `stop_moving` releases it, and choosing a
 standing-required spell releases the lease before casting. The observation
 carries target separation and facing for those choices.
+A Jev request that takes longer than 5 s is discarded as `jev_timeout`; no
+action is taken for it and the loop asks again. The run stops with
+`failed`/`jev_timeout` only after 3 timeouts in a row, and any answered request
+resets that count. Other Jev failures (HTTP errors, network errors, malformed
+replies) stop the run at once. When Jev fails a run, the stop keeps or starts
+auto-attack on the target if it is alive and attacking the character
+(`tactics.defense: auto_attack`). Otherwise it releases control and reports
+`uncontrolled_in_combat` if the character is still in combat, or `none`.
 
 `tuicraft tactics` [`--json`]
 :: Print tactics loop state. `lastOutcome.observation` retains the actual
 terminal observation when one was available, including blocks before inference.
-`lastRequest` is not populated without a real Jev request.
+`lastRequest` is not populated without a real Jev request. `timeouts` holds the
+run's `consecutive` and `total` Jev timeouts and the stop `limit` (3); `defense`
+is set only when a Jev failure stopped the run.
 
 `tuicraft cycle` _guid..._ [`--instruction` _text_] [`--max` _N_] [`--json`]
 :: Run the fight-loot-next-target loop over an explicit GUID queue: `fight`

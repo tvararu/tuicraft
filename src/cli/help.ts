@@ -38,6 +38,7 @@ USAGE
                             Engages hostile/neutral creatures; refuses friendly (target_friendly) and players
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations
+                            3 Jev timeouts in a row stop a fight; see defense
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause

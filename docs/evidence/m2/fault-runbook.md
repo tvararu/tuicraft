@@ -56,7 +56,7 @@ Exercise a delay exceeding the 2000 ms result-age bound (`DEFAULT_MAX_AGE_MS = 2
 
 ### 1B. Request Timeout Exceeded (`jev_timeout`)
 
-Exercise a delay exceeding the 5000 ms request timeout bound (`DEFAULT_TIMEOUT_MS = 5000`) where the timeout cancels the in-flight request.
+Exercise a delay exceeding the 5000 ms request timeout bound (`DEFAULT_TIMEOUT_MS = 5000`) where the timeout cancels the in-flight request. Each timeout is discarded without an action and the loop asks again; only `MAX_CONSECUTIVE_TIMEOUTS = 3` timeouts in a row stop the run.
 
 1. Stop any running daemon:
    ```bash
@@ -71,10 +71,7 @@ Exercise a delay exceeding the 5000 ms request timeout bound (`DEFAULT_TIMEOUT_M
    tuicraft target <guid>
    tuicraft fight <guid>
    ```
-4. Wait 7 seconds for the request timeout (5000 ms) to trip:
-   ```bash
-   sleep 7
-   ```
+4. The `fight` command returns once three timeouts in a row (about 15 s) stop the run.
 5. Check tactics state:
    ```bash
    tuicraft tactics --json
@@ -84,16 +81,42 @@ Exercise a delay exceeding the 5000 ms request timeout bound (`DEFAULT_TIMEOUT_M
    - `lastStopReason`: `"failed"`
    - `lastDiscardReason`: `"jev_timeout"`
    - `lastOutcome.reason`: `"jev_timeout"`
+   - `timeouts`: `{ "consecutive": 3, "total": 3, "limit": 3 }`
+   - `defense`: `"auto_attack"` when the target is alive and attacking, otherwise `"uncontrolled_in_combat"` or `"none"`
    - `fault`: `"delay:6000ms"`
 6. Distil the encounter record:
    ```bash
    mise evidence:encounter latest delayed-response-timeout > docs/evidence/m2/delayed-response-timeout.json
    ```
    **Proof field in distilled record:**
-   - `transportErrors`: contains `"jev_timeout"`
+   - `transportErrors`: three `"jev_timeout"` entries
    - `outcome.status`: `"failed"`
    - `outcome.reason`: `"jev_timeout"`
    - `fault`: `"delay:6000ms"`
+
+### 1C. One Request Timeout Mid-Fight (`jev_timeout`, recovered)
+
+Exercise a single timed-out request inside a fight that continues.
+
+1. Stop any running daemon, then start it with a 6000 ms delay on the third Jev request only:
+   ```bash
+   tuicraft stop
+   JEV_FAULT=delay:6000@3 tuicraft start
+   ```
+2. Fight a target:
+   ```bash
+   tuicraft fight <guid>
+   ```
+3. Check tactics state:
+   ```bash
+   tuicraft tactics --json
+   ```
+   **Expect in `tuicraft tactics --json`:**
+   - `lastOutcome.reason`: `"server_kill_credit"`
+   - `timeouts`: `{ "consecutive": 0, "total": 1, "limit": 3 }`
+   - `fault`: `"delay:6000ms@3"`
+
+   The session log holds one TACTICS `transport` `jev_timeout`, then a new `request`, and later a `discarded` `aborted` for the late reply.
 
 ---
 

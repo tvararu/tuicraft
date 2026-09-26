@@ -2,6 +2,7 @@ import type { Unsubscribe } from "lib/emitter";
 import type { ClientConfig } from "wow/client";
 import { CombatRuntime } from "wow/combat";
 import { CombatActions } from "wow/combat-actions";
+import { defendTarget } from "wow/combat-defense";
 import { ControlRuntime } from "wow/control";
 import { EncounterCycleRuntime } from "wow/encounter-cycle";
 import type { EntityLookup } from "wow/entity-store";
@@ -131,6 +132,7 @@ function createTactics(
     actions: CombatActions;
     prepare: (signal: AbortSignal) => Promise<void>;
     halt: () => void;
+    defense: { combat: CombatRuntime; control: ControlRuntime };
   },
 ): TacticsLoop {
   const { actions } = hooks;
@@ -151,6 +153,11 @@ function createTactics(
     observe: (context) => actions.observe(context),
     execute: (id, context) => actions.execute(id, context),
     halt: hooks.halt,
+    defend: (context) =>
+      defendTarget(
+        { ...hooks.defense, entity: (guid) => conn.entityStore.get(guid) },
+        context.targetGuid,
+      ),
   });
 }
 
@@ -313,6 +320,7 @@ export function createRuntimes(
       signal.throwIfAborted();
     },
     halt: rawHalt,
+    defense: { combat, control },
   });
   conn.tactics = tactics;
   const parts = {

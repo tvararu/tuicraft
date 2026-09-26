@@ -35,6 +35,7 @@ export function fixture(over: Partial<TacticsDeps> = {}) {
   const stopped = Promise.withResolvers<void>();
   const requested = Promise.withResolvers<void>();
   let halts = 0;
+  let defenses = 0;
   let activations = 0;
   let calls = 0;
   const tactics = new TacticsLoop({
@@ -42,6 +43,10 @@ export function fixture(over: Partial<TacticsDeps> = {}) {
       activations += 1;
     },
     apiKey: "ts_test_key",
+    defend: () => {
+      defenses += 1;
+      return "auto_attack";
+    },
     execute: (id) => {
       actions.push(id);
     },
@@ -68,6 +73,9 @@ export function fixture(over: Partial<TacticsDeps> = {}) {
     },
     get calls() {
       return calls;
+    },
+    get defenses() {
+      return defenses;
     },
     events,
     get halts() {
