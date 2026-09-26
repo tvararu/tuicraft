@@ -169,7 +169,7 @@ tuicraft loot            # current offer and unanswered requests
 tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
-tuicraft release-loot      # request closure of the open window
+tuicraft release-loot      # request closure of a window you leave partly looted
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
@@ -329,6 +329,9 @@ intent, errors, item/money notices and actual inventory evidence.
 Opening requires an observed lootable creature corpse and authoritative alive
 self state. Take only offered slots. `OK`, slot removal and money clearance do
 not prove stored items or a coinage gain. Inspect raw inventory changes separately.
+Like the real client, tuicraft releases the window itself once a take leaves it
+with no items and no money; `release-loot` is only needed after a partial loot,
+and on a window that is already closing or closed it sends nothing.
 
 A release-only notification during opening leaves the open request unanswered.
 It can precede a later full response and is not proof of denial or closure.

@@ -230,14 +230,11 @@ export class RewardsRuntime {
 
   close(): RewardsState {
     this.active();
+    if (this.loot.phase === "closed" || this.loot.phase === "closing")
+      return this.snapshot();
     if (this.loot.phase !== "open")
       throw new Error("No open loot window to close");
-    const guid = this.loot.guid;
-    const requestedAt = this.deps.now();
-    this.deps.send(GameOpcode.CMSG_LOOT_RELEASE, buildLootRelease(guid));
-    this.loot.phase = "closing";
-    this.pending = { action: "close", guid, requestedAt, status: "unanswered" };
-    return this.emit("loot_close_requested");
+    return this.release(this.loot);
   }
 
   receiveLootResponse(response: LootResponse): void {
@@ -278,6 +275,7 @@ export class RewardsRuntime {
     if (this.pending?.action === "take" && this.pending.slot === slot)
       this.pending = undefined;
     this.emit("loot_removed");
+    this.releaseIfEmpty();
   }
 
   receiveLootMoneyCleared(): void {
@@ -286,6 +284,7 @@ export class RewardsRuntime {
     this.loot.money = 0;
     if (this.pending?.action === "money") this.pending = undefined;
     this.emit("loot_money_cleared");
+    this.releaseIfEmpty();
   }
 
   receiveLootRelease(response: LootReleaseResponse): void {
@@ -428,6 +427,21 @@ export class RewardsRuntime {
     if (this.loot.phase === "closed" || this.loot.invalidatedReason) return;
     this.loot.invalidatedReason = reason;
     this.emit("loot_invalidated");
+  }
+
+  private release(window: RewardsOpenLoot): RewardsState {
+    const { guid } = window;
+    const requestedAt = this.deps.now();
+    this.deps.send(GameOpcode.CMSG_LOOT_RELEASE, buildLootRelease(guid));
+    window.phase = "closing";
+    this.pending = { action: "close", guid, requestedAt, status: "unanswered" };
+    return this.emit("loot_close_requested");
+  }
+
+  private releaseIfEmpty(): void {
+    if (this.loot.phase !== "open" || this.pending) return;
+    if (this.loot.items.length > 0 || this.loot.money > 0) return;
+    this.release(this.loot);
   }
 
   private emit(type: RewardsEvent["type"]): RewardsState {

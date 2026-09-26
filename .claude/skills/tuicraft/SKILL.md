@@ -336,7 +336,8 @@ Rules:
 - Confirm stored gain with actual raw slot/count or stack-count changes. Confirm money gain with actual coinage changes.
 - Item/money notices are separate evidence. An item-push slot of `0xFFFFFFFF` is a stacking sentinel, not a physical inventory address.
 - Inventory-full/bag-full errors retain their raw result/details. They do not prove that a particular pending take resolved.
-- `release-loot` requests close of an open window and can replace an unanswered take with close intent. Wait for observed release before replacement.
+- Once a take or money clearance leaves the window with no items and no money, tuicraft sends the release itself, as the real client does: `loot.phase` goes `closing`, then `closed` on the server's release. Taking a subset leaves it open.
+- `release-loot` requests close of an open window and can replace an unanswered take with close intent. Wait for observed release before replacement. On a window that is already closing or closed it sends nothing and returns OK.
 - A release-only notification during opening does not prove denial or closure. `loot.phase` stays opening and `pending.status` stays unanswered.
 - That release can precede a valid full response. Do not take, replace, timeout-reset, or automatically retry while opening remains unanswered.
 - If no full response follows, explicitly reconnect with `tuicraft stop`, then `tuicraft inventory --json`. This is ordinary reconnect recovery, not completed denial/retry support.

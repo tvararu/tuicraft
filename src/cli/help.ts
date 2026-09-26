@@ -73,6 +73,7 @@ USAGE
   tuicraft take-loot <slot>  Request an offered uint8 loot slot (0-255)
   tuicraft take-money        Request money from the current offer
   tuicraft release-loot      Request close of the open loot window
+                            Taking the last item and money releases it automatically
                             OK/slot removal is not stored gain
                             Item-push slot 0xFFFFFFFF means stacking, not a bag slot
                             Release-only opening stays unanswered; reconnect explicitly
