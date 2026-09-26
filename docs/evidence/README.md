@@ -28,3 +28,4 @@ is what a reader inspects.
 - [m3/](m3/README.md) — movement as a tactical action
 - [m3a/](m3a/funnel-corner.md) — reliable local navigation (funnel corner)
 - [m4/](m4/README.md) — repeatable encounter cycles
+- [m5/](m5/README.md) — the first quest (8325) end to end
