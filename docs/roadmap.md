@@ -796,11 +796,12 @@ recorded in `tmp/gameplay-data/provenance.json` (gitignored). The matching
 Expansion01 navigation data and native library are present; their presence
 alone does not prove navigation.
 
-The unmerged `vibe` branch contains movement, namigator navigation, combat, and
-priest-hunting work, along with research notes and live-run journals. It is
-reference material, not a merge candidate or the architecture to inherit.
-Useful pieces may be reused after inspection and verification to the same
-standard as new work. Its recorded successes are not proof of current readiness.
+The unmerged `vibe` work (tag `archive/vibe`) contains movement, namigator
+navigation, combat, and priest-hunting work, along with research notes and
+live-run journals. It is reference material, not a merge candidate or the
+architecture to inherit. Useful pieces may be reused after inspection and
+verification to the same standard as new work. Its recorded successes are not
+proof of current readiness.
 
 An initial TypeSafe experiment used six synthetic WoW scenarios with
 `jev-1.13.0`. It demonstrated instruction-dependent action choices and measured
@@ -813,7 +814,7 @@ decision.
 
 ## What this document does not authorize
 
-No bulk merge of `vibe`, server-data modifications, or commitment to a
+No bulk merge of `archive/vibe`, server-data modifications, or commitment to a
 natural-language planner, generic task framework, or exact rendering
 implementation. The active goal permits useful capability additions and
 sequencing changes after independent consultation and a recorded decision.
