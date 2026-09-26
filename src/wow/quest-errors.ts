@@ -17,6 +17,7 @@ export type QuestError = {
   at: number;
   questId?: number;
   reason?: number;
+  reasonName?: string;
   window?: QuestWindow;
   guid?: bigint;
   name?: string;

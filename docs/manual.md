@@ -725,7 +725,7 @@ Escaped newlines and quotes stay inside the code instead of creating another IPC
 
 `tuicraft accept-quest`
 :: Request acceptance of the currently offered quest details. Inspect subsequent log state for actual acceptance.
-Auto-accept quests (for example 8325) enter the log when `select-quest` opens their details. The details stay open, but `accept-quest` then fails with `quest_already_in_log` instead of sending a request the server rejects.
+Auto-accept quests (for example 8325) carry quest flag 0x80000; the server enters them in the log when `select-quest` opens their details. `quests` marks such details `(auto-accept)` and `quests --json` sets `dialog.data.autoAccept: true`. The details stay open, but `accept-quest` then fails with `quest_already_in_log <id>` and sends nothing instead of a request the server rejects. A server refusal (`SMSG_QUESTGIVER_QUEST_INVALID`) is recorded as `lastError` `{kind: "invalid", reason, reasonName}`, where `reasonName` names the InvalidReason, for example 13 `already_on_quest`.
 
 `tuicraft complete-quest` _id_
 :: Send `CMSG_QUESTGIVER_COMPLETE_QUEST` for a quest in the current dialog. This is the request `select-quest` already sends for a quest you can turn in. The server answers with a `requestItems` dialog when the quest needs items, even if you carry them, and with `offer` otherwise. On an open `requestItems` dialog it only re-sends the same dialog, with no error; use `request-reward` there. Log membership or queried metadata alone does not authorize this action.

@@ -129,6 +129,7 @@ describe("quest menus and rewards", () => {
       objectives: "O",
       activateAccept: 2,
       flags: 0x80_00_02_00,
+      autoAccept: false,
       suggestedPlayers: 3,
       unknown: 127,
       rewards,

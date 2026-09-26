@@ -61,6 +61,7 @@ export type QuestgiverQuestDetails = {
   objectives: string;
   activateAccept: number;
   flags: number;
+  autoAccept: boolean;
   suggestedPlayers: number;
   unknown: number;
   rewards: QuestRewards;
@@ -256,18 +257,29 @@ function emotes(
   return result;
 }
 
+const QUEST_FLAGS_AUTO_ACCEPT = 0x8_00_00;
+
 export function parseQuestgiverQuestDetails(
   r: PacketReader,
 ): QuestgiverQuestDetails {
+  const guid = r.uint64LE();
+  const dividerGuid = r.uint64LE();
+  const questId = r.uint32LE();
+  const title = r.cString();
+  const details = r.cString();
+  const objectives = r.cString();
+  const activateAccept = r.uint8();
+  const flags = r.uint32LE();
   return {
-    guid: r.uint64LE(),
-    dividerGuid: r.uint64LE(),
-    questId: r.uint32LE(),
-    title: r.cString(),
-    details: r.cString(),
-    objectives: r.cString(),
-    activateAccept: r.uint8(),
-    flags: r.uint32LE(),
+    guid,
+    dividerGuid,
+    questId,
+    title,
+    details,
+    objectives,
+    activateAccept,
+    flags,
+    autoAccept: (flags & QUEST_FLAGS_AUTO_ACCEPT) !== 0,
     suggestedPlayers: r.uint32LE(),
     unknown: r.uint8(),
     rewards: { ...rewardPrefix(r), ...rewardSuffix(r) },

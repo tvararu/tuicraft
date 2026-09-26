@@ -23,13 +23,16 @@ describe("quest 8325 captured from the live server", () => {
     const details = must(runtime.snapshot().dialog);
     if (details.kind !== "details") throw new Error(details.kind);
     expect(details.data.flags & 0x8_00_00).toBe(0x8_00_00);
+    expect(details.data.autoAccept).toBe(true);
     expect(details.data.rewards.choices.map((c) => c.itemId)).toEqual([
       20_997, 20_998,
     ]);
     expect(details.data.rewards.money).toBe(30);
     logQuest(questId, 0);
     expect(events.some((e) => e.type === "accepted")).toBe(true);
-    expect(() => runtime.accept()).toThrow("quest_already_in_log");
+    const before = sent.length;
+    expect(() => runtime.accept()).toThrow("quest_already_in_log 8325");
+    expect(sent.length).toBe(before);
     packet(
       GameOpcode.SMSG_QUESTGIVER_QUEST_INVALID,
       captured8325.alreadyOnQuest,
@@ -37,6 +40,7 @@ describe("quest 8325 captured from the live server", () => {
     expect(runtime.snapshot().lastError).toMatchObject({
       kind: "invalid",
       reason: 13,
+      reasonName: "already_on_quest",
     });
   });
 

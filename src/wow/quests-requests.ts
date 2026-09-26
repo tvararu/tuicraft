@@ -140,10 +140,10 @@ export function acceptRequest(
   log: QuestLog,
 ): QuestRequest {
   if (dialog?.kind !== "details") throw new Error("quest_details_not_open");
-  if (!dialog.data.activateAccept) throw new Error("quest_accept_not_offered");
   const { guid, questId } = dialog.data;
   if (log.slots.some((slot) => slot.questId === questId))
-    throw new Error("quest_already_in_log");
+    throw new Error(`quest_already_in_log ${questId}`);
+  if (!dialog.data.activateAccept) throw new Error("quest_accept_not_offered");
   return {
     opcode: GameOpcode.CMSG_QUESTGIVER_ACCEPT_QUEST,
     body: buildQuestgiverAcceptQuest(guid, questId, 0),
