@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { waitUntil } from "test/live-helpers";
+import { goXyz, SUNSTRIDER_SPAWN, waitUntil } from "test/live-helpers";
 import { must } from "test/must";
 import { authHandshake } from "wow/auth";
 import { type WorldHandle, worldSession } from "wow/client";
@@ -16,7 +16,7 @@ const config1 = {
 
 const ERONA = 15_278;
 const QUEST = 8325;
-const SUNSTRIDER_START = ".go xyz 10349.6 -6357.29 33.4026 530";
+const SUNSTRIDER_START = goXyz(SUNSTRIDER_SPAWN);
 const OUT_OF_REACH = ".go xyz 10382 -6379.56 37.69 530";
 const ARENA = 15_284;
 const NEAR_ARENA = ".go xyz 10369.5 -6429.4 38.6 530";

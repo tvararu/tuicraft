@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readConfig } from "lib/config";
-import { appearBeside, waitUntil } from "test/live-helpers";
+import { near, SUNSTRIDER_SPAWN, standAt, waitUntil } from "test/live-helpers";
 import { must } from "test/must";
 import { authHandshake } from "wow/auth";
 import { type WorldHandle, worldSession } from "wow/client";
@@ -41,16 +41,44 @@ describe("remote movement", () => {
     });
 
     try {
-      await Bun.sleep(2000);
-      restore = await appearBeside(
+      const excursion = await standAt(
         handle1,
         config1.character,
-        config2.character,
+        SUNSTRIDER_SPAWN,
       );
-      poses.length = 0;
+      restore = excursion.restore;
       handle2 = await worldSession(config2, auth2);
       const peer = handle2.getControlState().selfGuid;
-      await waitUntil(() => poses.some((p) => p.guid === peer));
+      const summonedAt = Date.now();
+      poses.length = 0;
+      handle1.sendWhisper(config1.character, `.summon ${config2.character}`);
+      await waitUntil(() => {
+        const pose = handle2?.getControlState().serverPose;
+        return (
+          pose !== undefined &&
+          pose.updatedAt >= summonedAt &&
+          near(pose, SUNSTRIDER_SPAWN, 5)
+        );
+      });
+      await waitUntil(() =>
+        poses.some(
+          (p) =>
+            p.guid === peer &&
+            p.invalid === undefined &&
+            near(p.position, SUNSTRIDER_SPAWN, 5),
+        ),
+      );
+      const heading = must(SUNSTRIDER_SPAWN.orientation);
+      handle2.face(heading);
+      await waitUntil(() =>
+        poses.some(
+          (p) =>
+            p.guid === peer &&
+            p.source === "observer" &&
+            Math.abs((p.position.orientation ?? 0) - heading) < 0.01,
+        ),
+      );
+      poses.length = 0;
       const started = Date.now();
       handle2.move("forward", 1500);
       await waitUntil(() =>
