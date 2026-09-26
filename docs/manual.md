@@ -362,7 +362,14 @@ the stop reason. A request for money or an item slot does not prove a gain.
 `tuicraft goto` _x_ _y_ _z_
 :: Request a ground route. Missing navigation data fails with `ERR`.
 An entity's observed Z need not be a unique ground height. Do not pass
-`nearby` coordinates to `goto` without ground validation.
+`nearby` coordinates to `goto` without ground validation. The start and
+destination must each have one ground height. Along the route, a column may
+also hold surfaces below the walked ground or more than 1.6 yards (the agent
+height) above it, such as a canopy or a bridge overhead. A route still
+refuses a surface within 1.6 yards above the walked ground and a step of more
+than 1 yard between 0.5-yard samples. A native path corner may sit up to
+1.25 yards above the ground (the navmesh's climb plus one cell), but no other
+surface may be closer to it.
 
 `tuicraft navigation` [`--json`]
 :: Print navigation state, including raw `blockedReason`, `refusal` and

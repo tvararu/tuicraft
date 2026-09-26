@@ -91,6 +91,50 @@ describe("grounded navigation", () => {
     expect(() => navigation(map).plan(530, start, end)).toThrow(/collision/);
   });
 
+  test("walks under overhead geometry that clears the agent height", () => {
+    const map = native({
+      findHeights: (x) => (x > 0 && x < 10 ? [0, 10, -5] : [0]),
+    });
+    expect(navigation(map).plan(530, start, end).length).toBe(10);
+  });
+
+  test("rejects a route surface without headroom beneath another", () => {
+    const map = native({
+      findHeights: (x) => (x === 5 ? [0, 1.5] : [0]),
+    });
+    expect(() => navigation(map).plan(530, start, end)).toThrow(/ambiguous/);
+  });
+
+  test("rejects a connected trace that drops to a lower floor", () => {
+    const map = native({
+      findHeight: (_from, x) => (x >= 4 && x <= 6 ? -5 : 0),
+      findHeights: (x) => (x >= 4 && x <= 6 ? [0, -5] : [0]),
+    });
+    expect(() => navigation(map).plan(530, start, end)).toThrow(/ambiguous/);
+  });
+
+  test("accepts a mesh corner up to one climb and cell above the ground", () => {
+    const corner = (z: number, column: number[]) =>
+      navigation(
+        native({
+          findPath: (from, to) => [from, { x: 5, y: 5, z }, to],
+          findHeights: (x, y) => {
+            if (x === 5 && y === 5) return column;
+            return y === 0 && x > 4 && x < 6 ? [0, 1] : [0];
+          },
+        }),
+      );
+    expect(corner(1.25, [0]).plan(530, start, end).length).toBeCloseTo(14.142);
+    for (const [z, column] of [
+      [1.3, [0]],
+      [-0.3, [0]],
+      [1.2, [0, 2]],
+    ] as const)
+      expect(() => corner(z, [...column]).plan(530, start, end)).toThrow(
+        /corner disagrees/,
+      );
+  });
+
   test("rejects unsafe native endpoint clamping even inside the old eight-yard limit", () => {
     for (const clampStart of [true, false]) {
       const map = native({
@@ -257,7 +301,7 @@ describe("validated direct corridor selection", () => {
         { x: 10, y: 2, z: 0 },
         to,
       ],
-      findHeights: (x, y) => (x >= 4 && x <= 6 && y === 0 ? [0, 10] : [0]),
+      findHeights: (x, y) => (x >= 4 && x <= 6 && y === 0 ? [0, 1] : [0]),
     });
     const route = navigation(map).plan(530, start, end);
     expect(route.length).toBe(14);
