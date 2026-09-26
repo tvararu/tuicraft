@@ -34,6 +34,7 @@ export function targetReason(
 ): string | undefined {
   const target = deps.entity(guid);
   const self = deps.entity(state.self.guid);
+  if (!target) return "target_unobserved";
   if (!isUnit(target) || target.objectType !== ObjectType.UNIT)
     return "target_not_pve_creature";
   if (!isUnit(self) || state.self.health === undefined)

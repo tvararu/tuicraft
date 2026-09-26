@@ -40,6 +40,7 @@ USAGE
   tuicraft stop-attack       Stop auto-attack
   tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target); 30 s without target damage or approach blocks no_progress
                             Engages hostile/neutral creatures; refuses friendly (target_friendly) and players
+                            A GUID not in view (never seen or left view) is refused with target_unobserved
                             Spell kit needs observed form 0; inspect tactics on refusal
                             3 recoverable server rejections in a row stop a fight; see defense
                             Out of melee and spell range 5 s without closing 1 yd blocks target_unreachable
