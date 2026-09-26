@@ -268,6 +268,8 @@ Quest actions use the current server-offered dialog and giver. Inspect `quests`
 between actions instead of assuming that a sent request changed the quest log.
 Use `select-option <id> [code]` for offered gossip, or `select-quest <id>` for an
 offered quest. Quote a code as one shell argument. Empty code differs from no code.
+Auto-accept quests enter the log on `select-quest`; `accept-quest` then fails
+with `quest_already_in_log`.
 The IPC representation uses JSON to preserve spaces without command injection.
 `complete-quest`, `request-reward`, and `choose-reward` require the corresponding
 offered dialog. Reward indices and abandonment slots are zero-based.

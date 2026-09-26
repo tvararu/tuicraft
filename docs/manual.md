@@ -356,6 +356,7 @@ Escaped newlines and quotes stay inside the code instead of creating another IPC
 
 `tuicraft accept-quest`
 :: Request acceptance of the currently offered quest details. Inspect subsequent log state for actual acceptance.
+Auto-accept quests (for example 8325) enter the log when `select-quest` opens their details. The details stay open, but `accept-quest` then fails with `quest_already_in_log` instead of sending a request the server rejects.
 
 `tuicraft complete-quest` _id_
 :: Request completion for a currently offered quest. Log membership or queried metadata alone does not authorize this action.

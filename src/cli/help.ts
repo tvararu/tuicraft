@@ -53,6 +53,7 @@ USAGE
                             Quote one code argument; omitted differs from empty
   tuicraft select-quest <id>  Choose a quest from the offered menu
   tuicraft accept-quest      Request acceptance of offered details
+                            Auto-accept quests are logged on select; accept then fails
   tuicraft complete-quest <id>  Request offered quest completion
   tuicraft request-reward    Request the current quest reward offer
   tuicraft choose-reward <index>  Choose offered reward (zero-based 0-5)
