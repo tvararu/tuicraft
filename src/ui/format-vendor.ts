@@ -13,6 +13,10 @@ function describeGood(good: NamedVendorGood): string {
   return `Slot ${good.slot}: item ${good.itemId}${name} x${good.buyCount} for ${good.price} copper (stock ${stock}${cost})`;
 }
 
+function describePrice(min: number, max: number): string {
+  return min === max ? `${min} copper` : `${min}-${max} copper`;
+}
+
 function describeRequest(request: VendorRequest): string {
   switch (request.action) {
     case "list":
@@ -20,7 +24,7 @@ function describeRequest(request: VendorRequest): string {
     case "sell":
       return `sell item ${request.itemId ?? "unknown"} x${request.count} from bag ${request.bag} slot ${request.slot}`;
     case "buy":
-      return `buy ${request.count} ${request.count === 1 ? "purchase" : "purchases"} of item ${request.itemId} from slot ${request.slot} for ${request.price} copper`;
+      return `buy ${request.count} ${request.count === 1 ? "purchase" : "purchases"} of item ${request.itemId} from slot ${request.slot} for ${describePrice(request.minPrice, request.maxPrice)}`;
     case "repair":
       return `repair ${request.damaged.length} damaged items`;
     default:

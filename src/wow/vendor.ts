@@ -73,7 +73,8 @@ export type VendorRequest = RequestBase &
         slot: number;
         itemId: number;
         count: number;
-        price: number;
+        minPrice: number;
+        maxPrice: number;
         answer: BuyItemResult | undefined;
       }
     | { action: "repair"; damaged: RepairTarget[] }
@@ -179,7 +180,7 @@ function settledBy(
       return left === stackBefore - count && delta > 0 ? "sold" : undefined;
     }
     case "buy":
-      return pending.answer && (pending.price === 0 || delta < 0)
+      return pending.answer && (pending.minPrice === 0 || delta < 0)
         ? "bought"
         : undefined;
     case "repair": {
@@ -269,7 +270,10 @@ export class VendorRuntime {
       slot,
       itemId: good.itemId,
       count,
-      price: good.price * count,
+      minPrice: good.price * count,
+      maxPrice:
+        good.price * count +
+        (good.price > 0 || good.extendedCost === 0 ? count - 1 : 0),
       answer: undefined,
     });
   }

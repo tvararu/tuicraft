@@ -910,7 +910,10 @@ keep the server's 1-based vendor slot, which can skip numbers:
 `x5` is how many items one purchase gives, and the price is what one purchase
 costs this character after any reputation discount. The last request reads
 `Last: sell item 4813 x1 from bag 255 slot 28: confirmed, +33 copper (coinage 49979 -> 50012)`,
-and a purchase reads `Last: buy 1 purchase of item 159 from slot 2 for 23 copper`.
+and a purchase reads `Last: buy 3 purchases of item 159 from slot 2 for 69-71 copper`.
+The server discounts the whole purchase and rounds down once, while the listed
+price is one purchase already rounded down, so a multi-purchase buy shows the
+range the charge falls in; the observed `moneyDelta` is what was paid.
 In `--json`, `data` holds `window` (`guid`, `items`, `emptyReason`,
 `openedAt`, `invalidatedReason`), `pending`, `lastOutcome` and `coinage`. Each
 item has `slot`, `itemId`, `name`, `quality`, `price`, `stock` (`null` when
@@ -918,7 +921,11 @@ unlimited), `buyCount`, `maxDurability`, `displayId` and `extendedCost`.
 `lastOutcome` has `action` (`list`, `sell`, `buy` or `repair`), `status`,
 `reason`, the original `request` with its `coinageBefore`, `coinageAfter`
 and `moneyDelta`. A buy `request.count` counts purchases, not items; one
-purchase gives the good's `buyCount` items.
+purchase gives the good's `buyCount` items. A buy request's `minPrice` and
+`maxPrice` bound the copper charged: `price * count` up to
+`price * count + count - 1`, equal for a single purchase. A good listed at 0
+copper that has an `extendedCost` has `maxPrice` 0; one without can still
+cost up to `count - 1` copper.
 
 `tuicraft open-vendor` _guid_
 :: Ask an observed creature with the vendor NPC flag for its goods

@@ -132,24 +132,25 @@ describe("vendor IPC boundary", () => {
     ]);
   });
 
-  test("the text inspection counts a purchase in vendor batches, not items", async () => {
+  test("the text inspection counts purchases and quotes the discounted range", async () => {
     const bought: NamedVendorState = {
       ...sold,
-      coinage: 49_954,
+      coinage: 49_929,
       lastOutcome: {
         action: "buy",
-        coinageAfter: 49_954,
-        moneyDelta: -46,
+        coinageAfter: 49_929,
+        moneyDelta: -71,
         observedAt: 2000,
         reason: undefined,
         request: {
           action: "buy",
           answer: undefined,
           coinageBefore: 50_000,
-          count: 2,
+          count: 3,
           guid: VENDOR,
           itemId: 159,
-          price: 46,
+          maxPrice: 71,
+          minPrice: 69,
           requestedAt: 1000,
           slot: 2,
         },
@@ -160,7 +161,7 @@ describe("vendor IPC boundary", () => {
       getVendorState: () => bought,
     });
     expect((await run({ type: "vendor" }, handle)).split("\n")[2]).toBe(
-      "Last: buy 2 purchases of item 159 from slot 2 for 46 copper: confirmed, -46 copper (coinage 50000 -> 49954)",
+      "Last: buy 3 purchases of item 159 from slot 2 for 69-71 copper: confirmed, -71 copper (coinage 50000 -> 49929)",
     );
   });
 
