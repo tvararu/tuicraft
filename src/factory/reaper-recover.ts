@@ -91,9 +91,9 @@ async function apply(recovery: Recovery): Promise<void> {
   await setStatus(issue, "ready");
 }
 
-function describe(recovery: Recovery): string {
+function summary(recovery: Recovery): string {
   return recovery.kind === "ready"
-    ? `recover #${recovery.issue}: back to Ready`
+    ? `recover #${recovery.issue}: back to Ready, comment: ${recovery.body}`
     : `recover #${recovery.issue}: delete claim ${recovery.comment}`;
 }
 
@@ -103,7 +103,7 @@ export async function recoverRun(opts: RecoverOptions): Promise<boolean> {
   try {
     const branch = end.role === "worker" ? await pushedBranch(end.ref) : null;
     for (const recovery of planRecovery({ ...end, branch }, await issues())) {
-      console.error(`reap: ${end.run} ${describe(recovery)}`);
+      console.error(`reap: ${end.run} ${summary(recovery)}`);
       if (!dryRun) await apply(recovery);
     }
     return true;
