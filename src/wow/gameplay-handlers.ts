@@ -62,6 +62,12 @@ import {
   parseTrainerBuySucceeded,
   parseTrainerList,
 } from "wow/protocol/trainer";
+import {
+  parseBuyFailed,
+  parseBuyItem,
+  parseListInventory,
+  parseSellItemFailure,
+} from "wow/protocol/vendor";
 import type { QuestDialog } from "wow/quests-requests";
 import type { WorldConn } from "wow/world-conn";
 
@@ -170,9 +176,6 @@ export function registerQuestHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, (r) =>
     conn.quests?.receiveQuery(parseQuestQueryResponse(r)),
   );
-  on(GameOpcode.SMSG_LIST_INVENTORY, (r) =>
-    conn.quests?.receiveWindow(r.uint64LE(), "vendor"),
-  );
   on(GameOpcode.SMSG_SHOW_BANK, (r) =>
     conn.quests?.receiveWindow(r.uint64LE(), "bank"),
   );
@@ -257,6 +260,7 @@ export function registerLootHandlers(conn: WorldConn): void {
     const packet = parseInventoryChangeFailure(r);
     conn.rewards?.receiveInventoryFailure(packet);
     conn.combat?.applyInventoryFailure(packet);
+    conn.vendor?.receiveInventoryFailure(packet);
   });
   on(GameOpcode.SMSG_ITEM_QUERY_SINGLE_RESPONSE, (r) =>
     conn.itemTemplates?.receive(parseItemQueryResponse(r)),
@@ -276,6 +280,25 @@ export function registerTrainerHandlers(conn: WorldConn): void {
   );
   on(GameOpcode.SMSG_TRAINER_BUY_FAILED, (r) =>
     conn.trainer?.receiveFailed(parseTrainerBuyFailed(r)),
+  );
+}
+
+export function registerVendorHandlers(conn: WorldConn): void {
+  const on = (opcode: number, handle: (r: PacketReader) => void) =>
+    conn.dispatch.on(opcode, handle);
+  on(GameOpcode.SMSG_LIST_INVENTORY, (r) => {
+    const list = parseListInventory(r);
+    conn.quests?.receiveWindow(list.guid, "vendor");
+    conn.vendor?.receiveInventory(list);
+  });
+  on(GameOpcode.SMSG_SELL_ITEM, (r) =>
+    conn.vendor?.receiveSellFailure(parseSellItemFailure(r)),
+  );
+  on(GameOpcode.SMSG_BUY_ITEM, (r) =>
+    conn.vendor?.receiveBuyItem(parseBuyItem(r)),
+  );
+  on(GameOpcode.SMSG_BUY_FAILED, (r) =>
+    conn.vendor?.receiveBuyFailure(parseBuyFailed(r)),
   );
 }
 

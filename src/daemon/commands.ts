@@ -1,5 +1,6 @@
 import { formatNearbyLine, formatNearbyObj } from "daemon/nearby";
 import type { IpcCommand } from "daemon/parse";
+import { waitUnlessAborted } from "lib/abort";
 import { messageOf } from "lib/errors";
 import type { RingBuffer } from "lib/ring-buffer";
 import {
@@ -29,6 +30,7 @@ import {
 import { formatPartyState } from "ui/format-party";
 import { formatQuestState } from "ui/format-quests";
 import { formatTrainerState } from "ui/format-trainer";
+import { formatVendorState } from "ui/format-vendor";
 import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
@@ -49,21 +51,6 @@ const asText: EventFormat = (entries) =>
   entries.flatMap((e) => (e.text === undefined ? [] : [e.text]));
 
 const asJson: EventFormat = (entries) => entries.map((e) => e.json);
-
-function waitUnlessAborted(ms: number, abort?: AbortSignal): Promise<boolean> {
-  if (abort?.aborted) return Promise.resolve(true);
-  const { promise, resolve } = Promise.withResolvers<boolean>();
-  const timer = setTimeout(() => resolve(false), ms);
-  abort?.addEventListener(
-    "abort",
-    () => {
-      clearTimeout(timer);
-      resolve(true);
-    },
-    { once: true },
-  );
-  return promise;
-}
 
 export type DispatchContext = {
   handle: WorldHandle;
@@ -184,6 +171,8 @@ const HANDLERS: Handlers = {
   },
   attack: (cmd, { handle, socket }) =>
     reply(socket, () => handle.attack(cmd.guid), ok),
+  buy: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.buyItem(cmd.slot, cmd.count), ok),
   cancel_cast: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.cancelCast(), ok),
   cancel_interaction: (_cmd, { handle, socket }) =>
@@ -381,6 +370,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.openLoot(cmd.guid), ok),
   open_trainer: (cmd, { handle, socket }) =>
     reply(socket, () => handle.openTrainer(cmd.guid), ok),
+  open_vendor: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.openVendor(cmd.guid), ok),
   party: (cmd, { handle, socket }) => {
     handle.sendParty(cmd.message);
     return acknowledge(socket);
@@ -407,6 +398,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.releaseLoot(), ok),
   release_spirit: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.releaseSpirit(), ok),
+  repair: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.repairAll(), ok),
   request_reward: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.requestQuestReward(), ok),
   resurrect: (cmd, { handle, socket }) =>
@@ -423,6 +416,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.selectGossipOption(cmd.optionId, cmd.code), ok),
   select_quest: (cmd, { handle, socket }) =>
     reply(socket, () => handle.selectQuest(cmd.questId), ok),
+  sell: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.sellItem(cmd.bag, cmd.slot, cmd.count), ok),
   spells: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getSpellbook(), pretty),
   spells_json: (_cmd, { handle, socket }) =>
@@ -461,6 +456,10 @@ const HANDLERS: Handlers = {
     send(socket, [`UNIMPLEMENTED ${cmd.feature}`]),
   use: (cmd, { handle, socket }) =>
     reply(socket, () => handle.useItem(cmd.bag, cmd.slot), ok),
+  vendor: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getVendorState(), formatVendorState),
+  vendor_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getVendorState(), json),
   walk_toward: (cmd, { handle, socket, abort }) =>
     reply(socket, () => handle.walkToward(cmd.target, cmd.yards, abort), json),
   whisper: (cmd, { handle, socket }) => {

@@ -139,6 +139,10 @@ const PREEMPTED_BY_HALT = new Set<IpcCommand["type"]>([
   "use",
   "open_trainer",
   "train",
+  "open_vendor",
+  "sell",
+  "buy",
+  "repair",
   "read_wait",
   "read_wait_json",
   "tail_wait",
@@ -252,6 +256,7 @@ function subscribeDomainEvents(
     onDomainEvent("rewards", event, sink, formatRewardsEventText),
   );
   handle.onTrainerEvent((event) => onDomainEvent("trainer", event, sink));
+  handle.onVendorEvent((event) => onDomainEvent("vendor", event, sink));
   handle.onPacketError((opcode, err) =>
     onDomainEvent(
       "packet",

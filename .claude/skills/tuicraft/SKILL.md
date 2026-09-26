@@ -47,10 +47,10 @@ Without separate directories the second `start` finds the first daemon and repor
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`, `vendor`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
-- Recovery, quest, loot, item, and trainer actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`, `open-trainer`, `train`.
+- Recovery, quest, loot, item, trainer, and vendor actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, `repair`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
 `logs` prints the raw session log. `skill` prints the raw reference document.
@@ -109,13 +109,13 @@ It prints one envelope per event and nothing for empty polls:
 These values describe the daemon socket, not world-session health.
 
 Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `inventory`,
-`experience`, `loot`, and `trainer` show short human summaries. Use `--json` for all
-fields and automated parsing. A human action acknowledgment means that the
-daemon accepted a request. It does not confirm that the server completed the
-action. `fight` replies when the run ends and human mode prints its outcome,
-such as `completed: server_kill_credit, XP 60` or `failed: self_dead`; `cycle`
-says that it ended, so read `cycling` for the outcome. `--json` replies are
-unchanged.
+`experience`, `loot`, `trainer`, and `vendor` show short human summaries. Use
+`--json` for all fields and automated parsing. A human action acknowledgment
+means that the daemon accepted a request. It does not confirm that the server
+completed the action. `fight` replies when the run ends and human mode prints
+its outcome, such as `completed: server_kill_credit, XP 60` or
+`failed: self_dead`; `cycle` says that it ended, so read `cycling` for the
+outcome. `--json` replies are unchanged.
 
 ## Direct control
 
@@ -339,7 +339,7 @@ Rules:
 - JSON escapes prevent code text, including line breaks, from injecting another IPC command. Do not send raw unencoded code text.
 - Only one unanswered conversation mutation can be pending. `quest_reply_unanswered` names the pending action and GUID; it is not permission to retry. Wait for the reply, or for the 5 s bound, or run `cancel-interaction`.
 - An unanswered request expires after 5 s: QUEST `expired no_reply`, `unresolved` gains it with `reason: "no_reply"`, and the next verb works. A late reply after that is stale; `talk` again.
-- Choosing a trainer option answers with QUEST `window trainer` and opens the offer in `trainer`. Choosing a vendor, bank or flight-master option answers with QUEST `window unsupported_window:<kind>` and `lastError.kind` `unsupported_window`. tuicraft cannot use those windows; move on to the next giver.
+- Choosing a trainer option answers with QUEST `window trainer` and opens the offer in `trainer`; choosing a vendor option answers with QUEST `window vendor` and opens the goods in `vendor`. Choosing a bank or flight-master option answers with QUEST `window unsupported_window:<kind>` and `lastError.kind` `unsupported_window`. tuicraft cannot use those windows; move on to the next giver.
 - `accept-quest` requests acceptance of offered details. Acceptance is established only by an authoritative log-ID addition, not by OK.
 - Auto-accept quests enter the log on `select-quest` while their details stay open. Check the log first: `accept-quest` fails with `quest_already_in_log` for a quest already there.
 - Advance by `quests --json` `.data.dialog.kind`: `gossip`/`list` → `select-quest <id>` (or `select-option <id>`); `details` → `accept-quest`; `requestItems` → `request-reward`; `offer` → `choose-reward <index>` (0 without choices).
@@ -422,6 +422,28 @@ Rules:
 - Refusals are named: `not_enough_money`, `not_enough_skill`, `unavailable`; silence ends `unanswered` after 5 s. Jev can use a learned spell once it is in `spells`.
 
 IPC: TRAINER, TRAINER_JSON, OPEN_TRAINER, TRAIN.
+
+## Vendors: list, sell, buy and repair
+
+    tuicraft vendor [--json]
+    tuicraft open-vendor <observed-vendor-guid>
+    tuicraft sell <bag> <slot> [count]
+    tuicraft buy <vendor-slot> [count]
+    tuicraft repair
+
+Rules:
+
+- `nearby --json` shows `npcFlags`: 0x80 is a vendor, 0x1000 also repairs. Stand within interaction range (about 5 yd) before `open-vendor`; from further away the server refuses with `cant_find_vendor`. Choosing a vendor option after `talk` opens the same window.
+- `vendor` lists goods by the server's 1-based vendor slot (slots can skip numbers) with item name, how many one purchase gives (`x5`), the price of one purchase in copper after reputation discount, and stock (`unlimited` or a count). JSON goods have `slot`, `itemId`, `name`, `quality`, `price`, `stock` (`null` = unlimited), `buyCount`, `maxDurability`.
+- `sell` takes the bag and slot that `inventory` prints (`at bag 255 slot 28`). Omit `count` to sell the whole stack. Grey items are `quality` 0 in `inventory --json`.
+- `buy` takes the vendor slot and the number of purchases (default 1, max 255); `request.count` and the `Last: buy 2 purchases of item 159 ...` line count purchases, each giving `buyCount` items. `repair` repairs every damaged carried and equipped item and needs a vendor with the repair flag.
+- `OK` is intent. The outcome is in `vendor`: `lastOutcome.status` is `confirmed`, `refused`, `partial` or `unanswered`, with `reason`, `request.coinageBefore`, `coinageAfter` and `moneyDelta`. Text shows it as `Last: sell item 4813 x1 from bag 255 slot 28: confirmed, +33 copper (coinage 49979 -> 50012)`.
+- Confirmation is observed state, not a notice: a sale needs the stack gone (or smaller by `count`) and coinage up; a purchase needs the server's purchase reply and coinage down; a repair needs every damaged item at full durability and coinage down.
+- Server refusals are named, for example `not_enough_money`, `distance_too_far`, `cant_carry_more`, `inventory_full`, `bag_full`, `cant_sell_item`, `cant_find_vendor`. The server never answers a repair it cannot pay for, so after 5 s it ends as `partial` or `unanswered` with reason `not_repaired`. Other silence ends as `unanswered` with `server_unanswered`.
+- One vendor request can be pending at a time. Local refusals print `ERR` (`No listed vendor`, `Vendor slot was not offered`, `Vendor does not repair`, `Nothing needs repair`, `Sell count exceeds the stack`).
+- Vendor actions take manual control; HALT drops older queued vendor actions.
+
+IPC: VENDOR, VENDOR_JSON, OPEN_VENDOR, SELL, BUY, REPAIR.
 
 ## Sending Messages
 
