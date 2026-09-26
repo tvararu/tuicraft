@@ -114,6 +114,8 @@ JSON OUTPUT
   summaries.
   Control actions print daemon request acceptance, not a server result.
   fight and cycle reply when the run ends; check tactics or cycling for the outcome.
+  walk-toward --json returns the terminal outcome as data; a stop also sets error and exits 1:
+    {"command":"walk-toward","data":{"status":"stopped","reason":"target_stale","traveled":0,"pose":{...}},"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"result"}
 
 SETUP FLAGS
   --account NAME  Account name (required)

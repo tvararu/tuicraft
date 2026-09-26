@@ -282,8 +282,15 @@ verified item gains. Confirm storage from `inventory --json` slot/count changes.
 Repeated `move` in the same direction renews active manual movement without a
 stop; taking control from Jev or cycle still stops the old owner.
 `walk-toward` travels at most 20 yards in one direct leg and returns terminal
-JSON with predicted distance, pose, and a reason if stopped. It exits with
-status 1 on a stop. An observed GUID is sampled once, not tracked.
+JSON with `status`, predicted `traveled` distance, `pose`, and a `reason` if
+stopped. It exits with status 1 on a stop; `--json` then keeps that outcome in
+`data` beside the error:
+
+```json
+{"command":"walk-toward","data":{"status":"stopped","reason":"target_stale","traveled":0,"pose":{"mapId":530,"x":8715.2,"y":-6653.1,"z":72.8,"orientation":5.08,"source":"predicted","updatedAt":1790382964703}},"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"result"}
+```
+
+An observed GUID is sampled once, not tracked.
 Coordinates require unambiguous native ground.
 Ground refusal, correction, HALT, or takeover stops the leg rather than
 steering blindly. A `completed` result is not server-confirmed arrival.

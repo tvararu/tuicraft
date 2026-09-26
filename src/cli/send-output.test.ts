@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   daemonCommandFailed,
   decodeReply,
+  decodeWalkReply,
   errorEnvelope,
   formatHumanIntent,
   walkCommandFailed,
@@ -274,6 +275,47 @@ test("a directed walk exits unsuccessfully on a stop or missing outcome", () => 
   ).toBe(true);
   expect(walkCommandFailed([])).toBe(true);
   expect(walkCommandFailed(["ERR target_not_observed"])).toBe(true);
+});
+
+describe("decodeWalkReply", () => {
+  const pose = { mapId: 530, source: "server", x: 1, y: 2, z: 3 };
+
+  test("an arrival is a result carrying the completed outcome", () => {
+    const outcome = { pose, status: "completed", traveled: 2 };
+    expect(decodeWalkReply("walk-toward", [JSON.stringify(outcome)])).toEqual({
+      command: "walk-toward",
+      data: outcome,
+      error: null,
+      events: [],
+      kind: "result",
+    });
+  });
+
+  test("a stop keeps its status and reason beside the error", () => {
+    const outcome = {
+      pose,
+      reason: "obstructed",
+      status: "stopped",
+      traveled: 0.5,
+    };
+    expect(decodeWalkReply("walk-toward", [JSON.stringify(outcome)])).toEqual({
+      command: "walk-toward",
+      data: outcome,
+      error: { message: "walk stopped without completion", stage: "command" },
+      events: [],
+      kind: "result",
+    });
+  });
+
+  test("a daemon refusal has no outcome", () => {
+    expect(
+      decodeWalkReply("walk-toward", ["ERR target_not_observed"]),
+    ).toMatchObject({
+      data: null,
+      error: { message: "target_not_observed", stage: "command" },
+      kind: "error",
+    });
+  });
 });
 
 describe("formatHumanIntent", () => {

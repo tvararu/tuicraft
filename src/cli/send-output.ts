@@ -152,6 +152,18 @@ export function walkCommandFailed(lines: string[]): boolean {
   }
 }
 
+export function decodeWalkReply(
+  command: string,
+  lines: string[],
+): OutputEnvelope {
+  const reply = decodeReply(command, "json", lines);
+  if (reply.error || !walkCommandFailed(lines)) return reply;
+  return {
+    ...reply,
+    error: { message: "walk stopped without completion", stage: "command" },
+  };
+}
+
 const RUNS: Record<string, string> = { cycle: "cycling", fight: "tactics" };
 const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
 const RECOVERY = [

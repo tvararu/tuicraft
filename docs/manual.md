@@ -197,6 +197,13 @@ The command waits for a terminal JSON object: `status` is `completed` or
 `source=predicted` for motion, and a stop has `reason`. Exit status is 1 on
 `stopped` or `ERR`, 0 on predicted completion. Completion is not server
 confirmation; ordinary self movement is not echoed by the server.
+With `--json` the outcome is the envelope's `data`, `kind` is `result`, and a
+stop also sets `error` while keeping `data`:
+
+    {"command":"walk-toward","data":{"status":"completed","traveled":3,"pose":{"mapId":530,"x":8715.2,"y":-6653.1,"z":72.8,"orientation":5.08,"source":"predicted","updatedAt":1790382964703}},"error":null,"events":[],"kind":"result"}
+    {"command":"walk-toward","data":{"status":"stopped","reason":"target_stale","traveled":0,"pose":{...}},"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"result"}
+
+An `ERR` refusal has no outcome: `kind` is `error` and `data` is null.
 
 `tuicraft target` _guid_
 :: Request selection of a unit. *guid* is an unsigned 64-bit integer in `0x`
@@ -698,7 +705,9 @@ and none for an empty poll:
 An error uses `stage: "arguments"`, `"startup"`, `"command"`, or `"wait"` and
 exits with status 1. An error before acknowledgment has `kind: "error"`.
 After a `send --wait` acknowledgment, a wait error keeps the initial `kind`
-and `data`; it sets `error.stage: "wait"` and exits with status 1.
+and `data`; it sets `error.stage: "wait"` and exits with status 1. A stopped
+`walk-toward` keeps `kind: "result"` and its outcome in `data` beside
+`error.stage: "command"`.
 JSON errors print to stdout as one envelope. Human output remains unchanged.
 `logs` prints the raw JSONL session log. `skill` prints the raw reference text.
 Neither command accepts `--json`.
