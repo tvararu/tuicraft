@@ -1,0 +1,198 @@
+$ tuicraft start  # 01:09:02
+CONNECTED
+
+$ tuicraft control --json  # 01:09:06
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":2.39205002784729,"source":"server","updatedAt":1790384943011,"x":8714.1396484375,"y":-6650.330078125,"z":72.75170135498047},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":2.39205002784729,"source":"server","updatedAt":1790384943011,"x":8714.1396484375,"y":-6650.330078125,"z":72.75170135498047},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8709.46 -6671.76 70.33597564697266 --json  # 01:09:08
+{"command":"goto","data":null,"error":{"message":"pick_destination: ambiguous ground column","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:09:09
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 20 8714.14 -6670.33 70.3402099609375 --json  # 01:09:17
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft control --json  # 01:09:18
+{"command":"control","data":{"blockedReason":"height_unresolved","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a different short heading or a known grounded waypoint. Do not retry this heading.","owner":"none","pose":{"mapId":530,"orientation":4.712406558578324,"source":"predicted","updatedAt":1790384958371,"x":8714.139755910575,"y":-6656.4440781240555,"z":72.75476837158203},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":2.39205002784729,"source":"server","updatedAt":1790384943011,"x":8714.1396484375,"y":-6650.330078125,"z":72.75170135498047},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 20 8714.14 -6670.33 70.3402099609375 --json  # 01:09:20
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft control --json  # 01:09:20
+{"command":"control","data":{"blockedReason":"height_unresolved","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a different short heading or a known grounded waypoint. Do not retry this heading.","owner":"none","pose":{"mapId":530,"orientation":4.712406558578363,"source":"predicted","updatedAt":1790384960598,"x":8714.139755910575,"y":-6656.4440781240555,"z":72.75476837158203},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":2.39205002784729,"source":"server","updatedAt":1790384943011,"x":8714.1396484375,"y":-6650.330078125,"z":72.75170135498047},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8709.46 -6671.76 70.33597564697266 --json  # 01:09:23
+{"command":"goto","data":null,"error":{"message":"pick_destination: ambiguous ground column","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:09:24
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 01:09:40
+OK
+
+$ tuicraft start  # 01:10:27
+CONNECTED
+
+$ tuicraft control --json  # 01:10:30
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 10 8722.14 -6653.44 72.75 --json  # 01:10:30
+{"command":"walk-toward","data":{"status":"completed","traveled":8.545684634103221,"pose":{"mapId":530,"x":8722.14,"y":-6653.44,"z":72.75225067138672,"orientation":0.3591778033702431,"source":"predicted","updatedAt":1790385032250}},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:10:32
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.3591778033702431,"source":"predicted","updatedAt":1790385032250,"x":8722.14,"y":-6653.44,"z":72.75225067138672},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 10 8723.14 -6657.44 72.49 --json  # 01:10:35
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft walk-toward 10 8723.14 -6664.44 70.31 --json  # 01:10:36
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft control --json  # 01:10:36
+{"command":"control","data":{"blockedReason":"height_unresolved","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a different short heading or a known grounded waypoint. Do not retry this heading.","owner":"none","pose":{"mapId":530,"orientation":4.803048867585435,"source":"predicted","updatedAt":1790385036020,"x":8722.14,"y":-6653.44,"z":72.75225067138672},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 5 8723.14 -6653.44 72.70 --json  # 01:10:39
+{"command":"walk-toward","data":{"status":"completed","traveled":1,"pose":{"mapId":530,"x":8723.14,"y":-6653.44,"z":72.6994857788086,"orientation":0,"source":"predicted","updatedAt":1790385039236}},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 5 8723.14 -6656.44 72.72 --json  # 01:10:39
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft walk-toward 5 8723.14 -6659.44 72.03 --json  # 01:10:39
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft walk-toward 5 8723.14 -6664.44 70.31 --json  # 01:10:39
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft control --json  # 01:10:39
+{"command":"control","data":{"blockedReason":"obstructed","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a different route. Inspect the ground before moving.","owner":"none","pose":{"mapId":530,"orientation":4.71238898038469,"source":"predicted","updatedAt":1790385039772,"x":8723.14,"y":-6655.347,"z":71.69847869873047},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft walk-toward 5 8723.14 -6656.44 72.72 --json  # 01:10:44
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft walk-toward 5 8723.14 -6659.44 72.03 --json  # 01:10:44
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft walk-toward 5 8723.14 -6664.44 70.31 --json  # 01:10:45
+{"command":"walk-toward","data":null,"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft control --json  # 01:10:46
+{"command":"control","data":{"blockedReason":"obstructed","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a different route. Inspect the ground before moving.","owner":"none","pose":{"mapId":530,"orientation":4.71238898038469,"source":"predicted","updatedAt":1790385045540,"x":8723.14,"y":-6655.347,"z":71.69847869873047},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft face 4.7124  # 01:10:49
+Daemon accepted request. No server result confirmed.
+
+$ tuicraft move forward 1500  # 01:10:49
+Daemon accepted request. No server result confirmed.
+
+$ tuicraft control --json  # 01:10:51
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":4.712399999999999,"source":"predicted","updatedAt":1790385050889,"x":8723.140115783099,"y":-6665.853999999361,"z":70.25762939453125},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8709.46 -6671.76 70.33597564697266 --json  # 01:10:54
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+$ tuicraft navigation --json  # 01:10:54
+{"command":"navigation","data":{"active":true,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"remaining":14.900550454481968,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:10:55
+{"command":"navigation","data":{"active":true,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"remaining":4.386550454481968,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:10:57
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:10:57
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.734042644652032,"source":"predicted","updatedAt":1790385056160,"x":8709.46,"y":-6671.76,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":4.712406635284424,"source":"server","updatedAt":1790385027525,"x":8714.1396484375,"y":-6656.44384765625,"z":72.75476837158203},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 01:11:00 set navigation_library -> /home/deity/wow-data/libnamigator.so
+navigation_library = "/home/deity/wow-data/libnamigator.so"
+
+$ tuicraft stop  # 01:11:00
+OK
+
+$ tuicraft start  # 01:11:01
+CONNECTED
+
+$ tuicraft control --json  # 01:11:04
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385061447,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385061447,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8730 -6660 70.38529968261719 --json  # 01:11:06
+{"command":"goto","data":null,"error":{"message":"stop: pathfind_find_height failed (UNKNOWN_HEIGHT)","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:11:08
+{"command":"navigation","data":{"active":false,"destination":{"x":8730,"y":-6660,"z":70.38529968261719},"owner":"none","blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","refusal":"stop","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:11:08
+{"command":"control","data":{"blockedReason":"pathfind_find_height failed (UNKNOWN_HEIGHT)","direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385061447,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385061447,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 01:11:08 /proc maps proof
+pid 2091369: /home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/src/main.ts --daemon 
+XDG_CONFIG_HOME=/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/factory-account-FAC6AB71AA32F/config
+705b3fe10000-705b3fe39000 r--p 00000000 08:02 6915760                    /home/deity/wow-data/libnamigator.so
+
+# 01:11:12 set navigation_library -> /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so
+navigation_library = "/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so"
+
+$ tuicraft stop  # 01:11:12
+OK
+
+$ tuicraft start  # 01:11:13
+CONNECTED
+
+$ tuicraft control --json  # 01:11:16
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385073333,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385073333,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8730 -6660 70.38529968261719 --json  # 01:11:16
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+$ tuicraft navigation --json  # 01:11:16
+{"command":"navigation","data":{"active":true,"destination":{"x":8730,"y":-6660,"z":70.38529968261719},"remaining":23.969643792737777,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:11:18
+{"command":"navigation","data":{"active":true,"destination":{"x":8730,"y":-6660,"z":70.38529968261719},"remaining":13.455643792737776,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:11:19
+{"command":"navigation","data":{"active":true,"destination":{"x":8730,"y":-6660,"z":70.38529968261719},"remaining":2.2486437927377843,"owner":"manual","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:11:21
+{"command":"navigation","data":{"active":false,"destination":{"x":8730,"y":-6660,"z":70.38529968261719},"remaining":0,"owner":"none","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:11:21
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.7119888913237601,"source":"predicted","updatedAt":1790385080164,"x":8730,"y":-6660,"z":70.38529968261719},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":-2.7340426445007324,"source":"server","updatedAt":1790385073333,"x":8709.4599609375,"y":-6671.759765625,"z":70.33597564697266},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 01:11:21 /proc maps proof
+pid 2092210: /home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/ovn-namigator/src/main.ts --daemon 
+XDG_CONFIG_HOME=/home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/factory-account-FAC6AB71AA32F/config
+7aa0184e7000-7aa0184fa000 r--p 00000000 08:02 594014                     /home/deity/orca/workspaces/tuicraft/ovn-namigator/tmp/namigator/libnamigator.so
+
+$ tuicraft stop  # 01:11:24
+OK
+
+$ tuicraft start  # 01:11:26
+CONNECTED
+
+$ tuicraft control --json  # 01:11:29
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8709.46 -6671.76 70.33597564697266 --json  # 01:11:31
+{"command":"goto","data":null,"error":{"message":"pick_destination: ambiguous ground column","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:11:32
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:11:32
+{"command":"control","data":{"blockedReason":"ambiguous ground column","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a destination with one ground height. Do not guess Z.","owner":"none","pose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 01:11:34
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 8709.46 -6671.76 70.33597564697266 --json  # 01:11:34
+{"command":"goto","data":null,"error":{"message":"pick_destination: ambiguous ground column","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 01:11:35
+{"command":"navigation","data":{"active":false,"destination":{"x":8709.46,"y":-6671.76,"z":70.33597564697266},"owner":"none","blockedReason":"ambiguous ground column","refusal":"pick_destination","nextStep":"Choose a destination with one ground height. Do not guess Z."},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 01:11:36
+{"command":"control","data":{"blockedReason":"ambiguous ground column","direction":null,"movementAllowed":true,"moving":false,"nextStep":"Choose a destination with one ground height. Do not guess Z.","owner":"none","pose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"requestedTarget":null,"selfGuid":"0xa1b","serverPose":{"mapId":530,"orientation":0.7119888663291931,"source":"server","updatedAt":1790385086187,"x":8730,"y":-6660,"z":70.38529968261719},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 01:11:40
+OK

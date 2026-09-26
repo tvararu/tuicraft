@@ -130,3 +130,8 @@ run = "ln -sf $PWD/dist/tuicraft /usr/local/bin/tuicraft"
 description = "Distil an encounter record from the session log"
 raw = true
 run = "bun run src/tools/distil-encounter.ts"
+
+[tasks."namigator:build"]
+description = "Build the patched libnamigator.so (vendor/namigator)"
+raw = true
+run = "vendor/namigator/build.sh"

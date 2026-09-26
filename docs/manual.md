@@ -56,6 +56,10 @@ Add optional data paths to the existing account config:
   `SpellRadius.dbc`. Jev tactics also requires `FactionTemplate.dbc` there.
 - `navigation_data_dir`: the compatible Namigator data root.
 - `navigation_library`: the compatible Namigator shared library.
+  `mise namigator:build` builds one from upstream Namigator with the
+  default patches in `vendor/namigator/` and prints its path under
+  `tmp/namigator/`. `NAMIGATOR_ADT_EDGES=1` also applies the opt-in
+  ADT-edge patch, which changes some heights that already succeed.
 
 The current ground planner supports Expansion01/map 530. Unsupported or
 ambiguous geometry fails explicitly.
