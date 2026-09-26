@@ -37,6 +37,29 @@ describe("cycle arguments", () => {
     });
   });
 
+  test("a quest objective replaces the guid queue", () => {
+    expect(
+      parseArgs(["cycle", "--quest", "8326", "--source=15294", "--max", "9"]),
+    ).toEqual({
+      guids: [],
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      maxStarts: 9,
+      mode: "cycle",
+      questId: 8326,
+      sources: [15_294],
+    });
+    expect(() => parseArgs(["cycle", "0xa", "--quest", "8325"])).toThrow(
+      "invalid cycle",
+    );
+    expect(() => parseArgs(["cycle", "0xa", "--source", "15294"])).toThrow(
+      "cycle source requires quest",
+    );
+    expect(() => parseArgs(["cycle", "--quest", "0"])).toThrow(
+      "invalid quest id",
+    );
+  });
+
   test("rejects missing guids, invalid guids and non-positive max", () => {
     expect(() => parseArgs(["cycle"])).toThrow("invalid cycle");
     expect(() => parseArgs(["cycle", "0"])).toThrow("invalid guid");

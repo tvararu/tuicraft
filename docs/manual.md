@@ -18,6 +18,7 @@ tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--js
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> [<z>]
 tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycle --resume [--instruction ...] [--max N] [--json] | cycling [--json]
+tuicraft cycle --quest <id> [--source <entry>...] [--instruction ...] [--max N] [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft spirit-healer <guid> | resurrect accept|decline
 tuicraft quests [--json] | talk <guid> | query-quest <id>
@@ -382,12 +383,38 @@ example after a recovery on the last target stopped with
 Nothing is repaired between the stop and the resume; check `nearby` and
 `recovery` first if the stop was not a `halt`.
 
+`tuicraft cycle` `--quest` _id_ [`--source` _entry_...] [`--instruction` _text_] [`--max` _N_] [`--json`]
+:: Pursue a logged quest's objectives instead of an explicit queue. GUIDs and
+`--quest` are mutually exclusive. The daemon queries the quest once and derives
+the objective creatures and counts from the server's quest data. Before each
+fight it re-reads the quest log slot, then picks the nearest live creature of
+a still-needed entry that it has not tried, that is not tapped by someone else,
+and that is within 50 yd. Jev fights it exactly as in a GUID cycle, then the
+loop loots and picks again; a death is recovered as in a GUID cycle and the
+run continues. The quest query names required items but not the creatures
+that drop them, so item objectives need one `--source` creature entry per
+dropping creature; without one the start fails with
+`objective_item_sources_unknown`. GameObject objectives are refused with
+`objective_gameobject_unsupported`. `--max` defaults to twice the total
+required count. The run stops with `objective_complete` once the server marks
+the quest log slot complete, and otherwise with `quest_not_in_log`,
+`quest_failed`, `objective_targets_absent` (no candidate observed; `stopDetail`
+lists the entries), `objective_targets_out_of_reach` (`stopDetail` has the
+nearest GUID and distance), `self_pose_unobserved`, or any GUID-cycle cause.
+`cycle --resume` continues a stopped quest run and never re-picks a creature
+it already tried. Travel toward more creatures and resume or start again after
+an `objective_targets_*` stop. Travel to and from the quest giver, acceptance
+and turn-in stay explicit supervisor steps. `cycling` shows the server
+counters in `objective`.
+
 `tuicraft cycling` [`--json`]
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
 `status` (`queued`, `done`, or `skipped`), skip `cause`, and `loot`
 (`looted` or `none`, set after a kill), `instruction`, `startsUsed`,
 `resumes`,
-`stopCause`, `stopDetail`, `startedAt`, `lastLoot`, and `lastRecovery`. This is the same
+`stopCause`, `stopDetail`, `startedAt`, `lastLoot`, `lastRecovery`, and
+`objective` (quest runs only: slot, `complete`, per-kill server counters
+`current`/`required`, and required items). This is the same
 snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
 `lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`

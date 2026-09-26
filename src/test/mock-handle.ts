@@ -275,6 +275,7 @@ export function createMockHandle(): MockHandle {
       (guids: bigint[], instruction: string, maxStarts?: number) =>
         cycle.start({ guids, instruction, maxStarts }),
     ),
+    startQuestCycle: jest.fn(async () => {}),
     startTactics: jest.fn(async () => {}),
     stopAttack: jest.fn(),
     stopCycle: jest.fn(() => {

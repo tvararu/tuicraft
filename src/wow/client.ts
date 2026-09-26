@@ -267,6 +267,12 @@ export type WorldHandle = {
     instruction: string,
     maxStarts?: number,
   ) => Promise<void>;
+  startQuestCycle: (
+    questId: number,
+    sources: number[],
+    instruction: string,
+    maxStarts?: number,
+  ) => Promise<void>;
   resumeCycle: (
     instruction: string | undefined,
     maxStarts: number | undefined,

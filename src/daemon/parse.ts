@@ -64,6 +64,8 @@ export type IpcCommand =
       guids: bigint[];
       instruction: string;
       maxStarts?: number;
+      questId?: number;
+      sources?: number[];
     }
   | { type: "cycle_resume"; instruction?: string; maxStarts?: number }
   | { type: "cycling" }

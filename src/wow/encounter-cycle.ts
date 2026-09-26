@@ -6,6 +6,7 @@ import type { CycleStop } from "wow/cycle-stop";
 import type { EntityEvent } from "wow/entity-store";
 import { EventWaiter } from "wow/event-waiter";
 import { lootCorpse } from "wow/loot-run";
+import type { ObjectivePick, ObjectiveProgress } from "wow/quest-objective";
 import type { RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import type { RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsLoop, TacticsOutcome, TacticsState } from "wow/tactics";
@@ -44,6 +45,11 @@ export type CycleState = {
   resumes: number;
   lastLoot: CycleLootRecord | undefined;
   lastRecovery: (CycleRecovery & { at: number }) | undefined;
+  objective: ObjectiveProgress | undefined;
+};
+export type CycleObjective = {
+  pick: (tried: ReadonlySet<bigint>) => ObjectivePick;
+  progress: () => ObjectiveProgress | undefined;
 };
 export type CycleEvent = {
   type:
@@ -106,7 +112,9 @@ export class EncounterCycleRuntime {
     resumes: 0,
     lastLoot: undefined,
     lastRecovery: undefined,
+    objective: undefined,
   };
+  private objective: CycleObjective | undefined;
 
   constructor(deps: CycleDeps) {
     this.deps = deps;
@@ -144,9 +152,11 @@ export class EncounterCycleRuntime {
     guids: bigint[];
     instruction: string;
     maxStarts?: number;
+    objective?: CycleObjective;
   }): Promise<void> {
     if (this.disposed) throw new Error("cycle_disposed");
-    if (args.guids.length === 0) throw new Error("cycle_empty_queue");
+    if (args.guids.length === 0 && !args.objective)
+      throw new Error("cycle_empty_queue");
     const maxStarts = args.maxStarts ?? DEFAULT_MAX_STARTS;
     if (!Number.isInteger(maxStarts) || maxStarts < 1)
       throw new Error("cycle_invalid_max");
@@ -164,7 +174,9 @@ export class EncounterCycleRuntime {
       resumes: 0,
       lastLoot: undefined,
       lastRecovery: undefined,
+      objective: args.objective?.progress(),
     };
+    this.objective = args.objective;
     await this.launch("started");
   }
 
@@ -179,7 +191,8 @@ export class EncounterCycleRuntime {
       (record, index) => index >= currentIndex && record.status === "queued",
     );
     const recoverOnly = next === -1 && queue.length > 0 && this.selfDead();
-    if (next === -1 && !recoverOnly) throw new Error("cycle_nothing_to_resume");
+    if (next === -1 && !recoverOnly && !this.objective)
+      throw new Error("cycle_nothing_to_resume");
     const maxStarts = args.maxStarts ?? this.state.maxStarts;
     if (!Number.isInteger(maxStarts) || maxStarts < 1)
       throw new Error("cycle_invalid_max");
@@ -187,7 +200,7 @@ export class EncounterCycleRuntime {
       ...this.state,
       active: true,
       phase: "fighting",
-      currentIndex: recoverOnly ? queue.length : next,
+      currentIndex: next === -1 ? queue.length : next,
       instruction: args.instruction ?? this.state.instruction,
       maxStarts,
       startsUsed: 0,
@@ -204,7 +217,8 @@ export class EncounterCycleRuntime {
     this.run = run;
     this.emit(type);
     try {
-      await this.drive(run.signal);
+      if (this.objective) await this.pursue(this.objective, run.signal);
+      else await this.drive(run.signal);
     } catch (error) {
       if (!run.signal.aborted) throw error;
     }
@@ -233,11 +247,8 @@ export class EncounterCycleRuntime {
   private async drive(signal: AbortSignal): Promise<void> {
     const { queue } = this.state;
     for (;;) {
-      if (this.selfDead()) {
-        const recovered = await this.recover(signal);
-        if (recovered) return this.stop(recovered.cause, recovered.detail);
-        signal.throwIfAborted();
-      }
+      const recovered = await this.recoverIfDead(signal);
+      if (recovered) return this.stop(recovered.cause, recovered.detail);
       const record = queue[this.state.currentIndex];
       if (record === undefined) return this.stop("queue_exhausted");
       if (this.state.startsUsed >= this.state.maxStarts)
@@ -251,6 +262,45 @@ export class EncounterCycleRuntime {
       this.state.currentIndex++;
       this.emit("target_done");
     }
+  }
+
+  private async pursue(
+    objective: CycleObjective,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const tried = new Set(this.state.queue.map((record) => record.guid));
+    for (;;) {
+      const recovered = await this.recoverIfDead(signal);
+      if (recovered) return this.stop(recovered.cause, recovered.detail);
+      const pick = objective.pick(tried);
+      if ("ok" in pick) return this.stop(pick.cause, pick.detail);
+      if (pick.kind === "complete") {
+        this.state.objective = pick.progress;
+        return this.stop("objective_complete");
+      }
+      if (this.state.startsUsed >= this.state.maxStarts)
+        return this.stop("max_starts_reached");
+      tried.add(pick.guid);
+      const record: CycleTargetRecord = { guid: pick.guid, status: "queued" };
+      this.state.queue.push(record);
+      this.state.currentIndex = this.state.queue.length - 1;
+      const failed = await this.engage(record, signal);
+      signal.throwIfAborted();
+      this.state.objective = objective.progress();
+      if (failed && !this.selfDead())
+        return this.stop(failed.cause, failed.detail);
+      if (failed) record.cause = failed.cause;
+      this.emit("target_done");
+    }
+  }
+
+  private async recoverIfDead(
+    signal: AbortSignal,
+  ): Promise<CycleStop | undefined> {
+    if (!this.selfDead()) return undefined;
+    const recovered = await this.recover(signal);
+    signal.throwIfAborted();
+    return recovered;
   }
 
   private async engage(

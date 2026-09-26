@@ -206,7 +206,15 @@ const HANDLERS: Handlers = {
   cycle: (cmd, { handle, socket }) =>
     reply(
       socket,
-      () => handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts),
+      () =>
+        cmd.questId === undefined
+          ? handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts)
+          : handle.startQuestCycle(
+              cmd.questId,
+              cmd.sources ?? [],
+              cmd.instruction,
+              cmd.maxStarts,
+            ),
       ok,
     ),
   cycle_resume: (cmd, { handle, socket }) =>
