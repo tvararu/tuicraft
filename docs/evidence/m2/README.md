@@ -92,6 +92,34 @@ this pair is suggestive, not a demonstration of instruction-driven behaviour.
 Replication (further runs per instruction) is still needed before the
 behaviour change milestone 2 asks for can be called demonstrated.
 
+A replication follows in the next section. The counts in the table above are
+chosen decisions. Counted as applied, the pair differs by one Power Word:
+Shield only; see [instruction-pairs.md](instruction-pairs.md).
+
+### Replication: six more instruction pairs, 2026-09-26
+
+[instruction-pairs.md](instruction-pairs.md) adds six counterbalanced pairs.
+That is twelve encounters, recorded as `pair-01-a.json` to `pair-06-b.json`:
+one new level 10 priest against level 6 and 7 Springpaw Stalkers, with the
+same two instruction texts. All twelve completed with server kill credit.
+
+Across all six pairs, the conserving instruction gave:
+
+- No Power Word: Shield (5 of 6 default runs used it).
+- Smite Rank 1 applied more than Rank 2 in every conserving run, and the
+  reverse in every default run.
+- Melee at least as often as its paired default run: 5 of 6 conserving
+  runs against 2 of 6 default runs, tied in three pairs.
+
+It also gave a new pattern: repeatedly starting a cast and then cancelling
+it.
+
+Mind Blast use and total mana on applied choices were mixed. Every
+conserving run was slower and cost more health than its paired default run.
+With n = 6 pairs and a stochastic judge, this is not a significance result.
+Neither the analysis nor this README treats it as acceptance of the
+milestone.
+
 ## Robustness exercises
 
 All four run live against the real server; no kill was needed or sought.

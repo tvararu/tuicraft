@@ -1,0 +1,4190 @@
+{
+ "source": "session.log of account FAC6AB724C926 (deleted), 2026-09-26; TACTICS started/request/stopped lines reduced to timestamp, type and observation.separation; COMBAT cast_succeeded and cast_interrupted lines inside each run's started..stopped window reduced to timestamp, type and state.lastOutcome",
+ "runs": {
+  "pair-01-a": {
+   "runId": "97653bfb-6c42-4347-8941-a1737d67d33e",
+   "window": [
+    1790387610607,
+    1790387617704
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790387610607,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790387610611,
+     "type": "request",
+     "separation": 23.799514631520335
+    },
+    {
+     "timestamp": 1790387610883,
+     "type": "request",
+     "separation": 24.484474862736718
+    },
+    {
+     "timestamp": 1790387611156,
+     "type": "request",
+     "separation": 25.162117532111957
+    },
+    {
+     "timestamp": 1790387611395,
+     "type": "request",
+     "separation": 25.75766355647029
+    },
+    {
+     "timestamp": 1790387611622,
+     "type": "request",
+     "separation": 25.332430156583587
+    },
+    {
+     "timestamp": 1790387611894,
+     "type": "request",
+     "separation": 24.65624315388429
+    },
+    {
+     "timestamp": 1790387612126,
+     "type": "request",
+     "separation": 24.07728150835748
+    },
+    {
+     "timestamp": 1790387612354,
+     "type": "request",
+     "separation": 23.511005799233917
+    },
+    {
+     "timestamp": 1790387612627,
+     "type": "request",
+     "separation": 22.066625340114353
+    },
+    {
+     "timestamp": 1790387612848,
+     "type": "request",
+     "separation": 19.16972864070322
+    },
+    {
+     "timestamp": 1790387613070,
+     "type": "request",
+     "separation": 17.862738014519675
+    },
+    {
+     "timestamp": 1790387613344,
+     "type": "request",
+     "separation": 16.211892364700887
+    },
+    {
+     "timestamp": 1790387613599,
+     "type": "request",
+     "separation": 14.687437327875264
+    },
+    {
+     "timestamp": 1790387613844,
+     "type": "request",
+     "separation": 13.215989004294107
+    },
+    {
+     "timestamp": 1790387614104,
+     "type": "request",
+     "separation": 11.64871334511803
+    },
+    {
+     "timestamp": 1790387614354,
+     "type": "request",
+     "separation": 10.155020523462037
+    },
+    {
+     "timestamp": 1790387614585,
+     "type": "request",
+     "separation": 8.771166424776549
+    },
+    {
+     "timestamp": 1790387614820,
+     "type": "request",
+     "separation": 7.365055932324819
+    },
+    {
+     "timestamp": 1790387615032,
+     "type": "request",
+     "separation": 6.093767321455703
+    },
+    {
+     "timestamp": 1790387615269,
+     "type": "request",
+     "separation": 4.670303330158037
+    },
+    {
+     "timestamp": 1790387615514,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387615752,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387615999,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387616238,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387616534,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387616776,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387617061,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387617269,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387617487,
+     "type": "request",
+     "separation": 3.4996278205699562
+    },
+    {
+     "timestamp": 1790387617704,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790387612346,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2307737d"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d2307737d",
+      "at": 1790387612346
+     }
+    },
+    {
+     "timestamp": 1790387614813,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2307737d"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d2307737d",
+      "at": 1790387614813
+     }
+    },
+    {
+     "timestamp": 1790387617514,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2307737d"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d2307737d",
+      "at": 1790387617514
+     }
+    }
+   ]
+  },
+  "pair-01-b": {
+   "runId": "a2473c03-7b96-4202-a2bf-ec7b62f49383",
+   "window": [
+    1790387782327,
+    1790387799045
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790387782327,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790387782327,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387782554,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387782754,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387783000,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387783370,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387783651,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387783883,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387784106,
+     "type": "request",
+     "separation": 18.459198811830504
+    },
+    {
+     "timestamp": 1790387784334,
+     "type": "request",
+     "separation": 17.156231472356428
+    },
+    {
+     "timestamp": 1790387784558,
+     "type": "request",
+     "separation": 15.811528945899171
+    },
+    {
+     "timestamp": 1790387784826,
+     "type": "request",
+     "separation": 14.203261900696765
+    },
+    {
+     "timestamp": 1790387785080,
+     "type": "request",
+     "separation": 12.680474771511639
+    },
+    {
+     "timestamp": 1790387785357,
+     "type": "request",
+     "separation": 11.021169193474089
+    },
+    {
+     "timestamp": 1790387785592,
+     "type": "request",
+     "separation": 9.61181473090895
+    },
+    {
+     "timestamp": 1790387785823,
+     "type": "request",
+     "separation": 8.232229216840494
+    },
+    {
+     "timestamp": 1790387786046,
+     "type": "request",
+     "separation": 6.889886856883427
+    },
+    {
+     "timestamp": 1790387786291,
+     "type": "request",
+     "separation": 5.425275398671593
+    },
+    {
+     "timestamp": 1790387786519,
+     "type": "request",
+     "separation": 4.051525051348093
+    },
+    {
+     "timestamp": 1790387786753,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387786986,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387787242,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387787471,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387787724,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387787996,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387788217,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387788450,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387788676,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387788929,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387789187,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387789416,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387789669,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387790152,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387790375,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387790594,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387790841,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387791076,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387791499,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387791736,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387791976,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387792244,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387792452,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387792704,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387792956,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387793378,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387793636,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387793900,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387794124,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387794330,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387794553,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387794773,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387795011,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387795248,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387795509,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387795757,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387795999,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387796243,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387796651,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387797124,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387797367,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387797618,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387797889,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387798124,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387798334,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387798769,
+     "type": "request",
+     "separation": 3.500306091206095
+    },
+    {
+     "timestamp": 1790387799045,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790387784051,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077575"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23077575",
+      "at": 1790387784051
+     }
+    },
+    {
+     "timestamp": 1790387785832,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077575"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23077575",
+      "at": 1790387785832
+     }
+    },
+    {
+     "timestamp": 1790387787855,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077575"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23077575",
+      "at": 1790387787855
+     }
+    },
+    {
+     "timestamp": 1790387789967,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387789967
+     }
+    },
+    {
+     "timestamp": 1790387791318,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387791318
+     }
+    },
+    {
+     "timestamp": 1790387793188,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387793188
+     }
+    },
+    {
+     "timestamp": 1790387795989,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077575"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23077575",
+      "at": 1790387795988
+     }
+    },
+    {
+     "timestamp": 1790387796947,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387796946
+     }
+    },
+    {
+     "timestamp": 1790387798595,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387798595
+     }
+    }
+   ]
+  },
+  "pair-02-a": {
+   "runId": "05218ccb-ad0f-4cd5-b91e-ad6365ee5658",
+   "window": [
+    1790388001530,
+    1790388010316
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790388001530,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790388001531,
+     "type": "request",
+     "separation": 24.968260515272622
+    },
+    {
+     "timestamp": 1790388001785,
+     "type": "request",
+     "separation": 24.968260515272622
+    },
+    {
+     "timestamp": 1790388002055,
+     "type": "request",
+     "separation": 24.968260515272622
+    },
+    {
+     "timestamp": 1790388002378,
+     "type": "request",
+     "separation": 24.968260515272622
+    },
+    {
+     "timestamp": 1790388002623,
+     "type": "request",
+     "separation": 24.968260515272622
+    },
+    {
+     "timestamp": 1790388002896,
+     "type": "request",
+     "separation": 21.41707495584062
+    },
+    {
+     "timestamp": 1790388003131,
+     "type": "request",
+     "separation": 21.41707495584062
+    },
+    {
+     "timestamp": 1790388003349,
+     "type": "request",
+     "separation": 21.41707495584062
+    },
+    {
+     "timestamp": 1790388003591,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388003810,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388004074,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388004311,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388004570,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388004803,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388005047,
+     "type": "request",
+     "separation": 16.40477633120932
+    },
+    {
+     "timestamp": 1790388005296,
+     "type": "request",
+     "separation": 15.604057976140886
+    },
+    {
+     "timestamp": 1790388005510,
+     "type": "request",
+     "separation": 14.315778543013472
+    },
+    {
+     "timestamp": 1790388005752,
+     "type": "request",
+     "separation": 12.865137049532139
+    },
+    {
+     "timestamp": 1790388006007,
+     "type": "request",
+     "separation": 11.326024764657848
+    },
+    {
+     "timestamp": 1790388006250,
+     "type": "request",
+     "separation": 9.866963317978563
+    },
+    {
+     "timestamp": 1790388006477,
+     "type": "request",
+     "separation": 8.511406296089477
+    },
+    {
+     "timestamp": 1790388006703,
+     "type": "request",
+     "separation": 7.146868147320185
+    },
+    {
+     "timestamp": 1790388006960,
+     "type": "request",
+     "separation": 5.609276927636532
+    },
+    {
+     "timestamp": 1790388007207,
+     "type": "request",
+     "separation": 4.134506100508339
+    },
+    {
+     "timestamp": 1790388007444,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388007649,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388007919,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388008134,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388008368,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388008619,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388008869,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388009101,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388009361,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388009607,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388009827,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388010077,
+     "type": "request",
+     "separation": 3.499963352671928
+    },
+    {
+     "timestamp": 1790388010316,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790388001801,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xa31"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 17,
+      "target": "0xa31",
+      "at": 1790388001801
+     }
+    },
+    {
+     "timestamp": 1790388005076,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077757"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23077757",
+      "at": 1790388005075
+     }
+    },
+    {
+     "timestamp": 1790388007522,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077757"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077757",
+      "at": 1790388007521
+     }
+    },
+    {
+     "timestamp": 1790388010109,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077757"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077757",
+      "at": 1790388010109
+     }
+    }
+   ]
+  },
+  "pair-02-b": {
+   "runId": "d419001c-9735-4b69-89f7-95e9dd5caa30",
+   "window": [
+    1790387952748,
+    1790387968851
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790387952748,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790387952749,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387953001,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387953203,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387953472,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387953898,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387954126,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387954413,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387954647,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387954877,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387955081,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387955543,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387955766,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387956027,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387956249,
+     "type": "request",
+     "separation": 25.464025070003615
+    },
+    {
+     "timestamp": 1790387956492,
+     "type": "request",
+     "separation": 25.517074077103626
+    },
+    {
+     "timestamp": 1790387956745,
+     "type": "request",
+     "separation": 25.75289854647714
+    },
+    {
+     "timestamp": 1790387956949,
+     "type": "request",
+     "separation": 25.951718902082458
+    },
+    {
+     "timestamp": 1790387957171,
+     "type": "request",
+     "separation": 26.17868657919106
+    },
+    {
+     "timestamp": 1790387957408,
+     "type": "request",
+     "separation": 26.432796089603983
+    },
+    {
+     "timestamp": 1790387957661,
+     "type": "request",
+     "separation": 26.713669428970395
+    },
+    {
+     "timestamp": 1790387957887,
+     "type": "request",
+     "separation": 26.975595667024276
+    },
+    {
+     "timestamp": 1790387958105,
+     "type": "request",
+     "separation": 27.23970552047581
+    },
+    {
+     "timestamp": 1790387958380,
+     "type": "request",
+     "separation": 26.86526317120899
+    },
+    {
+     "timestamp": 1790387958600,
+     "type": "request",
+     "separation": 25.558882659020355
+    },
+    {
+     "timestamp": 1790387958824,
+     "type": "request",
+     "separation": 24.2305154669134
+    },
+    {
+     "timestamp": 1790387959051,
+     "type": "request",
+     "separation": 22.885895120238967
+    },
+    {
+     "timestamp": 1790387959279,
+     "type": "request",
+     "separation": 21.527107956449385
+    },
+    {
+     "timestamp": 1790387959514,
+     "type": "request",
+     "separation": 20.121218893530262
+    },
+    {
+     "timestamp": 1790387959750,
+     "type": "request",
+     "separation": 18.70865871953019
+    },
+    {
+     "timestamp": 1790387959977,
+     "type": "request",
+     "separation": 17.339685413492305
+    },
+    {
+     "timestamp": 1790387960218,
+     "type": "request",
+     "separation": 15.89290563211891
+    },
+    {
+     "timestamp": 1790387960437,
+     "type": "request",
+     "separation": 14.5844830615927
+    },
+    {
+     "timestamp": 1790387960670,
+     "type": "request",
+     "separation": 13.18642193843783
+    },
+    {
+     "timestamp": 1790387960901,
+     "type": "request",
+     "separation": 11.800897800272335
+    },
+    {
+     "timestamp": 1790387961131,
+     "type": "request",
+     "separation": 10.429458725529996
+    },
+    {
+     "timestamp": 1790387961408,
+     "type": "request",
+     "separation": 8.78052772534946
+    },
+    {
+     "timestamp": 1790387961660,
+     "type": "request",
+     "separation": 7.3003336866479165
+    },
+    {
+     "timestamp": 1790387961906,
+     "type": "request",
+     "separation": 5.865103899039166
+    },
+    {
+     "timestamp": 1790387962154,
+     "type": "request",
+     "separation": 4.446985903462616
+    },
+    {
+     "timestamp": 1790387962368,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387962595,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387962813,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387963049,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387963292,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387963534,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387963985,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387964291,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387964511,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387964733,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387964960,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387965204,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387965448,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387965901,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387966138,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387966369,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387966590,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387966830,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387967261,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387967504,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387967769,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387968002,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387968213,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387968413,
+     "type": "request",
+     "separation": 3.488234179071437
+    },
+    {
+     "timestamp": 1790387968851,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790387953738,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 8092,
+      "result": 40,
+      "at": 1790387953737
+     }
+    },
+    {
+     "timestamp": 1790387955360,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 8092,
+      "result": 40,
+      "at": 1790387955360
+     }
+    },
+    {
+     "timestamp": 1790387958221,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23075ce2"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23075ce2",
+      "at": 1790387958221
+     }
+    },
+    {
+     "timestamp": 1790387960103,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23075ce2"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23075ce2",
+      "at": 1790387960103
+     }
+    },
+    {
+     "timestamp": 1790387961954,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23075ce2"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23075ce2",
+      "at": 1790387961953
+     }
+    },
+    {
+     "timestamp": 1790387963817,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387963817
+     }
+    },
+    {
+     "timestamp": 1790387965706,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387965706
+     }
+    },
+    {
+     "timestamp": 1790387967062,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387967062
+     }
+    },
+    {
+     "timestamp": 1790387968659,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790387968658
+     }
+    }
+   ]
+  },
+  "pair-03-a": {
+   "runId": "7645e643-415e-4295-8e96-146bc97ee71f",
+   "window": [
+    1790388059503,
+    1790388070683
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790388059503,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790388059504,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388059720,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388059942,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388060173,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388060413,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388060652,
+     "type": "request",
+     "separation": 26.60938388936222
+    },
+    {
+     "timestamp": 1790388060935,
+     "type": "request",
+     "separation": 23.094318844332964
+    },
+    {
+     "timestamp": 1790388061179,
+     "type": "request",
+     "separation": 19.580060610721496
+    },
+    {
+     "timestamp": 1790388061421,
+     "type": "request",
+     "separation": 19.580060610721496
+    },
+    {
+     "timestamp": 1790388061635,
+     "type": "request",
+     "separation": 16.34239595752286
+    },
+    {
+     "timestamp": 1790388061836,
+     "type": "request",
+     "separation": 16.34239595752286
+    },
+    {
+     "timestamp": 1790388062080,
+     "type": "request",
+     "separation": 16.31088491909034
+    },
+    {
+     "timestamp": 1790388062337,
+     "type": "request",
+     "separation": 15.688763359125694
+    },
+    {
+     "timestamp": 1790388062631,
+     "type": "request",
+     "separation": 14.979183274791525
+    },
+    {
+     "timestamp": 1790388062856,
+     "type": "request",
+     "separation": 14.440256023582384
+    },
+    {
+     "timestamp": 1790388063113,
+     "type": "request",
+     "separation": 13.237195035226629
+    },
+    {
+     "timestamp": 1790388063342,
+     "type": "request",
+     "separation": 11.859944769386335
+    },
+    {
+     "timestamp": 1790388063568,
+     "type": "request",
+     "separation": 10.506945377693349
+    },
+    {
+     "timestamp": 1790388063816,
+     "type": "request",
+     "separation": 9.014298780510922
+    },
+    {
+     "timestamp": 1790388064068,
+     "type": "request",
+     "separation": 7.51370595885063
+    },
+    {
+     "timestamp": 1790388064294,
+     "type": "request",
+     "separation": 6.164959342218431
+    },
+    {
+     "timestamp": 1790388064547,
+     "type": "request",
+     "separation": 4.6452286300583605
+    },
+    {
+     "timestamp": 1790388064828,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388065050,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388065295,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388065519,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388065754,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388066034,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388066277,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388066518,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388066750,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388067024,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388067261,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388067488,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388067733,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388067976,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388068214,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388068496,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388068730,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388069022,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388069271,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388069523,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388069763,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388070027,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388070257,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388070463,
+     "type": "request",
+     "separation": 3.4994771340124813
+    },
+    {
+     "timestamp": 1790388070683,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790388059736,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xa31"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 17,
+      "target": "0xa31",
+      "at": 1790388059735
+     }
+    },
+    {
+     "timestamp": 1790388063187,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026bab"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23026bab",
+      "at": 1790388063186
+     }
+    },
+    {
+     "timestamp": 1790388065577,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026bab"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23026bab",
+      "at": 1790388065576
+     }
+    },
+    {
+     "timestamp": 1790388068037,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026bab"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23026bab",
+      "at": 1790388068036
+     }
+    },
+    {
+     "timestamp": 1790388070513,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026bab"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23026bab",
+      "at": 1790388070513
+     }
+    }
+   ]
+  },
+  "pair-03-b": {
+   "runId": "c555ad26-0041-44cd-bb73-944d21fce31c",
+   "window": [
+    1790388138611,
+    1790388152643
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790388138611,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790388138611,
+     "type": "request",
+     "separation": 24.06503536129846
+    },
+    {
+     "timestamp": 1790388138850,
+     "type": "request",
+     "separation": 24.539981959932394
+    },
+    {
+     "timestamp": 1790388139054,
+     "type": "request",
+     "separation": 24.933418364710704
+    },
+    {
+     "timestamp": 1790388139325,
+     "type": "request",
+     "separation": 24.566712134439754
+    },
+    {
+     "timestamp": 1790388139583,
+     "type": "request",
+     "separation": 24.121976866847163
+    },
+    {
+     "timestamp": 1790388139821,
+     "type": "request",
+     "separation": 23.719900191224532
+    },
+    {
+     "timestamp": 1790388140109,
+     "type": "request",
+     "separation": 23.24608168890538
+    },
+    {
+     "timestamp": 1790388140348,
+     "type": "request",
+     "separation": 22.86122621367586
+    },
+    {
+     "timestamp": 1790388140648,
+     "type": "request",
+     "separation": 22.38762328974094
+    },
+    {
+     "timestamp": 1790388140886,
+     "type": "request",
+     "separation": 22.011143532657055
+    },
+    {
+     "timestamp": 1790388141117,
+     "type": "request",
+     "separation": 21.656657511152403
+    },
+    {
+     "timestamp": 1790388141363,
+     "type": "request",
+     "separation": 21.28672150155835
+    },
+    {
+     "timestamp": 1790388141612,
+     "type": "request",
+     "separation": 21.244044310003222
+    },
+    {
+     "timestamp": 1790388141877,
+     "type": "request",
+     "separation": 21.244044310003222
+    },
+    {
+     "timestamp": 1790388142157,
+     "type": "request",
+     "separation": 21.244044310003222
+    },
+    {
+     "timestamp": 1790388142381,
+     "type": "request",
+     "separation": 21.244044310003222
+    },
+    {
+     "timestamp": 1790388142608,
+     "type": "request",
+     "separation": 20.404808362275094
+    },
+    {
+     "timestamp": 1790388142946,
+     "type": "request",
+     "separation": 18.73684361400246
+    },
+    {
+     "timestamp": 1790388143191,
+     "type": "request",
+     "separation": 17.584634378827268
+    },
+    {
+     "timestamp": 1790388143429,
+     "type": "request",
+     "separation": 16.543034323568257
+    },
+    {
+     "timestamp": 1790388143675,
+     "type": "request",
+     "separation": 15.520305065690431
+    },
+    {
+     "timestamp": 1790388143917,
+     "type": "request",
+     "separation": 14.469948236905802
+    },
+    {
+     "timestamp": 1790388144160,
+     "type": "request",
+     "separation": 13.195481397188612
+    },
+    {
+     "timestamp": 1790388144389,
+     "type": "request",
+     "separation": 12.024775199862635
+    },
+    {
+     "timestamp": 1790388144633,
+     "type": "request",
+     "separation": 10.652959068001342
+    },
+    {
+     "timestamp": 1790388144872,
+     "type": "request",
+     "separation": 9.233897117343764
+    },
+    {
+     "timestamp": 1790388145152,
+     "type": "request",
+     "separation": 7.574658214486991
+    },
+    {
+     "timestamp": 1790388145390,
+     "type": "request",
+     "separation": 6.170048307367481
+    },
+    {
+     "timestamp": 1790388145643,
+     "type": "request",
+     "separation": 4.655898776787118
+    },
+    {
+     "timestamp": 1790388145897,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388146120,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388146364,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388146601,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388146834,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388147091,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388147303,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388147655,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388147896,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388148321,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388148573,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388148815,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388149030,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388149250,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388149682,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388149921,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388150185,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388150436,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388150658,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388150883,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388151132,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388151572,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388151818,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388152166,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388152421,
+     "type": "request",
+     "separation": 3.5001372475811543
+    },
+    {
+     "timestamp": 1790388152643,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790388140648,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 591,
+      "result": 40,
+      "at": 1790388140648
+     }
+    },
+    {
+     "timestamp": 1790388142377,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026c24"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23026c24",
+      "at": 1790388142377
+     }
+    },
+    {
+     "timestamp": 1790388144468,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026c24"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23026c24",
+      "at": 1790388144468
+     }
+    },
+    {
+     "timestamp": 1790388146831,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23026c24"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23026c24",
+      "at": 1790388146831
+     }
+    },
+    {
+     "timestamp": 1790388148150,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388148150
+     }
+    },
+    {
+     "timestamp": 1790388149495,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388149495
+     }
+    },
+    {
+     "timestamp": 1790388151378,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388151378
+     }
+    }
+   ]
+  },
+  "pair-04-a": {
+   "runId": "5b989481-1b22-4604-b035-c6d2a081191c",
+   "window": [
+    1790389041585,
+    1790389052348
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790389041585,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790389041586,
+     "type": "request",
+     "separation": 24.766076143067632
+    },
+    {
+     "timestamp": 1790389041848,
+     "type": "request",
+     "separation": 25.120741697965784
+    },
+    {
+     "timestamp": 1790389042101,
+     "type": "request",
+     "separation": 25.47435852157978
+    },
+    {
+     "timestamp": 1790389042367,
+     "type": "request",
+     "separation": 25.858906165349527
+    },
+    {
+     "timestamp": 1790389042610,
+     "type": "request",
+     "separation": 26.218605543125665
+    },
+    {
+     "timestamp": 1790389042890,
+     "type": "request",
+     "separation": 21.724017545517842
+    },
+    {
+     "timestamp": 1790389043138,
+     "type": "request",
+     "separation": 22.1612869901062
+    },
+    {
+     "timestamp": 1790389043390,
+     "type": "request",
+     "separation": 18.339822156566793
+    },
+    {
+     "timestamp": 1790389043642,
+     "type": "request",
+     "separation": 16.81495989112355
+    },
+    {
+     "timestamp": 1790389043890,
+     "type": "request",
+     "separation": 17.311522225998065
+    },
+    {
+     "timestamp": 1790389044156,
+     "type": "request",
+     "separation": 17.85653197905068
+    },
+    {
+     "timestamp": 1790389044399,
+     "type": "request",
+     "separation": 18.35936678762562
+    },
+    {
+     "timestamp": 1790389044662,
+     "type": "request",
+     "separation": 18.37047174783692
+    },
+    {
+     "timestamp": 1790389044935,
+     "type": "request",
+     "separation": 17.70945236510702
+    },
+    {
+     "timestamp": 1790389045209,
+     "type": "request",
+     "separation": 17.0498431691526
+    },
+    {
+     "timestamp": 1790389045449,
+     "type": "request",
+     "separation": 15.6900773802255
+    },
+    {
+     "timestamp": 1790389045716,
+     "type": "request",
+     "separation": 14.083428430557667
+    },
+    {
+     "timestamp": 1790389045980,
+     "type": "request",
+     "separation": 12.496727879976719
+    },
+    {
+     "timestamp": 1790389046226,
+     "type": "request",
+     "separation": 11.040028746881626
+    },
+    {
+     "timestamp": 1790389046579,
+     "type": "request",
+     "separation": 8.949396189874971
+    },
+    {
+     "timestamp": 1790389046838,
+     "type": "request",
+     "separation": 7.390801103736987
+    },
+    {
+     "timestamp": 1790389047077,
+     "type": "request",
+     "separation": 5.94665303532722
+    },
+    {
+     "timestamp": 1790389047363,
+     "type": "request",
+     "separation": 4.226665079012887
+    },
+    {
+     "timestamp": 1790389047612,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389047859,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389048188,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389048439,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389048731,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389049020,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389049261,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389049526,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389049775,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389050015,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389050230,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389050504,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389050793,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389051042,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389051421,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389051672,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389051905,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389052132,
+     "type": "request",
+     "separation": 3.5000117871680176
+    },
+    {
+     "timestamp": 1790389052348,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790389041848,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xa31"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 17,
+      "target": "0xa31",
+      "at": 1790389041848
+     }
+    },
+    {
+     "timestamp": 1790389045159,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077a89"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23077a89",
+      "at": 1790389045159
+     }
+    },
+    {
+     "timestamp": 1790389047494,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077a89"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077a89",
+      "at": 1790389047494
+     }
+    },
+    {
+     "timestamp": 1790389049875,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077a89"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077a89",
+      "at": 1790389049874
+     }
+    },
+    {
+     "timestamp": 1790389052245,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077a89"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077a89",
+      "at": 1790389052244
+     }
+    }
+   ]
+  },
+  "pair-04-b": {
+   "runId": "327481ab-f2e0-4c0d-9617-9d15284c17e5",
+   "window": [
+    1790388229398,
+    1790388243253
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790388229398,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790388229399,
+     "type": "request",
+     "separation": 23.590202015746293
+    },
+    {
+     "timestamp": 1790388229636,
+     "type": "request",
+     "separation": 23.61208349526463
+    },
+    {
+     "timestamp": 1790388229883,
+     "type": "request",
+     "separation": 23.65060605710528
+    },
+    {
+     "timestamp": 1790388230398,
+     "type": "request",
+     "separation": 23.782027213760724
+    },
+    {
+     "timestamp": 1790388230656,
+     "type": "request",
+     "separation": 23.86322160515494
+    },
+    {
+     "timestamp": 1790388231053,
+     "type": "request",
+     "separation": 23.516726181877388
+    },
+    {
+     "timestamp": 1790388231282,
+     "type": "request",
+     "separation": 23.33431114204892
+    },
+    {
+     "timestamp": 1790388231509,
+     "type": "request",
+     "separation": 23.166072546443974
+    },
+    {
+     "timestamp": 1790388231733,
+     "type": "request",
+     "separation": 23.0126072794135
+    },
+    {
+     "timestamp": 1790388231971,
+     "type": "request",
+     "separation": 22.86349167649798
+    },
+    {
+     "timestamp": 1790388232229,
+     "type": "request",
+     "separation": 22.71504935603746
+    },
+    {
+     "timestamp": 1790388232497,
+     "type": "request",
+     "separation": 22.51022767548906
+    },
+    {
+     "timestamp": 1790388232725,
+     "type": "request",
+     "separation": 22.34898694110774
+    },
+    {
+     "timestamp": 1790388232972,
+     "type": "request",
+     "separation": 22.190971765090623
+    },
+    {
+     "timestamp": 1790388233224,
+     "type": "request",
+     "separation": 21.27823392186876
+    },
+    {
+     "timestamp": 1790388233465,
+     "type": "request",
+     "separation": 19.83014283039275
+    },
+    {
+     "timestamp": 1790388233699,
+     "type": "request",
+     "separation": 18.42418577552475
+    },
+    {
+     "timestamp": 1790388233932,
+     "type": "request",
+     "separation": 17.024049184340175
+    },
+    {
+     "timestamp": 1790388234171,
+     "type": "request",
+     "separation": 15.587695666779243
+    },
+    {
+     "timestamp": 1790388234434,
+     "type": "request",
+     "separation": 14.00715402934636
+    },
+    {
+     "timestamp": 1790388234689,
+     "type": "request",
+     "separation": 12.484209023968363
+    },
+    {
+     "timestamp": 1790388234916,
+     "type": "request",
+     "separation": 11.124590237637928
+    },
+    {
+     "timestamp": 1790388235142,
+     "type": "request",
+     "separation": 9.764972613331675
+    },
+    {
+     "timestamp": 1790388235367,
+     "type": "request",
+     "separation": 8.412984287420882
+    },
+    {
+     "timestamp": 1790388235583,
+     "type": "request",
+     "separation": 7.115225263775778
+    },
+    {
+     "timestamp": 1790388235850,
+     "type": "request",
+     "separation": 5.511428913867355
+    },
+    {
+     "timestamp": 1790388236095,
+     "type": "request",
+     "separation": 4.046549264760481
+    },
+    {
+     "timestamp": 1790388236333,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388236603,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388236853,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388237090,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388237311,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388237527,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388237742,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388237960,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388238176,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388238412,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388238842,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388239090,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388239349,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388239579,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388239811,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388240093,
+     "type": "request",
+     "separation": 3.5005922964952867
+    },
+    {
+     "timestamp": 1790388240592,
+     "type": "request",
+     "separation": 2.850734528575265
+    },
+    {
+     "timestamp": 1790388240843,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388241089,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388241362,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388241587,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388241812,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388242239,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388242494,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388242735,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388242979,
+     "type": "request",
+     "separation": 2.1975972745125323
+    },
+    {
+     "timestamp": 1790388243253,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790388230219,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 8092,
+      "result": 40,
+      "at": 1790388230219
+     }
+    },
+    {
+     "timestamp": 1790388233012,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2303af2e"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d2303af2e",
+      "at": 1790388233012
+     }
+    },
+    {
+     "timestamp": 1790388234955,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2303af2e"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d2303af2e",
+      "at": 1790388234955
+     }
+    },
+    {
+     "timestamp": 1790388237346,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d2303af2e"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d2303af2e",
+      "at": 1790388237346
+     }
+    },
+    {
+     "timestamp": 1790388238672,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388238672
+     }
+    },
+    {
+     "timestamp": 1790388240405,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388240405
+     }
+    },
+    {
+     "timestamp": 1790388242049,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790388242049
+     }
+    }
+   ]
+  },
+  "pair-05-a": {
+   "runId": "f94757b1-da5e-4735-ba03-d5defa6e0592",
+   "window": [
+    1790389105509,
+    1790389118591
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790389105509,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790389105510,
+     "type": "request",
+     "separation": 31.739012927476917
+    },
+    {
+     "timestamp": 1790389105736,
+     "type": "request",
+     "separation": 31.25794645522904
+    },
+    {
+     "timestamp": 1790389106031,
+     "type": "request",
+     "separation": 30.637247728878428
+    },
+    {
+     "timestamp": 1790389106315,
+     "type": "request",
+     "separation": 30.044742747886726
+    },
+    {
+     "timestamp": 1790389106578,
+     "type": "request",
+     "separation": 29.502789774841368
+    },
+    {
+     "timestamp": 1790389106823,
+     "type": "request",
+     "separation": 25.506320438369105
+    },
+    {
+     "timestamp": 1790389107077,
+     "type": "request",
+     "separation": 25.004318140404575
+    },
+    {
+     "timestamp": 1790389107317,
+     "type": "request",
+     "separation": 21.050299368090634
+    },
+    {
+     "timestamp": 1790389107586,
+     "type": "request",
+     "separation": 18.67621080999676
+    },
+    {
+     "timestamp": 1790389107833,
+     "type": "request",
+     "separation": 18.22284524740958
+    },
+    {
+     "timestamp": 1790389108062,
+     "type": "request",
+     "separation": 17.949362345321557
+    },
+    {
+     "timestamp": 1790389108285,
+     "type": "request",
+     "separation": 17.949362345321557
+    },
+    {
+     "timestamp": 1790389108547,
+     "type": "request",
+     "separation": 17.949362345321557
+    },
+    {
+     "timestamp": 1790389108782,
+     "type": "request",
+     "separation": 17.949362345321557
+    },
+    {
+     "timestamp": 1790389109055,
+     "type": "request",
+     "separation": 17.949362345321557
+    },
+    {
+     "timestamp": 1790389109351,
+     "type": "request",
+     "separation": 16.714012286034727
+    },
+    {
+     "timestamp": 1790389109597,
+     "type": "request",
+     "separation": 15.241318576285456
+    },
+    {
+     "timestamp": 1790389109873,
+     "type": "request",
+     "separation": 13.60327227107383
+    },
+    {
+     "timestamp": 1790389110127,
+     "type": "request",
+     "separation": 12.08330501334627
+    },
+    {
+     "timestamp": 1790389110360,
+     "type": "request",
+     "separation": 10.689952039619302
+    },
+    {
+     "timestamp": 1790389110618,
+     "type": "request",
+     "separation": 9.14641715373564
+    },
+    {
+     "timestamp": 1790389110871,
+     "type": "request",
+     "separation": 7.632201069397167
+    },
+    {
+     "timestamp": 1790389111114,
+     "type": "request",
+     "separation": 6.173496066517015
+    },
+    {
+     "timestamp": 1790389111385,
+     "type": "request",
+     "separation": 4.549080109678266
+    },
+    {
+     "timestamp": 1790389111625,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389111870,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389112099,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389112472,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389112705,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389112997,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389113239,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389113464,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389113683,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389113940,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389114168,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389114368,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389114600,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389114856,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389115110,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389115345,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389115631,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389115929,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389116143,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389116375,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389116606,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389116866,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389117075,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389117327,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389117612,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389117871,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389118100,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389118342,
+     "type": "request",
+     "separation": 3.4998551348225857
+    },
+    {
+     "timestamp": 1790389118591,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790389105746,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xa31"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 17,
+      "target": "0xa31",
+      "at": 1790389105746
+     }
+    },
+    {
+     "timestamp": 1790389109074,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23074a72"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23074a72",
+      "at": 1790389109073
+     }
+    },
+    {
+     "timestamp": 1790389111620,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23074a72"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23074a72",
+      "at": 1790389111620
+     }
+    },
+    {
+     "timestamp": 1790389113886,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23074a72"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23074a72",
+      "at": 1790389113886
+     }
+    },
+    {
+     "timestamp": 1790389116143,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23074a72"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23074a72",
+      "at": 1790389116143
+     }
+    },
+    {
+     "timestamp": 1790389118391,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23074a72"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23074a72",
+      "at": 1790389118390
+     }
+    }
+   ]
+  },
+  "pair-05-b": {
+   "runId": "056114e3-1f41-4ec8-9bac-76061029bab6",
+   "window": [
+    1790389163674,
+    1790389180822
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790389163674,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790389163675,
+     "type": "request",
+     "separation": 19.992042511741225
+    },
+    {
+     "timestamp": 1790389163913,
+     "type": "request",
+     "separation": 19.992042511741225
+    },
+    {
+     "timestamp": 1790389164152,
+     "type": "request",
+     "separation": 20.18658801362769
+    },
+    {
+     "timestamp": 1790389164379,
+     "type": "request",
+     "separation": 20.66685532862986
+    },
+    {
+     "timestamp": 1790389164643,
+     "type": "request",
+     "separation": 21.22636069920036
+    },
+    {
+     "timestamp": 1790389164892,
+     "type": "request",
+     "separation": 21.761131282928282
+    },
+    {
+     "timestamp": 1790389165329,
+     "type": "request",
+     "separation": 22.710469210533127
+    },
+    {
+     "timestamp": 1790389165586,
+     "type": "request",
+     "separation": 23.276841212128634
+    },
+    {
+     "timestamp": 1790389165812,
+     "type": "request",
+     "separation": 23.76567009202773
+    },
+    {
+     "timestamp": 1790389166073,
+     "type": "request",
+     "separation": 24.330883956694844
+    },
+    {
+     "timestamp": 1790389166315,
+     "type": "request",
+     "separation": 24.712266373767683
+    },
+    {
+     "timestamp": 1790389166558,
+     "type": "request",
+     "separation": 24.712266373767683
+    },
+    {
+     "timestamp": 1790389166797,
+     "type": "request",
+     "separation": 24.712266373767683
+    },
+    {
+     "timestamp": 1790389167057,
+     "type": "request",
+     "separation": 24.712266373767683
+    },
+    {
+     "timestamp": 1790389167333,
+     "type": "request",
+     "separation": 24.712266373767683
+    },
+    {
+     "timestamp": 1790389167573,
+     "type": "request",
+     "separation": 23.535515098844726
+    },
+    {
+     "timestamp": 1790389167791,
+     "type": "request",
+     "separation": 22.232913891413297
+    },
+    {
+     "timestamp": 1790389168072,
+     "type": "request",
+     "separation": 20.540503729979584
+    },
+    {
+     "timestamp": 1790389168340,
+     "type": "request",
+     "separation": 18.92936271954205
+    },
+    {
+     "timestamp": 1790389168807,
+     "type": "request",
+     "separation": 16.128089865444263
+    },
+    {
+     "timestamp": 1790389169069,
+     "type": "request",
+     "separation": 14.547172062787622
+    },
+    {
+     "timestamp": 1790389169339,
+     "type": "request",
+     "separation": 12.924327754102192
+    },
+    {
+     "timestamp": 1790389169612,
+     "type": "request",
+     "separation": 11.289472067233147
+    },
+    {
+     "timestamp": 1790389169868,
+     "type": "request",
+     "separation": 9.744995635909191
+    },
+    {
+     "timestamp": 1790389170128,
+     "type": "request",
+     "separation": 8.189152749077133
+    },
+    {
+     "timestamp": 1790389170420,
+     "type": "request",
+     "separation": 6.43696873661737
+    },
+    {
+     "timestamp": 1790389170658,
+     "type": "request",
+     "separation": 5.010742937218592
+    },
+    {
+     "timestamp": 1790389170911,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389171190,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389171610,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389171846,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389172081,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389172334,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389172560,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389173034,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389173342,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389173576,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389173831,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389174104,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389174340,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389174591,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389175041,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389175286,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389175586,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389175858,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389176103,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389176346,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389176593,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389176857,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389177123,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389177359,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389177802,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389178076,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389178325,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389178544,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389178807,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389179071,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389179539,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389179814,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389180086,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389180364,
+     "type": "request",
+     "separation": 3.4995540481352396
+    },
+    {
+     "timestamp": 1790389180822,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790389165135,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 8092,
+      "result": 40,
+      "at": 1790389165135
+     }
+    },
+    {
+     "timestamp": 1790389167296,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23055450"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23055450",
+      "at": 1790389167295
+     }
+    },
+    {
+     "timestamp": 1790389168621,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389168621
+     }
+    },
+    {
+     "timestamp": 1790389171418,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389171418
+     }
+    },
+    {
+     "timestamp": 1790389172840,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389172840
+     }
+    },
+    {
+     "timestamp": 1790389174846,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389174846
+     }
+    },
+    {
+     "timestamp": 1790389177612,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389177612
+     }
+    },
+    {
+     "timestamp": 1790389179354,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389179354
+     }
+    },
+    {
+     "timestamp": 1790389180623,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389180623
+     }
+    }
+   ]
+  },
+  "pair-06-a": {
+   "runId": "73f052a0-75ed-4c14-bf50-8869b3ce3c41",
+   "window": [
+    1790389244000,
+    1790389254747
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790389244000,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790389244001,
+     "type": "request",
+     "separation": 26.53908162862083
+    },
+    {
+     "timestamp": 1790389244263,
+     "type": "request",
+     "separation": 26.53908162862083
+    },
+    {
+     "timestamp": 1790389244523,
+     "type": "request",
+     "separation": 26.53908162862083
+    },
+    {
+     "timestamp": 1790389244782,
+     "type": "request",
+     "separation": 26.53908162862083
+    },
+    {
+     "timestamp": 1790389245030,
+     "type": "request",
+     "separation": 26.53908162862083
+    },
+    {
+     "timestamp": 1790389245281,
+     "type": "request",
+     "separation": 22.114406139724945
+    },
+    {
+     "timestamp": 1790389245543,
+     "type": "request",
+     "separation": 22.114406139724945
+    },
+    {
+     "timestamp": 1790389245787,
+     "type": "request",
+     "separation": 18.2444377426955
+    },
+    {
+     "timestamp": 1790389246163,
+     "type": "request",
+     "separation": 15.562432640098093
+    },
+    {
+     "timestamp": 1790389246426,
+     "type": "request",
+     "separation": 15.562432640098093
+    },
+    {
+     "timestamp": 1790389246741,
+     "type": "request",
+     "separation": 14.0779985060399
+    },
+    {
+     "timestamp": 1790389246979,
+     "type": "request",
+     "separation": 12.708493969165911
+    },
+    {
+     "timestamp": 1790389247216,
+     "type": "request",
+     "separation": 11.36399880214541
+    },
+    {
+     "timestamp": 1790389247588,
+     "type": "request",
+     "separation": 9.27160955967462
+    },
+    {
+     "timestamp": 1790389247831,
+     "type": "request",
+     "separation": 7.950346287459756
+    },
+    {
+     "timestamp": 1790389248041,
+     "type": "request",
+     "separation": 6.729556234802047
+    },
+    {
+     "timestamp": 1790389248257,
+     "type": "request",
+     "separation": 5.459874580164653
+    },
+    {
+     "timestamp": 1790389248537,
+     "type": "request",
+     "separation": 3.827105431408415
+    },
+    {
+     "timestamp": 1790389248789,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389249027,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389249247,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389249502,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389249775,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389249994,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389250231,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389250462,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389250699,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389250980,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389251257,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389251493,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389251732,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389251990,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389252238,
+     "type": "request",
+     "separation": 3.500155125537806
+    },
+    {
+     "timestamp": 1790389252472,
+     "type": "request",
+     "separation": 3.4536112112074613
+    },
+    {
+     "timestamp": 1790389252707,
+     "type": "request",
+     "separation": 2.4615560195651587
+    },
+    {
+     "timestamp": 1790389252949,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389253210,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389253530,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389253780,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389254038,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389254324,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389254538,
+     "type": "request",
+     "separation": 1.9245915112232883
+    },
+    {
+     "timestamp": 1790389254747,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790389244267,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xa31"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 17,
+      "target": "0xa31",
+      "at": 1790389244266
+     }
+    },
+    {
+     "timestamp": 1790389247684,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077bff"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23077bff",
+      "at": 1790389247684
+     }
+    },
+    {
+     "timestamp": 1790389250053,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077bff"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077bff",
+      "at": 1790389250053
+     }
+    },
+    {
+     "timestamp": 1790389252437,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077bff"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077bff",
+      "at": 1790389252437
+     }
+    },
+    {
+     "timestamp": 1790389254714,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077bff"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 591,
+      "target": "0xf130003d23077bff",
+      "at": 1790389254714
+     }
+    }
+   ]
+  },
+  "pair-06-b": {
+   "runId": "e8b9b552-7c5b-40c8-a74e-67159dee6be8",
+   "window": [
+    1790389197733,
+    1790389211065
+   ],
+   "tactics": [
+    {
+     "timestamp": 1790389197733,
+     "type": "started"
+    },
+    {
+     "timestamp": 1790389197734,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389197948,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389198184,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389198509,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389198751,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389199012,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389199315,
+     "type": "request",
+     "separation": 21.520942244543374
+    },
+    {
+     "timestamp": 1790389199588,
+     "type": "request",
+     "separation": 21.346535205487328
+    },
+    {
+     "timestamp": 1790389199836,
+     "type": "request",
+     "separation": 19.85508380095513
+    },
+    {
+     "timestamp": 1790389200069,
+     "type": "request",
+     "separation": 18.45389724109474
+    },
+    {
+     "timestamp": 1790389200309,
+     "type": "request",
+     "separation": 17.01666947641631
+    },
+    {
+     "timestamp": 1790389200593,
+     "type": "request",
+     "separation": 15.308770505407015
+    },
+    {
+     "timestamp": 1790389200817,
+     "type": "request",
+     "separation": 13.955766610824636
+    },
+    {
+     "timestamp": 1790389201144,
+     "type": "request",
+     "separation": 11.99776696347384
+    },
+    {
+     "timestamp": 1790389201415,
+     "type": "request",
+     "separation": 10.393540181411938
+    },
+    {
+     "timestamp": 1790389201652,
+     "type": "request",
+     "separation": 8.963915273718177
+    },
+    {
+     "timestamp": 1790389201928,
+     "type": "request",
+     "separation": 7.304992351133528
+    },
+    {
+     "timestamp": 1790389202170,
+     "type": "request",
+     "separation": 5.851055909799718
+    },
+    {
+     "timestamp": 1790389202419,
+     "type": "request",
+     "separation": 4.359886120358475
+    },
+    {
+     "timestamp": 1790389202668,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389202905,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389203193,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389203416,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389203857,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389204119,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389204365,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389204722,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389204984,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389205435,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389205653,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389205923,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389206214,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389206474,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389206708,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389206956,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389207196,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389207627,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389207879,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389208118,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389208331,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389208578,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389208881,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389209142,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389209396,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389209854,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389210072,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389210304,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389210602,
+     "type": "request",
+     "separation": 3.499995251096251
+    },
+    {
+     "timestamp": 1790389211065,
+     "type": "stopped"
+    }
+   ],
+   "combat": [
+    {
+     "timestamp": 1790389199487,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077b37"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 8092,
+      "target": "0xf130003d23077b37",
+      "at": 1790389199487
+     }
+    },
+    {
+     "timestamp": 1790389201329,
+     "type": "cast_succeeded",
+     "lastOutcome": {
+      "kind": "cast",
+      "hits": [
+       "0xf130003d23077b37"
+      ],
+      "misses": [],
+      "status": "succeeded",
+      "spellId": 585,
+      "target": "0xf130003d23077b37",
+      "at": 1790389201329
+     }
+    },
+    {
+     "timestamp": 1790389203664,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389203664
+     }
+    },
+    {
+     "timestamp": 1790389205235,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389205235
+     }
+    },
+    {
+     "timestamp": 1790389207441,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389207441
+     }
+    },
+    {
+     "timestamp": 1790389209658,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389209658
+     }
+    },
+    {
+     "timestamp": 1790389210870,
+     "type": "cast_interrupted",
+     "lastOutcome": {
+      "kind": "cancel",
+      "status": "interrupted",
+      "spellId": 585,
+      "result": 40,
+      "at": 1790389210870
+     }
+    }
+   ]
+  }
+ }
+}
