@@ -569,6 +569,7 @@ Rules:
 | `mapId` | The map **this client was on when the entity was parsed**, stamped onto every entity by `handleUpdateObject`. It is not a per-entity property the server states, so do not treat it as authority for where an entity is. It differs from the player's current map only for entities left over from a previous map. |
 | `orientation` | Facing angle in radians. |
 | `gameObjectType` | Numeric GameObject type (e.g. 11 transport, 19 mailbox), present on gameobjects. Initialized to `0` at create time until `CMSG_GAMEOBJECT_QUERY` resolves. |
+| `remotePose` | Other players only, when movement was received. Last received pose, never extrapolated: `x`, `y`, `z`, `orientation`, `mapId`, exact `flags` and `extraFlags` (unknown bits kept, `null` if the block had none), `moverTime` (mover's clock), `receivedAt` (local ms), `ageMs`, `source` (`observer`, `create`, `update`), `motion` (`moving`, `stationary`, or `null`) and `invalid` (`null`, or why the pose is not usable ground movement: flag problems, transport/flying/falling/swimming/spline modes, `teleport`, `knockback`, `time_skipped`, `malformed`, `transfer`, `map_changed`, `dead`). The last five keep the old position and `receivedAt`. |
 
 TUI: `/tuicraft entities on|off` toggles entity event display.
 

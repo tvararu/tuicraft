@@ -9,6 +9,7 @@ import type {
 } from "wow/entity-store";
 import { bearing, distance2d, normalizeAngle } from "wow/geometry";
 import { ObjectType } from "wow/protocol/entity-fields";
+import type { RemotePose } from "wow/remote-motion";
 
 function objectTypeName(type: ObjectType): string {
   switch (type) {
@@ -89,6 +90,8 @@ type PreparedNearbyEntity = {
   originSource: "predicted" | "server" | "self_entity" | null;
   originUpdatedAt: number | null;
   self: boolean;
+  remotePose: RemotePose | undefined;
+  preparedAt: number;
 };
 
 type Origin = ControlPose | Position;
@@ -168,6 +171,8 @@ export function prepareNearbyEntities(
   const selfPos = selfPose ?? selfEntity?.position;
   const originSource = selfPose?.source ?? (selfPos ? "self_entity" : null);
   const originUpdatedAt = selfPose?.updatedAt ?? null;
+  const poses = new Map(handle.getRemotePoses().map((p) => [p.guid, p]));
+  const preparedAt = Date.now();
 
   const prepared: PreparedNearbyEntity[] = entities.map((entity) => {
     const isSelf = entity.guid === selfGuid;
@@ -181,6 +186,8 @@ export function prepareNearbyEntities(
       originSource,
       originUpdatedAt,
       position: isSelf ? selfPos : entity.position,
+      preparedAt,
+      remotePose: poses.get(entity.guid),
       self: isSelf,
       turnRadians,
     };
@@ -193,6 +200,28 @@ export function prepareNearbyEntities(
   }
 
   return prepared;
+}
+
+function formatRemotePose(
+  pose: RemotePose,
+  now: number,
+): Record<string, unknown> {
+  const { position } = pose;
+  return {
+    ageMs: now - pose.receivedAt,
+    extraFlags: pose.extraFlags ?? null,
+    flags: pose.flags ?? null,
+    invalid: pose.invalid ?? null,
+    mapId: position.mapId,
+    motion: pose.motion ?? null,
+    moverTime: pose.moverTime ?? null,
+    orientation: position.orientation,
+    receivedAt: pose.receivedAt,
+    source: pose.source,
+    x: position.x,
+    y: position.y,
+    z: position.z,
+  };
 }
 
 export function formatNearbyObj(
@@ -248,5 +277,7 @@ export function formatNearbyObj(
     obj["mapId"] = position.mapId;
     obj["orientation"] = position.orientation;
   }
+  if (p.remotePose)
+    obj["remotePose"] = formatRemotePose(p.remotePose, p.preparedAt);
   return obj;
 }

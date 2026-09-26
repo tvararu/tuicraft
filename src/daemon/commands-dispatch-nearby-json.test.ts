@@ -357,4 +357,84 @@ describe("dispatchCommand", () => {
     expect(must(rows[0]).self).toBe(true);
     expect(must(rows[1]).self).toBe(false);
   });
+
+  test("nearby json reports a remote pose with its age and exact flags", async () => {
+    const handle = attachControl(createMockHandle());
+    const peer: UnitEntity = {
+      class_: 0,
+      displayId: 0,
+      entry: 0,
+      factionTemplate: 0,
+      gender: 0,
+      guid: 0x9ffn,
+      health: 100,
+      level: 10,
+      maxHealth: 100,
+      maxPower: [0, 0, 0, 0, 0, 0, 0],
+      name: "Landra",
+      npcFlags: 0,
+      objectType: ObjectType.PLAYER,
+      position: { mapId: 530, orientation: 1, x: 5, y: 6, z: 7 },
+      power: [0, 0, 0, 0, 0, 0, 0],
+      race: 0,
+      rawFields: new Map(),
+      scale: 1,
+      target: 0n,
+      unitFlags: 0,
+    };
+    (handle.getNearbyEntities as ReturnType<typeof jest.fn>).mockReturnValue([
+      peer,
+      { ...peer, guid: 0xaan, name: "NoPose" },
+    ]);
+    (handle.getRemotePoses as ReturnType<typeof jest.fn>).mockReturnValue([
+      {
+        extraFlags: 0x80_00,
+        flags: 1,
+        guid: 0x9ffn,
+        invalid: "unknown_flags",
+        moverTime: 77,
+        position: { mapId: 530, orientation: 1, x: 5, y: 6, z: 7 },
+        receivedAt: 9600,
+        source: "observer",
+      },
+    ]);
+    const now = jest.spyOn(Date, "now").mockReturnValue(10_000);
+    const socket = createMockSocket();
+    try {
+      await dispatchCommand(
+        { type: "nearby_json" },
+        {
+          cleanup: jest.fn(),
+          events: new RingBuffer<EventEntry>(10),
+          handle,
+          socket,
+        },
+      );
+    } finally {
+      now.mockRestore();
+    }
+    const rows = socket
+      .written()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.find((row) => row.name === "Landra").remotePose).toEqual({
+      ageMs: 400,
+      extraFlags: 0x80_00,
+      flags: 1,
+      invalid: "unknown_flags",
+      mapId: 530,
+      motion: null,
+      moverTime: 77,
+      orientation: 1,
+      receivedAt: 9600,
+      source: "observer",
+      x: 5,
+      y: 6,
+      z: 7,
+    });
+    expect(
+      rows.find((row) => row.name === "NoPose").remotePose,
+    ).toBeUndefined();
+  });
 });
