@@ -40,7 +40,7 @@ export type Issue = {
 
 const reviewState = `status{context(name:"factory/review"){state createdAt}}`;
 
-const query = `query($q:String!,$cursor:String){search(type:ISSUE,query:$q,first:25,after:$cursor){
+const query = `query($q:String!,$cursor:String){search(type:ISSUE,query:$q,first:40,after:$cursor){
   pageInfo{hasNextPage endCursor} nodes{... on Issue{
   number author{login} blockedBy(first:20){nodes{state}}
   projectItems(first:20){nodes{project{id}
