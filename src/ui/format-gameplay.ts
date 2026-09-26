@@ -1,4 +1,5 @@
 import { formatGuid } from "ui/format";
+import { observedKillXp } from "ui/format-combat";
 import { formatResurrectionOffer } from "ui/format-recovery";
 import type {
   CycleLootRecord,
@@ -14,18 +15,12 @@ function show(value: string | number | undefined): string {
   return value === undefined ? "unknown" : String(value);
 }
 
-function killXp(target: CycleTargetRecord): number | undefined {
-  const xp = target.outcome?.observation?.["lastXp"];
-  if (typeof xp !== "object" || xp === null) return undefined;
-  if (!("kind" in xp && "victim" in xp && "total" in xp)) return undefined;
-  if (xp.kind !== "kill" || xp.victim !== formatGuid(target.guid))
-    return undefined;
-  return typeof xp.total === "number" ? xp.total : undefined;
-}
-
 function formatCycleTarget(target: CycleTargetRecord): string {
   const reason = target.outcome?.reason ?? target.cause;
-  const xp = reason === "server_kill_credit" ? killXp(target) : undefined;
+  const xp =
+    reason === "server_kill_credit"
+      ? observedKillXp(target.outcome?.observation, target.guid)
+      : undefined;
   const credit = xp === undefined ? "" : `, ${xp} XP`;
   const loot = target.loot === "none" ? ", no loot" : "";
   return `Target ${formatGuid(target.guid)}: ${target.status} (${show(reason)})${credit}${loot}`;

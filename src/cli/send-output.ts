@@ -164,7 +164,6 @@ export function decodeWalkReply(
   };
 }
 
-const RUNS: Record<string, string> = { cycle: "cycling", fight: "tactics" };
 const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
 const RECOVERY = [
   "query-corpse",
@@ -175,11 +174,16 @@ const RECOVERY = [
 ];
 
 export function formatHumanIntent(command: string, lines: string[]): string[] {
-  if (lines.length !== 1 || (lines[0] !== "OK" && !lines[0]?.startsWith("OK ")))
+  const [line] = lines;
+  if (lines.length !== 1 || (line !== "OK" && !line?.startsWith("OK ")))
     return lines;
-  const run = RUNS[command];
-  if (run)
-    return [`The ${command} run ended. Check tuicraft ${run} for its outcome.`];
+  if (command === "fight" && line !== "OK") return [line.slice(3)];
+  if (command === "fight" || command === "cycle") {
+    const inspection = command === "fight" ? "tactics" : "cycling";
+    return [
+      `The ${command} run ended. Check tuicraft ${inspection} for its outcome.`,
+    ];
+  }
   let inspection: string | undefined;
   if (LOOT.includes(command)) inspection = "loot";
   else if (RECOVERY.includes(command)) inspection = "recovery";

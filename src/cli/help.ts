@@ -27,7 +27,7 @@ USAGE
   tuicraft halt              Cancel motion, cast, attack, tactics, cycle
                             Drop older queued mutations on this socket; not sent requests
   tuicraft nearby [--all] [--json]  Nearby 3D/XY distance and facing from current pose; JSON adds remotePose (flags, age) for other players
-  tuicraft combat [--json]   Combat state
+  tuicraft combat [--json]   Combat summary: vitals, target, auras, cooldowns
   tuicraft spells [--json]   Learned spellbook
                             After reconnect, run once if all learned spells appear in unknownLearned
   tuicraft cast <id> <guid>  Cast a learned spell; result in combat --json lastOutcome (reason names failures)
@@ -37,7 +37,7 @@ USAGE
   tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target); 30 s without target damage or approach blocks no_progress
                             Engages hostile/neutral creatures; refuses friendly (target_friendly) and players
                             Spell kit needs observed form 0; inspect tactics on refusal
-  tuicraft tactics [--json]  Tactics state and terminal observations
+  tuicraft tactics [--json]  Tactics summary: outcome, target, vitals, last XP
                             3 Jev timeouts in a row stop a fight; see defense
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
@@ -117,10 +117,11 @@ JSON OUTPUT
   keeps the original kind and data. All JSON errors print to stdout.
   logs and skill remain raw; --json is unsupported for them, setup, help, version,
   interactive mode and internal daemon mode.
-  Without --json, cycling, recovery, inventory, experience and loot print readable
-  summaries.
+  Without --json, combat, tactics, cycling, recovery, inventory, experience and
+  loot print readable summaries.
   Control actions print daemon request acceptance, not a server result.
-  fight and cycle reply when the run ends; check tactics or cycling for the outcome.
+  fight replies when the run ends with its outcome line, for example
+  "completed: server_kill_credit, XP 60"; cycle says that it ended.
   walk-toward --json returns the terminal outcome as data; a stop also sets error and exits 1:
     {"command":"walk-toward","data":{"status":"stopped","reason":"target_stale","traveled":0,"pose":{...}},"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"result"}
 

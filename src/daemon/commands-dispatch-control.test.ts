@@ -24,6 +24,43 @@ describe("dispatchCommand", () => {
     expect(cleanup).not.toHaveBeenCalled();
   });
 
+  test("fight replies with the run outcome once it ends", async () => {
+    const handle = createMockHandle();
+    handle.getTacticsState = jest.fn(() => ({
+      instruction: "hold",
+      lastDecision: undefined,
+      lastDiscardReason: undefined,
+      lastOutcome: {
+        observation: {
+          lastXp: { kind: "kill", total: 60, victim: "0xa" },
+        },
+        reason: "server_kill_credit",
+        status: "completed" as const,
+      },
+      lastRequest: undefined,
+      lastResult: undefined,
+      lastStopReason: "completed",
+      runId: "run",
+      status: "idle" as const,
+      targetGuid: 0xan,
+      timeouts: { consecutive: 0, limit: 3, total: 0 },
+    }));
+    const socket = createMockSocket();
+    await dispatchCommand(
+      { guid: 0xan, instruction: "hold", type: "fight" },
+      {
+        cleanup: jest.fn(),
+        events: new RingBuffer<EventEntry>(10),
+        handle,
+        socket,
+      },
+    );
+    expect(handle.startTactics).toHaveBeenCalled();
+    expect(socket.written()).toBe(
+      "OK completed: server_kill_credit, XP 60\n\n",
+    );
+  });
+
   test("malformed move does not call handle", async () => {
     const handle = attachControl(createMockHandle());
     const events = new RingBuffer<EventEntry>(10);
