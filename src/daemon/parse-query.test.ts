@@ -54,6 +54,18 @@ describe("parseIpcCommand", () => {
     });
   });
 
+  test("EVENT_MARK and READ_WAIT since a mark", () => {
+    expect(parseIpcCommand("EVENT_MARK")).toEqual({ type: "event_mark" });
+    expect(parseIpcCommand("READ_WAIT_JSON 2000 17")).toEqual({
+      ms: 2000,
+      since: 17,
+      type: "read_wait_json",
+    });
+    expect(parseIpcCommand("READ_WAIT 2000 x")).toBeUndefined();
+    expect(parseIpcCommand("READ_WAIT 2000 1 2")).toBeUndefined();
+    expect(parseIpcCommand("TAIL_WAIT 1000 3")).toBeUndefined();
+  });
+
   test("WHO_JSON without filter", () => {
     expect(parseIpcCommand("WHO_JSON")).toEqual({ type: "who_json" });
   });

@@ -89,7 +89,8 @@ FLAGS
   -h, --help      Show this help
   --json          All daemon-backed commands: chat, queries, gameplay actions, start, status, stop, read, tail
   --all           Output all tracked entities without distance filter (nearby), including transports and off-map (>100yd)
-  --wait N        read/send: return unread events, waiting up to N seconds for one
+  --wait N        read: return unread events, waiting up to N seconds for one
+                  send: return events after the send, waiting up to N seconds for one
   --framing V     fight: Jev framing none|minimal|mechanics (or --framing=V)
   --instruction T cycle: instruction for every target; takes the following
                   words up to the next cycle flag (or --instruction=T)

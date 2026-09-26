@@ -20,6 +20,35 @@ describe("IPC round-trip", () => {
     expect(lines).toEqual(["[say] Alice: hi"]);
   });
 
+  test("send wait since a mark returns the send's result, not stale unread", async () => {
+    let requests = 0;
+    ipc.start({
+      onActivity: () => {
+        if (++requests !== 3) return;
+        queueMicrotask(() =>
+          ipc.handle.triggerMessage({
+            message: "rolled 30 (1-100)",
+            sender: "",
+            type: ChatType.SYSTEM,
+          }),
+        );
+      },
+    });
+    ipc.handle.triggerMessage({
+      message: "stale",
+      sender: "Alice",
+      type: ChatType.SAY,
+    });
+    const [mark = ""] = await sendToSocket("EVENT_MARK", ipc.sockPath);
+    expect(await sendToSocket("ROLL 100", ipc.sockPath)).toEqual(["OK"]);
+    expect(await sendToSocket(`READ_WAIT 5000 ${mark}`, ipc.sockPath)).toEqual([
+      "[system] rolled 30 (1-100)",
+    ]);
+    expect(await sendToSocket("READ", ipc.sockPath)).toEqual([
+      "[say] Alice: stale",
+    ]);
+  });
+
   test("onGroupEvent wiring pushes to ring buffer", async () => {
     ipc.start();
     ipc.handle.triggerGroupEvent({ type: "group_destroyed" });

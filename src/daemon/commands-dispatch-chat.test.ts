@@ -253,6 +253,49 @@ describe("dispatchCommand", () => {
     expect(events.drain()).toHaveLength(1);
   });
 
+  test("read_wait since a mark skips older unread and waits for new", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    const stale = { json: '{"type":"SAY"}', text: "[say] Old: before" };
+    events.push(stale);
+    const socket = createMockSocket();
+    const mark = createMockSocket();
+    await dispatchCommand(
+      { type: "event_mark" },
+      { cleanup: jest.fn(), events, handle, socket: mark },
+    );
+    expect(mark.written()).toBe("1\n\n");
+
+    const promise = dispatchCommand(
+      { ms: 60_000, since: 1, type: "read_wait" },
+      { cleanup: jest.fn(), events, handle, socket },
+    );
+    expect(socket.written()).toBe("");
+    events.push({ json: '{"type":"ROLL"}', text: "[roll] Me rolled 30" });
+    await promise;
+
+    expect(socket.written()).toBe("[roll] Me rolled 30\n\n");
+    expect(events.drain()).toEqual([stale]);
+  });
+
+  test("read_wait since a mark returns events that arrived before it", async () => {
+    const handle = createMockHandle();
+    const events = new RingBuffer<EventEntry>(10);
+    events.push({ json: '{"type":"SAY"}', text: "[say] Old: before" });
+    events.push({ json: '{"type":"SAY"}', text: "[say] Me: echo" });
+    const socket = createMockSocket();
+
+    await dispatchCommand(
+      { ms: 60_000, since: 1, type: "read_wait_json" },
+      { cleanup: jest.fn(), events, handle, socket },
+    );
+
+    expect(socket.written()).toBe('{"type":"SAY"}\n\n');
+    expect(events.drain()).toEqual([
+      { json: '{"type":"SAY"}', text: "[say] Old: before" },
+    ]);
+  });
+
   test("tail_wait returns only window events without draining", async () => {
     jest.useFakeTimers();
     try {

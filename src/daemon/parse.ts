@@ -18,8 +18,9 @@ export type IpcCommand =
   | { type: "whisper"; target: string; message: string }
   | { type: "read" }
   | { type: "read_json" }
-  | { type: "read_wait"; ms: number }
-  | { type: "read_wait_json"; ms: number }
+  | { type: "read_wait"; ms: number; since?: number }
+  | { type: "read_wait_json"; ms: number; since?: number }
+  | { type: "event_mark" }
   | { type: "tail_wait"; ms: number }
   | { type: "tail_wait_json"; ms: number }
   | { type: "stop" }

@@ -187,18 +187,19 @@ describe("main CLI against a daemon socket", () => {
     });
   });
 
-  test("JSON send wait collects events in its single envelope", async () => {
+  test("JSON send wait collects only events after its send", async () => {
     handle = createMockHandle();
     let requests = 0;
+    const stale = { json: '{"type":"SAY","message":"stale"}', text: "stale" };
     const event = {
       json: '{"type":"SAY","sender":"B","message":"reply"}',
       text: undefined,
     };
     const { code, out } = await runMain(
-      ["send", "hello", "--json", "--wait", "0.02"],
-      [],
+      ["send", "hello", "--json", "--wait", "5"],
+      [stale],
       () => {
-        if (++requests === 3) queueMicrotask(() => result.events.push(event));
+        if (++requests === 4) queueMicrotask(() => result.events.push(event));
       },
     );
     expect(code).toBe(0);
@@ -210,6 +211,7 @@ describe("main CLI against a daemon socket", () => {
       events: [{ message: "reply", sender: "B", type: "SAY" }],
       kind: "intent",
     });
+    expect(result.events.drain()).toEqual([stale]);
   });
 
   test("JSON send wait preserves intent when event read fails", async () => {
@@ -221,6 +223,8 @@ describe("main CLI against a daemon socket", () => {
           let reply = "ERR event_read_lost\n\n";
           if (command === "STATUS") {
             reply = "CONNECTED\n\n";
+          } else if (command === "EVENT_MARK") {
+            reply = "0\n\n";
           } else if (command.startsWith("SAY ")) {
             reply = "OK\n\n";
           }
@@ -384,7 +388,7 @@ describe("main CLI against a daemon socket", () => {
       },
     );
     expect(code).toBe(1);
-    expect(requests).toBe(2);
+    expect(requests).toBe(3);
     expect(JSON.parse(out)).toEqual({
       command: "send",
       data: null,
