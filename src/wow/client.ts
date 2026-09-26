@@ -1,4 +1,3 @@
-import type { Socket } from "bun";
 import type { Unsubscribe } from "lib/emitter";
 import { channelMethods, chatMethods } from "wow/client-chat";
 import {
@@ -25,50 +24,32 @@ import {
   ignoreMethods,
   socialMethods,
 } from "wow/client-social";
-import type { CombatEvent, CombatRuntime, CombatState } from "wow/combat";
+import type { CombatEvent, CombatState } from "wow/combat";
 import type {
   ControlEvent,
-  ControlRuntime,
   ControlState,
   MovementDirection,
   NavigationState,
   WalkOutcome,
 } from "wow/control";
-import type { Arc4 } from "wow/crypto/arc4";
-import type {
-  CycleEvent,
-  CycleState,
-  EncounterCycleRuntime,
-} from "wow/encounter-cycle";
-import type { Entity, EntityEvent, EntityStore } from "wow/entity-store";
+import type { CycleEvent, CycleState } from "wow/encounter-cycle";
+import type { Entity, EntityEvent } from "wow/entity-store";
 import type { ExperienceState } from "wow/experience";
 import type { FramingVariant } from "wow/framing";
-import type { FriendEntry, FriendEvent, FriendStore } from "wow/friend-store";
-import type { GuildEvent, GuildRoster, GuildStore } from "wow/guild-store";
-import type { IgnoreEntry, IgnoreEvent, IgnoreStore } from "wow/ignore-store";
+import type { FriendEntry, FriendEvent } from "wow/friend-store";
+import type { GuildEvent, GuildRoster } from "wow/guild-store";
+import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { InventoryState } from "wow/inventory";
-import type {
-  ChatMessage as RawChatMessage,
-  WhoResult,
-} from "wow/protocol/chat";
+import type { WhoResult } from "wow/protocol/chat";
 import { Language } from "wow/protocol/opcodes";
-import type { AccumulatorBuffer, OpcodeDispatch } from "wow/protocol/world";
-import type { QuestEvent, QuestRuntime, QuestState } from "wow/quests";
-import type {
-  RecoveryEvent,
-  RecoveryRuntime,
-  RecoveryState,
-} from "wow/recovery";
-import type {
-  RemoteMotion,
-  RemoteMotionEvent,
-  RemotePose,
-} from "wow/remote-motion";
-import type { RewardsEvent, RewardsRuntime, RewardsState } from "wow/rewards";
+import type { QuestEvent, QuestState } from "wow/quests";
+import type { RecoveryEvent, RecoveryState } from "wow/recovery";
+import type { RemoteMotionEvent, RemotePose } from "wow/remote-motion";
+import type { RewardsEvent, RewardsState } from "wow/rewards";
 import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
-import type { TacticsEvent, TacticsLoop, TacticsState } from "wow/tactics";
-import type { WorldEvents } from "wow/world-events";
+import type { TacticsEvent, TacticsState } from "wow/tactics";
+import type { WorldConn } from "wow/world-conn";
 
 export type ClientConfig = {
   host: string;
@@ -290,43 +271,6 @@ export type WorldHandle = {
   onCycleEvent: (cb: (event: CycleEvent) => void) => Unsubscribe;
 };
 
-export type WorldConn = {
-  socket?: Socket;
-  dispatch: OpcodeDispatch;
-  buf: AccumulatorBuffer;
-  arc4?: Arc4;
-  startTime: number;
-  pendingHeader?: { size: number; opcode: number };
-  dispatchingOpcode?: number;
-  nameCache: Map<number, string>;
-  pendingMessages: Map<number, RawChatMessage[]>;
-  channels: string[];
-  lastChatMode: ChatMode;
-  selfName: string;
-  selfClass?: string;
-  selfGuidLow: number;
-  selfGuidHigh: number;
-  partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
-  entityStore: EntityStore;
-  remoteMotion: RemoteMotion;
-  creatureNameCache: Map<number, string>;
-  gameObjectNameCache: Map<number, string>;
-  pendingNameQueries: Set<string>;
-  friendStore: FriendStore;
-  ignoreStore: IgnoreStore;
-  guildStore: GuildStore;
-  guildId: number;
-  pendingRequest: "group" | "duel" | null;
-  duelArbiter: bigint;
-  events: WorldEvents;
-  control?: ControlRuntime;
-  combat?: CombatRuntime;
-  recovery?: RecoveryRuntime;
-  quests?: QuestRuntime;
-  rewards?: RewardsRuntime;
-  cycle?: EncounterCycleRuntime;
-  tactics?: TacticsLoop;
-};
 type SessionHandle = {
   conn: WorldConn;
   rt: Runtimes;

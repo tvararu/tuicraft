@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { WorldConn } from "wow/client";
 import { ControlRuntime } from "wow/control";
 import { EntityStore } from "wow/entity-store";
 import { registerMovementHandlers } from "wow/movement-handlers";
@@ -9,6 +8,7 @@ import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { RemoteMotion } from "wow/remote-motion";
+import type { WorldConn } from "wow/world-conn";
 
 describe("handleNearTeleport", () => {
   function nearTeleportBody(guidLow: number): Uint8Array {

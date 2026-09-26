@@ -1,6 +1,7 @@
-import type { WorldConn, WorldHandle } from "wow/client";
+import type { WorldHandle } from "wow/client";
 import { readExperience } from "wow/experience";
 import type { Runtimes } from "wow/runtime";
+import type { WorldConn } from "wow/world-conn";
 import { selfGuid } from "wow/world-handlers";
 
 export function combatMethods(conn: WorldConn, rt: Runtimes) {

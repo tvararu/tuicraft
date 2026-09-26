@@ -1,10 +1,11 @@
-import type { ChatMode, WorldConn, WorldHandle } from "wow/client";
+import type { ChatMode, WorldHandle } from "wow/client";
 import {
   buildChatMessage,
   buildWhoRequest,
   parseWhoResponse,
 } from "wow/protocol/chat";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
+import type { WorldConn } from "wow/world-conn";
 import { sendPacket } from "wow/world-handlers";
 
 export function chatMethods(conn: WorldConn, lang: number) {

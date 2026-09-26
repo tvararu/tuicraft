@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { WorldConn } from "wow/client";
 import { registerGameHandlers } from "wow/client-handlers";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { STUBS } from "wow/protocol/stubs";
 import { OpcodeDispatch } from "wow/protocol/world";
+import type { WorldConn } from "wow/world-conn";
 
 describe("registerGameHandlers", () => {
   test("leaves every stubbed opcode without a real handler", () => {

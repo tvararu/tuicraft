@@ -1,5 +1,4 @@
 import { inflateSync } from "node:zlib";
-import type { WorldConn } from "wow/client";
 import { ObjectType, UpdateFlag } from "wow/protocol/entity-fields";
 import {
   buildCreatureQuery,
@@ -20,6 +19,7 @@ import {
   parseUpdateObject,
   type UpdateEntry,
 } from "wow/protocol/update-object";
+import type { WorldConn } from "wow/world-conn";
 import { selfGuid, sendPacket } from "wow/world-handlers";
 
 type TypeFields = Partial<UnitFieldsResult> & Partial<GameObjectFieldsResult>;

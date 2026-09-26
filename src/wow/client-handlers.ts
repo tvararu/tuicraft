@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import {
   registerCombatHandlers,
   registerLootHandlers,
@@ -9,6 +8,7 @@ import { registerMovementHandlers } from "wow/movement-handlers";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
 import { registerStubs } from "wow/protocol/stubs";
+import type { WorldConn } from "wow/world-conn";
 import {
   handleDuelComplete,
   handleDuelCountdown,

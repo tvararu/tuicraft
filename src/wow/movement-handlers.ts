@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import {
   parseClientControl,
   parseForceSpeed,
@@ -16,6 +15,7 @@ import {
   observeRemoteMovement,
   registerRemoteMotionHandlers,
 } from "wow/remote-motion-handlers";
+import type { WorldConn } from "wow/world-conn";
 import { selfGuid } from "wow/world-handlers";
 
 function handleNearTeleport(conn: WorldConn, r: PacketReader): void {

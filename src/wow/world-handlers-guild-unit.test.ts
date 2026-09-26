@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { GuildEvent, WorldConn } from "wow/client";
+import type { GuildEvent } from "wow/client";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import type { WorldConn } from "wow/world-conn";
 import { createWorldEvents } from "wow/world-events";
 import {
   handleGuildCommandResult,

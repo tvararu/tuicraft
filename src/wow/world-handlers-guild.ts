@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import type { GuildMember } from "wow/guild-store";
 import {
   GuildCommandResult,
@@ -10,6 +9,7 @@ import {
   parseGuildRoster,
 } from "wow/protocol/guild";
 import type { PacketReader } from "wow/protocol/packet";
+import type { WorldConn } from "wow/world-conn";
 
 export function handleGuildRoster(conn: WorldConn, r: PacketReader): void {
   const raw = parseGuildRoster(r);

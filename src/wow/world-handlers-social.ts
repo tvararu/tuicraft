@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import type { FriendEntry } from "wow/friend-store";
 import type { IgnoreEntry } from "wow/ignore-store";
 import { buildNameQuery } from "wow/protocol/chat";
@@ -13,6 +12,7 @@ import {
   parseFriendStatus,
   SocialFlag,
 } from "wow/protocol/social";
+import type { WorldConn } from "wow/world-conn";
 import { sendPacket } from "wow/world-handlers";
 
 function ensureNameQuery(conn: WorldConn, guid: bigint): void {

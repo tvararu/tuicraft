@@ -1,4 +1,3 @@
-import type { WorldConn } from "wow/client";
 import {
   buildNameQuery,
   parseChannelNotify,
@@ -12,6 +11,7 @@ import {
 import { ObjectType } from "wow/protocol/entity-fields";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
+import type { WorldConn } from "wow/world-conn";
 import { sendPacket } from "wow/world-handlers";
 
 function deliverMessage(
