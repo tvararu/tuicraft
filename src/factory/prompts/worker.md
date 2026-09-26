@@ -149,7 +149,10 @@ Collect for the PR's Proof section:
   `bun $F soap create eversong10` (account 2). Point the suite at them with
   `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
   `WOW_PASSWORD_2` and `WOW_CHARACTER_2`; the JSON from `soap create` has
-  `.account`, `.password` and `.character`. Delete both afterwards.
+  `.account`, `.password`, `.character` and `.dir`. Run it as
+  `XDG_CONFIG_HOME=<account 1 .dir>/config mise test:live`: the suite reads
+  the navigation data paths from that config, and the run's own XDG
+  directories have none. Delete both accounts afterwards.
 
 ## 7. History and stacks
 

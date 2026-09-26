@@ -114,7 +114,7 @@ describe("omp-factory", () => {
 
   test("gives a linked worktree per-run dirs mirroring all but tuicraft", async () => {
     const run = await launch(worktree, "hello");
-    const base = `${worktree}/tmp/.xdg`;
+    const base = `${main}/.git/worktrees/wt/factory-xdg`;
     expect(run).toEqual({
       args: ["hello"],
       config: `${base}/config`,
@@ -133,13 +133,15 @@ describe("omp-factory", () => {
     });
     expect(paths.configPath).toBe(`${base}/config/tuicraft/config.toml`);
     expect(paths.socketPath).toBe(`${base}/runtime/tuicraft/sock`);
+    expect(await git(worktree, "status", "--porcelain", "--ignored")).toBe("");
   });
 
   test("isolates a factory role even outside a tuicraft worktree", async () => {
     const run = await launch(other, "[factory:qa] go");
-    expect(run.config).toBe(`${other}/tmp/.xdg/config`);
-    expect(run.runtime).toBe(`${other}/tmp/.xdg/runtime`);
-    expect(run.state).toBe(`${other}/tmp/.xdg/state`);
+    const base = `${other}/tmp/factory-xdg`;
+    expect(run.config).toBe(`${base}/config`);
+    expect(run.runtime).toBe(`${base}/runtime`);
+    expect(run.state).toBe(`${base}/state`);
     expect(run.args).toContain("[factory:qa] go");
     expect(await mirrored(run.config)).toEqual({ gh: `${home}/.config/gh` });
   });

@@ -31,7 +31,7 @@ mirror() {
 }
 
 isolate() {
-  local base=$1/tmp/.xdg
+  local base=$1/factory-xdg
   mirror "${XDG_CONFIG_HOME:-$HOME/.config}" "$base/config"
   mirror "${XDG_RUNTIME_DIR:-}" "$base/runtime"
   mirror "${XDG_STATE_HOME:-$HOME/.local/state}" "$base/state"
@@ -47,7 +47,7 @@ tuicraft_worktree() {
     return 1
   top=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
   [[ $common == "$main/.git" && $top != "$main" ]] || return 1
-  printf '%s\n' "$top"
+  git rev-parse --absolute-git-dir
 }
 
 role=""
@@ -60,10 +60,10 @@ done
 
 omp=$(real_omp)
 
-if worktree=$(tuicraft_worktree); then
-  isolate "$worktree"
+if git_dir=$(tuicraft_worktree); then
+  isolate "$git_dir"
 elif [[ -n $role ]]; then
-  isolate "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  isolate "$(git rev-parse --absolute-git-dir 2>/dev/null || printf '%s/tmp' "$PWD")"
 fi
 
 if [[ -z $role ]]; then

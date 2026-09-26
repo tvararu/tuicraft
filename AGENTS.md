@@ -139,11 +139,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   for the `.freeze` and `.tele` checks) and
   `bun src/factory/main.ts soap create eversong10` (account 2). Set
   `WOW_ACCOUNT_1`, `WOW_PASSWORD_1`, `WOW_CHARACTER_1`, `WOW_ACCOUNT_2`,
-  `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, and
-  delete both with `soap delete <ACCOUNT>` afterwards. Unit, type, format,
-  and coverage checks are not live evidence. Do not claim the live suite is
-  passing without a successful run. If the suite fails for infrastructure
-  reasons (server down, SOAP unreachable), defer to the user.
+  `WOW_PASSWORD_2` and `WOW_CHARACTER_2` from the JSON each prints, run it
+  as `XDG_CONFIG_HOME=<account 1 .dir>/config mise test:live` (the suite
+  reads the navigation data paths from that config), and delete both with
+  `soap delete <ACCOUNT>` afterwards. Unit, type, format, and coverage
+  checks are not live evidence. Do not claim the live suite is passing
+  without a successful run. If the suite fails for infrastructure reasons
+  (server down, SOAP unreachable), defer to the user.
 - Run the CLI as a `soap create` character only through the wrapper it
   writes, `tmp/tc-<ACCOUNT>` (the JSON's `.wrapper`), never by exporting
   `XDG_*` into your shell. The wrapper sets the account's own config,
@@ -151,11 +153,11 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   character, prints `tc-<ACCOUNT>: character <name>` on stderr and runs
   `bun src/main.ts "$@"`. `soap delete` removes it with the account's
   directories. `omp-factory` starts every omp in a tuicraft worktree other
-  than the main checkout with per-run `XDG_*` directories (`tmp/.xdg/`)
-  that link everything in the real ones except `tuicraft`, so plain
-  `bun src/main.ts` there finds no config: `status` says the daemon is not
-  running, and `start` or any daemon command fails with "No config found"
-  after 30 seconds.
+  than the main checkout with per-run `XDG_*` directories (`factory-xdg/`
+  in the worktree's git directory) that link everything in the real ones
+  except `tuicraft`, so plain `bun src/main.ts` there finds no config:
+  `status` says the daemon is not running, and `start` or any daemon
+  command fails with "No config found" after 30 seconds.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`

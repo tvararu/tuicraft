@@ -46,11 +46,13 @@ fields changed.
 omp it starts for a factory role, or in any tuicraft worktree other than the
 main checkout (which covers the coordinator's `orca-ide worktree create
 --agent omp` launches), gets per-run `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`
-and `XDG_STATE_HOME` under the worktree's `tmp/.xdg/`. Each links every
-entry of the real directory except `tuicraft`, so `gh`, git, `mise` and
-`systemctl --user` work as before, while plain `bun src/main.ts` finds no
-config and cannot reach the default daemon socket. The main checkout and
-other repositories keep the default directories. Live characters come from
+and `XDG_STATE_HOME` under `factory-xdg/` in the worktree's git directory
+(`git rev-parse --absolute-git-dir`), which git status never shows and
+worktree removal deletes. Each links every entry of the real directory
+except `tuicraft`, so `gh`, git, `mise` and `systemctl --user` work as
+before, while plain `bun src/main.ts` finds no config and cannot reach the
+default daemon socket. The main checkout and other repositories keep the
+default directories. Live characters come from
 `bun src/factory/main.ts soap create <preset>`, which also writes
 `tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
 `tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config
