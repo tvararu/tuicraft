@@ -1,3 +1,4 @@
+import type { Unsubscribe } from "lib/emitter";
 import type { ClientConfig, WorldConn } from "wow/client";
 import { CombatRuntime } from "wow/combat";
 import { CombatActions } from "wow/combat-actions";
@@ -151,27 +152,37 @@ function createTactics(
   });
 }
 
-function wireEvents(conn: WorldConn, parts: RuntimeParts): void {
-  const { control, recovery, rewards, cycle, tactics } = parts;
-  control.onEvent((event) => {
-    conn.onControlEvent?.(event);
-    cycle.observeControl(event);
-  });
-  recovery.onEvent((event) => {
-    if (
-      event.type === "recovery_invalidated" ||
-      (event.type === "life_observed" &&
-        (event.state.life === "dead" || event.state.life === "ghost"))
-    ) {
-      tactics.stop(`self_${event.state.life}`);
-    }
-    conn.onRecoveryEvent?.(event);
-    cycle.observeRecovery(event);
-  });
-  rewards.onEvent((event) => {
-    conn.onRewardsEvent?.(event);
-    cycle.observeRewards(event);
-  });
+function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
+  const { control, combat, recovery, quests, rewards, cycle, tactics } = parts;
+  const { events } = conn;
+  const detach = [
+    control.onEvent((event) => {
+      events.control.emit(event);
+      cycle.observeControl(event);
+    }),
+    combat.onEvent((event) => events.combat.emit(event)),
+    tactics.onEvent((event) => events.tactics.emit(event)),
+    recovery.onEvent((event) => {
+      if (
+        event.type === "recovery_invalidated" ||
+        (event.type === "life_observed" &&
+          (event.state.life === "dead" || event.state.life === "ghost"))
+      ) {
+        tactics.stop(`self_${event.state.life}`);
+      }
+      events.recovery.emit(event);
+      cycle.observeRecovery(event);
+    }),
+    quests.onEvent((event) => events.quest.emit(event)),
+    rewards.onEvent((event) => {
+      events.rewards.emit(event);
+      cycle.observeRewards(event);
+    }),
+    cycle.onEvent((event) => events.cycle.emit(event)),
+  ];
+  return () => {
+    for (const off of detach) off();
+  };
 }
 
 function findObservedTarget(
@@ -209,16 +220,10 @@ function findObservedTarget(
 function disposeParts(
   parts: RuntimeParts,
   lazy: LazyState,
-  options: { sendStop: boolean; halt: () => void },
+  options: { sendStop: boolean; halt: () => void; unwire: Unsubscribe },
 ): void {
   const { control, combat, tactics, recovery, quests, rewards, cycle } = parts;
-  recovery.onEvent(undefined);
-  quests.onEvent(undefined);
-  rewards.onEvent(undefined);
-  control.onEvent(undefined);
-  combat.onEvent(undefined);
-  tactics.onEvent(undefined);
-  cycle.onEvent(undefined);
+  options.unwire();
   if (options.sendStop) options.halt();
   lazy.disposed = true;
   control.dispose();
@@ -328,7 +333,7 @@ export function createRuntimes(
     tactics,
     ...createSupportRuntimes(conn, runtimeDeps, { control, tactics }),
   };
-  wireEvents(conn, parts);
+  const unwire = wireEvents(conn, parts);
   const { cycle } = parts;
   return {
     ...parts,
@@ -343,7 +348,7 @@ export function createRuntimes(
     },
     dispose(sendStop: boolean): void {
       if (lazy.disposed) return;
-      disposeParts(parts, lazy, { sendStop, halt: rawHalt });
+      disposeParts(parts, lazy, { sendStop, halt: rawHalt, unwire });
     },
   };
 }

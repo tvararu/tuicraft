@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import { ObjectType } from "wow/protocol/entity-fields";
 
 export type Position = {
@@ -125,22 +126,22 @@ type EntityFields = Partial<
 export class EntityStore {
   private readonly entities: Map<bigint, Entity>;
   private readonly byType: Map<number, Set<bigint>>;
-  private listener?: (event: EntityEvent) => void;
+  private readonly events = new Emitter<[EntityEvent]>();
 
   constructor() {
     this.entities = new Map();
     this.byType = new Map();
   }
 
-  onEvent(cb: (event: EntityEvent) => void): void {
-    this.listener = cb;
+  onEvent(cb: (event: EntityEvent) => void): Unsubscribe {
+    return this.events.subscribe(cb);
   }
 
   create(guid: bigint, objectType: ObjectType, fields: EntityFields): void {
     const existing = this.entities.get(guid);
     if (existing) {
       this.byType.get(existing.objectType)?.delete(guid);
-      this.listener?.({ type: "disappear", guid, name: existing.name });
+      this.events.emit({ type: "disappear", guid, name: existing.name });
     }
 
     let entity: Entity;
@@ -161,7 +162,7 @@ export class EntityStore {
     }
     typeSet.add(guid);
 
-    this.listener?.({ type: "appear", entity });
+    this.events.emit({ type: "appear", entity });
   }
 
   update(guid: bigint, fields: Record<string, unknown>): void {
@@ -181,7 +182,7 @@ export class EntityStore {
     }
 
     if (changed.length > 0) {
-      this.listener?.({ type: "update", entity, changed });
+      this.events.emit({ type: "update", entity, changed });
     }
   }
 
@@ -192,12 +193,12 @@ export class EntityStore {
     this.entities.delete(guid);
     this.byType.get(entity.objectType)?.delete(guid);
 
-    this.listener?.({ type: "disappear", guid, name: entity.name });
+    this.events.emit({ type: "disappear", guid, name: entity.name });
   }
 
   clear(): void {
     for (const [guid, entity] of this.entities) {
-      this.listener?.({ type: "disappear", guid, name: entity.name });
+      this.events.emit({ type: "disappear", guid, name: entity.name });
     }
     this.entities.clear();
     this.byType.clear();
@@ -226,13 +227,13 @@ export class EntityStore {
     const entity = this.entities.get(guid);
     if (!entity) return;
     entity.name = name;
-    this.listener?.({ type: "update", entity, changed: ["name"] });
+    this.events.emit({ type: "update", entity, changed: ["name"] });
   }
 
   setPosition(guid: bigint, pos: Position): void {
     const entity = this.entities.get(guid);
     if (!entity) return;
     entity.position = pos;
-    this.listener?.({ type: "update", entity, changed: ["position"] });
+    this.events.emit({ type: "update", entity, changed: ["position"] });
   }
 }

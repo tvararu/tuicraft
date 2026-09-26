@@ -1,4 +1,5 @@
 import { expect, jest, test } from "bun:test";
+import { Emitter } from "lib/emitter";
 import {
   advanceUntilSettled,
   fakeControl,
@@ -205,7 +206,7 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
       lastRelease: undefined,
       disposed: false,
     });
-    let listener: ((event: RewardsEvent) => void) | undefined;
+    const listeners = new Emitter<[RewardsEvent]>();
     const closed = (): RewardsState => ({
       ...emptyOpen(),
       loot: { phase: "closed" },
@@ -216,7 +217,7 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
       takeMoney: () => closed(),
       close() {
         queueMicrotask(() =>
-          listener?.({
+          listeners.emit({
             type: "loot_release_observed",
             at: 0,
             state: {
@@ -228,8 +229,8 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
         );
         return closed();
       },
-      onEvent(cb: ((event: RewardsEvent) => void) | undefined) {
-        listener = cb;
+      onEvent(cb: (event: RewardsEvent) => void) {
+        return listeners.subscribe(cb);
       },
       snapshot: closed,
     };
@@ -256,7 +257,7 @@ test("stale generation loot cleanup keeps the newer listener", async () => {
     const second = runtime.start({ guids: [2n], instruction: "b" });
     await flush(20);
     await tick(2500);
-    listener?.({ type: "loot_opened", at: 0, state: emptyOpen() });
+    listeners.emit({ type: "loot_opened", at: 0, state: emptyOpen() });
     await flush(20);
     await tick(5000);
     await Promise.all([first, second]);

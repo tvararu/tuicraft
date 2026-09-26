@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 export type FriendEntry = {
   guid: bigint;
   name: string;
@@ -22,14 +23,14 @@ type FriendUpdateFields = Partial<
 
 export class FriendStore {
   private readonly friends: Map<bigint, FriendEntry>;
-  private listener?: (event: FriendEvent) => void;
+  private readonly events = new Emitter<[FriendEvent]>();
 
   constructor() {
     this.friends = new Map();
   }
 
-  onEvent(cb: (event: FriendEvent) => void): void {
-    this.listener = cb;
+  onEvent(cb: (event: FriendEvent) => void): Unsubscribe {
+    return this.events.subscribe(cb);
   }
 
   set(entries: FriendEntry[]): void {
@@ -37,7 +38,7 @@ export class FriendStore {
     for (const entry of entries) {
       this.friends.set(entry.guid, { ...entry });
     }
-    this.listener?.({
+    this.events.emit({
       type: "friend-list",
       friends: [...this.friends.values()],
     });
@@ -46,7 +47,7 @@ export class FriendStore {
   add(entry: FriendEntry): void {
     const copy = { ...entry };
     this.friends.set(copy.guid, copy);
-    this.listener?.({ type: "friend-added", friend: copy });
+    this.events.emit({ type: "friend-added", friend: copy });
   }
 
   update(guid: bigint, fields: FriendUpdateFields): void {
@@ -56,9 +57,9 @@ export class FriendStore {
     Object.assign(entry, fields);
 
     if (entry.status === 0) {
-      this.listener?.({ type: "friend-offline", guid, name: entry.name });
+      this.events.emit({ type: "friend-offline", guid, name: entry.name });
     } else {
-      this.listener?.({ type: "friend-online", friend: entry });
+      this.events.emit({ type: "friend-online", friend: entry });
     }
   }
 
@@ -67,7 +68,7 @@ export class FriendStore {
     if (!entry) return;
 
     this.friends.delete(guid);
-    this.listener?.({ type: "friend-removed", guid, name: entry.name });
+    this.events.emit({ type: "friend-removed", guid, name: entry.name });
   }
 
   setName(guid: bigint, name: string): void {

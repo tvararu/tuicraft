@@ -1,4 +1,5 @@
 import { abortable, abortReason, bounded, pause } from "lib/abort";
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import { messageOf } from "lib/errors";
 import { ignoreFailure } from "lib/ignore-failure";
 import type { FramingVariant } from "wow/framing";
@@ -113,7 +114,7 @@ export class TacticsLoop {
   private readonly maxResultAgeMs: number;
   private readonly minIntervalMs: number;
   private readonly requestTimeoutMs: number;
-  private listener: ((event: TacticsEvent) => void) | undefined;
+  private readonly events = new Emitter<[TacticsEvent]>();
   private run: Run | undefined;
   private pending: Promise<void> | undefined;
   private state: TacticsState = {
@@ -175,12 +176,12 @@ export class TacticsLoop {
     return structuredClone(this.state);
   }
 
-  onEvent(callback: ((event: TacticsEvent) => void) | undefined): void {
-    this.listener = callback;
+  onEvent(listener: (event: TacticsEvent) => void): Unsubscribe {
+    return this.events.subscribe(listener);
   }
 
   dispose(): void {
-    this.listener = undefined;
+    this.events.clear();
     this.stop("disposed");
   }
 
@@ -189,7 +190,7 @@ export class TacticsLoop {
   }
 
   private emit(event: TacticsEvent): void {
-    this.listener?.(structuredClone(event));
+    this.events.emit(structuredClone(event));
   }
 
   private begin(

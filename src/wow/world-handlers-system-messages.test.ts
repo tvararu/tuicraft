@@ -5,6 +5,7 @@ import { base, fakeAuth, waitForEchoProbe } from "test/world-handlers-fixtures";
 import { type ChatMessage, type WorldConn, worldSession } from "wow/client";
 import { ChatType, GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { createWorldEvents } from "wow/world-events";
 import { handleChatMessage } from "wow/world-handlers-chat";
 
 describe("world handler tests", () => {
@@ -391,10 +392,12 @@ describe("embedded chat sender names", () => {
   } {
     let result!: ChatMessage;
     let nameQueries = 0;
+    const events = createWorldEvents();
+    events.message.subscribe((m) => {
+      result = m;
+    });
     const conn = {
-      onMessage: (m: ChatMessage) => {
-        result = m;
-      },
+      events,
       ignoreStore: { has: () => ignored },
       nameCache: {
         get: () => {

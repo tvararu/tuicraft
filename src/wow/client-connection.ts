@@ -18,6 +18,7 @@ import {
   parseCharacterList,
 } from "wow/protocol/world";
 import type { Runtimes } from "wow/runtime";
+import { clearWorldEvents, createWorldEvents } from "wow/world-events";
 import { sendPacket } from "wow/world-handlers";
 
 function drainWorldPackets(conn: WorldConn): void {
@@ -34,14 +35,23 @@ function drainWorldPackets(conn: WorldConn): void {
 
     const { opcode } = conn.pendingHeader;
     conn.pendingHeader = undefined;
+    conn.dispatchingOpcode = opcode;
     try {
       conn.dispatch.handle(opcode, new PacketReader(conn.buf.drain(bodySize)));
     } catch (err) {
       if (err instanceof Error) {
-        conn.onPacketError?.(opcode, err);
+        conn.events.packetError.emit(opcode, err);
       }
+    } finally {
+      conn.dispatchingOpcode = undefined;
     }
   }
+}
+
+function reportListenerError(conn: WorldConn, error: unknown): void {
+  if (conn.dispatchingOpcode === undefined) throw error;
+  if (error instanceof Error)
+    conn.events.packetError.emit(conn.dispatchingOpcode, error);
 }
 
 export async function authenticateWorld(
@@ -142,17 +152,18 @@ export function createWorldConn(): WorldConn {
     guildId: 0,
     pendingRequest: null,
     duelArbiter: 0n,
+    events: createWorldEvents((error) => reportListenerError(conn, error)),
   };
   conn.entityStore.onEvent((event) => {
     if (event.type === "disappear") conn.combat?.forget(event.guid);
     conn.recovery?.observeEntity(event);
     conn.rewards?.observeEntity(event);
     conn.cycle?.observeEntity(event);
-    conn.onEntityEvent?.(event);
+    conn.events.entity.emit(event);
   });
-  conn.friendStore.onEvent((event) => conn.onFriendEvent?.(event));
-  conn.ignoreStore.onEvent((event) => conn.onIgnoreEvent?.(event));
-  conn.guildStore.onEvent((event) => conn.onGuildEvent?.(event));
+  conn.friendStore.onEvent((event) => conn.events.friend.emit(event));
+  conn.ignoreStore.onEvent((event) => conn.events.ignore.emit(event));
+  conn.guildStore.onEvent((event) => conn.events.guild.emit(event));
   return conn;
 }
 
@@ -161,15 +172,7 @@ export function cleanupSession(
   rt: Runtimes,
   sendStop: boolean,
 ): void {
-  conn.onEntityEvent = undefined;
-  conn.onFriendEvent = undefined;
-  conn.onIgnoreEvent = undefined;
-  conn.onGuildEvent = undefined;
-  conn.onGroupEvent = undefined;
-  conn.onDuelEvent = undefined;
-  conn.onControlEvent = undefined;
-  conn.onRecoveryEvent = undefined;
-  conn.onRewardsEvent = undefined;
+  clearWorldEvents(conn.events);
   rt.dispose(sendStop);
 }
 export function connectWorld(

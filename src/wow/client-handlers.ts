@@ -146,8 +146,8 @@ export function registerWorldHandlers(conn: WorldConn): void {
   registerLootHandlers(conn);
   registerRecoveryHandlers(conn);
   registerStubs(conn.dispatch, (msg) => {
-    if (!conn.onMessage) return false;
-    conn.onMessage({
+    if (conn.events.message.size === 0) return false;
+    conn.events.message.emit({
       type: ChatType.SYSTEM,
       sender: "",
       message: msg,

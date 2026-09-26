@@ -44,31 +44,31 @@ export function handleDuelRequested(conn: WorldConn, r: PacketReader): void {
   conn.pendingRequest = "duel";
   const guidLow = Number(duel.initiator & 0xffffffffn);
   const name = conn.nameCache.get(guidLow) ?? "Unknown";
-  conn.onDuelEvent?.({ type: "duel_requested", challenger: name });
+  conn.events.duel.emit({ type: "duel_requested", challenger: name });
 }
 
 export function handleDuelCountdown(conn: WorldConn, r: PacketReader): void {
   const { timeMs } = parseDuelCountdown(r);
-  conn.onDuelEvent?.({ type: "duel_countdown", timeMs });
+  conn.events.duel.emit({ type: "duel_countdown", timeMs });
 }
 
 export function handleDuelComplete(conn: WorldConn, r: PacketReader): void {
   const { completed } = parseDuelComplete(r);
-  conn.onDuelEvent?.({ type: "duel_complete", completed });
+  conn.events.duel.emit({ type: "duel_complete", completed });
 }
 
 export function handleDuelWinner(conn: WorldConn, r: PacketReader): void {
   const { reason, winner, loser } = parseDuelWinner(r);
   conn.duelArbiter = 0n;
-  conn.onDuelEvent?.({ type: "duel_winner", reason, winner, loser });
+  conn.events.duel.emit({ type: "duel_winner", reason, winner, loser });
 }
 
 export function handleDuelOutOfBounds(conn: WorldConn): void {
-  conn.onDuelEvent?.({ type: "duel_out_of_bounds" });
+  conn.events.duel.emit({ type: "duel_out_of_bounds" });
 }
 
 export function handleDuelInBounds(conn: WorldConn): void {
-  conn.onDuelEvent?.({ type: "duel_in_bounds" });
+  conn.events.duel.emit({ type: "duel_in_bounds" });
 }
 
 export function handlePartyCommandResult(
@@ -76,7 +76,7 @@ export function handlePartyCommandResult(
   r: PacketReader,
 ): void {
   const result = parsePartyCommandResult(r);
-  conn.onGroupEvent?.({
+  conn.events.group.emit({
     type: "command_result",
     operation: result.operation,
     target: result.member,
@@ -90,7 +90,7 @@ export function handleGroupInviteReceived(
 ): void {
   const invite = parseGroupInvite(r);
   conn.pendingRequest = "group";
-  conn.onGroupEvent?.({ type: "invite_received", from: invite.name });
+  conn.events.group.emit({ type: "invite_received", from: invite.name });
 }
 
 export function handleGroupSetLeaderMsg(
@@ -98,7 +98,7 @@ export function handleGroupSetLeaderMsg(
   r: PacketReader,
 ): void {
   const { name } = parseGroupSetLeader(r);
-  conn.onGroupEvent?.({ type: "leader_changed", name });
+  conn.events.group.emit({ type: "leader_changed", name });
 }
 
 export function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
@@ -123,7 +123,7 @@ export function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
       leaderName = m.name;
     }
   }
-  conn.onGroupEvent?.({
+  conn.events.group.emit({
     type: "group_list",
     members: list.members,
     leader: leaderName,
@@ -132,17 +132,17 @@ export function handleGroupListMsg(conn: WorldConn, r: PacketReader): void {
 
 export function handleGroupDestroyed(conn: WorldConn): void {
   conn.partyMembers.clear();
-  conn.onGroupEvent?.({ type: "group_destroyed" });
+  conn.events.group.emit({ type: "group_destroyed" });
 }
 
 export function handleGroupUninvite(conn: WorldConn): void {
   conn.partyMembers.clear();
-  conn.onGroupEvent?.({ type: "kicked" });
+  conn.events.group.emit({ type: "kicked" });
 }
 
 export function handleGroupDeclineMsg(conn: WorldConn, r: PacketReader): void {
   const { name } = parseGroupDecline(r);
-  conn.onGroupEvent?.({ type: "invite_declined", name });
+  conn.events.group.emit({ type: "invite_declined", name });
 }
 export function handlePartyMemberStatsMsg(
   conn: WorldConn,
@@ -150,7 +150,7 @@ export function handlePartyMemberStatsMsg(
   isFull = false,
 ): void {
   const stats = parsePartyMemberStats(r, isFull);
-  conn.onGroupEvent?.({
+  conn.events.group.emit({
     type: "member_stats",
     guidLow: stats.guidLow,
     online: stats.online,

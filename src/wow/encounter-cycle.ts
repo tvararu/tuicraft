@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import { messageOf } from "lib/errors";
 import type { ControlEvent, ControlRuntime, ControlState } from "wow/control";
 import { recoverCorpse } from "wow/corpse-run";
@@ -73,7 +74,7 @@ const DEFAULT_MAX_STARTS = 10;
 
 export class EncounterCycleRuntime {
   private readonly deps: CycleDeps;
-  private listener: ((event: CycleEvent) => void) | undefined;
+  private readonly events = new Emitter<[CycleEvent]>();
   private run: AbortController | undefined;
   private disposed = false;
   private recoveryEvents: EventWaiter<RecoveryEvent> | undefined;
@@ -107,8 +108,8 @@ export class EncounterCycleRuntime {
     };
   }
 
-  onEvent(callback: ((event: CycleEvent) => void) | undefined): void {
-    this.listener = callback;
+  onEvent(listener: (event: CycleEvent) => void): Unsubscribe {
+    return this.events.subscribe(listener);
   }
 
   observeRecovery(event: RecoveryEvent): void {
@@ -179,7 +180,7 @@ export class EncounterCycleRuntime {
   dispose(): void {
     this.disposed = true;
     this.run?.abort();
-    this.listener = undefined;
+    this.events.clear();
   }
 
   private async drive(signal: AbortSignal): Promise<void> {
@@ -281,7 +282,7 @@ export class EncounterCycleRuntime {
   }
 
   private emit(type: CycleEvent["type"]): void {
-    this.listener?.({ type, state: this.snapshot(), at: this.deps.now() });
+    this.events.emit({ type, state: this.snapshot(), at: this.deps.now() });
   }
 }
 

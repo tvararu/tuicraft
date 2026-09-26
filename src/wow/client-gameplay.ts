@@ -1,7 +1,7 @@
 import type { WorldConn, WorldHandle } from "wow/client";
 import type { Runtimes } from "wow/runtime";
 
-export function combatMethods(rt: Runtimes) {
+export function combatMethods(conn: WorldConn, rt: Runtimes) {
   const { combat, tactics, recovery } = rt;
   return {
     getCombatState() {
@@ -37,10 +37,10 @@ export function combatMethods(rt: Runtimes) {
       return tactics.snapshot();
     },
     onCombatEvent(cb) {
-      combat.onEvent(cb);
+      return conn.events.combat.subscribe(cb);
     },
     onTacticsEvent(cb) {
-      tactics.onEvent(cb);
+      return conn.events.tactics.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
@@ -71,12 +71,12 @@ export function recoveryMethods(conn: WorldConn, rt: Runtimes) {
       recovery.respondResurrection(accept);
     },
     onRecoveryEvent(cb) {
-      conn.onRecoveryEvent = cb;
+      return conn.events.recovery.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
 
-export function questMethods(rt: Runtimes) {
+export function questMethods(conn: WorldConn, rt: Runtimes) {
   const { quests } = rt;
   return {
     getQuestState() {
@@ -102,7 +102,7 @@ export function questMethods(rt: Runtimes) {
       quests.accept();
     },
     onQuestEvent(cb) {
-      quests.onEvent(cb);
+      return conn.events.quest.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
@@ -159,12 +159,12 @@ export function rewardsMethods(conn: WorldConn, rt: Runtimes) {
       rewards.close();
     },
     onRewardsEvent(cb) {
-      conn.onRewardsEvent = cb;
+      return conn.events.rewards.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
 
-export function cycleMethods(rt: Runtimes) {
+export function cycleMethods(conn: WorldConn, rt: Runtimes) {
   const { cycle } = rt;
   return {
     async startCycle(guids, instruction, maxStarts) {
@@ -178,7 +178,7 @@ export function cycleMethods(rt: Runtimes) {
       return cycle.snapshot();
     },
     onCycleEvent(cb) {
-      cycle.onEvent(cb);
+      return conn.events.cycle.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }

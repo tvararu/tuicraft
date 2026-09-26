@@ -156,7 +156,7 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
       return control.navigationState();
     },
     onControlEvent(cb) {
-      conn.onControlEvent = cb;
+      return conn.events.control.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }

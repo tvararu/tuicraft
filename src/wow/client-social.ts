@@ -38,7 +38,7 @@ import {
 } from "wow/world-handlers-guild";
 
 function notify(conn: WorldConn, message: string): void {
-  conn.onMessage?.({ type: ChatType.SYSTEM, sender: "", message });
+  conn.events.message.emit({ type: ChatType.SYSTEM, sender: "", message });
 }
 function acceptPending(conn: WorldConn): void {
   if (conn.pendingRequest === "duel") {
@@ -114,7 +114,7 @@ export function groupMethods(conn: WorldConn) {
       declinePending(conn);
     },
     onGroupEvent(cb) {
-      conn.onGroupEvent = cb;
+      return conn.events.group.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
@@ -122,10 +122,10 @@ export function groupMethods(conn: WorldConn) {
 export function socialMethods(conn: WorldConn) {
   return {
     onEntityEvent(cb) {
-      conn.onEntityEvent = cb;
+      return conn.events.entity.subscribe(cb);
     },
     onPacketError(cb) {
-      conn.onPacketError = cb;
+      return conn.events.packetError.subscribe(cb);
     },
     getNearbyEntities() {
       return conn.entityStore.all();
@@ -148,7 +148,7 @@ export function socialMethods(conn: WorldConn) {
       sendPacket(conn, GameOpcode.MSG_RANDOM_ROLL, buildRandomRoll(min, max));
     },
     onFriendEvent(cb) {
-      conn.onFriendEvent = cb;
+      return conn.events.friend.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
@@ -170,7 +170,7 @@ export function ignoreMethods(conn: WorldConn) {
       sendPacket(conn, GameOpcode.CMSG_DEL_IGNORE, buildDelIgnore(entry.guid));
     },
     onIgnoreEvent(cb) {
-      conn.onIgnoreEvent = cb;
+      return conn.events.ignore.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }
@@ -204,7 +204,7 @@ export function guildMethods(conn: WorldConn) {
       return requestGuildRoster(conn);
     },
     onGuildEvent(cb) {
-      conn.onGuildEvent = cb;
+      return conn.events.guild.subscribe(cb);
     },
     guildInvite(name) {
       sendPacket(conn, GameOpcode.CMSG_GUILD_INVITE, buildGuildInvite(name));
@@ -234,7 +234,7 @@ export function guildMethods(conn: WorldConn) {
       sendPacket(conn, GameOpcode.CMSG_GUILD_DECLINE);
     },
     onDuelEvent(cb) {
-      conn.onDuelEvent = cb;
+      return conn.events.duel.subscribe(cb);
     },
   } satisfies Partial<WorldHandle>;
 }

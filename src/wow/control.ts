@@ -257,7 +257,7 @@ export class ControlRuntime extends ControlSync {
   }
 
   dispose(): void {
-    this.listener = undefined;
+    this.events.clear();
     this.mode = "none";
     this.abortUnsafe("close");
   }
