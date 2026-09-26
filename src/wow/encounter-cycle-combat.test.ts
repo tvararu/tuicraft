@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
+import { fakeRecovery } from "test/cycle-recovery-fixtures";
 import {
   fakeControl,
   fakeLoot,
-  fakeRecovery,
   fakeTactics,
   makeCycle,
 } from "test/encounter-cycle-fixtures";

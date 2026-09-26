@@ -212,6 +212,7 @@ describe("cycle IPC boundary", () => {
         currentIndex: 0,
         instruction: "fight",
         lastLoot: undefined,
+        lastRecovery: undefined,
         maxStarts: 10,
         phase: "fighting",
         queue: [{ guid: 1n, status: "queued" }],

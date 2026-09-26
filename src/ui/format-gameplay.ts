@@ -52,6 +52,8 @@ export function formatCycleState(state: CycleState): string[] {
     ...state.queue.map(formatCycleTarget),
   ];
   if (state.lastLoot) lines.push(...formatCycleLoot(state.lastLoot));
+  if (state.lastRecovery)
+    lines.push(`Last recovery: ${state.lastRecovery.outcome}`);
   if (state.stopCause) lines.push(`Stop reason: ${state.stopCause}`);
   return lines;
 }

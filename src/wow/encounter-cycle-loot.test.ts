@@ -1,10 +1,10 @@
 import { expect, jest, test } from "bun:test";
+import { fakeRecovery } from "test/cycle-recovery-fixtures";
 import {
   advanceUntilSettled,
   body,
   fakeControl,
   fakeLoot,
-  fakeRecovery,
   fakeTactics,
   makeCycle,
 } from "test/encounter-cycle-fixtures";
@@ -283,7 +283,7 @@ test("release-only denial stops with reconnect cause", async () => {
   );
 });
 
-test("current resurrection offer is accepted and the cycle stops resurrected", async () => {
+test("current resurrection offer is accepted and the cycle continues", async () => {
   const recovery = fakeRecovery({
     offer: true,
     life: ["ghost", "alive"],
@@ -297,8 +297,11 @@ test("current resurrection offer is accepted and the cycle stops resurrected", a
   });
   await runtime.start({ guids: [1n, 2n], instruction: "fight" });
   expect(recovery.answered()).toBe(true);
-  expect(runtime.snapshot()).toMatchObject({
+  const state = runtime.snapshot();
+  expect(state).toMatchObject({
     phase: "stopped",
-    stopCause: "resurrected",
+    stopCause: "queue_exhausted",
+    lastRecovery: { outcome: "resurrected" },
   });
+  expect(state.queue.map((record) => record.status)).toEqual(["done", "done"]);
 });

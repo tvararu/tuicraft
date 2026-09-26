@@ -1,10 +1,10 @@
 import { expect, jest, test } from "bun:test";
 import { Emitter } from "lib/emitter";
+import { dyingTactics, fakeRecovery } from "test/cycle-recovery-fixtures";
 import {
   advanceUntilSettled,
   fakeControl,
   fakeLoot,
-  fakeRecovery,
   fakeTactics,
   makeCycle,
 } from "test/encounter-cycle-fixtures";
@@ -32,7 +32,7 @@ function ghostRun(config: {
     stopReason: config.stopReason,
   });
   const recovery = fakeRecovery({
-    life: ["dead", "ghost", "alive"],
+    life: ["alive", "dead", "ghost", "alive"],
     corpse: {
       status: "found",
       mapId: 0,
@@ -43,8 +43,9 @@ function ghostRun(config: {
     now: () => now,
     reclaimDelaySchedule: [{ atMs: 0, delayMs: 30_000 }],
   });
+  const tactics = dyingTactics(recovery);
   const runtime = makeCycle({
-    tactics: fakeTactics([]),
+    tactics,
     loot: fakeLoot({ items: [], money: 0 }),
     recovery,
     control,
@@ -58,19 +59,38 @@ function ghostRun(config: {
       },
     });
   };
-  return { control, runtime, run };
+  return { control, runtime, run, tactics };
 }
 
-test("legs walk the ghost into range, reclaim and stop reclaimed", async () => {
+test("legs walk the ghost into range, reclaim and continue the queue", async () => {
   jest.useFakeTimers();
   try {
-    const { control, runtime, run } = ghostRun({ corpseX: 200 });
+    const { control, runtime, run, tactics } = ghostRun({ corpseX: 200 });
+    const events: string[] = [];
+    runtime.onEvent((event) => events.push(event.type));
     await run(60_000);
     const state = runtime.snapshot();
-    expect(state).toMatchObject({ phase: "stopped", stopCause: "reclaimed" });
+    expect(state).toMatchObject({
+      phase: "stopped",
+      stopCause: "queue_exhausted",
+      lastRecovery: { outcome: "reclaimed" },
+    });
     expect(state.queue[0]).toMatchObject({ status: "skipped", cause: "died" });
-    expect(state.queue[1]).toMatchObject({ status: "queued" });
-    const detail = state.stopDetail as { range: number; legs: number };
+    expect(state.queue[1]).toMatchObject({ status: "done" });
+    expect(tactics.calls()).toBe(2);
+    expect(events).toEqual([
+      "started",
+      "target_done",
+      "recovery",
+      "recovered",
+      "loot_done",
+      "target_done",
+      "stopped",
+    ]);
+    const detail = state.lastRecovery?.detail as {
+      range: number;
+      legs: number;
+    };
     expect(detail.range).toBeLessThanOrEqual(39);
     expect(detail.range).toBeGreaterThan(20);
     expect(detail.legs).toBe(control.moves().length);
@@ -88,7 +108,7 @@ test("a leg that does not move retries with a heading offset", async () => {
       refuseMoves: 1,
     });
     await run(60_000);
-    expect(runtime.snapshot().stopCause).toBe("reclaimed");
+    expect(runtime.snapshot().lastRecovery?.outcome).toBe("reclaimed");
     const [first, second, third] = control.faced();
     expect(first).toBe(0);
     expect(second).toBeCloseTo(0.3);
@@ -106,7 +126,7 @@ test("a blocked stop after progress keeps the direct heading", async () => {
       stopReason: "height_unresolved",
     });
     await run(60_000);
-    expect(runtime.snapshot().stopCause).toBe("reclaimed");
+    expect(runtime.snapshot().lastRecovery?.outcome).toBe("reclaimed");
     expect(control.faced().every((heading) => heading === 0)).toBe(true);
   } finally {
     jest.useRealTimers();

@@ -18,10 +18,15 @@ export type CorpseRun = Pick<CycleDeps, "recovery" | "control"> & {
 
 type Done = { ok: true } | CycleStop;
 type Observed = { ok: true; state: RecoveryState } | CycleStop;
+export type CycleRecovery = {
+  outcome: "reclaimed" | "resurrected";
+  detail?: Record<string, unknown>;
+};
+type Recovered = ({ ok: true } & CycleRecovery) | CycleStop;
 
 const DONE = { ok: true } as const;
 
-export async function recoverCorpse(run: CorpseRun): Promise<CycleStop> {
+export async function recoverCorpse(run: CorpseRun): Promise<Recovered> {
   if (run.recovery.snapshot().resurrection?.response === "unanswered")
     return acceptResurrection(run);
   const ghost = await becomeGhost(run);
@@ -35,13 +40,13 @@ export async function recoverCorpse(run: CorpseRun): Promise<CycleStop> {
   const detail = legDetail(ready.state.reclaim, walked.legs);
   run.recovery.reclaimCorpse();
   const alive = await confirmLife(run, "alive", "reclaim_not_confirmed");
-  return alive.ok ? stop("reclaimed", detail) : alive;
+  return alive.ok ? { ok: true, outcome: "reclaimed", detail } : alive;
 }
 
-async function acceptResurrection(run: CorpseRun): Promise<CycleStop> {
+async function acceptResurrection(run: CorpseRun): Promise<Recovered> {
   run.recovery.respondResurrection(true);
   const alive = await confirmLife(run, "alive", "resurrection_not_confirmed");
-  return alive.ok ? stop("resurrected") : alive;
+  return alive.ok ? { ok: true, outcome: "resurrected" } : alive;
 }
 
 async function becomeGhost(run: CorpseRun): Promise<Done> {

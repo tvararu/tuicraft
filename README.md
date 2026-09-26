@@ -264,15 +264,18 @@ not auto-acquire. It runs `fight` over the queue and requests loot after each
 completed target. A target that dies, is unreachable, or fails to fight is
 skipped with a recorded cause instead of stopping the loop. A mid-fight death
 releases the spirit, walks the ghost in bounded legs to about 30 yd from the
-corpse, reclaims it, and then stops with `reclaimed` (or `resurrected` after an
-accepted offer) so the caller can check the killer before queueing more. `--max` caps tactics-loop starts for
+corpse, reclaims it (or accepts a current resurrection offer), records
+`lastRecovery`, and continues with the next queued target; the target it died
+to is `skipped` with cause `died`. A recovery that cannot finish stops with
+its cause, such as `corpse_out_of_range`. `--max` caps tactics-loop starts for
 the whole run (positive integer, default 10). Inspect `cycling --json` for
 each target's status and an open-ended `stopCause` with `stopDetail`. The loop waits for the server release acknowledgement after close; `loot_denied:timeout` and `loot_release_unconfirmed` stop without recording a gain.
 `halt` keeps the queue: `cycle --resume` continues from the first target
 still `queued` (a halted fight is fought again, a `done` target is not), with
 an optional new `--instruction` and a fresh `--max` budget. It emits a
 `resumed` CYCLE event and fails with `cycle_active` or
-`cycle_nothing_to_resume`.
+`cycle_nothing_to_resume`; while dead or a ghost it recovers first even when
+no target is left.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
 entry and the loop continues; `target_death_unconfirmed` stops it when the server
 never shows the corpse dead.

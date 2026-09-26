@@ -1,7 +1,7 @@
 import { Emitter, type Unsubscribe } from "lib/emitter";
 import { messageOf } from "lib/errors";
 import type { ControlEvent, ControlRuntime, ControlState } from "wow/control";
-import { recoverCorpse } from "wow/corpse-run";
+import { type CycleRecovery, recoverCorpse } from "wow/corpse-run";
 import type { CycleStop } from "wow/cycle-stop";
 import type { EntityEvent } from "wow/entity-store";
 import { EventWaiter } from "wow/event-waiter";
@@ -43,6 +43,7 @@ export type CycleState = {
   startedAt: number | undefined;
   resumes: number;
   lastLoot: CycleLootRecord | undefined;
+  lastRecovery: (CycleRecovery & { at: number }) | undefined;
 };
 export type CycleEvent = {
   type:
@@ -51,6 +52,7 @@ export type CycleEvent = {
     | "target_done"
     | "loot_done"
     | "recovery"
+    | "recovered"
     | "stopped";
   state: CycleState;
   at: number;
@@ -103,6 +105,7 @@ export class EncounterCycleRuntime {
     startedAt: undefined,
     resumes: 0,
     lastLoot: undefined,
+    lastRecovery: undefined,
   };
 
   constructor(deps: CycleDeps) {
@@ -160,6 +163,7 @@ export class EncounterCycleRuntime {
       startedAt: this.deps.now(),
       resumes: 0,
       lastLoot: undefined,
+      lastRecovery: undefined,
     };
     await this.launch("started");
   }
@@ -174,7 +178,8 @@ export class EncounterCycleRuntime {
     const next = queue.findIndex(
       (record, index) => index >= currentIndex && record.status === "queued",
     );
-    if (next === -1) throw new Error("cycle_nothing_to_resume");
+    const recoverOnly = next === -1 && queue.length > 0 && this.selfDead();
+    if (next === -1 && !recoverOnly) throw new Error("cycle_nothing_to_resume");
     const maxStarts = args.maxStarts ?? this.state.maxStarts;
     if (!Number.isInteger(maxStarts) || maxStarts < 1)
       throw new Error("cycle_invalid_max");
@@ -182,7 +187,7 @@ export class EncounterCycleRuntime {
       ...this.state,
       active: true,
       phase: "fighting",
-      currentIndex: next,
+      currentIndex: recoverOnly ? queue.length : next,
       instruction: args.instruction ?? this.state.instruction,
       maxStarts,
       startsUsed: 0,
@@ -227,18 +232,25 @@ export class EncounterCycleRuntime {
 
   private async drive(signal: AbortSignal): Promise<void> {
     const { queue } = this.state;
-    while (this.state.currentIndex < queue.length) {
-      if (this.state.startsUsed >= this.state.maxStarts)
-        return this.stop("max_starts_reached");
+    for (;;) {
+      if (this.selfDead()) {
+        const recovered = await this.recover(signal);
+        if (recovered) return this.stop(recovered.cause, recovered.detail);
+        signal.throwIfAborted();
+      }
       const record = queue[this.state.currentIndex];
       if (record === undefined) return this.stop("queue_exhausted");
+      if (this.state.startsUsed >= this.state.maxStarts)
+        return this.stop("max_starts_reached");
       const failed = await this.engage(record, signal);
-      if (failed) return this.stop(failed.cause, failed.detail);
       signal.throwIfAborted();
+      if (failed) {
+        if (!this.selfDead()) return this.stop(failed.cause, failed.detail);
+        record.cause = failed.cause;
+      }
       this.state.currentIndex++;
       this.emit("target_done");
     }
-    this.stop("queue_exhausted");
   }
 
   private async engage(
@@ -260,8 +272,8 @@ export class EncounterCycleRuntime {
       return skip(record, messageOf(error, "fight_failed"), outcome);
     }
     signal.throwIfAborted();
-    if (this.selfDead()) return this.recover(record, signal);
     const outcome = tactics.snapshot().lastOutcome;
+    if (this.selfDead()) return skip(record, "died", outcome);
     if (outcome?.status !== "completed")
       return skip(record, outcome?.reason ?? "fight_failed", outcome);
     record.status = "done";
@@ -269,12 +281,7 @@ export class EncounterCycleRuntime {
     return this.loot(record, signal);
   }
 
-  private async recover(
-    record: CycleTargetRecord,
-    signal: AbortSignal,
-  ): Promise<CycleStop> {
-    record.status = "skipped";
-    record.cause = "died";
+  private async recover(signal: AbortSignal): Promise<CycleStop | undefined> {
     this.state.phase = "recovering";
     this.emit("recovery");
     const events = new EventWaiter<RecoveryEvent>();
@@ -283,7 +290,14 @@ export class EncounterCycleRuntime {
     this.motionEvents = motion;
     try {
       const { recovery, control } = this.deps;
-      return await recoverCorpse({ recovery, control, events, motion, signal });
+      const run = { recovery, control, events, motion, signal };
+      const result = await recoverCorpse(run);
+      if (!result.ok) return result;
+      signal.throwIfAborted();
+      const { outcome, detail } = result;
+      this.state.lastRecovery = { outcome, detail, at: this.deps.now() };
+      this.emit("recovered");
+      return undefined;
     } finally {
       if (this.recoveryEvents === events) this.recoveryEvents = undefined;
       if (this.motionEvents === motion) this.motionEvents = undefined;

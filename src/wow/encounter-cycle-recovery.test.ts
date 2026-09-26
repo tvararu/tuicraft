@@ -1,14 +1,14 @@
 import { expect, jest, test } from "bun:test";
+import { fakeRecovery } from "test/cycle-recovery-fixtures";
 import {
   advanceUntilSettled,
   fakeControl,
   fakeLoot,
-  fakeRecovery,
   fakeTactics,
   makeCycle,
 } from "test/encounter-cycle-fixtures";
 
-test("reclaim delay waits bounded then retries once", async () => {
+test("a cycle started dead waits out the reclaim delay, then fights", async () => {
   jest.useFakeTimers();
   try {
     let now = 0;
@@ -50,10 +50,13 @@ test("reclaim delay waits bounded then retries once", async () => {
     });
     const started = runtime.start({ guids: [1n], instruction: "fight" });
     await advanceUntilSettled(started, 16_000, { onTick: advance });
-    expect(runtime.snapshot()).toMatchObject({
+    const state = runtime.snapshot();
+    expect(state).toMatchObject({
       phase: "stopped",
-      stopCause: "reclaimed",
+      stopCause: "queue_exhausted",
+      lastRecovery: { outcome: "reclaimed" },
     });
+    expect(state.queue[0]?.status).toBe("done");
   } finally {
     jest.useRealTimers();
   }
