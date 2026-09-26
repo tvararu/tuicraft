@@ -1,6 +1,10 @@
 import { type Entity, fieldOf } from "wow/entity-store";
 import { UNIT_FIELDS } from "wow/protocol/entity-fields";
-import { buildGossipHello, buildGossipSelectOption } from "wow/protocol/gossip";
+import {
+  buildGossipHello,
+  buildGossipSelectOption,
+  type GossipMessage,
+} from "wow/protocol/gossip";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { buildQuestLogRemoveQuest } from "wow/protocol/quest-log";
 import {
@@ -9,15 +13,67 @@ import {
   buildQuestgiverCompleteQuest,
   buildQuestgiverQueryQuest,
   buildQuestgiverRequestReward,
+  type QuestgiverOfferReward,
+  type QuestgiverQuestDetails,
+  type QuestgiverQuestList,
+  type QuestgiverRequestItems,
 } from "wow/protocol/questgiver";
 import type { QuestLog } from "wow/quest-slots";
-import type { QuestAction, QuestDialog, QuestIntent } from "wow/quests";
+
+export type QuestDialog =
+  | { kind: "gossip"; data: GossipMessage }
+  | { kind: "list"; data: QuestgiverQuestList }
+  | { kind: "details"; data: QuestgiverQuestDetails }
+  | { kind: "requestItems"; data: QuestgiverRequestItems }
+  | { kind: "offer"; data: QuestgiverOfferReward };
+
+export type QuestAction =
+  | "talk"
+  | "selectOption"
+  | "selectQuest"
+  | "accept"
+  | "complete"
+  | "requestReward"
+  | "chooseReward"
+  | "abandon"
+  | "cancel";
+
+export type QuestWindow = "trainer" | "vendor" | "taxi" | "bank";
+
+export type QuestUnresolvedReason =
+  | "cancelled"
+  | "closed"
+  | "reset"
+  | "no_reply";
+
+export type QuestIntent = {
+  action: QuestAction;
+  at: number;
+  guid?: bigint;
+  questId?: number;
+  optionId?: number;
+  rewardIndex?: number;
+  slot?: number;
+};
 
 export type QuestRequest = {
   opcode: number;
   body: Uint8Array;
   intent: Omit<QuestIntent, "at">;
 };
+
+export const QUEST_REPLY_TIMEOUT_MS = 5000;
+
+export function unansweredError(pending: QuestIntent, now: number): Error {
+  const target =
+    pending.guid === undefined ? "" : ` 0x${pending.guid.toString(16)}`;
+  const waited = ((now - pending.at) / 1000).toFixed(1);
+  const recover =
+    pending.action === "cancel" ? "" : ", or run cancel-interaction";
+  return new Error(
+    `quest_reply_unanswered: ${pending.action}${target} unanswered for ${waited}s; it expires as no_reply after ${QUEST_REPLY_TIMEOUT_MS / 1000}s${recover}`,
+  );
+}
 
 export function positiveId(id: number): void {
   if (!Number.isInteger(id) || id <= 0 || id > 0xff_ff_ff_ff)

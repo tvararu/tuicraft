@@ -22,9 +22,10 @@ export function questCapture(self: bigint) {
   const sent: number[] = [];
   const bodies: string[] = [];
   const events: QuestEvent[] = [];
+  let clock = 1000;
   const runtime = new QuestRuntime({
     getEntity: (guid) => entities.get(guid),
-    now: () => 1000,
+    now: () => clock,
     selfGuid: () => self,
     send: (opcode, body) => {
       sent.push(opcode);
@@ -68,5 +69,19 @@ export function questCapture(self: bigint) {
       must(entities.get(self)).rawFields.set(pack + i, word);
     runtime.observeQuestLog();
   };
-  return { bodies, carry, entities, events, logQuest, packet, runtime, sent };
+  const advance = (ms: number) => {
+    clock += ms;
+  };
+  return {
+    advance,
+    bodies,
+    carry,
+    dispatch,
+    entities,
+    events,
+    logQuest,
+    packet,
+    runtime,
+    sent,
+  };
 }

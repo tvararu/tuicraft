@@ -533,7 +533,7 @@ Do not retry unanswered actions automatically. Recovery command and inspection
 errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 `tuicraft quests` [`--json`]
-:: Print the current offered dialog/giver, observed quest log, metadata queries, pending intent, unresolved (cancelled or reset) intents, errors, progress, and reward facts.
+:: Print the current offered dialog/giver, observed quest log, metadata queries, pending intent, unresolved intents (each with `reason` `cancelled`, `closed`, `reset` or `no_reply`), errors, progress, and reward facts.
 A sent acceptance request is not an accepted quest. Acceptance and removal require authoritative same-lifetime quest-log observations.
 Log counters are server quest words, not inferred inventory counts. Unknown quest IDs stay unknown.
 Item objectives never appear in the log counters (AzerothCore sends no SMSG_QUESTUPDATE_ADD_ITEM). `items` lists each required item of a logged quest whose query is known, with the carried count read from the bags. Each item push for such an item waits in `itemPushes` until the bags hold its server total, then emits a QUEST `progress` event (source `inventory`) whose `lastProgress` is `{kind: "collect", questId, itemId, required, carried, pushed, totalCount, bag, slot}`. Query the quest first; pushes for unknown objectives are not correlated.
@@ -625,7 +625,8 @@ The quest remains until an authoritative log observation removes it. Removal alo
 :: Request close of the current interaction and revoke its authorization. The prior unanswered intent stays in `unresolved` until the quest log or a reward packet settles it; later cancels never drop it.
 Wait for observed close or a confirmed world reset before another mutation. Late menu/error packets do not unlock a pending cancel.
 
-All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending.
+All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending; another verb fails with `quest_reply_unanswered: <action> <guid> unanswered for <s>s; it expires as no_reply after 5s, or run cancel-interaction`.
+A request the server has not answered within 5 s expires: QUEST `expired no_reply`, and it moves to `unresolved` with `reason` `no_reply`. A trainer, vendor, bank or flight-master window from the same giver answers a `talk` or `select-option` with QUEST `window unsupported_window:<kind>` and `lastError` `{kind: "unsupported_window", window, guid}`; tuicraft does not handle those windows. An expired request is not a failure or a success; the quest log or a reward packet can still settle it, and a reply that arrives after expiry is a stale dialog.
 `OK` is request intent only. It does not establish acceptance, completion, reward, abandonment, or cancellation success.
 Quest action and inspection errors exit with status 1. Human mode prints `ERR`;
 JSON mode returns an error envelope. Do not retry an unanswered interaction automatically.

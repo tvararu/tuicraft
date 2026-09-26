@@ -362,6 +362,10 @@ and rewards require a server reward notification. Unanswered metadata is unknown
 not missing. `cancel-interaction` requests closure and does not immediately unlock
 another mutation. The cancelled request stays reported as `unresolved` until an
 authoritative outcome. Do not retry before an observed close or authoritative outcome.
+A request the server never answers (for example a `talk` out of range) expires
+after 5 s as `no_reply` and stays in `unresolved`; the next giver then works
+without `cancel-interaction`. A trainer, vendor, bank or flight-master window
+answers the request at once as `unsupported_window`.
 
 `experience` reads the observed level, XP and next-level XP fields beside the
 last XP-gain and level-up notices. A notice is not an XP change; compare the

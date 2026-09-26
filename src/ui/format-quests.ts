@@ -230,9 +230,11 @@ export function formatQuestEventText(event: QuestEvent): string {
       const quest = questId === undefined ? "" : ` ${named(state, questId)}`;
       return `[quest] intent${action ? ` ${action}` : ""}${quest}`;
     }
-    default:
+    default: {
+      const detail = event.detail === undefined ? "" : ` ${event.detail}`;
       return questId === undefined
-        ? `[quest] ${type}`
-        : `[quest] ${type} ${named(state, questId)}`;
+        ? `[quest] ${type}${detail}`
+        : `[quest] ${type} ${named(state, questId)}${detail}`;
+    }
   }
 }
