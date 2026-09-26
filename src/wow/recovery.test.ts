@@ -383,3 +383,17 @@ describe("ordinary-player recovery", () => {
     expect(ghost.runtime.snapshot().request).toBeUndefined();
   });
 });
+
+test("an offer without a packet name takes the observed caster's name", () => {
+  const f = fixture(0, 0);
+  f.runtime.receiveResurrectRequest(
+    parseResurrectRequest(new PacketReader(bytes(offer))),
+  );
+  expect(f.runtime.snapshot().resurrection?.name).toBe("");
+  f.others.set(0x63n, {
+    ...f.self,
+    guid: 0x63n,
+    name: "Fgklhcnkmic",
+  });
+  expect(f.runtime.snapshot().resurrection?.name).toBe("Fgklhcnkmic");
+});

@@ -152,7 +152,7 @@ tuicraft query-corpse      # request corpse information
 tuicraft release-spirit    # request release while observed dead
 tuicraft reclaim-corpse    # request guarded reclaim near the actual corpse
 tuicraft spirit-healer 0xabc  # request resurrection from an observed healer-flagged creature
-tuicraft resurrect accept # answer a current offer; decline is also supported
+tuicraft resurrect accept # answer a current offer (recovery shows it); decline is also supported
 tuicraft quests --json     # offered dialog, observed log and unanswered intent
 tuicraft talk 0xabc        # request conversation with an observed giver
 tuicraft query-quest 42    # request metadata, not permission to accept
