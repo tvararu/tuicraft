@@ -50,7 +50,7 @@ Use `--json` with these daemon-backed commands:
 - Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `defense`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`, `trainer`, `vendor`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `defend`, `goto`.
-- Recovery, quest, loot, item, trainer, and vendor actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `loot-roll`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, `repair`.
+- Recovery, quest, loot, item, trainer, and vendor actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `loot-roll`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, `repair`, `destroy`.
 - Daemon lifecycle: `start`, `status`, `stop`.
 
 `logs` prints the raw session log. `skill` prints the raw reference document.
@@ -379,6 +379,7 @@ IPC: QUESTS, QUESTS_JSON, TALK, QUERY_QUEST, SELECT_OPTION, SELECT_QUEST, ACCEPT
     tuicraft take-money
     tuicraft release-loot
     tuicraft loot-roll <roll-or-corpse-guid> <slot> need|greed|pass
+    tuicraft destroy <bag> <slot> [count]
 
 Rules:
 
@@ -402,10 +403,12 @@ Rules:
 - In a party on group loot, items at or above the threshold (uncommon) are rolled for: they show `slotType` 1 and `take-loot` refuses them. Every eligible member near the corpse gets the roll in `loot --json` `rolls.pending` (roll `guid`, `corpseGuid` only if you opened that corpse yourself, `slot`, `itemId`, `remainingMs`, `allowed`, `choice`, `votes`).
 - Answer with `loot-roll <guid> <slot> need|greed|pass` before `remainingMs` runs out; an unanswered roll counts as a pass. It refuses a roll that is not pending, already answered, or a type not in `allowed`. OK is intent: `rolls.last` then shows `won` (with `winner`, `mine`, `rolled`, `winnerChoice`, `myChoice`) or `all_passed`, and the winner's item appears in `inventory`.
 - HALT drops older queued loot mutations but retains inspections and newer requests. It cannot undo an already-sent request.
+- `destroy <bag> <slot> [count]` frees space where you stand: it destroys a carried backpack or bag stack (whole stack by default, partial count 1–255). Equipped items, empty slots and counts above the stack are refused locally. `OK` is intent; `inventory` shows `Last: destroy ...: confirmed` once the slot is observed empty or smaller, and `inventory --json` has `destroy.lastOutcome` (`status`, `reason`, `stackAfter`). Server refusals are named (`cant_drop_soulbound`, ...); silence ends `unanswered` after 5 s.
+- A quest reward or acceptance refused for full bags shows in `quests --json` as `lastError: {kind: "inventory", reason: 50, name: "inventory_full"}`. The server re-offers the reward: `destroy` a junk stack (quality 0 grey items are the usual choice), then `choose-reward` again.
 - Mutations stop prior control ownership through the manual override path. Inspections are readonly.
 - Action and inspection errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
-IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONEY, RELEASE_LOOT.
+IPC: INVENTORY, INVENTORY_JSON, LOOT, LOOT_JSON, OPEN_LOOT, TAKE_LOOT, TAKE_MONEY, RELEASE_LOOT, DESTROY.
 
 ## Using carried items
 

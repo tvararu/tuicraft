@@ -28,6 +28,7 @@ tuicraft complete-quest <id> | request-reward | choose-reward <index>
 tuicraft abandon-quest <slot> | cancel-interaction
 tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot | use <bag> <slot>
+tuicraft destroy <bag> <slot> [count]
 tuicraft trainer [--json] | open-trainer <guid> | train <spell-id>
 tuicraft vendor [--json] | open-vendor <guid> | sell <bag> <slot> [count]
 tuicraft buy <vendor-slot> [count] | repair
@@ -263,7 +264,7 @@ HALT on one IPC socket interrupts pending work and drops older queued
 RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
-HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE, OPEN_TRAINER/TRAIN and OPEN_VENDOR/SELL/BUY/REPAIR commands as well.
+HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE/DESTROY, OPEN_TRAINER/TRAIN and OPEN_VENDOR/SELL/BUY/REPAIR commands as well.
 Metadata queries and inventory/loot/vendor inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
 An enemy already attacking can continue after `halt`; stopping client actions
 does not disengage combat.
@@ -792,6 +793,27 @@ Unanswered rolls resolve when the server's countdown (60 s) ends, as passes. Rol
 
 Loot mutations use the manual override path. Readonly inventory/loot inspections do not change control ownership.
 
+`tuicraft destroy` _bag_ _slot_ [_count_]
+:: Destroy a carried backpack or bag stack at _bag_ _slot_, as `inventory`
+prints them, to free space where the character stands (CMSG_DESTROYITEM).
+Without _count_ the whole stack goes; a partial _count_ is 1 to 255.
+Equipped items, empty or unknown slots and a count above the observed stack
+are refused locally with `ERR`. `OK` is intent: the destroy is confirmed only
+when the slot is observed empty (or the stack smaller by _count_). `inventory`
+prints the last destroy, for example
+`Last: destroy item 20812 x1 at bag 255 slot 30: confirmed (stack 1 -> 0)`,
+and `inventory --json` carries it under `destroy` (`pending`, `lastOutcome`
+with `status`, `reason`, `request` and `stackAfter`). A server refusal is
+named from its inventory result (for example `cant_drop_soulbound` for items
+that cannot be destroyed); with no answer after 5 seconds the outcome is
+`unanswered` with `server_unanswered`.
+
+When `choose-reward` or `accept-quest` is answered with an inventory error,
+`quests` records it as `lastError` with `kind: "inventory"`, the raw result in
+`reason`, and its name in `name` (for example `inventory_full` or `bag_full`).
+The server then offers the reward again: free a slot with `destroy` (or sell
+at a vendor) and choose again.
+
 `tuicraft trainer` [`--json`]
 :: Print the trainer offer the server sent (SMSG_TRAINER_LIST), the unanswered
 trainer request, the last settled one, and carried coinage. Each spell row is
@@ -981,7 +1003,8 @@ All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
 `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`,
-`loot-roll`, `use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, and `repair`.
+`loot-roll`, `use`, `destroy`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`,
+and `repair`.
 `logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
 `help`, `version`, interactive mode, and internal daemon mode.
 

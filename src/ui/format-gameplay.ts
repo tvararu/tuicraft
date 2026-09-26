@@ -6,6 +6,8 @@ import type {
   CycleState,
   CycleTargetRecord,
   DefenseState,
+  DestroyRequest,
+  DestroyState,
   ExperienceState,
   NamedInventoryState,
   NamedRewardsState,
@@ -129,6 +131,24 @@ export function formatInventoryState(state: NamedInventoryState): string[] {
   lines.push(`Unknown slots: ${unknown.length}`);
   if (state.issues.length > 0)
     lines.push(`Inventory issues: ${state.issues.length}`);
+  return lines;
+}
+
+function describeDestroy(request: DestroyRequest): string {
+  return `destroy item ${show(request.itemId)} x${request.count} at bag ${request.bag} slot ${request.slot}`;
+}
+
+export function formatDestroyState(state: DestroyState): string[] {
+  const lines: string[] = [];
+  if (state.pending)
+    lines.push(`Request: ${describeDestroy(state.pending)} unanswered`);
+  const outcome = state.lastOutcome;
+  if (outcome) {
+    const reason = outcome.reason ? ` ${outcome.reason}` : "";
+    lines.push(
+      `Last: ${describeDestroy(outcome.request)}: ${outcome.status}${reason} (stack ${outcome.request.stackBefore} -> ${outcome.stackAfter})`,
+    );
+  }
   return lines;
 }
 

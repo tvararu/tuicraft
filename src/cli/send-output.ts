@@ -164,22 +164,20 @@ export function decodeWalkReply(
   };
 }
 
-const LOOT = [
-  "open-loot",
-  "take-loot",
-  "take-money",
-  "release-loot",
-  "loot-roll",
-];
-const TRAINER = ["open-trainer", "train"];
-const VENDOR = ["open-vendor", "sell", "buy", "repair"];
-const RECOVERY = [
-  "query-corpse",
-  "release-spirit",
-  "reclaim-corpse",
-  "spirit-healer",
-  "resurrect",
-];
+const INSPECTIONS: Record<string, string[]> = {
+  combat: ["use"],
+  inventory: ["destroy"],
+  loot: ["open-loot", "take-loot", "take-money", "release-loot", "loot-roll"],
+  recovery: [
+    "query-corpse",
+    "release-spirit",
+    "reclaim-corpse",
+    "spirit-healer",
+    "resurrect",
+  ],
+  trainer: ["open-trainer", "train"],
+  vendor: ["open-vendor", "sell", "buy", "repair"],
+};
 
 export function formatHumanIntent(command: string, lines: string[]): string[] {
   const [line] = lines;
@@ -192,12 +190,10 @@ export function formatHumanIntent(command: string, lines: string[]): string[] {
       `The ${command} run ended. Check tuicraft ${inspection} for its outcome.`,
     ];
   }
-  let inspection: string | undefined;
-  if (LOOT.includes(command)) inspection = "loot";
-  else if (RECOVERY.includes(command)) inspection = "recovery";
-  else if (command === "use") inspection = "combat";
-  else if (TRAINER.includes(command)) inspection = "trainer";
-  else if (VENDOR.includes(command)) inspection = "vendor";
+  const [inspection] =
+    Object.entries(INSPECTIONS).find(([, commands]) =>
+      commands.includes(command),
+    ) ?? [];
   return [
     `Daemon accepted request. ${inspection ? `Check tuicraft ${inspection} for observed results.` : "No server result confirmed."}`,
   ];

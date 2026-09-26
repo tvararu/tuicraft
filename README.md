@@ -171,6 +171,7 @@ tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of a window you leave partly looted
 tuicraft use 255 29 [--json] # eat, drink or drink a potion from an inventory bag/slot
+tuicraft destroy 255 30 [n] # destroy a carried stack to free a bag slot
 tuicraft open-trainer 0xabc # list a class trainer's spells
 tuicraft trainer [--json]  # offered spells with rank, cost, level and state
 tuicraft train 1243        # learn an available spell

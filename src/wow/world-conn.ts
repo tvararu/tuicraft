@@ -3,6 +3,7 @@ import type { ChatMode } from "wow/client";
 import type { CombatRuntime } from "wow/combat";
 import type { ControlRuntime } from "wow/control";
 import type { Arc4 } from "wow/crypto/arc4";
+import type { ItemDestroyRuntime } from "wow/destroy";
 import type { EncounterCycleRuntime } from "wow/encounter-cycle";
 import type { EntityStore } from "wow/entity-store";
 import type { FriendStore } from "wow/friend-store";
@@ -60,5 +61,6 @@ export type WorldConn = {
   cycle?: EncounterCycleRuntime;
   trainer?: TrainerRuntime;
   vendor?: VendorRuntime;
+  destroy?: ItemDestroyRuntime;
   tactics?: TacticsLoop;
 };

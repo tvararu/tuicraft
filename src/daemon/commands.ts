@@ -28,6 +28,7 @@ import { formatControlState, formatControlStateObj } from "ui/format-control";
 import {
   formatCycleState,
   formatDefenseState,
+  formatDestroyState,
   formatExperienceState,
   formatInventoryState,
   formatRecoveryState,
@@ -195,6 +196,8 @@ const HANDLERS: Handlers = {
     handle.removeIgnore(cmd.target);
     return acknowledge(socket);
   },
+  destroy: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.destroyItem(cmd.bag, cmd.slot, cmd.count), ok),
   dnd: (cmd, { handle, socket }) => {
     handle.sendDnd(cmd.message);
     return acknowledge(socket);
@@ -288,9 +291,23 @@ const HANDLERS: Handlers = {
     send(socket, [formatIgnoreListJson(handle.getIgnored())]),
   invalid: (cmd, { socket }) => send(socket, [`ERR ${cmd.reason}`]),
   inventory: (_cmd, { handle, socket }) =>
-    reply(socket, () => handle.getInventoryState(), formatInventoryState),
+    reply(
+      socket,
+      () => handle,
+      (h) => [
+        ...formatInventoryState(h.getInventoryState()),
+        ...formatDestroyState(h.getDestroyState()),
+      ],
+    ),
   inventory_json: (_cmd, { handle, socket }) =>
-    reply(socket, () => handle.getInventoryState(), json),
+    reply(
+      socket,
+      () => ({
+        ...handle.getInventoryState(),
+        destroy: handle.getDestroyState(),
+      }),
+      json,
+    ),
   invite: (cmd, { handle, socket }) => {
     handle.invite(cmd.target);
     return acknowledge(socket);

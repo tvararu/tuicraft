@@ -23,6 +23,7 @@ export type {
   NavigationState,
   WalkOutcome,
 } from "wow/control";
+export type { DestroyRequest, DestroyState } from "wow/destroy";
 export type {
   CycleEvent,
   CycleLootRecord,

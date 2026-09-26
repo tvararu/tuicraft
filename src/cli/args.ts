@@ -135,6 +135,7 @@ export type CliAction =
       vote: RollVote;
       json?: true;
     }
+  | { mode: "destroy"; bag: number; slot: number; count?: number; json?: true }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -207,6 +208,7 @@ const SUBCOMMANDS = new Set([
   "buy",
   "repair",
   "loot-roll",
+  "destroy",
 ]);
 
 const FIXED = new Map<string, CliAction>([

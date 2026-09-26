@@ -2,6 +2,7 @@ import { Emitter } from "lib/emitter";
 import type { ChatMessage, DuelEvent, GroupEvent } from "wow/client";
 import type { CombatEvent } from "wow/combat";
 import type { ControlEvent } from "wow/control";
+import type { DestroyEvent } from "wow/destroy";
 import type { CycleEvent } from "wow/encounter-cycle";
 import type { EntityEvent } from "wow/entity-store";
 import type { FriendEvent } from "wow/friend-store";
@@ -36,6 +37,7 @@ export type WorldEvents = {
   trainer: Emitter<[TrainerEvent]>;
   vendor: Emitter<[VendorEvent]>;
   defense: Emitter<[DefenseEvent]>;
+  destroy: Emitter<[DestroyEvent]>;
 };
 
 export function createWorldEvents(
@@ -61,6 +63,7 @@ export function createWorldEvents(
     trainer: new Emitter(report),
     vendor: new Emitter(report),
     defense: new Emitter(report),
+    destroy: new Emitter(report),
   };
 }
 

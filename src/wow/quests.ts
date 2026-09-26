@@ -2,6 +2,7 @@ import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { Entity, EntityLookup } from "wow/entity-store";
 import { readInventory } from "wow/inventory";
 import { ObjectType } from "wow/protocol/entity-fields";
+import type { InventoryChangeFailure } from "wow/protocol/inventory";
 import type { ItemPushResult } from "wow/protocol/loot";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type {
@@ -16,6 +17,7 @@ import type {
   QuestgiverQuestComplete,
   QuestgiverStatus,
 } from "wow/protocol/questgiver";
+import { inventoryQuestError, type QuestError } from "wow/quest-errors";
 import {
   itemObjectives,
   type QuestCollect,
@@ -59,22 +61,6 @@ export type QuestQuery =
       receivedAt: number;
       data: QuestQueryResponse;
     };
-
-export type QuestError = {
-  kind:
-    | "stale_dialog"
-    | "invalid"
-    | "log_full"
-    | "quest_failed"
-    | "failed"
-    | "timer_failed"
-    | "unsupported_window";
-  at: number;
-  questId?: number;
-  reason?: number;
-  window?: QuestWindow;
-  guid?: bigint;
-};
 
 export type QuestProgressUpdate =
   | { kind: "kill"; data: QuestUpdateAddKill }
@@ -526,6 +512,13 @@ export class QuestRuntime {
     if (!this.pending || this.pending.action === "cancel") return;
     const { status: _status, ...intent } = this.pending;
     this.unresolved.push({ ...intent, reason });
+  }
+
+  receiveInventoryFailure(packet: InventoryChangeFailure): void {
+    const error = inventoryQuestError(this.pending, packet);
+    if (this.disposed || !error) return;
+    this.lastError = { ...error, at: this.deps.now() };
+    this.emit("error", "packet", error.questId);
   }
 
   private resolve(action: QuestAction, questId: number): void {

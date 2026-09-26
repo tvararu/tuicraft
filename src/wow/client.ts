@@ -35,6 +35,7 @@ import type {
   NavigationState,
   WalkOutcome,
 } from "wow/control";
+import type { DestroyEvent, DestroyState } from "wow/destroy";
 import type { CycleEvent, CycleState } from "wow/encounter-cycle";
 import type { Entity, EntityEvent } from "wow/entity-store";
 import type { ExperienceState } from "wow/experience";
@@ -277,6 +278,9 @@ export type WorldHandle = {
   useItem: (bag: number, slot: number) => Promise<void>;
   rollLoot: (guid: bigint, slot: number, vote: RollVote) => void;
   onRewardsEvent: (cb: (event: RewardsEvent) => void) => Unsubscribe;
+  destroyItem: (bag: number, slot: number, count?: number) => void;
+  getDestroyState: () => DestroyState;
+  onDestroyEvent: (cb: (event: DestroyEvent) => void) => Unsubscribe;
   startCycle: (
     guids: bigint[],
     instruction: string,

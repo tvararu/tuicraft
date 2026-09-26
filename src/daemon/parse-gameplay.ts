@@ -12,12 +12,12 @@ import {
   parseGoto,
   parseGuidArg,
   parseItemSlot,
+  parseItemStack,
   parseLootRoll,
   parseMove,
   parseOptionId,
   parseQuestId,
   parseResurrect,
-  parseSell,
   parseSpellId,
   parseWalkToward,
   tokenize,
@@ -157,9 +157,17 @@ function parseIndexed(verb: string, tokens: string[]): IpcCommand | undefined {
     case "TRAIN":
       return from(parseSpellId(tokens), (v) => ({ type: "train", ...v }));
     case "SELL":
-      return from(parseSell(tokens), (v) => ({ type: "sell", ...v }));
+      return from(parseItemStack(tokens, "sell"), (v) => ({
+        type: "sell",
+        ...v,
+      }));
     case "BUY":
       return from(parseBuy(tokens), (v) => ({ type: "buy", ...v }));
+    case "DESTROY":
+      return from(parseItemStack(tokens, "destroy"), (v) => ({
+        type: "destroy",
+        ...v,
+      }));
     default:
       return;
   }

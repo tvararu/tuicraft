@@ -12,12 +12,12 @@ import {
   parseGoto,
   parseGuidArg,
   parseItemSlot,
+  parseItemStack,
   parseLootRoll,
   parseMove,
   parseOptionId,
   parseQuestId,
   parseResurrect,
-  parseSell,
   parseSpellId,
   parseWalkToward,
 } from "cli/tokens";
@@ -126,11 +126,13 @@ function parseItemVerb(cmd: string, rest: string[]): CliAction | undefined {
     case "open-vendor":
       return { mode: "open_vendor", ...take(parseGuidArg(rest, true)) };
     case "sell":
-      return { mode: "sell", ...take(parseSell(rest)) };
+      return { mode: "sell", ...take(parseItemStack(rest, "sell")) };
     case "buy":
       return { mode: "buy", ...take(parseBuy(rest)) };
     case "loot-roll":
       return { mode: "loot_roll", ...take(parseLootRoll(rest)) };
+    case "destroy":
+      return { mode: "destroy", ...take(parseItemStack(rest, "destroy")) };
     default:
       return parseTrainerVerb(cmd, rest);
   }

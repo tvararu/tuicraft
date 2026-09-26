@@ -145,6 +145,7 @@ function routeEntityEvent(conn: WorldConn, event: EntityEvent): void {
   conn.cycle?.observeEntity(event);
   conn.trainer?.observe();
   conn.vendor?.observeEntity(event);
+  conn.destroy?.observeInventory();
   conn.events.entity.emit(event);
 }
 
