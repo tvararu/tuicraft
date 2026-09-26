@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { paces } from "factory/config";
 import type { Issue, LabelEvent, Pr } from "factory/github";
 import {
   decideMerger,
@@ -7,6 +8,10 @@ import {
   decideWorker,
   inScope,
 } from "factory/precheck";
+
+const pickWork = (issues: Issue[]) => decideWorker(issues, paces.default.wip);
+const pickReview = (issues: Issue[]) =>
+  decideReviewer(issues, paces.default.reviewing);
 
 const theo: LabelEvent = {
   actor: "tvararu",
@@ -82,7 +87,7 @@ describe("scope rule", () => {
 
 describe("worker", () => {
   test("picks an in-scope issue", () => {
-    expect(decideWorker([issue(7, ["ready"])])).toEqual({
+    expect(pickWork([issue(7, ["ready"])])).toEqual({
       ok: true,
       out: { issue: 7 },
     });
@@ -91,11 +96,11 @@ describe("worker", () => {
   test("skips issues with an open blocker", () => {
     const blocked = issue(1, ["ready"], { blockers: ["CLOSED", "OPEN"] });
     const done = issue(2, ["ready"], { blockers: ["CLOSED"] });
-    expect(decideWorker([blocked, done])).toEqual({
+    expect(pickWork([blocked, done])).toEqual({
       ok: true,
       out: { issue: 2 },
     });
-    expect(decideWorker([blocked]).ok).toBe(false);
+    expect(pickWork([blocked]).ok).toBe(false);
   });
 
   test("skips issues already claimed", () => {
@@ -107,11 +112,11 @@ describe("worker", () => {
       "agent:landing",
     ];
     for (const label of claimed)
-      expect(decideWorker([issue(1, ["ready", label])]).ok).toBe(false);
+      expect(pickWork([issue(1, ["ready", label])]).ok).toBe(false);
   });
 
   test("pm ready overrides needs:pm", () => {
-    expect(decideWorker([issue(1, ["ready", "needs:pm"])])).toEqual({
+    expect(pickWork([issue(1, ["ready", "needs:pm"])])).toEqual({
       ok: true,
       out: { issue: 1 },
     });
@@ -119,18 +124,17 @@ describe("worker", () => {
 
   test("needs:pm waits without a pm ready", () => {
     const bots = issue(1, ["ready", "needs:pm"], { events: [theo, bot] });
-    expect(decideWorker([bots]).ok).toBe(false);
-    expect(decideWorker([issue(2, ["needs:pm"])]).ok).toBe(false);
-    expect(decideWorker([issue(3, ["agent:rework", "needs:pm"])]).ok).toBe(
-      false,
-    );
+    expect(pickWork([bots]).ok).toBe(false);
+    expect(pickWork([issue(2, ["needs:pm"])]).ok).toBe(false);
+    expect(pickWork([issue(3, ["agent:rework", "needs:pm"])]).ok).toBe(false);
   });
 
   test("respects the wip cap", () => {
     const one = [issue(1, ["agent:working"]), issue(2, ["ready"])];
     const two = [issue(3, ["agent:working"]), ...one];
-    expect(decideWorker(one)).toEqual({ ok: true, out: { issue: 2 } });
-    expect(decideWorker(two)).toEqual({ ok: false, why: "wip 2/2" });
+    expect(decideWorker(one, 2)).toEqual({ ok: true, out: { issue: 2 } });
+    expect(decideWorker(two, 2)).toEqual({ ok: false, why: "wip 2/2" });
+    expect(decideWorker(two, 3)).toEqual({ ok: true, out: { issue: 2 } });
   });
 
   test("orders by priority label then oldest number", () => {
@@ -140,12 +144,12 @@ describe("worker", () => {
       issue(8, ["ready", "p1"]),
       issue(4, ["ready"]),
     ];
-    expect(decideWorker(issues)).toEqual({ ok: true, out: { issue: 8 } });
-    expect(decideWorker(issues.slice(0, 2))).toEqual({
+    expect(pickWork(issues)).toEqual({ ok: true, out: { issue: 8 } });
+    expect(pickWork(issues.slice(0, 2))).toEqual({
       ok: true,
       out: { issue: 9 },
     });
-    expect(decideWorker([issue(5, ["ready"]), issue(4, ["ready"])])).toEqual({
+    expect(pickWork([issue(5, ["ready"]), issue(4, ["ready"])])).toEqual({
       ok: true,
       out: { issue: 4 },
     });
@@ -155,7 +159,7 @@ describe("worker", () => {
 describe("reviewer", () => {
   test("picks a review issue with an open non-draft pr", () => {
     const issues = [issue(3, ["agent:review"], { prs: [pr({ number: 42 })] })];
-    expect(decideReviewer(issues)).toEqual({
+    expect(pickReview(issues)).toEqual({
       ok: true,
       out: { issue: 3, pr: 42 },
     });
@@ -168,7 +172,21 @@ describe("reviewer", () => {
       issue(3, ["agent:review"], { prs: [pr({ state: "MERGED" })] }),
       issue(4, ["agent:review"]),
     ];
-    expect(decideReviewer(issues).ok).toBe(false);
+    expect(pickReview(issues).ok).toBe(false);
+  });
+
+  test("stops at the reviews-in-flight cap", () => {
+    const waiting = issue(9, ["agent:review"], { prs: [pr({ number: 90 })] });
+    const inFlight = [1, 2].map((n) => issue(n, ["agent:reviewing"]));
+    expect(decideReviewer([...inFlight, waiting], 3)).toEqual({
+      ok: true,
+      out: { issue: 9, pr: 90 },
+    });
+    const full = [...inFlight, issue(3, ["agent:reviewing"]), waiting];
+    expect(decideReviewer(full, 3)).toEqual({
+      ok: false,
+      why: "reviewing 3/3",
+    });
   });
 });
 

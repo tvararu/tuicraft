@@ -1,3 +1,4 @@
+import { runPace } from "factory/pace";
 import { runPrecheck } from "factory/precheck";
 import { runQaChanges } from "factory/qa-changes";
 import { runReap } from "factory/reaper";
@@ -7,6 +8,7 @@ import { runSoap } from "factory/soap-cli";
 type Command = (args: string[]) => Promise<number>;
 
 const commands: Record<string, Command> = {
+  pace: runPace,
   precheck: runPrecheck,
   "qa-changes": runQaChanges,
   reap: runReap,
@@ -16,6 +18,7 @@ const commands: Record<string, Command> = {
 
 const usage = `usage: bun src/factory/main.ts <command>
 
+  pace [default|max]                      show or set the factory pace
   precheck <worker|reviewer|merger|qa>   exit 0 when the role has work
   qa-changes <prev> <sha>                 JSON of commits -> PRs -> issues
   soap <create|delete|sweep|list> ...    per-run game accounts on t1

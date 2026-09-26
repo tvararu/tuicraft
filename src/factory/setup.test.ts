@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { paces } from "factory/config";
 import {
   type Automation,
   command,
@@ -42,7 +43,7 @@ describe("missingLabels", () => {
 
 describe("desiredAutomations", () => {
   test("every prompt starts with its role marker for omp-factory", () => {
-    for (const spec of desiredAutomations(false)) {
+    for (const spec of desiredAutomations(false, paces.default)) {
       const role = spec.name.replace("factory-", "");
       expect(spec.prompt.split("\n")[0]).toBe(`[factory:${role}]`);
       expect(spec.precheck).toEndWith(`main.ts precheck ${role}`);
@@ -51,12 +52,10 @@ describe("desiredAutomations", () => {
 });
 
 describe("plan", () => {
-  const [worker, reviewer, merger, qa] = desiredAutomations(false) as [
-    Spec,
-    Spec,
-    Spec,
-    Spec,
-  ];
+  const [worker, reviewer, merger, qa] = desiredAutomations(
+    false,
+    paces.default,
+  ) as [Spec, Spec, Spec, Spec];
 
   test("creates missing, keeps identical, edits drifted fields", () => {
     const existing = [
@@ -78,7 +77,7 @@ describe("plan", () => {
   });
 
   test("enables a disabled automation only when asked", () => {
-    const [enabledWorker] = desiredAutomations(true) as [Spec];
+    const [enabledWorker] = desiredAutomations(true, paces.default) as [Spec];
     const current = recorded(worker);
     expect(plan([worker], [current])[0]?.kind).toBe("ok");
     expect(plan([enabledWorker], [current])[0]).toMatchObject({
@@ -94,7 +93,7 @@ describe("plan", () => {
 });
 
 describe("command", () => {
-  const [worker] = desiredAutomations(false) as [Spec];
+  const [worker] = desiredAutomations(false, paces.default) as [Spec];
 
   test("creates disabled by default and enabled with --enable", () => {
     const create = command({ kind: "create", spec: worker });
