@@ -1,6 +1,9 @@
 import type { CombatRuntime, CombatState } from "wow/combat";
-import { type EntityLookup, isUnit } from "wow/entity-store";
-import type { FactionTemplateCatalog } from "wow/faction-template";
+import { type EntityLookup, isUnit, type UnitEntity } from "wow/entity-store";
+import type {
+  FactionRelation,
+  FactionTemplateCatalog,
+} from "wow/faction-template";
 import { ObjectType, UnitFlag } from "wow/protocol/entity-fields";
 
 type TargetDeps = {
@@ -45,13 +48,36 @@ export function targetReason(
       (target.unitFlags & UnitFlag.IN_COMBAT) !== 0)
   )
     return undefined;
-  const factions = deps.factions();
-  if (
-    factions?.relation(self.factionTemplate, target.factionTemplate) !==
-      "hostile" ||
-    factions.relation(target.factionTemplate, self.factionTemplate) ===
-      "friendly"
-  )
-    return "unverified_hostile_relation";
+  const relation = unitRelation(deps.factions(), self, target);
+  if (relation === "friendly") return "target_friendly";
+  if (relation === "unknown") return "unverified_hostile_relation";
   return undefined;
+}
+
+export function targetRelation(
+  deps: Pick<TargetDeps, "entity" | "factions">,
+  guid: bigint,
+  selfGuid: bigint,
+): FactionRelation {
+  const target = deps.entity(guid);
+  const self = deps.entity(selfGuid);
+  if (!(isUnit(target) && isUnit(self))) return "unknown";
+  return unitRelation(deps.factions(), self, target);
+}
+
+function unitRelation(
+  factions: FactionTemplateCatalog | undefined,
+  self: UnitEntity,
+  target: UnitEntity,
+): FactionRelation {
+  if (!factions) return "unknown";
+  const toward = factions.relation(
+    self.factionTemplate,
+    target.factionTemplate,
+  );
+  const back = factions.relation(target.factionTemplate, self.factionTemplate);
+  if (toward === "friendly" || back === "friendly") return "friendly";
+  if (toward === "hostile" || back === "hostile") return "hostile";
+  if (toward === "unknown" || back === "unknown") return "unknown";
+  return "neutral";
 }

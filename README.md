@@ -250,8 +250,11 @@ and `WOW_JEV_FRAMING` (the default `fight --framing`).
 
 The narrow Jev spell kit requires observed normal form, including protocol-defined
 zero fields in a complete server CREATE. Unknown or nonzero forms disable spells,
-not necessarily melee. An unverified hostile relation refuses a fight unless
-faction data or current attack evidence verifies it. A structural lack of
+not necessarily melee. `fight` engages hostile and neutral creatures. It
+refuses friendly ones (`target_friendly`), players (`target_not_pve_creature`)
+and an unknown faction relation (`unverified_hostile_relation`), except that a
+creature attacking the character is always fair game. `tactics --json` reports
+the relation as `lastOutcome.observation.targetRelation`. A structural lack of
 supported combat actions stops with a reason; cooldown and server-response waits
 do not. Inspect `tactics` for terminal observations. Jev may choose directional
 movement under a renewable lease (`wait` holds, `stop_moving` releases).

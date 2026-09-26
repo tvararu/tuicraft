@@ -21,7 +21,7 @@ import {
   requiresStanding,
   unsupportedSpell,
 } from "wow/combat-actions-spells";
-import { targetReason } from "wow/combat-actions-target";
+import { targetReason, targetRelation } from "wow/combat-actions-target";
 import type { ControlRuntime } from "wow/control";
 import { type EntityLookup, isUnit } from "wow/entity-store";
 import type { FactionTemplateCatalog } from "wow/faction-template";
@@ -82,6 +82,11 @@ export class CombatActions {
       observation: {
         self: unitObservation(state.self),
         target: state.target ? unitObservation(state.target) : null,
+        targetRelation: targetRelation(
+          this.deps,
+          context.targetGuid,
+          state.self.guid,
+        ),
         separation: separation(state) ?? null,
         facingTarget: facing(state),
         casting: state.casting

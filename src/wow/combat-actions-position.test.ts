@@ -178,7 +178,7 @@ test("facing remains recoverable and does not stop as unreachable", () => {
   }
 });
 
-test("an attacking creature whose faction relation is not verified as hostile can be engaged", () => {
+test("an attacking creature whose faction relation is unknown can be engaged", () => {
   const store = new EntityStore();
   const fields = new Map<number, number>([
     [UNIT_FIELDS.HEALTH.offset, 100],
@@ -227,7 +227,7 @@ test("an attacking creature whose faction relation is not verified as hostile ca
   combat.observePosition(2n, { mapId: 530, x: 10, y: 0, z: 0, orientation: 0 });
   combat.applyInitialSpells({ spells: [{ spellId: 17 }], cooldowns: [] });
   const factionsCatalog = {
-    relation: () => "neutral" as const,
+    relation: () => "unknown" as const,
   } as unknown as FactionTemplateCatalog;
   const actions = new CombatActions({
     combat,
