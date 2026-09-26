@@ -89,18 +89,11 @@ describe("a dead worker", () => {
     ]);
   });
 
-  test("a card that already left In progress only loses the run's claim", () => {
-    const cards = (["ready", "in-review", "blocked", "done"] as const).map(
-      (status, i) =>
-        issue(i + 1, status, { markers: [claim(dead, 30, i + 1)] }),
+  test("a card that went past In progress is left alone", () => {
+    const cards = (["in-review", "blocked", "done"] as const).map((status, i) =>
+      issue(i + 1, status, { markers: [claim(dead, 30, i + 1)] }),
     );
-    expect(planRecovery(worker, cards)).toEqual(
-      cards.map((c) => ({
-        comment: c.number,
-        issue: c.number,
-        kind: "unclaim",
-      })),
-    );
+    expect(planRecovery(worker, cards)).toEqual([]);
   });
 });
 

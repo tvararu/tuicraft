@@ -163,19 +163,20 @@ what a marker means.
   A run it removes died if it ended without finishing: Orca marked it
   `failed`, or `dispatch_failed` with its terminals quiet for 10 min, or it
   is over its cap, but never `completed`. Before removing a dead worker
-  run, the reaper takes every open issue whose latest worker claim is that
-  run's. If the card is still In progress, it comments which run died,
-  how, and what it left (the pushed `factory/<N>-…` branch and the open
-  PR), then moves the card back to Ready. Then it deletes the run's claim
+  run, the reaper looks at every open issue whose latest worker claim is
+  that run's. If the card is still In progress, it comments which run
+  died, how, and what it left (the pushed `factory/<N>-…` branch and the
+  open PR), moves the card back to Ready, and then deletes the run's claim
   comments there, so the next worker's race check can't lose to a dead
-  claim. Before removing a dead reviewer run, it deletes that run's claim
-  comments, so the head can be reviewed again straight away. A card whose
-  latest worker claim belongs to another run is left alone. If a recovery
-  fails, the worktree stays and the next pass tries again; a claim left
-  behind after the move to Ready is deleted then. A held dead run is
-  recovered only when the reaper removes it after the hold clears, so a
-  held worker run's card says what to do if the maintainer removes the
-  tree by hand.
+  claim. If the card is already Ready, it only deletes the claim: that is
+  the retry after a pass that moved the card but failed to delete it.
+  Cards in any other Status are left alone, as is a card whose latest
+  worker claim belongs to another run. Before removing a dead reviewer
+  run, it deletes that run's claim comments, so the head can be reviewed
+  again straight away. If a recovery fails, the worktree stays and the
+  next pass tries again. A held dead run is recovered only when the reaper
+  removes it after the hold clears, so a held worker run's card says what
+  to do if the maintainer removes the tree by hand.
 
 ## Legacy labels
 

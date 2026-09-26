@@ -57,7 +57,8 @@ function unclaims(run: string, issue: Issue): Recovery[] {
 function workerRecovery(dead: DeadRun, issue: Issue): Recovery[] {
   if (lastWorkerClaim(issue) !== dead.run) return [];
   const unclaim = unclaims(dead.run, issue);
-  if (issue.status !== "in-progress") return unclaim;
+  if (issue.status === "ready") return unclaim;
+  if (issue.status !== "in-progress") return [];
   const body = diedBody(dead, factoryPr(issue.number, issue.prs));
   return [{ body, issue: issue.number, kind: "ready" }, ...unclaim];
 }
