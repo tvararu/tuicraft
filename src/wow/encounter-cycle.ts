@@ -28,6 +28,7 @@ export type CycleTargetRecord = {
 export type CycleLootRecord = {
   guid: string;
   slotsTaken: number[];
+  slotsLeft: number[];
   moneyTaken: number;
   coinageBefore: number | undefined;
   coinageAfter: number | undefined;
@@ -72,6 +73,10 @@ export type CycleDeps = {
     RewardsRuntime,
     "snapshot" | "open" | "take" | "takeMoney" | "close"
   >;
+  bags: {
+    questItems: () => ReadonlySet<number>;
+    stackSize: (entry: number) => Promise<number | undefined>;
+  };
   recovery: Pick<
     RecoveryRuntime,
     | "snapshot"
@@ -373,8 +378,8 @@ export class EncounterCycleRuntime {
     this.rewardsEvents = events;
     this.bodyEvents = bodies;
     try {
-      const { rewards } = this.deps;
-      const run = { rewards, events, bodies: bodies.waiter, signal };
+      const { rewards, bags } = this.deps;
+      const run = { rewards, bags, events, bodies: bodies.waiter, signal };
       const result = await lootCorpse(run, target.guid);
       if (!result.ok) return result;
       target.loot = result.record ? "looted" : "none";

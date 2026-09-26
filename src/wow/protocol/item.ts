@@ -3,7 +3,8 @@ import { type PacketReader, PacketWriter } from "wow/protocol/packet";
 export const ItemSpellTrigger = { ON_USE: 0 } as const;
 
 const ITEM_SPELL_SLOTS = 5;
-const WORDS_FROM_FLAGS_TO_STATS = 19;
+const WORDS_FROM_FLAGS_TO_STACKABLE = 17;
+const UNLIMITED_STACK = 0x7f_ff_ff_ff;
 const WORDS_FROM_SCALING_TO_SPELLS = 2 + 2 * 3 + 7 + 3;
 
 export type ItemSpell = {
@@ -21,6 +22,7 @@ export type ItemTemplate = {
   quality: number;
   itemClass: number;
   subclass: number;
+  stackSize: number;
   spells: ItemSpell[];
 };
 
@@ -54,7 +56,10 @@ export function parseItemQueryResponse(r: PacketReader): ItemQueryResponse {
   for (let i = 0; i < 3; i++) r.cString();
   r.skip(4);
   const quality = r.uint32LE();
-  r.skip(WORDS_FROM_FLAGS_TO_STATS * 4);
+  r.skip(WORDS_FROM_FLAGS_TO_STACKABLE * 4);
+  const stackable = r.uint32LE() | 0;
+  const stackSize = stackable > 0 ? stackable : UNLIMITED_STACK;
+  r.skip(4);
   const stats = r.uint32LE();
   r.skip((stats * 2 + WORDS_FROM_SCALING_TO_SPELLS) * 4);
   const spells: ItemSpell[] = [];
@@ -71,7 +76,7 @@ export function parseItemQueryResponse(r: PacketReader): ItemQueryResponse {
   }
   return {
     entry,
-    template: { entry, name, quality, itemClass, subclass, spells },
+    template: { entry, name, quality, itemClass, subclass, stackSize, spells },
   };
 }
 

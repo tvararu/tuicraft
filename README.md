@@ -329,6 +329,11 @@ shows its state and `record` counts it.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
 entry and the loop continues; `target_death_unconfirmed` stops it when the server
 never shows the corpse dead.
+Looting keeps one bag slot free so a quest reward can still be stored: an item
+that would need the last free slot stays in the corpse (`lastLoot.slotsLeft`),
+items that fit into carried stacks are still taken, and quest items go first.
+A quest item that would need that slot stops the loop with
+`inventory_reserve_reached`; `destroy` or `sell` a stack, then `cycle --resume`.
 `lastLoot.slotsTaken` and `moneyTaken` report requests and offered money, not
 verified item gains. Confirm storage from `inventory --json` slot/count changes.
 

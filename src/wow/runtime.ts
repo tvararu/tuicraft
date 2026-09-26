@@ -317,6 +317,15 @@ function createSupportRuntimes(
     rewards,
     recovery,
     control,
+    bags: {
+      questItems: () =>
+        new Set(quests.snapshot().items.map((item) => item.itemId)),
+      stackSize: (entry) =>
+        items.lookup(entry).then(
+          (template) => template?.stackSize,
+          () => undefined,
+        ),
+    },
     now: runtimeDeps.now,
   });
   conn.cycle = cycle;

@@ -35,11 +35,16 @@ function formatCycleLoot(loot: CycleLootRecord): string[] {
     before !== undefined && after !== undefined
       ? `${before} -> ${after}`
       : "unknown";
-  return [
+  const lines = [
     `Money: ${loot.moneyTaken} copper requested`,
     `Coinage change: ${coinage}`,
     `Item slots requested: ${loot.slotsTaken.join(", ") || "none"}`,
   ];
+  if (loot.slotsLeft.length > 0)
+    lines.push(
+      `Item slots left to keep a bag slot free: ${loot.slotsLeft.join(", ")}`,
+    );
+  return lines;
 }
 
 export function formatCycleState(state: CycleState): string[] {

@@ -1,19 +1,23 @@
+import { abortable } from "lib/abort";
 import { messageOf } from "lib/errors";
 import { type CycleStop, cycleStop as stop } from "wow/cycle-stop";
 import type { CycleDeps, CycleLootRecord } from "wow/encounter-cycle";
 import { type EntityEvent, fieldOf } from "wow/entity-store";
 import type { EventWaiter } from "wow/event-waiter";
+import { BAG_RESERVE, keepsReserve, slotsNeeded } from "wow/loot-room";
 import { UNIT_FIELDS } from "wow/protocol/entity-fields";
+import type { LootItem } from "wow/protocol/loot";
 import {
   NOT_DEAD,
   NOT_LOOTABLE,
   type RewardsEvent,
+  type RewardsOpenLoot,
   type RewardsState,
 } from "wow/rewards";
 
 const LOOT_SETTLE_MS = 5000;
 
-export type LootRun = Pick<CycleDeps, "rewards"> & {
+export type LootRun = Pick<CycleDeps, "rewards" | "bags"> & {
   events: EventWaiter<RewardsEvent>;
   bodies: EventWaiter<EntityEvent>;
   signal: AbortSignal;
@@ -23,6 +27,7 @@ type Looted = { ok: true; record: CycleLootRecord | undefined } | CycleStop;
 type Opened = { ok: true; state: RewardsState | undefined } | CycleStop;
 type Corpse = "lootable" | "empty" | CycleStop;
 type Taken = { ok: true; taken: boolean } | CycleStop;
+type Items = { ok: true; taken: number[]; left: number[] } | CycleStop;
 
 export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   const released = await releaseLeftover(run);
@@ -32,12 +37,8 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   if (!opened.state) return { ok: true, record: undefined };
   const offer = opened.state.loot;
   if (offer.phase !== "open") return stop("loot_denied:unexpected_phase");
-  const slotsTaken: number[] = [];
-  for (const { slot } of offer.items) {
-    const result = await take(run, () => run.rewards.take(slot), slot);
-    if (!result.ok) return result;
-    if (result.taken) slotsTaken.push(slot);
-  }
+  const items = await takeItems(run, opened.state, offer);
+  if (!items.ok) return items;
   let moneyTaken = 0;
   if (offer.money > 0) {
     const result = await take(run, () => run.rewards.takeMoney());
@@ -48,7 +49,8 @@ export async function lootCorpse(run: LootRun, guid: bigint): Promise<Looted> {
   if (!closed.ok) return closed;
   const record = {
     guid: guid.toString(),
-    slotsTaken,
+    slotsTaken: items.taken,
+    slotsLeft: items.left,
     moneyTaken,
     coinageBefore: opened.state.inventory.coinage,
     coinageAfter: run.rewards.snapshot().inventory.coinage,
@@ -61,6 +63,66 @@ async function releaseLeftover(
 ): Promise<{ ok: true } | CycleStop> {
   if (run.rewards.snapshot().loot.phase !== "open") return { ok: true };
   return await closeLoot(run);
+}
+
+async function takeItems(
+  run: LootRun,
+  opened: RewardsState,
+  offer: RewardsOpenLoot,
+): Promise<Items> {
+  const quest = run.bags.questItems();
+  const items = [...offer.items].sort(
+    (a, b) => Number(quest.has(b.itemId)) - Number(quest.has(a.itemId)),
+  );
+  const sizes = await stackSizes(run, items);
+  const freeAtOpen = opened.inventory.freeSlots;
+  const taken: number[] = [];
+  const left: number[] = [];
+  let usedSinceOpen = 0;
+  for (const item of items) {
+    const { inventory } = run.rewards.snapshot();
+    const needed = slotsNeeded(inventory, item, sizes.get(item.itemId));
+    const free = inventory.freeSlots;
+    if (!keepsReserve({ needed, freeAtOpen, usedSinceOpen, free })) {
+      if (quest.has(item.itemId)) return reserveStop(run, item, free);
+      left.push(item.slot);
+      continue;
+    }
+    const { slot } = item;
+    const result = await take(run, () => run.rewards.take(slot), slot);
+    if (!result.ok) return result;
+    if (!result.taken) continue;
+    taken.push(slot);
+    usedSinceOpen += needed;
+  }
+  return { ok: true, taken, left };
+}
+
+async function stackSizes(
+  run: LootRun,
+  items: readonly LootItem[],
+): Promise<Map<number, number | undefined>> {
+  const entries = [...new Set(items.map((item) => item.itemId))];
+  const sizes = await abortable(
+    Promise.all(entries.map((entry) => run.bags.stackSize(entry))),
+    run.signal,
+  );
+  return new Map(entries.map((entry, index) => [entry, sizes[index]]));
+}
+
+async function reserveStop(
+  run: LootRun,
+  item: LootItem,
+  free: number | undefined,
+): Promise<CycleStop> {
+  const closed = await closeLoot(run);
+  if (!closed.ok) return closed;
+  return stop("inventory_reserve_reached", {
+    itemId: item.itemId,
+    lootSlot: item.slot,
+    freeSlots: free ?? null,
+    reserve: BAG_RESERVE,
+  });
 }
 
 async function awaitCorpse(run: LootRun, guid: bigint): Promise<Corpse> {

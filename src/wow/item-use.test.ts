@@ -14,6 +14,7 @@ const ribs: ItemTemplate = {
   quality: 1,
   itemClass: 0,
   subclass: 5,
+  stackSize: 20,
   spells: [
     {
       id: 99,

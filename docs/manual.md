@@ -423,6 +423,22 @@ is recorded as `loot: "none"` on its queue entry and the loop continues,
 as is one that despawns while its loot is opening.
 If no death update arrives within the loot settle time, the loop stops with
 `target_death_unconfirmed`.
+Looting keeps one carried bag slot free, so that a quest reward can still be
+stored at turn-in. Before each take the loop compares the item with the
+observed free bag slots, counting the slots already filled from the same
+window, and with its stack size from the item query: an item that fits into a
+stack already carried needs no slot. Items that a logged quest requires are
+taken first; quests count when their query is known (`cycle --quest` queries
+its quest, `query-quest` any other). Any other item that would need the last
+free slot stays in the corpse, and `lastLoot.slotsLeft` lists its loot slot.
+A quest item that would need it closes the loot window and stops the loop
+with `inventory_reserve_reached`; `stopDetail` has `itemId`, `lootSlot`,
+`freeSlots` and `reserve`. Free a slot with `destroy` or `sell`, then
+`cycle --resume`: it continues with the next target, and the item stays in
+that corpse for `open-loot`. Without an observed free-slot count, only items
+that fit into carried stacks are taken, and a quest item that needs a slot
+stops the loop the same way (`freeSlots` null). Money needs no slot; it is
+taken unless the loop stopped first.
 A fight that ends because Jev is unavailable (see `fight`) is not the target's
 fault: the loop stops with `jev_unavailable`, `stopDetail.reason` holds the
 cause (for example `HTTP 402 billing_error`), the current target and the rest
@@ -431,7 +447,7 @@ of the queue stay `queued`, and `cycle` or `cycle --resume` replies
 once Jev is back to fight the same target again.
 The loop stops on queue exhaustion (`queue_exhausted`), the starts cap
 (`max_starts_reached`), `halt`, a denied or blocked loot window
-(`loot_denied:*`, `loot_inventory_full`,
+(`loot_denied:*`, `loot_inventory_full`, `inventory_reserve_reached`,
 `loot_denied:release_only`, `loot_release_unconfirmed`), an
 unanswered loot take (`loot_denied:timeout`), or an unrecovered death
 (`corpse_absent`, `reclaim_delayed`, `corpse_out_of_range`,
@@ -524,13 +540,14 @@ intervention with scope `defense`.
 `objective` (quest runs only: slot, `complete`, per-kill server counters
 `current`/`required`, and required items). This is the same
 snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
-`lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
+`lastLoot.slotsTaken` records take requests, `slotsLeft` the loot slots left in
+the corpse to keep a bag slot free, and `moneyTaken` records the offered
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
 record observed values when known. Confirm stored items through actual
 inventory slot or count changes.
 Without `--json`, `cycling` prints the cycle phase, instruction, starts,
 resumes, each target outcome,
-server kill XP when observed, `no loot` for a kill without loot, requested loot, observed coinage changes, and
+server kill XP when observed, `no loot` for a kill without loot, requested loot, loot left to keep a bag slot free, observed coinage changes, and
 the stop reason. A request for money or an item slot does not prove a gain.
 
 `tuicraft goto` _x_ _y_ [_z_] | _guid_

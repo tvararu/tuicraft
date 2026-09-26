@@ -45,6 +45,8 @@ USAGE
   tuicraft tactics [--json]  Tactics summary: outcome, target, vitals, last XP
                             3 Jev timeouts in a row stop a fight; see defense
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues
+                            Loot keeps one bag slot free: other items that need it stay in the corpse,
+                            a quest item that needs it stops the cycle with inventory_reserve_reached
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
   tuicraft cycle --quest <id> [--source <entry>...] [--max N] [--json]  Pick targets from a logged quest's objectives until the log slot completes
   tuicraft defend on [instruction...] | defend off  Opt-in self-defence when attacked while nothing owns combat; halt disarms it
