@@ -102,14 +102,14 @@ export function handleFriendStatus(conn: WorldConn, r: PacketReader): void {
     case FriendResult.IGNORE_NOT_FOUND:
     case FriendResult.IGNORE_ALREADY:
     case FriendResult.IGNORE_AMBIGUOUS:
-      conn.onIgnoreEvent?.({
+      conn.events.ignore.emit({
         type: "ignore-error",
         result: packet.result,
         name: conn.nameCache.get(guidLow) ?? `guid:${guidLow}`,
       });
       break;
     default:
-      conn.onFriendEvent?.({
+      conn.events.friend.emit({
         type: "friend-error",
         result: packet.result,
         name: conn.nameCache.get(guidLow) ?? `guid:${guidLow}`,

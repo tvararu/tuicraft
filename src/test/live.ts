@@ -501,7 +501,7 @@ describe("gameplay guards while alive", () => {
     const auth1 = await authHandshake(config1);
     const handle1 = await worldSession(config1, auth1);
     const events: RecoveryEvent[] = [];
-    handle1.onRecoveryEvent((e) => events.push(e));
+    const unsubscribe = handle1.onRecoveryEvent((e) => events.push(e));
 
     try {
       await waitUntil(() => handle1.getRecoveryState().life === "alive");
@@ -524,7 +524,7 @@ describe("gameplay guards while alive", () => {
       expect(handle1.getRecoveryState().corpse.status).toBe("absent");
       expect(handle1.getRecoveryState().life).toBe("alive");
     } finally {
-      handle1.onRecoveryEvent(undefined);
+      unsubscribe();
       handle1.close();
       await handle1.closed;
     }

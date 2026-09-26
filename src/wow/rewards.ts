@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import { type EntityEvent, type EntityLookup, fieldOf } from "wow/entity-store";
 import { type InventoryState, readInventory } from "wow/inventory";
 import { readLife } from "wow/player-state";
@@ -128,7 +129,7 @@ function copyInventoryError(
 }
 
 export class RewardsRuntime {
-  private listener: ((event: RewardsEvent) => void) | undefined;
+  private readonly events = new Emitter<[RewardsEvent]>();
   private disposed = false;
   private selfUnavailable = false;
   private loot: RewardsLoot = { phase: "closed" };
@@ -146,10 +147,10 @@ export class RewardsRuntime {
     this.deps = deps;
   }
 
-  onEvent(callback: ((event: RewardsEvent) => void) | undefined): void {
-    if (this.disposed) return;
-    this.listener = callback;
+  onEvent(listener: (event: RewardsEvent) => void): Unsubscribe {
+    if (this.disposed) return () => undefined;
     this.lastInventory = undefined;
+    return this.events.subscribe(listener);
   }
 
   snapshot(): RewardsState {
@@ -342,7 +343,7 @@ export class RewardsRuntime {
       guid === this.loot.guid
     )
       this.invalidate("loot_source_unavailable");
-    if (!this.listener) return;
+    if (this.events.size === 0) return;
     this.observeInventory(guid);
   }
 
@@ -369,7 +370,7 @@ export class RewardsRuntime {
 
   dispose(): void {
     this.disposed = true;
-    this.listener = undefined;
+    this.events.clear();
     this.selfUnavailable = true;
     this.loot = { phase: "closed" };
     this.pending = undefined;
@@ -431,7 +432,7 @@ export class RewardsRuntime {
 
   private emit(type: RewardsEvent["type"]): RewardsState {
     const state = this.snapshot();
-    this.listener?.({ type, at: this.deps.now(), state });
+    this.events.emit({ type, at: this.deps.now(), state });
     return state;
   }
 }

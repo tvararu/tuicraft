@@ -8,12 +8,7 @@ import {
 } from "test/fixtures";
 import { must } from "test/must";
 import type { AuthResult } from "wow/auth";
-import type {
-  ChatMessage,
-  DuelEvent,
-  GroupEvent,
-  WorldHandle,
-} from "wow/client";
+import type { DuelEvent, GroupEvent, WorldHandle } from "wow/client";
 import type { EntityEvent } from "wow/entity-store";
 import {
   OBJECT_FIELDS,
@@ -42,13 +37,13 @@ export function fakeAuth(port: number): AuthResult {
 export async function waitForEchoProbe(
   handle: Pick<WorldHandle, "onMessage" | "sendSay">,
 ): Promise<void> {
-  const received = new Promise<ChatMessage>((resolve) => {
-    handle.onMessage((msg) => {
-      if (msg.message === "probe") resolve(msg);
-    });
+  const received = Promise.withResolvers<void>();
+  const unsubscribe = handle.onMessage((msg) => {
+    if (msg.message === "probe") received.resolve();
   });
   handle.sendSay("probe");
-  await received;
+  await received.promise;
+  unsubscribe();
 }
 
 export function waitForGroupEvents(

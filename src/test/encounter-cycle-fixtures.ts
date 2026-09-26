@@ -1,4 +1,5 @@
 import { jest } from "bun:test";
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import type {
   ControlEvent,
   ControlPose,
@@ -91,7 +92,7 @@ export function fakeLoot(config: {
   const remainingItems = new Set(offeredSlots);
   let lastLootError: RewardsState["lastLootError"];
   let lastInventoryError: RewardsState["lastInventoryError"];
-  let listener: ((event: RewardsEvent) => void) | undefined;
+  const listeners = new Emitter<[RewardsEvent]>();
   let lastRelease: RewardsState["lastRelease"];
   const closeRequested = Promise.withResolvers<void>();
 
@@ -149,7 +150,7 @@ export function fakeLoot(config: {
   }
 
   function emit(type: RewardsEvent["type"]): void {
-    listener?.({ at: 0, state: state(), type });
+    listeners.emit({ at: 0, state: state(), type });
   }
   function acknowledgeClose(): void {
     phase = "closed";
@@ -169,8 +170,8 @@ export function fakeLoot(config: {
     closing: closeRequested.promise,
     corpse,
     moneyTaken: () => moneyRequested,
-    onEvent(callback: ((event: RewardsEvent) => void) | undefined) {
-      listener = callback;
+    onEvent(callback: (event: RewardsEvent) => void) {
+      return listeners.subscribe(callback);
     },
     open(_guid: bigint): RewardsState {
       attempted.resolve();
@@ -286,12 +287,12 @@ export function fakeControl(
   let refusalsRemaining = config.refuseMoves ?? 0;
   const faced: number[] = [];
   const moves: { direction: MovementDirection; durationMs: number }[] = [];
-  let listener: ((event: ControlEvent) => void) | undefined;
+  const listeners = new Emitter<[ControlEvent]>();
   const snapshot = () => ({ pose: pose ? { ...pose } : undefined, speed });
   const stopAfter = (ms: number, reason: string) =>
     setTimeout(() => {
       const state = snapshot() as ControlState;
-      listener?.({ reason, state, type: "movement_stopped" });
+      listeners.emit({ reason, state, type: "movement_stopped" });
     }, ms);
   return {
     face(orientation: number) {
@@ -318,8 +319,8 @@ export function fakeControl(
       };
     },
     moves: () => moves,
-    onEvent(cb: ((event: ControlEvent) => void) | undefined) {
-      listener = cb;
+    onEvent(cb: (event: ControlEvent) => void) {
+      return listeners.subscribe(cb);
     },
     pose: (): ControlPose | undefined => (pose ? { ...pose } : undefined),
     snapshot,
@@ -360,7 +361,7 @@ export function fakeRecovery(config: {
     | undefined;
   const now = config.now ?? (() => 0);
   const posefn = config.pose ?? (() => undefined);
-  let listener: ((event: RecoveryEvent) => void) | undefined;
+  const listeners = new Emitter<[RecoveryEvent]>();
 
   function life(): PlayerLife {
     return config.life[Math.min(lifeIndex, config.life.length - 1)] ?? "dead";
@@ -428,7 +429,7 @@ export function fakeRecovery(config: {
   }
 
   function emit(type: RecoveryEvent["type"]): void {
-    listener?.({ at: now(), state: snapshot(), type });
+    listeners.emit({ at: now(), state: snapshot(), type });
   }
 
   for (const entry of config.reclaimDelaySchedule ?? []) {
@@ -452,8 +453,8 @@ export function fakeRecovery(config: {
 
   return {
     answered: () => answered,
-    onEvent(cb: ((event: RecoveryEvent) => void) | undefined) {
-      listener = cb;
+    onEvent(cb: (event: RecoveryEvent) => void) {
+      return listeners.subscribe(cb);
     },
     queryCorpse() {
       emit("corpse_observed");
@@ -483,7 +484,7 @@ export function fakeRecovery(config: {
 }
 
 export type Wired<E> = {
-  onEvent: (callback: ((event: E) => void) | undefined) => void;
+  onEvent: (callback: (event: E) => void) => Unsubscribe;
 };
 
 export function makeCycle(

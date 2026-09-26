@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 export type IgnoreEntry = {
   guid: bigint;
   name: string;
@@ -12,15 +13,15 @@ export type IgnoreEvent =
 export class IgnoreStore {
   private readonly ignored: Map<bigint, IgnoreEntry>;
   private readonly guidLows: Set<number>;
-  private listener?: (event: IgnoreEvent) => void;
+  private readonly events = new Emitter<[IgnoreEvent]>();
 
   constructor() {
     this.ignored = new Map();
     this.guidLows = new Set();
   }
 
-  onEvent(cb: (event: IgnoreEvent) => void): void {
-    this.listener = cb;
+  onEvent(cb: (event: IgnoreEvent) => void): Unsubscribe {
+    return this.events.subscribe(cb);
   }
 
   set(entries: IgnoreEntry[]): void {
@@ -30,7 +31,7 @@ export class IgnoreStore {
       this.ignored.set(entry.guid, { ...entry });
       this.guidLows.add(Number(entry.guid & 0xffffffffn));
     }
-    this.listener?.({
+    this.events.emit({
       type: "ignore-list",
       entries: [...this.ignored.values()],
     });
@@ -40,7 +41,7 @@ export class IgnoreStore {
     const copy = { ...entry };
     this.ignored.set(copy.guid, copy);
     this.guidLows.add(Number(copy.guid & 0xffffffffn));
-    this.listener?.({ type: "ignore-added", entry: copy });
+    this.events.emit({ type: "ignore-added", entry: copy });
   }
 
   remove(guid: bigint): void {
@@ -48,7 +49,7 @@ export class IgnoreStore {
     if (!entry) return;
     this.ignored.delete(guid);
     this.guidLows.delete(Number(guid & 0xffffffffn));
-    this.listener?.({ type: "ignore-removed", guid, name: entry.name });
+    this.events.emit({ type: "ignore-removed", guid, name: entry.name });
   }
 
   setName(guid: bigint, name: string): void {

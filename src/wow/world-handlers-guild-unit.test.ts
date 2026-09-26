@@ -1,11 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { GuildEvent, WorldConn } from "wow/client";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
+import { createWorldEvents } from "wow/world-events";
 import {
   handleGuildCommandResult,
   handleGuildEvent,
   handleGuildInvitePacket,
 } from "wow/world-handlers-guild";
+
+function connWith(listener?: (event: GuildEvent) => void): WorldConn {
+  const events = createWorldEvents();
+  if (listener) events.guild.subscribe(listener);
+  return { events } as unknown as WorldConn;
+}
 
 describe("handleGuildEvent unit", () => {
   function fireEvent(
@@ -19,11 +26,9 @@ describe("handleGuildEvent unit", () => {
     for (const p of params) w.cString(p);
     if (guid !== undefined) w.uint64LE(guid);
     let result!: GuildEvent;
-    const conn = {
-      onGuildEvent: (e: GuildEvent) => {
-        result = e;
-      },
-    } as unknown as WorldConn;
+    const conn = connWith((e: GuildEvent) => {
+      result = e;
+    });
     handleGuildEvent(conn, new PacketReader(w.finish()));
     return result;
   }
@@ -94,11 +99,9 @@ describe("handleGuildCommandResult", () => {
     w.cString("Thrall");
     w.uint32LE(0x03);
     let result!: GuildEvent;
-    const conn = {
-      onGuildEvent: (e: GuildEvent) => {
-        result = e;
-      },
-    } as unknown as WorldConn;
+    const conn = connWith((e: GuildEvent) => {
+      result = e;
+    });
     handleGuildCommandResult(conn, new PacketReader(w.finish()));
     expect(result).toEqual({
       type: "command_result",
@@ -114,21 +117,19 @@ describe("handleGuildCommandResult", () => {
     w.cString("Thrall");
     w.uint32LE(0x00);
     let called = false;
-    const conn = {
-      onGuildEvent: () => {
-        called = true;
-      },
-    } as unknown as WorldConn;
+    const conn = connWith(() => {
+      called = true;
+    });
     handleGuildCommandResult(conn, new PacketReader(w.finish()));
     expect(called).toBe(false);
   });
 
-  test("works when onGuildEvent is not set", () => {
+  test("works without a guild listener", () => {
     const w = new PacketWriter();
     w.uint32LE(1);
     w.cString("X");
     w.uint32LE(0x0b);
-    const conn = {} as unknown as WorldConn;
+    const conn = connWith();
     expect(() =>
       handleGuildCommandResult(conn, new PacketReader(w.finish())),
     ).not.toThrow();
@@ -141,11 +142,9 @@ describe("handleGuildInvitePacket", () => {
     w.cString("Thrall");
     w.cString("Horde Heroes");
     let result!: GuildEvent;
-    const conn = {
-      onGuildEvent: (e: GuildEvent) => {
-        result = e;
-      },
-    } as unknown as WorldConn;
+    const conn = connWith((e: GuildEvent) => {
+      result = e;
+    });
     handleGuildInvitePacket(conn, new PacketReader(w.finish()));
     expect(result).toEqual({
       type: "guild_invite",
@@ -154,11 +153,11 @@ describe("handleGuildInvitePacket", () => {
     });
   });
 
-  test("works when onGuildEvent is not set", () => {
+  test("works without a guild listener", () => {
     const w = new PacketWriter();
     w.cString("A");
     w.cString("B");
-    const conn = {} as unknown as WorldConn;
+    const conn = connWith();
     expect(() =>
       handleGuildInvitePacket(conn, new PacketReader(w.finish())),
     ).not.toThrow();

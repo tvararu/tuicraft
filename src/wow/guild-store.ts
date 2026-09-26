@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 export type GuildMember = {
   guid: bigint;
   name: string;
@@ -42,7 +43,7 @@ export class GuildStore {
   private motd: string;
   private guildInfo: string;
   private rankNames: string[];
-  private listener?: (event: GuildEvent) => void;
+  private readonly events = new Emitter<[GuildEvent]>();
 
   constructor() {
     this.members = new Map();
@@ -52,8 +53,8 @@ export class GuildStore {
     this.rankNames = [];
   }
 
-  onEvent(cb: (event: GuildEvent) => void): void {
-    this.listener = cb;
+  onEvent(cb: (event: GuildEvent) => void): Unsubscribe {
+    return this.events.subscribe(cb);
   }
 
   setRoster(motd: string, guildInfo: string, members: GuildMember[]): void {
@@ -91,6 +92,6 @@ export class GuildStore {
 
   private fire(): void {
     const roster = this.get();
-    if (roster) this.listener?.({ type: "guild-roster", roster });
+    if (roster) this.events.emit({ type: "guild-roster", roster });
   }
 }

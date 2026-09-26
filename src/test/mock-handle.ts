@@ -17,6 +17,7 @@ import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
+import { createWorldEvents } from "wow/world-events";
 
 export function createMockHandle(): WorldHandle & {
   triggerMessage: (msg: ChatMessage) => void;
@@ -34,14 +35,6 @@ export function createMockHandle(): WorldHandle & {
   triggerRewardsEvent: (event: RewardsEvent) => void;
   resolveClosed: () => void;
 } {
-  let messageCb: ((msg: ChatMessage) => void) | undefined;
-  let groupEventCb: ((event: GroupEvent) => void) | undefined;
-  let duelEventCb: ((event: DuelEvent) => void) | undefined;
-  let entityEventCb: ((event: EntityEvent) => void) | undefined;
-  let friendEventCb: ((event: FriendEvent) => void) | undefined;
-  let ignoreEventCb: ((event: IgnoreEvent) => void) | undefined;
-  let guildEventCb: ((event: GuildEvent) => void) | undefined;
-  let controlEventCb: ((event: ControlEvent) => void) | undefined;
   const controlState: ControlState = {
     blockedReason: undefined,
     direction: undefined,
@@ -55,11 +48,6 @@ export function createMockHandle(): WorldHandle & {
     speed: 0,
     target: undefined,
   };
-  let combatEventCb: ((event: CombatEvent) => void) | undefined;
-  let tacticsEventCb: ((event: TacticsEvent) => void) | undefined;
-  let recoveryEventCb: ((event: RecoveryEvent) => void) | undefined;
-  let questEventCb: ((event: QuestEvent) => void) | undefined;
-  let rewardsEventCb: ((event: RewardsEvent) => void) | undefined;
   const runtimeDeps = {
     getEntity: () => undefined,
     now: () => 0,
@@ -103,6 +91,7 @@ export function createMockHandle(): WorldHandle & {
     },
   });
 
+  const events = createWorldEvents();
   let closeResolve: () => void;
   const closed = new Promise<void>((r) => {
     closeResolve = r;
@@ -168,47 +157,49 @@ export function createMockHandle(): WorldHandle & {
     leaveGroup: jest.fn(),
     move: jest.fn(),
     onCombatEvent(cb) {
-      combatEventCb = cb;
+      return events.combat.subscribe(cb);
     },
     onControlEvent(cb) {
-      controlEventCb = cb;
+      return events.control.subscribe(cb);
     },
     onCycleEvent(cb) {
-      cycle.onEvent(cb);
+      return cycle.onEvent(cb);
     },
     onDuelEvent(cb) {
-      duelEventCb = cb;
+      return events.duel.subscribe(cb);
     },
     onEntityEvent(cb) {
-      entityEventCb = cb;
+      return events.entity.subscribe(cb);
     },
     onFriendEvent(cb) {
-      friendEventCb = cb;
+      return events.friend.subscribe(cb);
     },
     onGroupEvent(cb) {
-      groupEventCb = cb;
+      return events.group.subscribe(cb);
     },
     onGuildEvent(cb) {
-      guildEventCb = cb;
+      return events.guild.subscribe(cb);
     },
     onIgnoreEvent(cb) {
-      ignoreEventCb = cb;
+      return events.ignore.subscribe(cb);
     },
     onMessage(cb) {
-      messageCb = cb;
+      return events.message.subscribe(cb);
     },
-    onPacketError: jest.fn(),
+    onPacketError: jest.fn((cb: (opcode: number, err: Error) => void) =>
+      events.packetError.subscribe(cb),
+    ),
     onQuestEvent(cb) {
-      questEventCb = cb;
+      return events.quest.subscribe(cb);
     },
     onRecoveryEvent(cb) {
-      recoveryEventCb = cb;
+      return events.recovery.subscribe(cb);
     },
     onRewardsEvent(cb) {
-      rewardsEventCb = cb;
+      return events.rewards.subscribe(cb);
     },
     onTacticsEvent(cb) {
-      tacticsEventCb = cb;
+      return events.tactics.subscribe(cb);
     },
     openLoot: jest.fn(),
     queryCorpse: jest.fn(),
@@ -258,43 +249,43 @@ export function createMockHandle(): WorldHandle & {
     takeLootMoney: jest.fn(),
     talk: jest.fn(),
     triggerCombatEvent(event) {
-      combatEventCb?.(event);
+      events.combat.emit(event);
     },
     triggerControlEvent(event) {
-      controlEventCb?.(event);
+      events.control.emit(event);
     },
     triggerDuelEvent(event) {
-      duelEventCb?.(event);
+      events.duel.emit(event);
     },
     triggerEntityEvent(event) {
-      entityEventCb?.(event);
+      events.entity.emit(event);
     },
     triggerFriendEvent(event) {
-      friendEventCb?.(event);
+      events.friend.emit(event);
     },
     triggerGroupEvent(event) {
-      groupEventCb?.(event);
+      events.group.emit(event);
     },
     triggerGuildEvent(event) {
-      guildEventCb?.(event);
+      events.guild.emit(event);
     },
     triggerIgnoreEvent(event) {
-      ignoreEventCb?.(event);
+      events.ignore.emit(event);
     },
     triggerMessage(msg) {
-      messageCb?.(msg);
+      events.message.emit(msg);
     },
     triggerQuestEvent(event) {
-      questEventCb?.(event);
+      events.quest.emit(event);
     },
     triggerRecoveryEvent(event) {
-      recoveryEventCb?.(event);
+      events.recovery.emit(event);
     },
     triggerRewardsEvent(event) {
-      rewardsEventCb?.(event);
+      events.rewards.emit(event);
     },
     triggerTacticsEvent(event) {
-      tacticsEventCb?.(event);
+      events.tactics.emit(event);
     },
     uninvite: jest.fn(),
     walkToward: jest.fn(async () => {

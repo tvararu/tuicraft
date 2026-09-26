@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import type {
   ControlDeps,
   ControlEvent,
@@ -50,7 +51,7 @@ function copyPose(pose: ControlPose | undefined): ControlPose | undefined {
 
 export class ControlCore {
   protected readonly deps: ControlDeps;
-  protected listener: ((event: ControlEvent) => void) | undefined;
+  protected readonly events = new Emitter<[ControlEvent]>();
   protected predicted: ControlPose | undefined;
   protected server: ControlPose | undefined;
   protected mapId = 0;
@@ -94,8 +95,8 @@ export class ControlCore {
     this.deps = deps;
   }
 
-  onEvent(cb: ((event: ControlEvent) => void) | undefined): void {
-    this.listener = cb;
+  onEvent(listener: (event: ControlEvent) => void): Unsubscribe {
+    return this.events.subscribe(listener);
   }
 
   snapshot(): ControlState {
@@ -187,6 +188,6 @@ export class ControlCore {
   protected emit(type: ControlEventType, reason?: string): void {
     const event: ControlEvent = { type, state: this.snapshot() };
     if (reason !== undefined) event.reason = reason;
-    this.listener?.(event);
+    this.events.emit(event);
   }
 }

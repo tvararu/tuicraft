@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import { AuraStore, type CombatAura } from "wow/aura-store";
 import { CombatCasts } from "wow/combat-casts";
 import { combatUnitOf } from "wow/combat-unit";
@@ -130,7 +131,7 @@ export type CombatDeps = {
 
 export class CombatRuntime {
   private readonly deps: CombatDeps;
-  private listener: ((event: CombatEvent) => void) | undefined;
+  private readonly events = new Emitter<[CombatEvent]>();
   private readonly incomingAttackers = new Set<bigint>();
   private readonly learned = new Set<number>();
   private readonly cooldowns: CooldownStore;
@@ -159,8 +160,8 @@ export class CombatRuntime {
     });
   }
 
-  onEvent(cb: ((event: CombatEvent) => void) | undefined): void {
-    this.listener = cb;
+  onEvent(listener: (event: CombatEvent) => void): Unsubscribe {
+    return this.events.subscribe(listener);
   }
 
   isAttackingSelf(guid: bigint): boolean {
@@ -264,7 +265,7 @@ export class CombatRuntime {
   }
 
   dispose(): void {
-    this.listener = undefined;
+    this.events.clear();
     this.incomingAttackers.clear();
     this.motions.clear();
     this.auras.clear();
@@ -473,6 +474,6 @@ export class CombatRuntime {
   private emit(type: CombatEventType, reason?: string): void {
     const event: CombatEvent = { type, state: this.snapshot() };
     if (reason !== undefined) event.reason = reason;
-    this.listener?.(event);
+    this.events.emit(event);
   }
 }

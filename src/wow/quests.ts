@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { Entity, EntityLookup } from "wow/entity-store";
 import { ObjectType } from "wow/protocol/entity-fields";
 import type { GossipMessage } from "wow/protocol/gossip";
@@ -138,7 +139,7 @@ export type QuestDeps = {
 };
 
 export class QuestRuntime {
-  private listener: ((event: QuestEvent) => void) | undefined;
+  private readonly events = new Emitter<[QuestEvent]>();
   private disposed = false;
   private dialog: QuestDialog | undefined;
   private giver: bigint | undefined;
@@ -161,8 +162,9 @@ export class QuestRuntime {
     this.logEntity = deps.getEntity(deps.selfGuid());
   }
 
-  onEvent(callback: ((event: QuestEvent) => void) | undefined): void {
-    this.listener = this.disposed ? undefined : callback;
+  onEvent(listener: (event: QuestEvent) => void): Unsubscribe {
+    if (this.disposed) return () => undefined;
+    return this.events.subscribe(listener);
   }
 
   snapshot(): QuestState {
@@ -305,7 +307,7 @@ export class QuestRuntime {
 
   dispose(): void {
     this.disposed = true;
-    this.listener = undefined;
+    this.events.clear();
     this.dialog = undefined;
     this.giver = undefined;
     this.pending = undefined;
@@ -330,8 +332,8 @@ export class QuestRuntime {
     source: QuestEvent["source"],
     questId?: number,
   ): void {
-    if (this.listener)
-      this.listener({ type, source, questId, state: this.snapshot() });
+    if (this.events.size > 0)
+      this.events.emit({ type, source, questId, state: this.snapshot() });
   }
 
   private send({ opcode, body, intent }: QuestRequest): void {

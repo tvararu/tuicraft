@@ -1,4 +1,5 @@
 import type { Socket } from "bun";
+import type { Unsubscribe } from "lib/emitter";
 import { channelMethods, chatMethods } from "wow/client-chat";
 import {
   authenticateWorld,
@@ -61,6 +62,7 @@ import type { RewardsEvent, RewardsRuntime, RewardsState } from "wow/rewards";
 import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { TacticsEvent, TacticsLoop, TacticsState } from "wow/tactics";
+import type { WorldEvents } from "wow/world-events";
 
 export type ClientConfig = {
   host: string;
@@ -157,7 +159,7 @@ export type WalkTarget =
 export type WorldHandle = {
   closed: Promise<void>;
   close: () => void;
-  onMessage: (cb: (msg: ChatMessage) => void) => void;
+  onMessage: (cb: (msg: ChatMessage) => void) => Unsubscribe;
   sendWhisper: (target: string, message: string) => void;
   sendSay: (message: string) => void;
   sendYell: (message: string) => void;
@@ -185,22 +187,22 @@ export type WorldHandle = {
   setLeader: (name: string) => void;
   acceptInvite: () => void;
   declineInvite: () => void;
-  onGroupEvent: (cb: (event: GroupEvent) => void) => void;
-  onEntityEvent: (cb: (event: EntityEvent) => void) => void;
-  onPacketError: (cb: (opcode: number, err: Error) => void) => void;
+  onGroupEvent: (cb: (event: GroupEvent) => void) => Unsubscribe;
+  onEntityEvent: (cb: (event: EntityEvent) => void) => Unsubscribe;
+  onPacketError: (cb: (opcode: number, err: Error) => void) => Unsubscribe;
   getNearbyEntities: () => Entity[];
   getFriends: () => FriendEntry[];
   addFriend: (name: string) => void;
   removeFriend: (name: string) => void;
   sendRoll: (min: number, max: number) => void;
-  onFriendEvent: (cb: (event: FriendEvent) => void) => void;
+  onFriendEvent: (cb: (event: FriendEvent) => void) => Unsubscribe;
   getIgnored: () => IgnoreEntry[];
   addIgnore: (name: string) => void;
   removeIgnore: (name: string) => void;
-  onIgnoreEvent: (cb: (event: IgnoreEvent) => void) => void;
+  onIgnoreEvent: (cb: (event: IgnoreEvent) => void) => Unsubscribe;
   requestGuildRoster: () => Promise<GuildRoster | undefined>;
-  onGuildEvent: (cb: (event: GuildEvent) => void) => void;
-  onDuelEvent: (cb: (event: DuelEvent) => void) => void;
+  onGuildEvent: (cb: (event: GuildEvent) => void) => Unsubscribe;
+  onDuelEvent: (cb: (event: DuelEvent) => void) => Unsubscribe;
   guildInvite: (name: string) => void;
   guildRemove: (name: string) => void;
   guildLeave: () => void;
@@ -221,7 +223,7 @@ export type WorldHandle = {
   ) => Promise<WalkOutcome>;
   selectTarget: (guid: bigint) => void;
   halt: () => void;
-  onControlEvent: (cb: ((event: ControlEvent) => void) | undefined) => void;
+  onControlEvent: (cb: (event: ControlEvent) => void) => Unsubscribe;
   getCombatState: () => CombatState;
   getSpellbook: () => Promise<SpellDefinition[]>;
   cast: (spellId: number, targetGuid: bigint) => void;
@@ -237,15 +239,15 @@ export type WorldHandle = {
   getTacticsState: () => TacticsState;
   goTo: (x: number, y: number, z: number) => void;
   getNavigationState: () => NavigationState;
-  onCombatEvent: (cb: ((event: CombatEvent) => void) | undefined) => void;
-  onTacticsEvent: (cb: ((event: TacticsEvent) => void) | undefined) => void;
+  onCombatEvent: (cb: (event: CombatEvent) => void) => Unsubscribe;
+  onTacticsEvent: (cb: (event: TacticsEvent) => void) => Unsubscribe;
   getRecoveryState: () => RecoveryState;
   queryCorpse: () => void;
   releaseSpirit: () => void;
   reclaimCorpse: () => void;
   activateSpiritHealer: (guid: bigint) => void;
   respondResurrection: (accept: boolean) => void;
-  onRecoveryEvent: (cb: ((event: RecoveryEvent) => void) | undefined) => void;
+  onRecoveryEvent: (cb: (event: RecoveryEvent) => void) => Unsubscribe;
   getQuestState: () => QuestState;
   talk: (guid: bigint) => void;
   queryQuest: (questId: number) => void;
@@ -257,14 +259,14 @@ export type WorldHandle = {
   chooseQuestReward: (index: number) => void;
   abandonQuest: (slot: number) => void;
   cancelInteraction: () => void;
-  onQuestEvent: (cb: ((event: QuestEvent) => void) | undefined) => void;
+  onQuestEvent: (cb: (event: QuestEvent) => void) => Unsubscribe;
   getInventoryState: () => InventoryState;
   getRewardsState: () => RewardsState;
   openLoot: (guid: bigint) => void;
   takeLoot: (slot: number) => void;
   takeLootMoney: () => void;
   releaseLoot: () => void;
-  onRewardsEvent: (cb: ((event: RewardsEvent) => void) | undefined) => void;
+  onRewardsEvent: (cb: (event: RewardsEvent) => void) => Unsubscribe;
   startCycle: (
     guids: bigint[],
     instruction: string,
@@ -272,7 +274,7 @@ export type WorldHandle = {
   ) => Promise<void>;
   stopCycle: () => void;
   getCycleState: () => CycleState;
-  onCycleEvent: (cb: ((event: CycleEvent) => void) | undefined) => void;
+  onCycleEvent: (cb: (event: CycleEvent) => void) => Unsubscribe;
 };
 
 export type WorldConn = {
@@ -282,33 +284,27 @@ export type WorldConn = {
   arc4?: Arc4;
   startTime: number;
   pendingHeader?: { size: number; opcode: number };
+  dispatchingOpcode?: number;
   nameCache: Map<number, string>;
   pendingMessages: Map<number, RawChatMessage[]>;
   channels: string[];
   lastChatMode: ChatMode;
-  onMessage?: (msg: ChatMessage) => void;
   selfName: string;
   selfClass?: string;
   selfGuidLow: number;
   selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
-  onGroupEvent?: (event: GroupEvent) => void;
   entityStore: EntityStore;
   creatureNameCache: Map<number, string>;
   gameObjectNameCache: Map<number, string>;
-  onEntityEvent?: (event: EntityEvent) => void;
-  onPacketError?: (opcode: number, err: Error) => void;
   pendingNameQueries: Set<string>;
   friendStore: FriendStore;
-  onFriendEvent?: (event: FriendEvent) => void;
   ignoreStore: IgnoreStore;
-  onIgnoreEvent?: (event: IgnoreEvent) => void;
   guildStore: GuildStore;
   guildId: number;
-  onGuildEvent?: (event: GuildEvent) => void;
   pendingRequest: "group" | "duel" | null;
   duelArbiter: bigint;
-  onDuelEvent?: (event: DuelEvent) => void;
+  events: WorldEvents;
   control?: ControlRuntime;
   combat?: CombatRuntime;
   recovery?: RecoveryRuntime;
@@ -316,9 +312,6 @@ export type WorldConn = {
   rewards?: RewardsRuntime;
   cycle?: EncounterCycleRuntime;
   tactics?: TacticsLoop;
-  onControlEvent?: (event: ControlEvent) => void;
-  onRecoveryEvent?: (event: RecoveryEvent) => void;
-  onRewardsEvent?: (event: RewardsEvent) => void;
 };
 type SessionHandle = {
   conn: WorldConn;
@@ -332,7 +325,7 @@ function createHandle(session: SessionHandle): WorldHandle {
   const handle: WorldHandle = {
     ...lifecycle,
     onMessage(cb) {
-      conn.onMessage = cb;
+      return conn.events.message.subscribe(cb);
     },
     ...chatMethods(conn, lang),
     ...channelMethods(conn, () => handle),
@@ -341,12 +334,12 @@ function createHandle(session: SessionHandle): WorldHandle {
     ...ignoreMethods(conn),
     ...guildMethods(conn),
     ...controlMethods(conn, rt),
-    ...combatMethods(rt),
+    ...combatMethods(conn, rt),
     ...recoveryMethods(conn, rt),
-    ...questMethods(rt),
+    ...questMethods(conn, rt),
     ...questRewardMethods(rt),
     ...rewardsMethods(conn, rt),
-    ...cycleMethods(rt),
+    ...cycleMethods(conn, rt),
   };
   return handle;
 }

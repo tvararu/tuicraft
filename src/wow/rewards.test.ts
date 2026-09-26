@@ -52,8 +52,8 @@ function fixture() {
     selfGuid: () => 1n,
     getEntity: (guid) => entities.get(guid),
   });
-  runtime.onEvent((event) => events.push(event));
-  return { runtime, self, target, entities, sent, events };
+  const unsubscribe = runtime.onEvent((event) => events.push(event));
+  return { runtime, self, target, entities, sent, events, unsubscribe };
 }
 
 const loot = `
@@ -212,7 +212,7 @@ describe("authoritative loot runtime", () => {
   test("resuming inventory observation refreshes membership changed while the listener was absent", () => {
     const f = fixture();
     f.runtime.observeEntity({ type: "appear", entity: f.self });
-    f.runtime.onEvent(undefined);
+    f.unsubscribe();
     f.self.rawFields.set(0x1_72, 5);
     f.runtime.observeEntity({
       type: "update",

@@ -19,7 +19,7 @@ export function deliverMessage(
   raw: RawChatMessage,
   name: string,
 ): void {
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: raw.type,
     sender: name,
     message: raw.message,
@@ -123,7 +123,7 @@ export function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
   const event = parseChannelNotify(r);
   if (event.type === "joined") {
     conn.channels.push(event.channel);
-    conn.onMessage?.({
+    conn.events.message.emit({
       type: ChatType.SYSTEM,
       sender: "",
       message: `Joined channel: ${event.channel}`,
@@ -131,13 +131,13 @@ export function handleChannelNotify(conn: WorldConn, r: PacketReader): void {
   } else if (event.type === "left") {
     const idx = conn.channels.indexOf(event.channel);
     if (idx !== -1) conn.channels.splice(idx, 1);
-    conn.onMessage?.({
+    conn.events.message.emit({
       type: ChatType.SYSTEM,
       sender: "",
       message: `Left channel: ${event.channel}`,
     });
   } else if (event.type === "error") {
-    conn.onMessage?.({
+    conn.events.message.emit({
       type: ChatType.SYSTEM,
       sender: "",
       message: event.message,
@@ -151,7 +151,7 @@ export function handleMotd(conn: WorldConn, r: PacketReader): void {
   for (let i = 0; i < lineCount; i++) {
     lines.push(r.cString());
   }
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message: lines.join("\n"),
@@ -160,7 +160,7 @@ export function handleMotd(conn: WorldConn, r: PacketReader): void {
 
 export function handlePlayerNotFound(conn: WorldConn, r: PacketReader): void {
   const name = r.cString();
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message: `No player named "${name}" is currently playing.`,
@@ -176,7 +176,7 @@ const CHAT_RESTRICTION_MESSAGES: Record<number, string> = {
 
 export function handleChatRestricted(conn: WorldConn, r: PacketReader): void {
   const restriction = r.uint8();
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message:
@@ -186,7 +186,7 @@ export function handleChatRestricted(conn: WorldConn, r: PacketReader): void {
 }
 
 export function handleChatWrongFaction(conn: WorldConn): void {
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message: "You cannot speak to members of the opposing faction",
@@ -195,7 +195,7 @@ export function handleChatWrongFaction(conn: WorldConn): void {
 
 export function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
   const { message } = parseServerBroadcast(r);
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message,
@@ -205,7 +205,7 @@ export function handleServerBroadcast(conn: WorldConn, r: PacketReader): void {
 
 export function handleNotification(conn: WorldConn, r: PacketReader): void {
   const { message } = parseNotification(r);
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message,
@@ -215,7 +215,7 @@ export function handleNotification(conn: WorldConn, r: PacketReader): void {
 
 export function handleReceivedMail(conn: WorldConn, r: PacketReader): void {
   r.uint32LE();
-  conn.onMessage?.({
+  conn.events.message.emit({
     type: ChatType.SYSTEM,
     sender: "",
     message: "You have new mail.",

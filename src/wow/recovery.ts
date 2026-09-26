@@ -1,3 +1,4 @@
+import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { ControlPose } from "wow/control";
 import { type EntityEvent, type EntityLookup, isUnit } from "wow/entity-store";
 import { distance } from "wow/geometry";
@@ -136,7 +137,7 @@ function dead(life: PlayerLife): boolean {
 
 export class RecoveryRuntime {
   private readonly deps: RecoveryDeps;
-  private listener: ((event: RecoveryEvent) => void) | undefined;
+  private readonly events = new Emitter<[RecoveryEvent]>();
   private disposed = false;
   private unavailable = false;
   private epoch = 0;
@@ -168,8 +169,9 @@ export class RecoveryRuntime {
     this.lastLife = this.life().life;
   }
 
-  onEvent(callback: ((event: RecoveryEvent) => void) | undefined): void {
-    if (!this.disposed) this.listener = callback;
+  onEvent(listener: (event: RecoveryEvent) => void): Unsubscribe {
+    if (this.disposed) return () => undefined;
+    return this.events.subscribe(listener);
   }
 
   snapshot(): RecoveryState {
@@ -388,7 +390,7 @@ export class RecoveryRuntime {
 
   dispose(): void {
     this.disposed = true;
-    this.listener = undefined;
+    this.events.clear();
     this.unavailable = true;
     this.queryPending = undefined;
     this.newEpoch();
@@ -505,7 +507,7 @@ export class RecoveryRuntime {
 
   private emit(type: RecoveryEvent["type"]): RecoveryState {
     const state = this.snapshot();
-    this.listener?.({ type, at: this.deps.now(), state });
+    this.events.emit({ type, at: this.deps.now(), state });
     return state;
   }
 }
