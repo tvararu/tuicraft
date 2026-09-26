@@ -76,6 +76,11 @@ function fixFor(h: Held): string {
   return `The worktree has uncommitted work. Commit and land it, or discard it; the reaper removes the tree once it is clean and landed. If the work is not wanted, remove it with ${rm}.${restore}`;
 }
 
+function recoverNote(h: Held): string {
+  if (h.owner !== "reaper:worker" || h.issue === null) return "";
+  return ` If you remove the worktree yourself while #${h.issue} is still In progress, move #${h.issue} back to Ready and delete this run's \`factory:claim\` comment on it: the reaper recovers the card only when it removes the tree itself.`;
+}
+
 export function reportBody(h: Held): string {
   return [
     `The reaper will not remove the worktree \`${h.name}\`.`,
@@ -85,7 +90,7 @@ export function reportBody(h: Held): string {
     `- Archive: ${h.archive ? `\`${h.archive}\`` : "none"}`,
     ...(h.issue === null ? [] : [`- Issue: #${h.issue}`]),
     "",
-    `What to do: ${fixFor(h)}`,
+    `What to do: ${fixFor(h)}${recoverNote(h)}`,
     "",
     "The reaper deletes this card on its first pass after the worktree is gone or no longer held.",
   ].join("\n");

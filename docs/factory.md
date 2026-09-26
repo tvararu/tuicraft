@@ -160,16 +160,22 @@ what a marker means.
   Blocked, `Reaper: <worktree> held (<reason>)`, saying what to do; the
   reaper deletes it once the hold clears.
 
-  A run it removes died if it ended without finishing: `dispatch_failed`
-  with its terminals quiet for 10 min, or over its cap, but not
-  `completed`. Before removing a dead worker run whose card is still In
-  progress with that run's claim as the latest worker claim, the reaper
-  comments which run died, how, and what it left (the pushed
-  `factory/<N>-…` branch and the open PR), then moves the card back to
-  Ready. Before removing a dead reviewer run, it deletes that run's claim
+  A run it removes died if it ended without finishing: Orca marked it
+  `failed`, or `dispatch_failed` with its terminals quiet for 10 min, or it
+  is over its cap, but never `completed`. Before removing a dead worker
+  run, the reaper takes every open issue whose latest worker claim is that
+  run's. If the card is still In progress, it comments which run died,
+  how, and what it left (the pushed `factory/<N>-…` branch and the open
+  PR), then moves the card back to Ready. Then it deletes the run's claim
+  comments there, so the next worker's race check can't lose to a dead
+  claim. Before removing a dead reviewer run, it deletes that run's claim
   comments, so the head can be reviewed again straight away. A card whose
-  latest claim belongs to another run is left alone. If a recovery fails,
-  the worktree stays and the next pass tries again.
+  latest worker claim belongs to another run is left alone. If a recovery
+  fails, the worktree stays and the next pass tries again; a claim left
+  behind after the move to Ready is deleted then. A held dead run is
+  recovered only when the reaper removes it after the hold clears, so a
+  held worker run's card says what to do if the maintainer removes the
+  tree by hand.
 
 ## Legacy labels
 

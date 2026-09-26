@@ -39,20 +39,28 @@ const reviewer: DeadRun = {
 };
 
 describe("a dead worker", () => {
-  test("its In progress card goes back to Ready with what the run left", () => {
+  test("its In progress card goes back to Ready, then loses the run's claim", () => {
     const card = issue(253, "in-progress", {
       markers: [claim(live, 300, 1), claim(dead, 30, 2)],
       prs: [pr({ branch: "factory/253-goto-blames", number: 300 })],
     });
-    const [recovery, ...rest] = planRecovery(worker, [
-      card,
-      issue(254, "in-progress"),
+    const plan = planRecovery(worker, [card, issue(254, "in-progress")]);
+    expect(plan).toMatchObject([
+      { issue: 253, kind: "ready" },
+      { comment: 2, issue: 253, kind: "unclaim" },
     ]);
-    expect(rest).toEqual([]);
-    expect(recovery).toMatchObject({ issue: 253, kind: "ready" });
-    const body = recovery?.kind === "ready" ? recovery.body : "";
+    const body = plan[0]?.kind === "ready" ? plan[0].body : "";
     for (const part of [dead, worker.death, branch.name, "91b9500", "#300"])
       expect(body).toContain(part);
+  });
+
+  test("a retry after the move to Ready still deletes the run's claim", () => {
+    const card = issue(253, "ready", {
+      markers: [claim(live, 300, 1), claim(dead, 30, 2)],
+    });
+    expect(planRecovery(worker, [card])).toEqual([
+      { comment: 2, issue: 253, kind: "unclaim" },
+    ]);
   });
 
   test("a run that left no branch and no PR says so without naming one", () => {
@@ -77,15 +85,22 @@ describe("a dead worker", () => {
     });
     expect(planRecovery(worker, [card])).toMatchObject([
       { issue: 253, kind: "ready" },
+      { comment: 1, issue: 253, kind: "unclaim" },
     ]);
   });
 
-  test("a card that already left In progress is left alone", () => {
+  test("a card that already left In progress only loses the run's claim", () => {
     const cards = (["ready", "in-review", "blocked", "done"] as const).map(
       (status, i) =>
         issue(i + 1, status, { markers: [claim(dead, 30, i + 1)] }),
     );
-    expect(planRecovery(worker, cards)).toEqual([]);
+    expect(planRecovery(worker, cards)).toEqual(
+      cards.map((c) => ({
+        comment: c.number,
+        issue: c.number,
+        kind: "unclaim",
+      })),
+    );
   });
 });
 

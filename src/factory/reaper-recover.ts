@@ -48,27 +48,25 @@ function diedBody({ run, death, branch }: DeadRun, pr?: Pr): string {
   return `Factory worker ${run} died with this card In progress: ${death}. It left ${pushed} and ${open}. The reaper moved the card back to Ready.`;
 }
 
+function unclaims(run: string, issue: Issue): Recovery[] {
+  return issue.markers
+    .filter((m) => claimOf(m.body)?.run === run)
+    .map((m) => ({ comment: m.id, issue: issue.number, kind: "unclaim" }));
+}
+
+function workerRecovery(dead: DeadRun, issue: Issue): Recovery[] {
+  if (lastWorkerClaim(issue) !== dead.run) return [];
+  const unclaim = unclaims(dead.run, issue);
+  if (issue.status !== "in-progress") return unclaim;
+  const body = diedBody(dead, factoryPr(issue.number, issue.prs));
+  return [{ body, issue: issue.number, kind: "ready" }, ...unclaim];
+}
+
 export function planRecovery(dead: DeadRun, issues: Issue[]): Recovery[] {
   if (dead.role === "worker")
-    return issues
-      .filter(
-        (i) => i.status === "in-progress" && lastWorkerClaim(i) === dead.run,
-      )
-      .map((i) => ({
-        body: diedBody(dead, factoryPr(i.number, i.prs)),
-        issue: i.number,
-        kind: "ready",
-      }));
+    return issues.flatMap((i) => workerRecovery(dead, i));
   if (dead.role !== "reviewer") return [];
-  return issues.flatMap((i) =>
-    i.markers
-      .filter((m) => claimOf(m.body)?.run === dead.run)
-      .map((m) => ({
-        comment: m.id,
-        issue: i.number,
-        kind: "unclaim" as const,
-      })),
-  );
+  return issues.flatMap((i) => unclaims(dead.run, i));
 }
 
 async function pushedBranch(ref: string): Promise<Branch | null> {
