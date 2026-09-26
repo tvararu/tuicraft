@@ -339,13 +339,28 @@ replies) stop the run at once. When Jev fails a run, the stop keeps or starts
 auto-attack on the target if it is alive and attacking the character
 (`tactics.defense: auto_attack`). Otherwise it releases control and reports
 `uncontrolled_in_combat` if the character is still in combat, or `none`.
+A server rejection of a cast or swing does not end the fight when the fight can
+recover from it: not in front (spell results 61 and 134, swing `bad_facing`),
+out of range (97, swing `not_in_range`), too close (128), line of sight (47),
+moving (51), not standing (69), not ready (67), spell in progress (105),
+can't do that right now (173), no power (85), any interrupt (40, 41, 10, or an
+interrupted status), and a loss of control (stunned 108, silenced 104,
+pacified 98, confused 26, fleeing 34). The next observation carries it as
+`rejections` (`consecutive`, `limit`, `last` with `reason`, `recoverable` and
+`facing`), and a facing rejection offers `face_target` even when the client
+thinks it is facing. Three recoverable rejections in a row, with no started or
+successful cast or swing between them, stop the fight as `blocked` with
+`server_action_rejected:<reason>`, the cast result name or swing error (for
+example `unit_not_infront` or `bad_facing`). Any other rejection (for example
+`bad_targets` 12, target dead, `cant_attack`) stops it at once the same way.
+Both rejection stops set `tactics.defense` as a Jev failure stop does.
 
 `tuicraft tactics` [`--json`]
 :: Print tactics loop state. `lastOutcome.observation` retains the actual
 terminal observation when one was available, including blocks before inference.
 `lastRequest` is not populated without a real Jev request. `timeouts` holds the
 run's `consecutive` and `total` Jev timeouts and the stop `limit` (3); `defense`
-is set only when a Jev failure stopped the run.
+is set only when a Jev failure or a server rejection stopped the run.
 Without `--json` it prints a short summary: status, run ID, target (name, GUID,
 level, health), outcome status and reason, stop reason, self health and power
 at the end, last XP award, last cast or attack result, the count of

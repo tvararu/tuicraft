@@ -16,6 +16,7 @@ const DEFAULT_MAX_AGE_MS = 2000;
 const DEFAULT_INTERVAL_MS = 200;
 const DEFAULT_TIMEOUT_MS = 5000;
 export const MAX_CONSECUTIVE_TIMEOUTS = 3;
+export const SERVER_REJECTION = "server_action_rejected:";
 
 export type TacticsContext = {
   targetGuid: bigint;
@@ -291,7 +292,8 @@ export class TacticsLoop {
       const frame = this.deps.observe(run.context);
       if (!this.live(run)) return;
       if (frame.outcome) {
-        this.finish(run, frame.outcome, frame.observation);
+        const defend = frame.outcome.reason.startsWith(SERVER_REJECTION);
+        this.finish(run, frame.outcome, frame.observation, defend);
         return;
       }
       const candidates = withWait(frame.candidates);
@@ -388,7 +390,8 @@ export class TacticsLoop {
     const current = this.deps.observe(run.context);
     if (!this.live(run)) return;
     if (current.outcome) {
-      this.finish(run, current.outcome, current.observation);
+      const defend = current.outcome.reason.startsWith(SERVER_REJECTION);
+      this.finish(run, current.outcome, current.observation, defend);
       return;
     }
     if (!offers(withWait(current.candidates), choice)) {

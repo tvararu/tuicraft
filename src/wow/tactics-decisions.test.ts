@@ -119,6 +119,27 @@ test("a pre-request block retains isolated terminal observations without fake in
   expect(f.calls).toBe(0);
 });
 
+test("a server rejection stop defends, other blocks halt", async () => {
+  const stop = async (reason: string) => {
+    const f = fixture({
+      observe: () => ({ ...frame, outcome: { status: "blocked", reason } }),
+    });
+    await f.tactics.start(context);
+    await f.stopped;
+    return {
+      defenses: f.defenses,
+      halts: f.halts,
+      state: f.tactics.snapshot(),
+    };
+  };
+  const rejected = await stop("server_action_rejected:bad_facing");
+  expect(rejected).toMatchObject({ defenses: 1, halts: 0 });
+  expect(rejected.state.defense).toBe("auto_attack");
+  const blocked = await stop("no_supported_combat_actions");
+  expect(blocked).toMatchObject({ defenses: 0, halts: 1 });
+  expect(blocked.state.defense).toBeUndefined();
+});
+
 test("provider failure terminates explicitly without hidden retries", async () => {
   const f = fixture({
     select: async () => {
