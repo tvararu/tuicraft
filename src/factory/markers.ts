@@ -1,5 +1,5 @@
 import { roleCapHours } from "factory/config";
-import type { Issue } from "factory/github";
+import type { Issue, Marker } from "factory/github";
 
 export type Landing = { issue: number; id: number; run: string; at: string };
 export type Claim = { run: string; head: string | null };
@@ -53,12 +53,14 @@ export function claimOf(body: string): Claim | null {
   return run === undefined ? null : { head: head ?? null, run };
 }
 
-export function lastWorkerClaim(issue: Issue): string | undefined {
+export function lastWorkerClaim(
+  issue: Issue,
+): (Marker & { run: string }) | undefined {
   return issue.markers
     .flatMap((m) => {
       const claim = claimOf(m.body);
       return claim && claim.head === null ? [{ ...m, run: claim.run }] : [];
     })
     .toSorted((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id - b.id)
-    .at(-1)?.run;
+    .at(-1);
 }

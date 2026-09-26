@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type DeadRun, deathOf, planRecovery } from "factory/reaper-recover";
-import { issue, marker, pr } from "test/factory-fixtures";
+import { ago, issue, marker, pr } from "test/factory-fixtures";
 
 const head = "d".repeat(40);
 const dead = "OpenHubris/auto-work-run-252-20260926T1542";
@@ -75,6 +75,15 @@ describe("a dead worker", () => {
   test("a card whose latest claim belongs to another run is left alone", () => {
     const card = issue(253, "in-progress", {
       markers: [claim(dead, 300, 1), claim(live, 30, 2)],
+    });
+    expect(planRecovery(worker, [card])).toEqual([]);
+  });
+
+  test("an In progress card moved after the run's claim belongs to the next worker", () => {
+    const card = issue(328, "in-progress", {
+      markers: [claim(dead, 20, 1)],
+      prs: [pr({ branch: "factory/328-recover", number: 334 })],
+      statusAt: ago(1),
     });
     expect(planRecovery(worker, [card])).toEqual([]);
   });
