@@ -47,6 +47,10 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   factory CLI (design: `docs/plans/2026-09-25-dev-factory-design.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
+- `mise factory:pace [default|max]` — show the factory pace and the live
+  schedules, or set it (automation schedules in place, worker and review
+  caps, reaper timer). Use `max` in quiet weeks with usage to spare and for
+  overnight pushes; the design doc's Pace section has the table
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
 - `orca-ide worktree create --name <name> --parent-worktree active --comment
@@ -206,7 +210,7 @@ Theo must never find stale worktrees or idle agents in Orca.
   Commit and push before you stop.
 - Factory runs never create worktrees; subagents work inside the run's own
   worktree.
-- The reaper (`tuicraft-factory-reaper.timer`, every 10 minutes) is the
+- The reaper (`tuicraft-factory-reaper.timer`, every 5 minutes) is the
   backstop. It removes finished or over-time `auto-*` runs, and removes
   other worktrees only when they have landed on `main`, are clean, and have
   been idle for more than 12 hours. It never deletes a dirty tree: it

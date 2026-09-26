@@ -1,7 +1,10 @@
 import {
   labels,
   mainCheckout,
+  type PaceLevel,
+  paces,
   type Role,
+  readPace,
   repoSlug,
   runner,
 } from "factory/config";
@@ -39,7 +42,7 @@ export type Step =
   | { kind: "ok"; id: string; spec: Spec };
 
 const provider = "omp";
-const baseBranch = "origin/main";
+export const baseBranch = "origin/main";
 const precheckTimeout = 60;
 
 export const desiredLabels: Label[] = [
@@ -86,20 +89,20 @@ export const desiredLabels: Label[] = [
   { color: "C5DEF5", description: "Filed by factory QA", name: labels.qa },
 ];
 
-const roles: [Role, string, string][] = [
-  ["worker", "*/5 * * * *", worker],
-  ["reviewer", "*/10 * * * *", reviewer],
-  ["merger", "0 * * * *", merger],
-  ["qa", "*/30 * * * *", qa],
+const roles: [Role, string][] = [
+  ["worker", worker],
+  ["reviewer", reviewer],
+  ["merger", merger],
+  ["qa", qa],
 ];
 
-export function desiredAutomations(enable: boolean): Spec[] {
-  return roles.map(([role, rrule, prompt]) => ({
+export function desiredAutomations(enable: boolean, level: PaceLevel): Spec[] {
+  return roles.map(([role, prompt]) => ({
     enable,
     name: `factory-${role}`,
     precheck: `bun ${runner}/src/factory/main.ts precheck ${role}`,
     prompt,
-    rrule,
+    rrule: level.schedules[role],
   }));
 }
 
@@ -198,7 +201,7 @@ async function existingLabels(): Promise<string[]> {
   return listed.map(({ name }) => name);
 }
 
-async function existingAutomations(): Promise<Automation[]> {
+export async function existingAutomations(): Promise<Automation[]> {
   const cmd = ["orca-ide", "automations", "list", "--json"];
   const listed = await json<{ result: { automations: Automation[] } }>(cmd);
   return listed.result.automations;
@@ -223,7 +226,11 @@ async function setupAutomations(
   apply: boolean,
   enable: boolean,
 ): Promise<number> {
-  const steps = plan(desiredAutomations(enable), await existingAutomations());
+  const level = paces[await readPace()];
+  const steps = plan(
+    desiredAutomations(enable, level),
+    await existingAutomations(),
+  );
   for (const step of steps) console.log(describe(step));
   const commands = steps.map(command).filter((cmd) => cmd !== undefined);
   return execute(commands, apply);

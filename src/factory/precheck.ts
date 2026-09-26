@@ -1,11 +1,12 @@
 import {
   factoryStateDir,
   labels,
+  paces,
   pm,
   pmApproval,
   type Role,
+  readPace,
   repoSlug,
-  wip,
 } from "factory/config";
 import { must } from "factory/exec";
 import { fetchIssues, type Issue, type Pr } from "factory/github";
@@ -59,7 +60,7 @@ function free(issue: Issue): boolean {
   );
 }
 
-export function decideWorker(issues: Issue[]): Decision {
+export function decideWorker(issues: Issue[], wip: number): Decision {
   const working = issues.filter((issue) =>
     issue.labels.includes(labels.working),
   ).length;
@@ -72,7 +73,12 @@ export function decideWorker(issues: Issue[]): Decision {
     : { ok: false, why: "no eligible issue" };
 }
 
-export function decideReviewer(issues: Issue[]): Decision {
+export function decideReviewer(issues: Issue[], cap: number): Decision {
+  const reviewing = issues.filter((issue) =>
+    issue.labels.includes(labels.reviewing),
+  ).length;
+  if (reviewing >= cap)
+    return { ok: false, why: `reviewing ${reviewing}/${cap}` };
   const waiting = issues.filter(
     (i) =>
       i.labels.includes(labels.review) && !i.labels.includes(labels.reviewing),
@@ -145,8 +151,14 @@ async function qa(): Promise<Decision> {
 const deciders: Record<Role, () => Promise<Decision>> = {
   merger: async () => decideMerger(await fetchIssues()),
   qa,
-  reviewer: async () => decideReviewer(await fetchIssues()),
-  worker: async () => decideWorker(await fetchIssues()),
+  reviewer: async () => {
+    const { reviewing } = paces[await readPace()];
+    return decideReviewer(await fetchIssues(), reviewing);
+  },
+  worker: async () => {
+    const { wip } = paces[await readPace()];
+    return decideWorker(await fetchIssues(), wip);
+  },
 };
 
 export async function runPrecheck(args: string[]): Promise<number> {

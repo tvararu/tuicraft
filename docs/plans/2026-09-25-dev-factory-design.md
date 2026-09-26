@@ -160,7 +160,7 @@ Closed means done. PRs close their issue with `Fixes #N` in the body.
 Each role is one Orca Automation. `--precheck` is a cheap `gh` query that
 exits non-zero when there is nothing to do, so an empty poll costs no tokens.
 
-**Worker.** Trigger: every 5 minutes. The precheck passes when an in-scope
+**Worker.** Trigger: the [pace](#pace) schedule. The precheck passes when an in-scope
 issue (see [Scope rule](#scope-rule)) with no open blocked-by dependency
 exists and fewer than `WIP` issues have `agent:working`. Runs of one
 automation overlap (phase 0), so the WIP count and the claim re-read are the
@@ -217,8 +217,9 @@ is still one PR for one issue.
   worker files it as a sub-issue (with `needs:pm`, so Theo gates it) and
   links it with blocked-by if the order matters.
 
-**Reviewer.** Trigger: every 10 minutes. The precheck passes when a PR's issue
-has `agent:review`.
+**Reviewer.** Trigger: the [pace](#pace) schedule. The precheck passes when a
+PR's issue has `agent:review` and fewer issues than the pace's in-flight cap
+carry `agent:reviewing`.
 
 1. Start from a fresh context with a skeptical prompt. It gets the diff, the
    issue, the workpad and the proof, but not the worker's transcript.
@@ -234,9 +235,9 @@ has `agent:review`.
 4. If it passes, set `agent:merging`. Otherwise post one review comment and
    set `agent:rework`.
 
-**Merger.** Trigger: hourly. The precheck passes when an issue has
+**Merger.** Trigger: the [pace](#pace) schedule. The precheck passes when an issue has
 `agent:merging` and (phase 1) its PR has `reviewDecision == APPROVED`. An
-unapproved PR must not wake the merger every hour to find nothing to land.
+unapproved PR must not wake the merger every run to find nothing to land.
 
 1. List candidate PRs: `factory/ci` and `factory/review` pass, and (phase 1)
    Theo has approved.
@@ -269,6 +270,44 @@ compares `git rev-parse origin/main` with a stored SHA.
 **Reaper.** Not an agent, so it spends no tokens. It is the owner of every
 factory run worktree and the backstop for all other tuicraft worktrees. See
 [Worktree lifecycle](#worktree-lifecycle).
+
+### Pace
+
+One switch sets how hard the factory runs. Both levels live in one table,
+`paces` in `src/factory/config.ts`, so a change to them is reviewed like
+code:
+
+| Knob | `default` | `max` |
+|---|---|---|
+| `factory-worker` schedule | `*/3` | `*/2` |
+| Worker WIP cap | 3 | 6 |
+| `factory-reviewer` schedule | `*/3` | every minute |
+| Reviews in flight (`agent:reviewing`) cap | 3 | 6 |
+| `factory-merger` schedule | `*/10` | `*/3` |
+| `factory-qa` schedule | `*/30` | `*/15` |
+| Reaper timer | 5 min | 5 min |
+
+The active level is persisted in `~/.config/tuicraft-factory/pace`;
+`default` applies when the file is absent. The worker and reviewer
+prechecks read their caps for the active level on every run, and
+`setup automations` uses its schedules.
+
+`mise factory:pace <default|max>` writes the file, changes only the
+schedule of each automation in place (`orca-ide automations edit --id <id>
+--trigger <rrule>`, a partial `automation.update`, so `setupDecision: run`
+survives; recreating an automation would lose it), writes the timer drop-in
+`~/.config/systemd/user/tuicraft-factory-reaper.timer.d/pace.conf`, then
+reloads systemd and restarts the timer. `mise factory:pace` alone prints the
+level and the live schedules read back from Orca and systemd, and flags a
+schedule that does not match the level, or an automation that lost
+`setupDecision: run`, its precheck, `--base-branch origin/main` or
+`enabled`. Use `max` in quiet weeks with usage to spare and for overnight
+pushes.
+
+Runs overlap at `max`, so two merger runs can be live at once. Only one
+lands at a time: the merger precheck skips while any issue has
+`agent:landing`, and the claim step's re-read and claim marker resolve two
+runs that claimed at the same time.
 
 ### Worktree lifecycle
 
@@ -308,7 +347,7 @@ which is why the flag must be explicit. Factory runs never create worktrees
   forgets.
 
 **The reaper is the backstop for every tuicraft worktree except the main
-checkout.** A systemd user timer runs it every 10 minutes, from the main
+checkout.** A systemd user timer runs it every 5 minutes, from the main
 checkout, never from a worktree it might delete. Each pass:
 
 1. `auto-*` worktrees. When the run is `completed`, or is older than its
@@ -547,8 +586,8 @@ Two cases need more than a transcript:
 
 ### Limits
 
-- `WIP`: at most N concurrent workers, enforced by the precheck count. Start
-  at 2.
+- `WIP`: at most N concurrent workers, enforced by the precheck count. The
+  [pace](#pace) sets N.
 - Per-run time cap on every role: `--max-time` added by the omp wrapper
   ([Orca integration](#orca-integration) item 5), with the reaper as
   backstop. Orca itself launches `omp '<prompt>'` with no flags.
@@ -671,7 +710,7 @@ run it from a dedicated clone, the runner,
 It is not run from the main checkout, because that is Theo's and the
 coordinator's working tree and may lag `main`. Every reaper pass first
 fetches the runner and resets it hard to `origin/main` (`ExecStartPre` in
-the unit), so landed factory changes take effect within 10 minutes. The
+the unit), so landed factory changes take effect within 5 minutes. The
 runner is a plain clone, not an Orca worktree, so the reaper never sees it.
 
 | Piece | Files | Verified |
