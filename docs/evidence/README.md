@@ -22,15 +22,9 @@ must never be presented as the same measurement.
 Raw session-log slices are scratch and are not committed, so the committed
 record must stand on its own: it is what a reader inspects.
 
-## Milestones
+## Records
 
-- [m1/](m1/README.md) — target selection and clearing: creature, player,
-  malformed and stale GUIDs
-- [m2/](m2/README.md) — a constrained Jev-controlled encounter
-- [m3/](m3/README.md) — movement as a tactical action
-- [m3a/](m3a/README.md) — reliable local navigation (live slices; funnel corner in [m3a/funnel-corner.md](m3a/funnel-corner.md))
-- [m3a/replanning.md](m3a/replanning.md) — reliable local navigation (bounded replanning)
-- [m4/](m4/README.md) — repeatable encounter cycles
-- [m5/](m5/README.md) — the selected questing loop: quest 8325 end to end, the cancel barrier and bounded quest requests
-- [m6/](m6/README.md) — a first sustained supervised session, recorded with
-  `tuicraft record --since <epoch-ms>`
+Each milestone keeps its records in its own directory here (`m1/`, `m2/`,
+`m3a/`, …), and the `README.md` in that directory says what they show. Browse
+[this directory](./) to find them. This file does not list them, so adding a
+milestone directory or a record needs no edit here.

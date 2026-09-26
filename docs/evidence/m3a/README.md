@@ -8,6 +8,12 @@ run), spawned inside the Fairbreeze Village inn on map 530. Native data:
 Raw command transcripts are kept beside this file; every quoted value below
 comes from them.
 
+Other records in this directory: slice 2, the funnel corner
+([funnel-corner.md](funnel-corner.md)); slice 3, bounded replanning
+([replanning.md](replanning.md)); the namigator patches
+([patched-namigator.md](patched-namigator.md)); and goto's corner and column
+refusals ([ground-policy.md](ground-policy.md)).
+
 ## Slice 1: ground-derived `goto` (issue #120), 2026-09-26
 
 Transcript: [ground-goto-transcript.txt](ground-goto-transcript.txt).
