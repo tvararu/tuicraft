@@ -257,6 +257,13 @@ Theo must never find stale worktrees or idle agents in Orca.
 
 ## WorldHandle
 
+- Shells (`src/cli`, `src/daemon`, `src/ui`, `src/tools`, `src/main.ts`)
+  import core only from `"wow"`, the explicit barrel `src/wow/index.ts`,
+  or from `"wow/session"` for `worldSession` and auth; biome's
+  `noRestrictedImports` rejects any other `wow/*` there. The barrel
+  exports no value that loads the session, so `"wow/session"` stays a lazy
+  `import()` in `src/main.ts`. Export a new core symbol from the barrel
+  before a shell uses it
 - `src/test/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
   `src/daemon/start.test.ts` spreads it and overrides only `closed` and
   `close`, so add new WorldHandle methods to the shared mock only
