@@ -85,7 +85,18 @@ the one-hour cap:
 4. Content check: `git range-diff $oldbase..$old origin/main..HEAD`. Every
    pair must be `=`. Any `!`, `<` or `>` line means the reviewed code
    changed.
-5. `new=$(git rev-parse HEAD)`. Run `mise ci`. If it fails, do not push:
+5. Trailers: tag every commit with the issue and the PR, so QA can map
+   landed commits offline. Add one `--trailer "Refs: #<issue>"` for N and
+   for each other issue the PR closes
+   (`gh pr view M --json closingIssuesReferences`):
+   ```sh
+   git rebase origin/main --exec 'git -c trailer.ifExists=addIfDifferent commit --amend --no-edit --trailer "Refs: #N" --trailer "PR: #M"'
+   ```
+   The hk `wrap-body` hook keeps the trailer block, and `addIfDifferent`
+   skips trailers a commit already has. Check with
+   `git log --format='%h %(trailers:key=Refs,valueonly) %(trailers:key=PR,valueonly)' origin/main..HEAD`.
+   Only the message changes, so step 4's content check still holds.
+   `new=$(git rev-parse HEAD)`. Run `mise ci`. If it fails, do not push:
    comment the failure on the PR, swap `agent:merging` for `agent:rework`,
    remove `agent:landing`, and move on. If `$new` differs from `$old`,
    push:

@@ -82,7 +82,8 @@ Judge the outcome against the issue first, then the code.
   review" or "fix typo" commits. Each commit makes sense on its own and
   builds: `git switch -c scratch-review $sha && git rebase -x "mise typecheck" origin/main`,
   then `git switch --detach $sha && git branch -D scratch-review`.
-  A history failure is a rework reason like a code failure.
+  A history failure is a rework reason like a code failure. Do not require
+  `Refs:` or `PR:` trailers: the merger adds them when it lands the PR.
 
 ## 5. Verdict
 
