@@ -132,6 +132,7 @@ Rules:
 - The daemon stops on unsafe ground, correction, client disconnect, manual takeover, or HALT.
 - A 10-second safety lease renews only while the character makes progress.
 - The daemon does not make a blind detour or retry automatically. It does not track a moving GUID.
+- `walk-toward --json` puts the outcome in `data`: `status` (`completed`|`stopped`), `traveled`, `pose`, and `reason` on a stop. A stop also sets `error` (`walk stopped without completion`) and exits 1 but keeps `data`, so branch on `data.status` and `data.reason`. An `ERR` refusal has `kind=error` and `data=null`.
 - `walk-toward` returns one JSON object with `status`, `traveled`, and `pose`.
 - A stopped result also contains `reason` and makes the CLI exit with status 1.
 - `completed` is a predicted endpoint. It is not server confirmation.

@@ -15,6 +15,7 @@ import {
 import {
   daemonCommandFailed,
   decodeReply,
+  decodeWalkReply,
   errorEnvelope,
   formatHumanIntent,
   type JsonValue,
@@ -95,22 +96,12 @@ function printControlReply(lines: string[]): void {
   }
 }
 function printWalkReply(lines: string[]): void {
-  const failed = walkCommandFailed(lines);
-  if (!jsonRequested()) {
-    for (const line of lines) console.log(line);
-    if (failed) process.exitCode = 1;
+  if (jsonRequested()) {
+    emit(decodeWalkReply(publicCommand() ?? "", lines));
     return;
   }
-  const reply = decodeReply(publicCommand() ?? "", "json", lines);
-  if (reply.error || !failed) emit(reply);
-  else
-    emit(
-      errorEnvelope(
-        publicCommand(),
-        "command",
-        "walk stopped without completion",
-      ),
-    );
+  for (const line of lines) console.log(line);
+  if (walkCommandFailed(lines)) process.exitCode = 1;
 }
 
 function printStatus(command: string, lines: string[], data: JsonValue): void {
