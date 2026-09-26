@@ -1,5 +1,6 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { ignoreFailure } from "lib/ignore-failure";
 
 export type LogEntry = {
   type: string;
@@ -10,18 +11,21 @@ export type LogEntry = {
 
 export class SessionLog {
   private readonly path: string;
-  private readonly ready: Promise<void>;
+  private tail: Promise<unknown>;
 
   constructor(path: string) {
     this.path = path;
-    this.ready = mkdir(dirname(path), { recursive: true }).then(
-      () => undefined,
-    );
+    this.tail = mkdir(dirname(path), { recursive: true }).catch(ignoreFailure);
   }
 
-  async append(entry: LogEntry): Promise<void> {
-    await this.ready;
+  append(entry: LogEntry): Promise<void> {
     const line = `${JSON.stringify({ ...entry, timestamp: Date.now() })}\n`;
-    await appendFile(this.path, line);
+    const write = this.tail.then(() => appendFile(this.path, line));
+    this.tail = write.catch(ignoreFailure);
+    return write;
+  }
+
+  async flush(): Promise<void> {
+    await this.tail;
   }
 }
