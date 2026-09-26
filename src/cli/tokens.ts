@@ -12,7 +12,7 @@ const DEFAULT_MOVE_MS = 1000;
 const MAX_MOVE_MS = 10_000;
 const MAX_WALK_YARDS = 20;
 const DIRECTIONS: readonly string[] = ["forward", "backward", "left", "right"];
-const CYCLE_FLAGS = ["--max", "--instruction"];
+const CYCLE_FLAGS = ["--max", "--instruction", "--resume"];
 const WHITESPACE = /\s+/;
 const GUID_PATTERN = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
 const DIGITS = /^[0-9]+$/;
@@ -236,6 +236,7 @@ function parseCycleMax(raw: string | undefined): number | undefined {
 type CycleDraft = {
   guids: bigint[];
   maxStarts?: number;
+  resume: boolean;
   words: string[];
 };
 
@@ -257,6 +258,10 @@ function readCycleToken(
   queue: string[],
   draft: CycleDraft,
 ): string | null {
+  if (token === "--resume") {
+    draft.resume = true;
+    return null;
+  }
   if (token === "--max" || token.startsWith("--max=")) {
     const raw =
       token === "--max" ? queue.shift() : token.slice("--max=".length);
@@ -277,16 +282,35 @@ function readCycleToken(
   return null;
 }
 
-export function parseCycle(tokens: string[]): Parsed<CycleArgs> {
-  const draft: CycleDraft = { guids: [], words: [] };
+function readCycleDraft(tokens: string[]): Parsed<CycleDraft> {
+  const draft: CycleDraft = { guids: [], resume: false, words: [] };
   const queue = [...tokens];
   for (let token = queue.shift(); token !== undefined; token = queue.shift()) {
     const reason = readCycleToken(token, queue, draft);
     if (reason !== null) return fail(reason);
   }
-  const { guids, maxStarts, words } = draft;
-  if (guids.length === 0) return fail("invalid cycle");
+  return ok(draft);
+}
+
+export function parseCycle(tokens: string[]): Parsed<CycleArgs> {
+  const draft = readCycleDraft(tokens);
+  if (!draft.ok) return draft;
+  const { guids, maxStarts, resume, words } = draft.value;
+  if (resume || guids.length === 0) return fail("invalid cycle");
   const instruction = oneLine(words.join(" "));
   if (!instruction.ok) return instruction;
   return ok({ guids, instruction: instruction.value, maxStarts });
+}
+
+export type CycleResumeArgs = { instruction?: string; maxStarts?: number };
+
+export function parseCycleResume(tokens: string[]): Parsed<CycleResumeArgs> {
+  const draft = readCycleDraft(tokens);
+  if (!draft.ok) return draft;
+  const { guids, maxStarts, words } = draft.value;
+  if (guids.length > 0) return fail("cycle --resume takes no guids");
+  if (words.length === 0) return ok({ maxStarts });
+  const instruction = oneLine(words.join(" "));
+  if (!instruction.ok) return instruction;
+  return ok({ instruction: instruction.value, maxStarts });
 }

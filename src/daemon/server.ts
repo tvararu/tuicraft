@@ -113,6 +113,7 @@ const PREEMPTED_BY_HALT = new Set<IpcCommand["type"]>([
   "fight",
   "goto",
   "cycle",
+  "cycle_resume",
   "release_spirit",
   "reclaim_corpse",
   "spirit_healer",

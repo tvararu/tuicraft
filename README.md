@@ -128,6 +128,7 @@ tuicraft stop-attack       # stop auto-attack
 tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
 tuicraft tactics [--json]  # tactics loop state and terminal observation
 tuicraft cycle 0xa 0xb --max 3 # explicit GUID queue from nearby; no auto-acquire
+tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft goto 1 2 3        # ground route
 tuicraft navigation --json # route state, refusal and conservative next step
@@ -241,6 +242,11 @@ corpse, reclaims it, and then stops with `reclaimed` (or `resurrected` after an
 accepted offer) so the caller can check the killer before queueing more. `--max` caps tactics-loop starts for
 the whole run (positive integer, default 10). Inspect `cycling --json` for
 each target's status and an open-ended `stopCause` with `stopDetail`. The loop waits for the server release acknowledgement after close; `loot_denied:timeout` and `loot_release_unconfirmed` stop without recording a gain.
+`halt` keeps the queue: `cycle --resume` continues from the first target
+still `queued` (a halted fight is fought again, a `done` target is not), with
+an optional new `--instruction` and a fresh `--max` budget. It emits a
+`resumed` CYCLE event and fails with `cycle_active` or
+`cycle_nothing_to_resume`.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
 entry and the loop continues; `target_death_unconfirmed` stops it when the server
 never shows the corpse dead.

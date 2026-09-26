@@ -17,7 +17,7 @@ tuicraft control [--json] | nearby [--all] [--json]
 tuicraft combat [--json] | spells [--json] | tactics [--json] | navigation [--json]
 tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> <z>
-tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycling [--json]
+tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycle --resume [--instruction ...] [--max N] [--json] | cycling [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft spirit-healer <guid> | resurrect accept|decline
 tuicraft quests [--json] | talk <guid> | query-quest <id>
@@ -262,17 +262,32 @@ the stop cause, detail, and per-target queue status.
 `stopCause` is not a closed list: `loot_denied:*` includes a reason, and
 recovery can report other causes. Inspect `stopDetail` instead of guessing.
 
+`tuicraft cycle --resume` [`--instruction` _text_] [`--max` _N_] [`--json`]
+:: Resume a stopped cycle. The loop continues from the first target at or
+after `currentIndex` that is still `queued`: a target halted mid-fight is
+fought again, and a target already `done` (for example after a `halt` during
+loot) is not. With `--instruction` the new instruction applies to every
+remaining target; without it the previous instruction stays. `--max` sets
+the starts cap for the resumed run, which counts from zero; without it the
+previous cap stays. Resume works after any stop cause, not only `halt`, and
+emits a `resumed` CYCLE event. It fails with `cycle_active` while a cycle
+runs and with `cycle_nothing_to_resume` when no queued target remains.
+Nothing is repaired between the stop and the resume; check `nearby` and
+`recovery` first if the stop was not a `halt`.
+
 `tuicraft cycling` [`--json`]
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
 `status` (`queued`, `done`, or `skipped`), skip `cause`, and `loot`
-(`looted` or `none`, set after a kill), `startsUsed`,
+(`looted` or `none`, set after a kill), `instruction`, `startsUsed`,
+`resumes`,
 `stopCause`, `stopDetail`, `startedAt`, and `lastLoot`. This is the same
 snapshot the `CYCLE` event carries in `data.state` in `read`/`tail`.
 `lastLoot.slotsTaken` records take requests and `moneyTaken` records the offered
 amount, not verified item or money gains. `coinageBefore` and `coinageAfter`
 record observed values when known. Confirm stored items through actual
 inventory slot or count changes.
-Without `--json`, `cycling` prints the cycle phase, each target outcome,
+Without `--json`, `cycling` prints the cycle phase, instruction, starts,
+resumes, each target outcome,
 server kill XP when observed, `no loot` for a kill without loot, requested loot, observed coinage changes, and
 the stop reason. A request for money or an item slot does not prove a gain.
 

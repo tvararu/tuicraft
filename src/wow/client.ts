@@ -274,6 +274,10 @@ export type WorldHandle = {
     instruction: string,
     maxStarts?: number,
   ) => Promise<void>;
+  resumeCycle: (
+    instruction: string | undefined,
+    maxStarts: number | undefined,
+  ) => Promise<void>;
   stopCycle: () => void;
   getCycleState: () => CycleState;
   onCycleEvent: (cb: (event: CycleEvent) => void) => Unsubscribe;

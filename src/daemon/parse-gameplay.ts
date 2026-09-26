@@ -4,6 +4,7 @@ import {
   parseBoundedArg,
   parseCast,
   parseCycle,
+  parseCycleResume,
   parseFace,
   parseFight,
   parseGoto,
@@ -162,6 +163,11 @@ function parseMotion(
       return from(parseFight(tokens), (v) => ({ type: "fight", ...v }));
     case "CYCLE":
       return from(parseCycle(tokens), (v) => ({ type: "cycle", ...v }));
+    case "CYCLE_RESUME":
+      return from(parseCycleResume(tokens), (v) => ({
+        type: "cycle_resume",
+        ...v,
+      }));
     case "GOTO":
       return from(parseGoto(tokens), (v) => ({ type: "goto", ...v }));
     case "RESURRECT":

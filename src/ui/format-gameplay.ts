@@ -46,7 +46,9 @@ function formatCycleLoot(loot: CycleLootRecord): string[] {
 export function formatCycleState(state: CycleState): string[] {
   const lines = [
     `Cycle: ${state.phase}`,
+    `Instruction: ${state.instruction}`,
     `Starts: ${state.startsUsed}/${state.maxStarts}`,
+    `Resumes: ${state.resumes}`,
     ...state.queue.map(formatCycleTarget),
   ];
   if (state.lastLoot) lines.push(...formatCycleLoot(state.lastLoot));

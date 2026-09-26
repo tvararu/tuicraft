@@ -41,10 +41,17 @@ export type CycleState = {
   stopCause: string | undefined;
   stopDetail: Record<string, unknown> | undefined;
   startedAt: number | undefined;
+  resumes: number;
   lastLoot: CycleLootRecord | undefined;
 };
 export type CycleEvent = {
-  type: "started" | "target_done" | "loot_done" | "recovery" | "stopped";
+  type:
+    | "started"
+    | "resumed"
+    | "target_done"
+    | "loot_done"
+    | "recovery"
+    | "stopped";
   state: CycleState;
   at: number;
 };
@@ -94,6 +101,7 @@ export class EncounterCycleRuntime {
     stopCause: undefined,
     stopDetail: undefined,
     startedAt: undefined,
+    resumes: 0,
     lastLoot: undefined,
   };
 
@@ -139,9 +147,6 @@ export class EncounterCycleRuntime {
     const maxStarts = args.maxStarts ?? DEFAULT_MAX_STARTS;
     if (!Number.isInteger(maxStarts) || maxStarts < 1)
       throw new Error("cycle_invalid_max");
-    this.run?.abort();
-    const run = new AbortController();
-    this.run = run;
     this.state = {
       active: true,
       phase: "fighting",
@@ -153,9 +158,46 @@ export class EncounterCycleRuntime {
       stopCause: undefined,
       stopDetail: undefined,
       startedAt: this.deps.now(),
+      resumes: 0,
       lastLoot: undefined,
     };
-    this.emit("started");
+    await this.launch("started");
+  }
+
+  async resume(args: {
+    instruction?: string;
+    maxStarts?: number;
+  }): Promise<void> {
+    if (this.disposed) throw new Error("cycle_disposed");
+    if (this.state.active) throw new Error("cycle_active");
+    const { queue, currentIndex } = this.state;
+    const next = queue.findIndex(
+      (record, index) => index >= currentIndex && record.status === "queued",
+    );
+    if (next === -1) throw new Error("cycle_nothing_to_resume");
+    const maxStarts = args.maxStarts ?? this.state.maxStarts;
+    if (!Number.isInteger(maxStarts) || maxStarts < 1)
+      throw new Error("cycle_invalid_max");
+    this.state = {
+      ...this.state,
+      active: true,
+      phase: "fighting",
+      currentIndex: next,
+      instruction: args.instruction ?? this.state.instruction,
+      maxStarts,
+      startsUsed: 0,
+      stopCause: undefined,
+      stopDetail: undefined,
+      resumes: this.state.resumes + 1,
+    };
+    await this.launch("resumed");
+  }
+
+  private async launch(type: "started" | "resumed"): Promise<void> {
+    this.run?.abort();
+    const run = new AbortController();
+    this.run = run;
+    this.emit(type);
     try {
       await this.drive(run.signal);
     } catch (error) {

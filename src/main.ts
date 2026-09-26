@@ -49,6 +49,8 @@ function publicCommand(): string | null {
     case "party":
     case "whisper":
       return "send";
+    case "cycle_resume":
+      return "cycle";
     default:
       return action.mode.replaceAll("_", "-");
   }

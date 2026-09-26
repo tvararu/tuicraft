@@ -71,6 +71,12 @@ export type CliAction =
       maxStarts?: number;
       json?: true;
     }
+  | {
+      mode: "cycle_resume";
+      instruction?: string;
+      maxStarts?: number;
+      json?: true;
+    }
   | { mode: "cycling"; json: boolean }
   | { mode: "goto"; x: number; y: number; z: number; json?: true }
   | { mode: "navigation"; json: boolean }
