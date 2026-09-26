@@ -7,10 +7,12 @@ export type LabelEvent = { label: string; actor: string; at: string };
 export type Pr = {
   number: number;
   state: string;
+  base: string;
   branch: string;
   head: string;
   decision: string | null;
   draft: boolean;
+  checked: string;
   statuses: Status[];
 };
 
@@ -30,9 +32,9 @@ const query = `query($q:String!){search(type:ISSUE,query:$q,first:100){nodes{...
   number title author{login} labels(first:50){nodes{name}} blockedBy(first:20){nodes{state}}
   timelineItems(itemTypes:LABELED_EVENT,last:50){nodes{... on LabeledEvent{label{name} actor{login} createdAt}}}
   closedByPullRequestsReferences(first:5,includeClosedPrs:false){nodes{
-    number state headRefName headRefOid reviewDecision isDraft
-    statusCheckRollup{contexts(first:50){nodes{__typename
-      ... on StatusContext{context state} ... on CheckRun{name conclusion}}}}}}}}}}`;
+    number state baseRefName headRefName headRefOid reviewDecision isDraft
+    commits(last:1){nodes{commit{oid statusCheckRollup{contexts(first:50){nodes{__typename
+      ... on StatusContext{context state} ... on CheckRun{name conclusion}}}}}}}}}}}}}`;
 
 function searchQuery(): string {
   const names = Object.values(labels).map((name) => `"${name}"`);
@@ -76,9 +78,13 @@ function parseEvent(node: Node): LabelEvent {
 
 function parsePr(node: Node): Pr {
   const decision = node["reviewDecision"];
-  const rollup = node["statusCheckRollup"];
+  const [last] = nodes(node["commits"]);
+  const commit = last ? obj(last["commit"]) : {};
+  const rollup = commit["statusCheckRollup"];
   return {
+    base: str(node["baseRefName"]),
     branch: str(node["headRefName"]),
+    checked: last ? str(commit["oid"]) : "",
     decision: typeof decision === "string" ? decision : null,
     draft: node["isDraft"] === true,
     head: str(node["headRefOid"]),
