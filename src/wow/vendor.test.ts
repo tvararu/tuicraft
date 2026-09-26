@@ -276,7 +276,7 @@ describe("buying", () => {
       guid: MARNIEL,
       items: [
         { ...good, extendedCost: 0 },
-        { ...good, slot: 2, itemId: 29_434, extendedCost: 2_587 },
+        { ...good, slot: 2, itemId: 29_434, extendedCost: 2587 },
       ],
       emptyReason: undefined,
     });
