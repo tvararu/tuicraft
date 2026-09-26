@@ -88,6 +88,21 @@ describe("observeNavigation", () => {
     );
   });
 
+  test("a planner UNKNOWN_HEIGHT refusal asks for a short move or a nearer waypoint", () => {
+    const unknown = "pathfind_find_height failed (UNKNOWN_HEIGHT)";
+    const hint = observeNavigation(
+      state({ blockedReason: unknown, refusal: "stop" }),
+    ).nextStep;
+    expect(hint).toContain("Do not repeat this goto unchanged");
+    expect(hint).toContain("Move about 10 yards off this spot");
+    expect(hint).toContain("nearer grounded waypoint");
+    expect(
+      observeNavigation(
+        state({ blockedReason: `replan_refused: ${unknown}`, refusal: "stop" }),
+      ).nextStep,
+    ).toContain("refused a new route from the stopped pose");
+  });
+
   test("an unblocked state has a null hint", () => {
     expect(observeNavigation(state({ active: true })).nextStep).toBeNull();
   });

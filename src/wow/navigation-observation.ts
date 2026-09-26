@@ -35,11 +35,16 @@ export function nextStepFor(reason: string | undefined): string | null {
   return null;
 }
 
+function navigationNextStep(state: NavigationState): string | null {
+  if (state.replan?.pending)
+    return "Replanning from the stopped pose. Wait for navigation to become active or stop; do not issue another goto.";
+  if (state.blockedReason === "pathfind_find_height failed (UNKNOWN_HEIGHT)")
+    return "The planner lost the ground between this pose and the destination. Do not repeat this goto unchanged. Move about 10 yards off this spot with face and move forward, then plan again, or choose a nearer grounded waypoint. When several destinations fail this way from one pose, move first.";
+  return nextStepFor(state.blockedReason);
+}
+
 export function observeNavigation(
   state: NavigationState,
 ): NavigationObservation {
-  const nextStep = state.replan?.pending
-    ? "Replanning from the stopped pose. Wait for navigation to become active or stop; do not issue another goto."
-    : nextStepFor(state.blockedReason);
-  return { ...state, nextStep };
+  return { ...state, nextStep: navigationNextStep(state) };
 }
