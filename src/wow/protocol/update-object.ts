@@ -1,6 +1,7 @@
 import type { Position } from "wow/entity-store";
 import { ObjectType, UpdateType } from "wow/protocol/entity-fields";
 import type { CreateSpline } from "wow/protocol/monster-move";
+import type { MovementInfo } from "wow/protocol/movement";
 import { parseMovementBlock } from "wow/protocol/movement-block";
 import type { PacketReader } from "wow/protocol/packet";
 import { parseUpdateMask } from "wow/protocol/update-mask";
@@ -8,7 +9,7 @@ import { parseUpdateMask } from "wow/protocol/update-mask";
 type Movement = {
   position: Position;
   updateFlags: number;
-  movementFlags?: number;
+  movementInfo?: MovementInfo;
   runSpeed?: number;
   runBackSpeed?: number;
   spline?: CreateSpline;
@@ -24,11 +25,25 @@ export type UpdateEntry =
   | { type: "values"; guid: bigint; fields: Map<number, number> }
   | ({ type: "movement"; guid: bigint } & Movement)
   | { type: "outOfRange"; guids: bigint[] }
-  | { type: "nearObjects"; guids: bigint[] };
+  | { type: "nearObjects"; guids: bigint[] }
+  | { type: "malformed"; guid: bigint };
 
-function readMovement(r: PacketReader, mapId: number): Movement {
-  const { x, y, z, orientation, ...rest } = parseMovementBlock(r);
-  return { position: { mapId, x, y, z, orientation }, ...rest };
+class MalformedEntry extends Error {
+  readonly guid: bigint;
+
+  constructor(guid: bigint, options: ErrorOptions) {
+    super("malformed update entry", options);
+    this.guid = guid;
+  }
+}
+
+function readMovement(r: PacketReader, mapId: number, guid: bigint): Movement {
+  try {
+    const { x, y, z, orientation, ...rest } = parseMovementBlock(r);
+    return { position: { mapId, x, y, z, orientation }, ...rest };
+  } catch (error) {
+    throw new MalformedEntry(guid, { cause: error });
+  }
 }
 
 const OBJECT_TYPES = new Set<number>(Object.values(ObjectType));
@@ -60,17 +75,15 @@ function readEntry(r: PacketReader, mapId: number): UpdateEntry | undefined {
         guid: r.packedGuidBig(),
         fields: parseUpdateMask(r),
       };
-    case UpdateType.MOVEMENT:
-      return {
-        type: "movement",
-        guid: r.packedGuidBig(),
-        ...readMovement(r, mapId),
-      };
+    case UpdateType.MOVEMENT: {
+      const guid = r.packedGuidBig();
+      return { type: "movement", guid, ...readMovement(r, mapId, guid) };
+    }
     case UpdateType.CREATE_OBJECT:
     case UpdateType.CREATE_OBJECT2: {
       const guid = r.packedGuidBig();
       const objectType = readObjectType(r);
-      const movement = readMovement(r, mapId);
+      const movement = readMovement(r, mapId, guid);
       return {
         type: "create",
         guid,
@@ -95,7 +108,9 @@ export function parseUpdateObject(r: PacketReader, mapId = 0): UpdateEntry[] {
     try {
       const entry = readEntry(r, mapId);
       if (entry) entries.push(entry);
-    } catch {
+    } catch (error) {
+      if (error instanceof MalformedEntry)
+        entries.push({ type: "malformed", guid: error.guid });
       break;
     }
   }

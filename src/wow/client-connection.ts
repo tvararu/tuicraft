@@ -1,10 +1,11 @@
 import type { AuthResult } from "wow/auth";
 import type { ClientConfig, WorldConn } from "wow/client";
 import { Arc4 } from "wow/crypto/arc4";
-import { EntityStore } from "wow/entity-store";
+import { EntityStore, isUnit } from "wow/entity-store";
 import { FriendStore } from "wow/friend-store";
 import { GuildStore } from "wow/guild-store";
 import { IgnoreStore } from "wow/ignore-store";
+import { ObjectType } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import {
@@ -17,9 +18,10 @@ import {
   OpcodeDispatch,
   parseCharacterList,
 } from "wow/protocol/world";
+import { RemoteMotion } from "wow/remote-motion";
 import type { Runtimes } from "wow/runtime";
 import { clearWorldEvents, createWorldEvents } from "wow/world-events";
-import { sendPacket } from "wow/world-handlers";
+import { selfGuid, sendPacket } from "wow/world-handlers";
 
 function drainWorldPackets(conn: WorldConn): void {
   while (true) {
@@ -143,6 +145,17 @@ export function createWorldConn(): WorldConn {
     selfGuidHigh: 0,
     partyMembers: new Map(),
     entityStore: new EntityStore(),
+    remoteMotion: new RemoteMotion({
+      now: () => Date.now(),
+      eligible: (guid) =>
+        guid !== selfGuid(conn) &&
+        conn.entityStore.get(guid)?.objectType === ObjectType.PLAYER,
+      dead: (guid) => {
+        const entity = conn.entityStore.get(guid);
+        return isUnit(entity) && entity.maxHealth > 0 && entity.health === 0;
+      },
+      emit: (event) => conn.events.remoteMotion.emit(event),
+    }),
     creatureNameCache: new Map(),
     gameObjectNameCache: new Map(),
     pendingNameQueries: new Set(),
@@ -155,7 +168,10 @@ export function createWorldConn(): WorldConn {
     events: createWorldEvents((error) => reportListenerError(conn, error)),
   };
   conn.entityStore.onEvent((event) => {
-    if (event.type === "disappear") conn.combat?.forget(event.guid);
+    if (event.type === "disappear") {
+      conn.remoteMotion.forget(event.guid);
+      conn.combat?.forget(event.guid);
+    }
     conn.recovery?.observeEntity(event);
     conn.rewards?.observeEntity(event);
     conn.cycle?.observeEntity(event);

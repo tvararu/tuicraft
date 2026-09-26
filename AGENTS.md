@@ -42,7 +42,7 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   temporary `refs/signoff/<sha>` ref so the not-yet-pushed commit can be
   signed off, deletes that ref, and fails the push if signoff fails
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts
-  ./src/test/live-quest.ts`); needs two game accounts via `WOW_*` (see Testing)
+  ./src/test/live-quest.ts ./src/test/live-remote-motion.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `bun src/factory/main.ts <precheck|qa-changes|soap|reap|setup>` — the dev
   factory CLI (design: `docs/plans/2026-09-25-dev-factory-design.md`).
   Automations and the reaper run it from the runner clone,

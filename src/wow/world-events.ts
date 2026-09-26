@@ -9,6 +9,7 @@ import type { GuildEvent } from "wow/guild-store";
 import type { IgnoreEvent } from "wow/ignore-store";
 import type { QuestEvent } from "wow/quests";
 import type { RecoveryEvent } from "wow/recovery";
+import type { RemoteMotionEvent } from "wow/remote-motion";
 import type { RewardsEvent } from "wow/rewards";
 import type { TacticsEvent } from "wow/tactics";
 
@@ -28,6 +29,7 @@ export type WorldEvents = {
   quest: Emitter<[QuestEvent]>;
   rewards: Emitter<[RewardsEvent]>;
   cycle: Emitter<[CycleEvent]>;
+  remoteMotion: Emitter<[RemoteMotionEvent]>;
 };
 
 export function createWorldEvents(
@@ -49,6 +51,7 @@ export function createWorldEvents(
     quest: new Emitter(report),
     rewards: new Emitter(report),
     cycle: new Emitter(report),
+    remoteMotion: new Emitter(report),
   };
 }
 

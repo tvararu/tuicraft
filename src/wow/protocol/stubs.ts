@@ -20,7 +20,6 @@ export const STUBS: [opcode: number, label: string][] = [
   [GameOpcode.SMSG_ACHIEVEMENT_EARNED, "Achievement earned"],
   [GameOpcode.SMSG_CRITERIA_UPDATE, "Achievement criteria"],
   [GameOpcode.SMSG_ALL_ACHIEVEMENT_DATA, "Achievement data"],
-  [GameOpcode.SMSG_COMPRESSED_MOVES, "Compressed movement"],
   [GameOpcode.SMSG_ATTACKERSTATEUPDATE, "Damage dealt"],
   [GameOpcode.SMSG_SPELLHEALLOG, "Heal received"],
   [GameOpcode.SMSG_SPELLNONMELEEDAMAGELOG, "Spell damage"],
