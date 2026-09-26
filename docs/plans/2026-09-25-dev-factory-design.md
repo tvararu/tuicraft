@@ -751,7 +751,10 @@ Cutover progress (Theo's go, 2026-09-25):
   Orca, disabled; a second `setup automations` run reports every one `ok`.
   The reaper units are installed in `~/.config/systemd/user/`, and a dry run
   under `systemd-run --user` with the unit's `PATH` succeeded. The wrapper
-  is installed as `~/.local/bin/omp-factory`.
+  is installed as `~/.local/bin/omp-factory`. It was first a copy; since
+  2026-09-26 `setup wrapper --apply` makes it a symlink to the runner
+  clone's `src/factory/omp-factory`, so it finds `omp-factory.yml` beside
+  it and stays current with `main`.
 - Landed on `main` 2026-09-25 (`d6f34cc`, pushed by this worktree with
   Theo's go). The runner clone and the timer followed; see below.
 - Done (2026-09-25): the Orca host settings. Theo's Mac app edits only its
