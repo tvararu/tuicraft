@@ -255,7 +255,7 @@ async function handleLine(input: string, ctx: LineContext): Promise<void> {
   const { handle } = state;
   try {
     if (await executeCommand(state, parseCommand(input.trim()))) {
-      handle.close();
+      handle.logout();
       rl.close();
       resolve();
       return;
@@ -303,12 +303,12 @@ export function startTui(
     );
 
     rl.on("SIGINT", () => {
-      handle.close();
+      handle.logout();
       rl.close();
     });
 
     rl.on("close", () => {
-      handle.close();
+      handle.logout();
       resolve();
     });
 

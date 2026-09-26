@@ -115,7 +115,7 @@ describe("IPC round-trip", () => {
     ipc.start();
     await sendToSocket("STATUS", ipc.sockPath);
     ipc.result.cleanup();
-    expect(ipc.handle.close).toHaveBeenCalled();
+    expect(ipc.handle.logout).toHaveBeenCalled();
     await expect(sendToSocket("STATUS", ipc.sockPath)).rejects.toThrow();
   });
 
@@ -123,7 +123,7 @@ describe("IPC round-trip", () => {
     ipc.start();
     ipc.result.cleanup();
     ipc.result.cleanup();
-    expect(ipc.handle.close).toHaveBeenCalledTimes(1);
+    expect(ipc.handle.logout).toHaveBeenCalledTimes(1);
   });
 
   test("cleanup ignores missing socket file", async () => {
@@ -131,7 +131,7 @@ describe("IPC round-trip", () => {
     await sendToSocket("STATUS", ipc.sockPath);
     await unlink(ipc.sockPath);
     ipc.result.cleanup();
-    expect(ipc.handle.close).toHaveBeenCalledTimes(1);
+    expect(ipc.handle.logout).toHaveBeenCalledTimes(1);
   });
 
   test("STOP triggers process.exit", async () => {

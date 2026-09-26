@@ -184,7 +184,7 @@ tuicraft loot-roll 0xabc 0 need # answer a pending group loot roll (need|greed|p
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
-tuicraft stop [--json]     # stop daemon
+tuicraft stop [--json]     # log out and stop daemon
 tuicraft logs              # print the raw session log
 tuicraft record --since 1790382736199 # session record JSON from the log
 tuicraft skill             # print SKILL.md for AI agents

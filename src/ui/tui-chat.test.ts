@@ -193,7 +193,7 @@ describe("startTui", () => {
     await done;
   });
 
-  test("quit command closes handle and resolves", async () => {
+  test("quit command logs out and resolves", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
 
@@ -201,6 +201,6 @@ describe("startTui", () => {
     writeLine(input, "/quit");
     await done;
 
-    expect(handle.close).toHaveBeenCalled();
+    expect(handle.logout).toHaveBeenCalled();
   });
 });

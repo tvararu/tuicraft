@@ -217,6 +217,7 @@ export function createMockHandle(): MockHandle {
     joinChannel: jest.fn(),
     leaveChannel: jest.fn(),
     leaveGroup: jest.fn(),
+    logout: jest.fn(() => closeResolve()),
     move: jest.fn(),
     observeNavigation: jest.fn(() =>
       observeNavigation(handle.getNavigationState()),

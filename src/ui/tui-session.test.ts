@@ -47,7 +47,7 @@ describe("startTui", () => {
     await done;
   });
 
-  test("SIGINT closes handle and resolves", async () => {
+  test("SIGINT logs out and resolves", async () => {
     const handle = createMockHandle();
     const input = new PassThrough();
     const spy = jest
@@ -62,7 +62,7 @@ describe("startTui", () => {
       input.write("\x03");
       await done;
 
-      expect(handle.close).toHaveBeenCalled();
+      expect(handle.logout).toHaveBeenCalled();
     } finally {
       spy.mockRestore();
     }

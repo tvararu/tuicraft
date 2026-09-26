@@ -1,4 +1,5 @@
 import type { Unsubscribe } from "lib/emitter";
+import { ignoreFailure } from "lib/ignore-failure";
 import { channelMethods, chatMethods } from "wow/client-chat";
 import {
   authenticateWorld,
@@ -44,6 +45,7 @@ import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { NamedInventoryState, NamedRewardsState } from "wow/item-labels";
+import { LOGOUT_TIMEOUT_MS, requestLogout } from "wow/logout";
 import type { NavigationObservation } from "wow/navigation-observation";
 import type { NearbyQuery, NearbyRow } from "wow/nearby";
 import type { PartyChange, PartyLoot, PartyState } from "wow/party-store";
@@ -71,6 +73,7 @@ export type ClientConfig = {
   srpPrivateKey?: bigint;
   clientSeed?: Uint8Array;
   pingIntervalMs?: number;
+  logoutTimeoutMs?: number;
   language?: number;
   cachedSessionKey?: Uint8Array;
   spellDataDir?: string;
@@ -162,6 +165,7 @@ export type GotoTarget =
 export type WorldHandle = {
   closed: Promise<void>;
   close: () => void;
+  logout: () => void;
   onMessage: (cb: (msg: ChatMessage) => void) => Unsubscribe;
   sendWhisper: (target: string, message: string) => void;
   sendSay: (message: string) => void;
@@ -319,7 +323,7 @@ type SessionHandle = {
   conn: WorldConn;
   rt: Runtimes;
   lang: number;
-  lifecycle: Pick<WorldHandle, "closed" | "close">;
+  lifecycle: Pick<WorldHandle, "closed" | "close" | "logout">;
 };
 
 function createHandle(session: SessionHandle): WorldHandle {
@@ -373,7 +377,16 @@ export function worldSession(
         cleanupSession(conn, rt, true);
         conn.socket?.end();
       };
-      resolve(createHandle({ conn, rt, lang, lifecycle: { closed, close } }));
+      let loggingOut = false;
+      const logout = (): void => {
+        if (loggingOut) return;
+        loggingOut = true;
+        cleanupSession(conn, rt, true);
+        const timeoutMs = config.logoutTimeoutMs ?? LOGOUT_TIMEOUT_MS;
+        requestLogout(conn, closed, timeoutMs).then(close).catch(ignoreFailure);
+      };
+      const lifecycle = { close, closed, logout };
+      resolve(createHandle({ conn, lang, lifecycle, rt }));
     }
 
     login().catch((err) => {
