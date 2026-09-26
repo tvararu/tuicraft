@@ -1,9 +1,10 @@
 [Unit]
-Description=Run the tuicraft factory reaper every 5 minutes
+Description=Run the tuicraft factory reaper every minute
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=5min
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=1s
 
 [Install]
 WantedBy=timers.target
