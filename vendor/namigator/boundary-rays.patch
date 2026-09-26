@@ -1,0 +1,186 @@
+diff --git a/pathfind/Map.cpp b/pathfind/Map.cpp
+index 0366f53..74f249c 100644
+--- a/pathfind/Map.cpp
++++ b/pathfind/Map.cpp
+@@ -90,69 +90,112 @@ float random_between_0_and_1() {
+     return static_cast<float>(dis(gen));
+ }
+ 
+-const float* VertexAt(const dtNavMesh& mesh, dtPolyRef ref, const float* pos)
++float SurfaceY(const dtNavMeshQuery& query, dtPolyRef ref, const float* pos)
+ {
+-    const dtMeshTile* tile = nullptr;
+-    const dtPoly* poly = nullptr;
+-    if (dtStatusFailed(mesh.getTileAndPolyByRef(ref, &tile, &poly)) ||
+-        poly->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)
+-        return nullptr;
+-
+-    for (int i = 0; i < poly->vertCount; ++i)
+-    {
+-        const float* v = &tile->verts[poly->verts[i] * 3];
+-        if (v[0] == pos[0] && v[2] == pos[2])
+-            return v;
+-    }
+-
+-    return nullptr;
++    float closest[3];
++    query.closestPointOnPoly(ref, pos, closest, nullptr);
++    return closest[1];
+ }
+ 
+-// findNearestPoly() picks one of the polygons that share a vertex.  When the
+-// source is exactly that vertex and the ray leaves the chosen polygon at the
+-// source (t == 0), restart it from each other polygon sharing the vertex and
+-// keep the first ray that reaches the target.
+-void RaycastFromSharedVertex(const dtNavMesh& mesh,
+-                             const dtNavMeshQuery& query,
+-                             const dtQueryFilter& filter, dtPolyRef startRef,
+-                             const float* source, const float* target,
+-                             const float* extents, dtRaycastHit& hit)
++// Detour's raycast() stops where the segment leaves the current polygon
++// through an edge without a link, or where the linked neighbour's clip is
++// empty, and findNearestPoly() picks just one polygon for the source.  When the
++// segment starts on, or passes exactly through, a vertex or edge that several
++// polygons share, which polygon is tried depends on edge order and rounding,
++// so a segment that stays on the mesh can stop early.  Resume the ray from any
++// polygon near the stop point whose boundary-inclusive clip covers the stop
++// and extends past it, provided its surface there is within WalkableClimb of
++// the polygon the ray stopped in, the same limit Recast uses to connect
++// neighbouring spans.
++void ContinueRaycast(const dtNavMeshQuery& query, const dtNavMesh& mesh,
++                     const dtQueryFilter& filter, dtPolyRef startRef,
++                     const float* source, const float* target,
++                     const float* extents, dtRaycastHit& hit)
+ {
+-    const float* vertex = VertexAt(mesh, startRef, source);
+-    if (!vertex)
+-        return;
++    constexpr float reached = std::numeric_limits<float>::max();
++    dtPolyRef trialPath[100];
++    dtRaycastHit trial = hit;
++    trial.path = trialPath;
++    trial.maxPath = std::min(hit.maxPath, 100);
++    trial.pathCount = std::min(hit.pathCount, trial.maxPath);
++    std::copy(hit.path, hit.path + trial.pathCount, trialPath);
++    for (int round = 0; round < 8 && trial.t != reached; ++round)
++    {
++        float stop[3];
++        dtVlerp(stop, source, target, trial.t);
++        auto const stopRef =
++            trial.pathCount ? trial.path[trial.pathCount - 1] : startRef;
++        auto const stopY = SurfaceY(query, stopRef, stop);
++
++        dtPolyRef polys[32];
++        int polyCount = 0;
++        if (dtStatusFailed(query.queryPolygons(stop, extents, &filter, polys,
++                                               &polyCount, 32)))
++            return;
++
++        bool advanced = false;
++        for (int i = 0; i < polyCount && !advanced; ++i)
++        {
++            if (polys[i] == startRef ||
++                std::find(trial.path, trial.path + trial.pathCount, polys[i]) !=
++                    trial.path + trial.pathCount)
++                continue;
+ 
+-    dtPolyRef polys[32];
+-    int polyCount = 0;
+-    if (dtStatusFailed(query.queryPolygons(source, extents, &filter, polys,
+-                                           &polyCount, 32)))
+-        return;
++            const dtMeshTile* tile = nullptr;
++            const dtPoly* poly = nullptr;
++            mesh.getTileAndPolyByRefUnsafe(polys[i], &tile, &poly);
++            if (poly->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)
++                continue;
+ 
+-    for (int i = 0; i < polyCount; ++i)
+-    {
+-        if (polys[i] == startRef)
+-            continue;
++            float verts[DT_VERTS_PER_POLYGON * 3];
++            for (int v = 0; v < poly->vertCount; ++v)
++                dtVcopy(&verts[v * 3], &tile->verts[poly->verts[v] * 3]);
++            float tmin, tmax;
++            int segMin, segMax;
++            bool sharesStop = false;
++            for (int v = 0; v < poly->vertCount; ++v)
++                sharesStop = sharesStop || (verts[v * 3] == stop[0] &&
++                                            verts[v * 3 + 2] == stop[2]);
++            auto const covers =
++                dtIntersectSegmentPoly2D(source, target, verts,
++                                         poly->vertCount, tmin, tmax, segMin,
++                                         segMax) &&
++                tmin <= trial.t && tmax > trial.t;
++            if (!(covers || sharesStop) ||
++                std::fabs(SurfaceY(query, polys[i], stop) - stopY) >
++                    MeshSettings::WalkableClimb)
++                continue;
+ 
+-        const float* other = VertexAt(mesh, polys[i], source);
+-        if (!other || other[1] != vertex[1])
+-            continue;
++            dtPolyRef path[100];
++            dtRaycastHit next;
++            next.path = path;
++            next.maxPath = 100;
++            if (query.raycast(polys[i], source, target, &filter, 0, &next) !=
++                    DT_SUCCESS ||
++                next.pathCount == 0 || next.t <= trial.t)
++                continue;
+ 
+-        dtPolyRef path[100];
+-        dtRaycastHit retry;
+-        retry.path = path;
+-        retry.maxPath = std::min(hit.maxPath, 100);
+-        if (query.raycast(polys[i], source, target, &filter, 0, &retry) !=
+-                DT_SUCCESS ||
+-            retry.t != std::numeric_limits<float>::max())
+-            continue;
++            auto const room = trial.maxPath - trial.pathCount;
++            auto const count = std::min(next.pathCount, room);
++            std::copy(path, path + count, trial.path + trial.pathCount);
++            trial.pathCount += count;
++            trial.t = next.t;
++            trial.hitEdgeIndex = next.hitEdgeIndex;
++            dtVcopy(trial.hitNormal, next.hitNormal);
++            advanced = count > 0;
++        }
+ 
+-        std::copy(path, path + retry.pathCount, hit.path);
+-        hit.pathCount = retry.pathCount;
+-        hit.t = retry.t;
+-        hit.hitEdgeIndex = retry.hitEdgeIndex;
+-        dtVcopy(hit.hitNormal, retry.hitNormal);
+-        return;
++        if (!advanced)
++            return;
+     }
++
++    if (trial.t != reached)
++        return;
++    std::copy(trialPath, trialPath + trial.pathCount, hit.path);
++    hit.pathCount = trial.pathCount;
++    hit.t = trial.t;
++    hit.hitEdgeIndex = trial.hitEdgeIndex;
++    dtVcopy(hit.hitNormal, trial.hitNormal);
+ }
+ 
+ } // anonymous namespace
+@@ -905,9 +948,12 @@ bool Map::FindHeight(const math::Vertex& source, float x, float y, float& z) con
+                            0, &hit) != DT_SUCCESS)
+         return false;
+ 
+-    if (hit.t == 0.f)
+-        RaycastFromSharedVertex(m_navMesh, m_navQuery, m_queryFilter, startRef,
+-                                recastSource, recastTarget, extents, hit);
++    if (hit.t != std::numeric_limits<float>::max() &&
++        (!hit.pathCount ||
++         m_navQuery.getPolyHeight(hit.path[hit.pathCount - 1], recastTarget,
++                                  &z) != DT_SUCCESS))
++        ContinueRaycast(m_navQuery, m_navMesh, m_queryFilter, startRef,
++                        recastSource, recastTarget, extents, hit);
+ 
+     if (!hit.pathCount)
+         return false;
