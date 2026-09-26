@@ -124,7 +124,7 @@ describe("parseUpdateObject", () => {
     const e = must(entries[0]);
     expect(e.type).toBe("create");
     if (e.type !== "create") throw new Error("wrong type");
-    expect(e.position.mapId).toBe(530);
+    expect(must(e.position).mapId).toBe(530);
     expect(e.updateFlags & UpdateFlag.SELF).toBe(UpdateFlag.SELF);
   });
 
@@ -163,10 +163,10 @@ describe("parseUpdateObject", () => {
     expect(e.type).toBe("movement");
     if (e.type !== "movement") throw new Error("wrong type");
     expect(e.guid).toBe(100n);
-    expect(e.position.x).toBeCloseTo(10.5);
-    expect(e.position.y).toBeCloseTo(20.5);
-    expect(e.position.z).toBeCloseTo(30.5);
-    expect(e.position.orientation).toBeCloseTo(1.25);
+    expect(must(e.position).x).toBeCloseTo(10.5);
+    expect(must(e.position).y).toBeCloseTo(20.5);
+    expect(must(e.position).z).toBeCloseTo(30.5);
+    expect(must(e.position).orientation).toBeCloseTo(1.25);
   });
 
   test("OUT_OF_RANGE", () => {
@@ -257,6 +257,24 @@ describe("parseUpdateObject", () => {
     expect(must(e.position).x).toBeCloseTo(100);
     expect(must(e.position).y).toBeCloseTo(200);
     expect(must(e.position).z).toBeCloseTo(300);
+  });
+
+  test("create without a placement flag has no position", () => {
+    const w = new PacketWriter();
+    w.uint32LE(1);
+    w.uint8(2);
+    writePackedGuid(w, 0x4000_0000_000f_ce64n);
+    w.uint8(1);
+    w.uint16LE(0);
+    writeUpdateMask(w, new Map([[0, 64]]));
+
+    const r = new PacketReader(w.finish());
+    const entries = parseUpdateObject(r, 530);
+    expect(r.remaining).toBe(0);
+    const e = must(entries[0]);
+    if (e.type !== "create") throw new Error("wrong type");
+    expect(e.objectType).toBe(1);
+    expect(e.position).toBeUndefined();
   });
 
   test("an unknown object type ends the packet", () => {

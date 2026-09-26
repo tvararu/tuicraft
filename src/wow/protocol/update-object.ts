@@ -7,7 +7,7 @@ import type { PacketReader } from "wow/protocol/packet";
 import { parseUpdateMask } from "wow/protocol/update-mask";
 
 type Movement = {
-  position: Position;
+  position: Position | undefined;
   updateFlags: number;
   movementInfo?: MovementInfo;
   runSpeed?: number;
@@ -39,8 +39,8 @@ class MalformedEntry extends Error {
 
 function readMovement(r: PacketReader, mapId: number, guid: bigint): Movement {
   try {
-    const { x, y, z, orientation, ...rest } = parseMovementBlock(r);
-    return { position: { mapId, x, y, z, orientation }, ...rest };
+    const { point, ...rest } = parseMovementBlock(r);
+    return { position: point && { mapId, ...point }, ...rest };
   } catch (error) {
     throw new MalformedEntry(guid, { cause: error });
   }

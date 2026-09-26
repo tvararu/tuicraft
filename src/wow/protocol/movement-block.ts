@@ -6,12 +6,11 @@ import {
 import { type MovementInfo, parseMovementInfo } from "wow/protocol/movement";
 import type { PacketReader } from "wow/protocol/packet";
 
+type Point = { x: number; y: number; z: number; orientation: number };
+
 export type MovementData = {
   updateFlags: number;
-  x: number;
-  y: number;
-  z: number;
-  orientation: number;
+  point?: Point;
   runSpeed?: number;
   runBackSpeed?: number;
   movementInfo?: MovementInfo;
@@ -19,8 +18,6 @@ export type MovementData = {
 };
 
 type Placement = Omit<MovementData, "updateFlags">;
-
-const ORIGIN: Placement = { x: 0, y: 0, z: 0, orientation: 0 };
 
 function readLiving(r: PacketReader): Placement {
   const movementInfo = parseMovementInfo(r);
@@ -32,10 +29,7 @@ function readLiving(r: PacketReader): Placement {
   const splined = flags & MovementFlag.SPLINE_ENABLED;
   const spline = splined ? parseCreateSpline(r) : undefined;
   return {
-    x,
-    y,
-    z,
-    orientation,
+    point: { x, y, z, orientation },
     runSpeed,
     runBackSpeed,
     movementInfo,
@@ -49,15 +43,15 @@ function readStationaryTransport(r: PacketReader): Placement {
   r.skip(12);
   const orientation = r.floatLE();
   r.skip(4);
-  return { ...position, orientation };
+  return { point: { ...position, orientation } };
 }
 
 function readPlacement(r: PacketReader, updateFlags: number): Placement {
   if (updateFlags & UpdateFlag.LIVING) return readLiving(r);
   if (updateFlags & UpdateFlag.POSITION) return readStationaryTransport(r);
   if (updateFlags & UpdateFlag.HAS_POSITION)
-    return { ...r.vec3(), orientation: r.floatLE() };
-  return ORIGIN;
+    return { point: { ...r.vec3(), orientation: r.floatLE() } };
+  return {};
 }
 
 function skipTrailer(r: PacketReader, updateFlags: number): void {

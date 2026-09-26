@@ -85,12 +85,14 @@ function applyCreate(conn: WorldConn, entry: Entry<"create">): void {
   const self = selfGuid(conn);
   const created = guid === self ? conn.entityStore.get(self) : undefined;
   if (created) conn.quests?.observeSelfCreate(created);
-  if (position) conn.combat?.observePosition(guid, position, entry.spline);
-  conn.remoteMotion.observe(guid, {
-    position,
-    source: "create",
-    info: entry.movementInfo,
-  });
+  if (position) {
+    conn.combat?.observePosition(guid, position, entry.spline);
+    conn.remoteMotion.observe(guid, {
+      position,
+      source: "create",
+      info: entry.movementInfo,
+    });
+  }
   if (!name) queryEntityName(conn, guid, objectType, object.entry);
   if (guid !== self && (entry.updateFlags & UpdateFlag.SELF) === 0) return;
   conn.control?.observeSelf({
@@ -126,6 +128,7 @@ function applyValues(conn: WorldConn, entry: Entry<"values">): void {
 }
 
 function applyMovement(conn: WorldConn, entry: Entry<"movement">): void {
+  if (!entry.position) return;
   conn.remoteMotion.observe(entry.guid, {
     position: entry.position,
     source: "update",

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { must } from "test/must";
 import { MovementFlag, MovementFlagExtra, UpdateFlag } from "./entity-fields";
 import { parseMovementBlock } from "./movement-block";
 import { PacketReader, PacketWriter } from "./packet";
@@ -55,10 +56,10 @@ describe("parseMovementBlock", () => {
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
     expect(m.updateFlags).toBe(UpdateFlag.LIVING);
-    expect(m.x).toBeCloseTo(1.5);
-    expect(m.y).toBeCloseTo(2.5);
-    expect(m.z).toBeCloseTo(3.5);
-    expect(m.orientation).toBeCloseTo(0.5);
+    expect(must(m.point).x).toBeCloseTo(1.5);
+    expect(must(m.point).y).toBeCloseTo(2.5);
+    expect(must(m.point).z).toBeCloseTo(3.5);
+    expect(must(m.point).orientation).toBeCloseTo(0.5);
     expect(m.runSpeed).toBeCloseTo(7.0);
     expect(m.runBackSpeed).toBeCloseTo(0);
     expect(m.movementInfo?.flags).toBe(0);
@@ -77,9 +78,9 @@ describe("parseMovementBlock", () => {
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
     expect(m.updateFlags).toBe(UpdateFlag.LIVING | UpdateFlag.SELF);
-    expect(m.x).toBeCloseTo(10);
-    expect(m.y).toBeCloseTo(20);
-    expect(m.z).toBeCloseTo(30);
+    expect(must(m.point).x).toBeCloseTo(10);
+    expect(must(m.point).y).toBeCloseTo(20);
+    expect(must(m.point).z).toBeCloseTo(30);
     expect(m.runSpeed).toBeCloseTo(7.0);
     expect(r.remaining).toBe(0);
   });
@@ -94,10 +95,10 @@ describe("parseMovementBlock", () => {
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
     expect(m.updateFlags).toBe(UpdateFlag.HAS_POSITION);
-    expect(m.x).toBeCloseTo(5.0);
-    expect(m.y).toBeCloseTo(6.0);
-    expect(m.z).toBeCloseTo(7.0);
-    expect(m.orientation).toBeCloseTo(1.0);
+    expect(must(m.point).x).toBeCloseTo(5.0);
+    expect(must(m.point).y).toBeCloseTo(6.0);
+    expect(must(m.point).z).toBeCloseTo(7.0);
+    expect(must(m.point).orientation).toBeCloseTo(1.0);
     expect(r.remaining).toBe(0);
   });
 
@@ -116,10 +117,10 @@ describe("parseMovementBlock", () => {
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
     expect(m.updateFlags).toBe(UpdateFlag.POSITION);
-    expect(m.x).toBeCloseTo(100);
-    expect(m.y).toBeCloseTo(200);
-    expect(m.z).toBeCloseTo(300);
-    expect(m.orientation).toBeCloseTo(1.5);
+    expect(must(m.point).x).toBeCloseTo(100);
+    expect(must(m.point).y).toBeCloseTo(200);
+    expect(must(m.point).z).toBeCloseTo(300);
+    expect(must(m.point).orientation).toBeCloseTo(1.5);
     expect(r.remaining).toBe(0);
   });
 
@@ -141,9 +142,9 @@ describe("parseMovementBlock", () => {
     for (let i = 0; i < 9; i++) w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -168,9 +169,9 @@ describe("parseMovementBlock", () => {
     for (let i = 0; i < 9; i++) w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -196,9 +197,9 @@ describe("parseMovementBlock", () => {
     for (let i = 0; i < 9; i++) w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -217,9 +218,9 @@ describe("parseMovementBlock", () => {
     for (let i = 0; i < 9; i++) w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -238,9 +239,9 @@ describe("parseMovementBlock", () => {
     for (let i = 0; i < 9; i++) w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -271,9 +272,9 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
-    expect(m.y).toBeCloseTo(2);
-    expect(m.z).toBeCloseTo(3);
+    expect(must(m.point).x).toBeCloseTo(1);
+    expect(must(m.point).y).toBeCloseTo(2);
+    expect(must(m.point).z).toBeCloseTo(3);
     expect(r.remaining).toBe(0);
   });
 
@@ -305,7 +306,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
+    expect(must(m.point).x).toBeCloseTo(1);
     expect(r.remaining).toBe(0);
   });
 
@@ -337,7 +338,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
+    expect(must(m.point).x).toBeCloseTo(1);
     expect(r.remaining).toBe(0);
   });
 
@@ -371,7 +372,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
+    expect(must(m.point).x).toBeCloseTo(1);
     expect(r.remaining).toBe(0);
   });
 
@@ -403,7 +404,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(1);
+    expect(must(m.point).x).toBeCloseTo(1);
     expect(r.remaining).toBe(0);
   });
 
@@ -417,7 +418,7 @@ describe("parseMovementBlock", () => {
     w.uint32LE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -431,7 +432,7 @@ describe("parseMovementBlock", () => {
     w.uint32LE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -445,7 +446,7 @@ describe("parseMovementBlock", () => {
     w.rawBytes(new Uint8Array([0]));
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -459,7 +460,7 @@ describe("parseMovementBlock", () => {
     w.uint32LE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -474,7 +475,7 @@ describe("parseMovementBlock", () => {
     w.floatLE(0);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -488,7 +489,7 @@ describe("parseMovementBlock", () => {
     w.uint64LE(0n);
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
-    expect(m.x).toBeCloseTo(5);
+    expect(must(m.point).x).toBeCloseTo(5);
     expect(r.remaining).toBe(0);
   });
 
@@ -511,9 +512,9 @@ describe("parseMovementBlock", () => {
     const r = new PacketReader(w.finish());
     const m = parseMovementBlock(r);
     expect(m.updateFlags).toBe(flags);
-    expect(m.x).toBeCloseTo(10);
-    expect(m.y).toBeCloseTo(20);
-    expect(m.z).toBeCloseTo(30);
+    expect(must(m.point).x).toBeCloseTo(10);
+    expect(must(m.point).y).toBeCloseTo(20);
+    expect(must(m.point).z).toBeCloseTo(30);
     expect(r.remaining).toBe(0);
   });
 });
