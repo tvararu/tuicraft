@@ -121,6 +121,12 @@ what a marker means.
 
 ## Roles
 
+The worker, reviewer and merger prechecks share one read of the open
+issues: the first to run in a 30-second window saves it to `issues.json`
+in the factory state directory and the others reuse it, which keeps
+every-minute ticks inside GitHub's hourly GraphQL budget. `landings` and
+the reaper always read fresh.
+
 - **Worker.** Takes the oldest Ready card with no live claim, moves it to In
   progress, keeps one workpad comment, live-tests on its own SOAP account,
   opens a PR from `factory/<N>-<slug>` and moves the card to In review. The

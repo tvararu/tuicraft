@@ -12,6 +12,7 @@ import {
 } from "factory/config";
 import { must } from "factory/exec";
 import { factoryPr, fetchIssues, type Issue, type Pr } from "factory/github";
+import { sharedIssues } from "factory/issue-cache";
 import { liveLandings, reviewerClaimed, workerClaimed } from "factory/markers";
 import { strayMessage, strayWorktree } from "factory/repo-guard";
 
@@ -185,21 +186,21 @@ async function qa(): Promise<Decision> {
 
 const deciders: Record<Role, (dryRun: boolean) => Promise<Decision>> = {
   merger: async (dryRun) => {
-    const issues = await fetchIssues();
+    const issues = await sharedIssues();
     await applyBounces(movedHeads(issues, Date.now()), dryRun, setStatus);
     return decideMerger(issues, Date.now());
   },
   qa,
   reviewer: async () => {
     const { reviewing } = levelOf(await readPace());
-    return decideReviewer(await fetchIssues(), reviewing, Date.now());
+    return decideReviewer(await sharedIssues(), reviewing, Date.now());
   },
   worker: async (dryRun) => {
     const { wip } = levelOf(await readPace());
     const now = Date.now();
     const picks = await readPicks();
     const decision = decideWorker(
-      await fetchIssues(),
+      await sharedIssues(),
       wip,
       now,
       heldPicks(picks, now),
