@@ -6,9 +6,9 @@ history ([#110](https://github.com/tvararu/tuicraft/issues/110)).
 
 ## Status
 
-Acceptance is Theo's call. The verdicts below state what the committed
-evidence supports; they accept nothing. Detail lives in each milestone section
-and in the linked records.
+Acceptance is the maintainer's call. The verdicts below state what the
+committed evidence supports; they accept nothing. Detail lives in each
+milestone section and in the linked records.
 
 | Milestone | Verdict on committed evidence | Recorded decision |
 |-----------|-------------------------------|-------------------|
@@ -17,7 +17,7 @@ and in the linked records.
 | [3. Movement as a tactical action](#3-movement-as-a-tactical-action) | Partly met: two exit criteria unmet | Accepted with two gaps, `001882d` |
 | [3a. Reliable local navigation](#3a-reliable-local-navigation) | Partly met: one route walked, refusals and a clean halt recorded; repeated traversal, redirection, unreachable reporting, ground-derived destinations, the funnel corner and bounded replanning missing | None |
 | [3b. Remote movement and character following](#3b-remote-movement-and-character-following) | Not started; follow was deleted in `05ee035` | None |
-| [4. Repeatable encounter cycles](#4-repeatable-encounter-cycles) | Evidence recorded as met, awaiting Theo's acceptance | `7da1f02` ("Accept M4 exit evidence"); its roadmap text was hedged to "met" in `13ca530` |
+| [4. Repeatable encounter cycles](#4-repeatable-encounter-cycles) | Evidence recorded as met, awaiting the maintainer's acceptance | `7da1f02` ("Accept M4 exit evidence"); its roadmap text was hedged to "met" in `13ca530` |
 | [5. A selected questing loop](#5-a-selected-questing-loop) | Not started; quest protocol code is on `main`, with no live record | None |
 | [6. Sustained supervised play](#6-sustained-supervised-play) | Not started | None |
 
@@ -187,13 +187,13 @@ another large branch of plausible agent-written code would not solve that.
 
 Every change reaches `main` through a pull request with green `signoff/ci`,
 `factory/ci` and `factory/review` statuses, and lands as one squash commit. The
-[dev factory](factory.md) takes issues Theo labels
+[dev factory](factory.md) takes issues the maintainer labels
 `ready` through a worker, a reviewer and a merger. Work from outside the
 factory goes through the same reviewer and merger: an issue with
 `## Acceptance criteria`, a `factory/<N>-<slug>` branch, a PR with `Fixes #N`
 and a `## Proof` section, then `agent:review` on the issue. The procedure is in
 [AGENTS.md](../AGENTS.md) under Commits. Releases are paused. A merged PR does
-not accept a milestone; that stays Theo's call.
+not accept a milestone; that stays the maintainer's call.
 
 ### What an increment provides
 
@@ -615,7 +615,7 @@ The contract, in short:
 - The first rescue after M2 attempt 04 was repair-assisted and does not count
   toward the clean recovery criterion.
 
-#### Status: evidence recorded as met (`7da1f02`), awaiting Theo's acceptance
+#### Status: evidence recorded as met (`7da1f02`), awaiting the maintainer's acceptance
 
 Records: [docs/evidence/m4/](evidence/m4/README.md). One `cycle --max 2`
 completed two fights with kill credit, two acknowledged loot windows and raw

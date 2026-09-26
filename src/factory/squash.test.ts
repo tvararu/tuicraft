@@ -9,7 +9,7 @@ const source = {
 };
 
 describe("squashMessage", () => {
-  test("title, why, then one trailer block crediting Theo", () => {
+  test("title, why, then one trailer block crediting the maintainer", () => {
     expect(squashMessage(source)).toEqual({
       body: [
         "Agents need X because Y.",

@@ -6,12 +6,13 @@ with proof, then stop. Follow AGENTS.md. Your results are the GitHub state
 you leave (labels, workpad, PR), never your exit code or final reply.
 
 `F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`.
-`tvararu` (Theo) is the PM.
+`tvararu` is the maintainer: the human who dispatches work and answers
+`needs:pm`.
 
 ## Hard rules
 
-- Never sign, approve or comment as Theo. Approvals come only from `tvararu`
-  on github.com; Orca approvals do not count.
+- Never sign, approve or comment as the maintainer. Approvals come only from
+  `tvararu` on github.com; Orca approvals do not count.
 - Never create Orca worktrees (`orca-ide worktree create`) or omp worktrees.
   Never remove this worktree: the reaper does that.
 - Never push to `main`. Force-push only your own `factory/<N>-<slug>` branch.
@@ -27,8 +28,9 @@ you leave (labels, workpad, PR), never your exit code or final reply.
    0 it prints `{"issue":N}`. That is your issue.
 3. `gh issue view N -R tvararu/tuicraft --json labels,title,body,comments`.
    It must have `ready` (fresh) or `agent:rework` (rework) and no other
-   `agent:*` label; otherwise stop without any change. Theo adding `ready`
-   is the whole release step: a `needs:pm` alongside it is already answered.
+   `agent:*` label; otherwise stop without any change. The maintainer
+   adding `ready` is the whole release step: a `needs:pm` alongside it is
+   already answered.
 4. Claim: fresh:
    `gh issue edit N -R tvararu/tuicraft --remove-label ready --remove-label needs:pm --add-label agent:working`;
    rework:
@@ -76,10 +78,10 @@ Write it before any code, in this order:
    will attach.
 4. Progress and blockers, updated as you go.
 
-If the issue is ambiguous or needs something only Theo can decide (a new
-preset, a product choice, credentials), write the question in the workpad,
-set `needs:pm` in place of `agent:working`, push anything you have, and
-stop.
+If the issue is ambiguous or needs something only the maintainer can decide
+(a new preset, a product choice, credentials), write the question in the
+workpad, set `needs:pm` in place of `agent:working`, push anything you have,
+and stop.
 
 ## 4. Implement
 
@@ -106,9 +108,9 @@ eval "$(printf '%s' "$acct" | jq -r '.env|to_entries[]|"export \(.key)=\(.value)
 
 Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
 `max80` (level 80, Dalaran). Record `.account` and `.character` in the
-workpad. Run tuicraft with this environment only; never use Theo's or the
-live-test accounts. Filter playerbot chat; invite only factory characters by
-exact name. At the end, always:
+workpad. Run tuicraft with this environment only; never use the
+maintainer's or the live-test accounts. Filter playerbot chat; invite only
+factory characters by exact name. At the end, always:
 
 ```sh
 bun $F soap delete "$(printf '%s' "$acct" | jq -r .account)"

@@ -8,7 +8,7 @@ import {
   decideWorker,
   inScope,
 } from "factory/precheck";
-import { issue, pr, theo } from "test/factory-fixtures";
+import { issue, maintainer, pr } from "test/factory-fixtures";
 
 const pickWork = (issues: Issue[]) => decideWorker(issues, paces.default.wip);
 const pickReview = (issues: Issue[]) =>
@@ -22,8 +22,12 @@ const bot: LabelEvent = {
 
 describe("scope rule", () => {
   test("latest ready actor wins", () => {
-    expect(inScope(issue(1, ["ready"], { events: [bot, theo] }))).toBe(true);
-    expect(inScope(issue(1, ["ready"], { events: [theo, bot] }))).toBe(false);
+    expect(inScope(issue(1, ["ready"], { events: [bot, maintainer] }))).toBe(
+      true,
+    );
+    expect(inScope(issue(1, ["ready"], { events: [maintainer, bot] }))).toBe(
+      false,
+    );
   });
 
   test("ready never added by pm is out", () => {
@@ -31,7 +35,7 @@ describe("scope rule", () => {
   });
 
   test("other label events do not affect the ready actor", () => {
-    const events = [theo, { ...bot, label: "agent:rework" }];
+    const events = [maintainer, { ...bot, label: "agent:rework" }];
     expect(inScope(issue(1, ["agent:rework"], { events }))).toBe(true);
   });
 
@@ -89,7 +93,7 @@ describe("worker", () => {
   });
 
   test("needs:pm waits without a pm ready", () => {
-    const bots = issue(1, ["ready", "needs:pm"], { events: [theo, bot] });
+    const bots = issue(1, ["ready", "needs:pm"], { events: [maintainer, bot] });
     expect(pickWork([bots]).ok).toBe(false);
     expect(pickWork([issue(2, ["needs:pm"])]).ok).toBe(false);
     expect(pickWork([issue(3, ["agent:rework", "needs:pm"])]).ok).toBe(false);
