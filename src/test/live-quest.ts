@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { waitUntil } from "test/live-helpers";
 import { must } from "test/must";
 import { authHandshake } from "wow/auth";
-import { worldSession } from "wow/client";
+import { type WorldHandle, worldSession } from "wow/client";
 import type { QuestEvent } from "wow/quests";
 
 const config1 = {
@@ -17,6 +17,17 @@ const config1 = {
 const ERONA = 15_278;
 const QUEST = 8325;
 const SUNSTRIDER_START = ".go xyz 10349.6 -6357.29 33.4026 530";
+const OUT_OF_REACH = ".go xyz 10382 -6379.56 37.69 530";
+
+async function reachErona(handle: WorldHandle) {
+  await waitUntil(() => handle.getQuestState().log.complete);
+  handle.sendWhisper(config1.character, SUNSTRIDER_START);
+  await waitUntil(() =>
+    handle.getNearbyEntities().some((e) => e.entry === ERONA),
+  );
+  await Bun.sleep(2000);
+  return must(handle.getNearbyEntities().find((e) => e.entry === ERONA));
+}
 
 describe("quest dialog", () => {
   test("auto-accept quest enters the log on select, then abandons", async () => {
@@ -27,20 +38,12 @@ describe("quest dialog", () => {
       handle.getQuestState().log.slots.find((slot) => slot.questId === QUEST)
         ?.slot;
     try {
-      await waitUntil(() => handle.getQuestState().log.complete);
-      handle.sendWhisper(config1.character, SUNSTRIDER_START);
-      await waitUntil(() =>
-        handle.getNearbyEntities().some((e) => e.entry === ERONA),
-      );
-      await Bun.sleep(2000);
+      const erona = await reachErona(handle);
       const existing = logged();
       if (existing !== undefined) {
         handle.abandonQuest(existing);
         await waitUntil(() => logged() === undefined);
       }
-      const erona = must(
-        handle.getNearbyEntities().find((e) => e.entry === ERONA),
-      );
 
       handle.talk(erona.guid);
       await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");
@@ -62,6 +65,29 @@ describe("quest dialog", () => {
       expect(handle.getQuestState().lastReward).toBeUndefined();
     } finally {
       unsubscribe();
+      handle.close();
+      await handle.closed;
+    }
+  }, 60_000);
+
+  test("a cancelled unanswered talk stays unresolved", async () => {
+    const handle = await worldSession(config1, await authHandshake(config1));
+    try {
+      const erona = await reachErona(handle);
+      handle.sendWhisper(config1.character, OUT_OF_REACH);
+      await Bun.sleep(3000);
+      handle.talk(erona.guid);
+      await Bun.sleep(3000);
+      expect(handle.getQuestState().pending?.action).toBe("talk");
+      handle.cancelInteraction();
+      await waitUntil(() => handle.getQuestState().pending === undefined);
+      handle.cancelInteraction();
+      await waitUntil(() => handle.getQuestState().pending === undefined);
+      expect(handle.getQuestState().dialog).toBeUndefined();
+      expect(handle.getQuestState().unresolved).toMatchObject([
+        { action: "talk", guid: erona.guid },
+      ]);
+    } finally {
       handle.close();
       await handle.closed;
     }
