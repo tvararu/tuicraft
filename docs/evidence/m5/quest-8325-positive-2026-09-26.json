@@ -1,0 +1,1182 @@
+{
+ "account": "FAC6AB70F671F",
+ "character": "Fgklhapghbp",
+ "guid": "0xa04",
+ "buildCommit": "85b38f9",
+ "binary": "dist/tuicraft",
+ "questId": 8325,
+ "giver": {
+  "name": "Magistrix Erona",
+  "entry": 15278,
+  "guid": "0xf130003bae004980"
+ },
+ "journal": "tmp/m5-final/journal.md (gitignored operator journal, not committed)",
+ "daemon": {
+  "start": {
+   "at": 1790381990701,
+   "output": {
+    "command": "start",
+    "data": {
+     "socket": "responsive",
+     "started": true
+    },
+    "error": null,
+    "events": [],
+    "kind": "result"
+   }
+  },
+  "stop": {
+   "at": 1790382282184,
+   "output": {
+    "command": "stop",
+    "data": null,
+    "error": null,
+    "events": [],
+    "kind": "intent"
+   }
+  }
+ },
+ "baseline": {
+  "at": 1790381998920,
+  "questLogActive": [],
+  "inventory": {
+   "coinage": 0,
+   "items": [
+    [
+     255,
+     3,
+     53,
+     1
+    ],
+    [
+     255,
+     4,
+     20891,
+     1
+    ],
+    [
+     255,
+     6,
+     52,
+     1
+    ],
+    [
+     255,
+     7,
+     51,
+     1
+    ],
+    [
+     255,
+     15,
+     20981,
+     1
+    ],
+    [
+     255,
+     23,
+     20857,
+     4
+    ],
+    [
+     255,
+     24,
+     159,
+     2
+    ],
+    [
+     255,
+     25,
+     6948,
+     1
+    ]
+   ]
+  },
+  "experience": {
+   "level": 1,
+   "xp": 0,
+   "nextLevelXp": 400
+  }
+ },
+ "talk": {
+  "at": 1790382005895,
+  "dialog": {
+   "kind": "gossip",
+   "data": {
+    "guid": "0xf130003bae004980",
+    "menuId": 11902,
+    "titleTextId": 16703,
+    "options": [],
+    "quests": [
+     {
+      "questId": 8325,
+      "icon": 2,
+      "level": 1,
+      "flags": 524424,
+      "repeatable": 0,
+      "title": "Reclaiming Sunstrider Isle"
+     }
+    ]
+   }
+  }
+ },
+ "accept": {
+  "selectQuestAt": 1790382014517,
+  "readEvents": [
+   {
+    "type": "QUEST",
+    "evt": "intent",
+    "source": "request",
+    "questId": 8325
+   },
+   {
+    "type": "QUEST",
+    "evt": "dialog",
+    "source": "packet",
+    "questId": 8325,
+    "dialogKind": "details"
+   },
+   {
+    "type": "QUEST",
+    "evt": "accepted",
+    "source": "quest_log",
+    "questId": 8325,
+    "dialogKind": "details"
+   },
+   {
+    "type": "QUEST",
+    "evt": "log",
+    "source": "quest_log",
+    "questId": null,
+    "dialogKind": "details"
+   }
+  ],
+  "slot": {
+   "slot": 0,
+   "questId": 8325,
+   "flags": 0,
+   "counters": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "expiresAtSeconds": 0
+  },
+  "detailsRewards": {
+   "choices": [
+    {
+     "itemId": 20997,
+     "count": 1,
+     "displayId": 33325
+    },
+    {
+     "itemId": 20998,
+     "count": 1,
+     "displayId": 33326
+    }
+   ],
+   "items": [],
+   "money": 30,
+   "experience": 100,
+   "honor": 0,
+   "honorMultiplier": 0,
+   "spellId": 0,
+   "spellCastId": 0,
+   "titleId": 0,
+   "talents": 0,
+   "arenaPoints": 0,
+   "reputationMask": 0,
+   "factions": [
+    {
+     "factionId": 911,
+     "valueId": 5,
+     "override": 0
+    },
+    {
+     "factionId": 0,
+     "valueId": 0,
+     "override": 0
+    },
+    {
+     "factionId": 0,
+     "valueId": 0,
+     "override": 0
+    },
+    {
+     "factionId": 0,
+     "valueId": 0,
+     "override": 0
+    },
+    {
+     "factionId": 0,
+     "valueId": 0,
+     "override": 0
+    }
+   ]
+  },
+  "detailsFlags": 524424,
+  "activateAccept": 1,
+  "acceptQuest": {
+   "at": 1790382022994,
+   "exit": 1,
+   "output": {
+    "command": "accept-quest",
+    "data": null,
+    "error": {
+     "message": "quest_already_in_log",
+     "stage": "command"
+    },
+    "events": [],
+    "kind": "error"
+   }
+  },
+  "cancelInteraction": {
+   "at": 1790382027961,
+   "readEvents": [
+    {
+     "type": "QUEST",
+     "evt": "intent",
+     "source": "request",
+     "questId": null
+    },
+    {
+     "type": "QUEST",
+     "evt": "closed",
+     "source": "packet",
+     "questId": null
+    }
+   ]
+  }
+ },
+ "kills": [
+  {
+   "n": 1,
+   "wyrmGuid": "0xf130003baa073c41",
+   "fightStart": 1790382071597,
+   "fightEnd": 1790382076435,
+   "progressAt": 1790382076343,
+   "currentCount": 1,
+   "requiredCount": 8,
+   "slotCounters": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 51,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073c41",
+    "total": 51,
+    "kind": "kill",
+    "at": 1790382076343
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  },
+  {
+   "n": 2,
+   "wyrmGuid": "0xf130003baa073c81",
+   "fightStart": 1790382106313,
+   "fightEnd": 1790382112124,
+   "progressAt": 1790382111899,
+   "currentCount": 2,
+   "requiredCount": 8,
+   "slotCounters": [
+    2,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 101,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073c81",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382111899
+   },
+   "tacticsStopped": [
+    {
+     "reason": "failed"
+    },
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  },
+  {
+   "n": 3,
+   "wyrmGuid": "0xf130003baa073c97",
+   "fightStart": 1790382130387,
+   "fightEnd": 1790382134474,
+   "progressAt": 1790382134257,
+   "currentCount": 3,
+   "requiredCount": 8,
+   "slotCounters": [
+    3,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 151,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073c97",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382134257
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": null
+  },
+  {
+   "n": 4,
+   "wyrmGuid": "0xf130003baa073ca1",
+   "fightStart": 1790382140814,
+   "fightEnd": 1790382145054,
+   "progressAt": 1790382144951,
+   "currentCount": 4,
+   "requiredCount": 8,
+   "slotCounters": [
+    4,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 201,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073ca1",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382144951
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  },
+  {
+   "n": 5,
+   "wyrmGuid": "0xf130003baa073cac",
+   "fightStart": 1790382150661,
+   "fightEnd": 1790382155396,
+   "progressAt": 1790382155213,
+   "currentCount": 5,
+   "requiredCount": 8,
+   "slotCounters": [
+    5,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 251,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073cac",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382155213
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  },
+  {
+   "n": 6,
+   "wyrmGuid": "0xf130003baa073d2f",
+   "fightStart": 1790382173054,
+   "fightEnd": 1790382177568,
+   "progressAt": 1790382177558,
+   "currentCount": 6,
+   "requiredCount": 8,
+   "slotCounters": [
+    6,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 301,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073d2f",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382177558
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": null
+  },
+  {
+   "n": 7,
+   "wyrmGuid": "0xf130003baa073d49",
+   "fightStart": 1790382190646,
+   "fightEnd": 1790382195316,
+   "progressAt": 1790382195244,
+   "currentCount": 7,
+   "requiredCount": 8,
+   "slotCounters": [
+    7,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 0,
+   "xpAfter": 351,
+   "levelAfter": 1,
+   "nextLevelXp": 400,
+   "lastXp": {
+    "victim": "0xf130003baa073d49",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382195244
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  },
+  {
+   "n": 8,
+   "wyrmGuid": "0xf130003baa008b6d",
+   "fightStart": 1790382206576,
+   "fightEnd": 1790382210334,
+   "progressAt": 1790382210267,
+   "currentCount": 8,
+   "requiredCount": 8,
+   "slotCounters": [
+    8,
+    0,
+    0,
+    0
+   ],
+   "slotFlags": 1,
+   "xpAfter": 1,
+   "levelAfter": 2,
+   "nextLevelXp": 900,
+   "lastXp": {
+    "victim": "0xf130003baa008b6d",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382210267
+   },
+   "tacticsStopped": [
+    {
+     "reason": "completed"
+    }
+   ],
+   "questEvents": [
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "packet",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "completed",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "progress",
+     "source": "quest_log",
+     "questId": 8325
+    },
+    {
+     "type": "QUEST",
+     "evt": "log",
+     "source": "quest_log",
+     "questId": null
+    }
+   ],
+   "faceGuidError": {
+    "message": "target_stale",
+    "stage": "command"
+   }
+  }
+ ],
+ "levelUp": {
+  "level": 2,
+  "healthDelta": 6,
+  "powerDeltas": [
+   55,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "statDeltas": [
+   0,
+   0,
+   0,
+   1,
+   1
+  ],
+  "at": 1790382210267
+ },
+ "completion": {
+  "at": 1790382218066,
+  "slot": {
+   "slot": 0,
+   "questId": 8325,
+   "flags": 1,
+   "counters": [
+    8,
+    0,
+    0,
+    0
+   ],
+   "expiresAtSeconds": 0
+  },
+  "completedEventAtKill8": [
+   {
+    "type": "QUEST",
+    "evt": "completed",
+    "source": "quest_log",
+    "questId": 8325
+   }
+  ]
+ },
+ "turnIn": {
+  "inventoryBefore": {
+   "at": 1790382257220,
+   "coinage": 0,
+   "items": [
+    [
+     255,
+     3,
+     53,
+     1
+    ],
+    [
+     255,
+     4,
+     20891,
+     1
+    ],
+    [
+     255,
+     6,
+     52,
+     1
+    ],
+    [
+     255,
+     7,
+     51,
+     1
+    ],
+    [
+     255,
+     15,
+     20981,
+     1
+    ],
+    [
+     255,
+     23,
+     20857,
+     4
+    ],
+    [
+     255,
+     24,
+     159,
+     2
+    ],
+    [
+     255,
+     25,
+     6948,
+     1
+    ]
+   ]
+  },
+  "experienceBefore": {
+   "level": 2,
+   "xp": 1,
+   "nextLevelXp": 900,
+   "lastXp": {
+    "victim": "0xf130003baa008b6d",
+    "total": 50,
+    "kind": "kill",
+    "at": 1790382210267
+   },
+   "lastLevelUp": {
+    "level": 2,
+    "healthDelta": 6,
+    "powerDeltas": [
+     55,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "statDeltas": [
+     0,
+     0,
+     0,
+     1,
+     1
+    ],
+    "at": 1790382210267
+   }
+  },
+  "talk": {
+   "at": 1790382257257,
+   "dialog": {
+    "kind": "gossip",
+    "data": {
+     "guid": "0xf130003bae004980",
+     "menuId": 11902,
+     "titleTextId": 16703,
+     "options": [],
+     "quests": [
+      {
+       "questId": 8325,
+       "icon": 4,
+       "level": 1,
+       "flags": 524424,
+       "repeatable": 0,
+       "title": "Reclaiming Sunstrider Isle"
+      }
+     ]
+    }
+   }
+  },
+  "selectQuest": {
+   "at": 1790382262139,
+   "lastIntent": {
+    "action": "complete",
+    "guid": "0xf130003bae004980",
+    "questId": 8325,
+    "at": 1790382262159
+   },
+   "dialogKind": "offer",
+   "offerRewards": {
+    "choices": [
+     {
+      "itemId": 20997,
+      "count": 1,
+      "displayId": 33325
+     },
+     {
+      "itemId": 20998,
+      "count": 1,
+      "displayId": 33326
+     }
+    ],
+    "items": [],
+    "money": 30,
+    "experience": 100,
+    "honor": 0,
+    "honorMultiplier": 0,
+    "spellId": 0,
+    "spellCastId": 0,
+    "titleId": 0,
+    "talents": 0,
+    "arenaPoints": 0,
+    "reputationMask": 0,
+    "factions": [
+     {
+      "factionId": 911,
+      "valueId": 5,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     },
+     {
+      "factionId": 0,
+      "valueId": 0,
+      "override": 0
+     }
+    ]
+   },
+   "note": "server answered with offer directly; no request-items dialog"
+  },
+  "chooseReward": {
+   "at": 1790382266979,
+   "index": 0,
+   "output": {
+    "command": "choose-reward",
+    "data": null,
+    "error": null,
+    "events": [],
+    "kind": "intent"
+   }
+  },
+  "readEvents": [
+   {
+    "type": "QUEST",
+    "evt": "intent",
+    "source": "request",
+    "questId": 8325
+   },
+   {
+    "type": "REWARDS",
+    "evt": "item_push",
+    "source": null,
+    "questId": null
+   },
+   {
+    "type": "COMBAT",
+    "evt": "xp",
+    "source": null,
+    "questId": null
+   },
+   {
+    "type": "QUEST",
+    "evt": "rewarded",
+    "source": "packet",
+    "questId": 8325
+   },
+   {
+    "type": "REWARDS",
+    "evt": "inventory_observed",
+    "source": null,
+    "questId": null
+   },
+   {
+    "type": "QUEST",
+    "evt": "removed",
+    "source": "quest_log",
+    "questId": 8325
+   },
+   {
+    "type": "QUEST",
+    "evt": "log",
+    "source": "quest_log",
+    "questId": null
+   }
+  ],
+  "lastItemPush": {
+   "guid": "0xa04",
+   "received": 1,
+   "created": 0,
+   "showInChat": 0,
+   "bagSlot": 255,
+   "slot": 26,
+   "itemId": 20997,
+   "randomSuffix": 0,
+   "randomPropertyId": 0,
+   "count": 1,
+   "totalCount": 1,
+   "observedAt": 1790382267006
+  },
+  "xpEventLastXp": {
+   "victim": "0x0",
+   "total": 100,
+   "kind": "other",
+   "at": 1790382267006
+  },
+  "lastReward": {
+   "questId": 8325,
+   "experience": 100,
+   "money": 30,
+   "honor": 0,
+   "talents": 0,
+   "arenaPoints": 0,
+   "at": 1790382267007
+  },
+  "questLogAfter": [],
+  "inventoryAfter": {
+   "at": 1790382269540,
+   "coinage": 30,
+   "items": [
+    [
+     255,
+     3,
+     53,
+     1
+    ],
+    [
+     255,
+     4,
+     20891,
+     1
+    ],
+    [
+     255,
+     6,
+     52,
+     1
+    ],
+    [
+     255,
+     7,
+     51,
+     1
+    ],
+    [
+     255,
+     15,
+     20981,
+     1
+    ],
+    [
+     255,
+     23,
+     20857,
+     4
+    ],
+    [
+     255,
+     24,
+     159,
+     2
+    ],
+    [
+     255,
+     25,
+     6948,
+     1
+    ],
+    [
+     255,
+     26,
+     20997,
+     1
+    ]
+   ]
+  },
+  "inventoryDiff": {
+   "coinageDelta": 30,
+   "added": [
+    [
+     255,
+     26,
+     20997,
+     1
+    ]
+   ],
+   "removed": []
+  },
+  "experienceAfter": {
+   "level": 2,
+   "xp": 101,
+   "nextLevelXp": 900,
+   "lastXp": {
+    "victim": "0x0",
+    "total": 100,
+    "kind": "other",
+    "at": 1790382267006
+   },
+   "lastLevelUp": {
+    "level": 2,
+    "healthDelta": 6,
+    "powerDeltas": [
+     55,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "statDeltas": [
+     0,
+     0,
+     0,
+     1,
+     1
+    ],
+    "at": 1790382210267
+   }
+  },
+  "experienceDelta": {
+   "xp": 100,
+   "level": 0
+  }
+ },
+ "failuresAndWorkarounds": [
+  {
+   "step": "goto 10380 -6320 33.6 from spawn (10349.6,-6357.29,33.40)",
+   "output": {
+    "command": "goto",
+    "data": null,
+    "error": {
+     "message": "stop: pathfind_find_height failed (UNKNOWN_HEIGHT)",
+     "stage": "command"
+    },
+    "events": [],
+    "kind": "error"
+   },
+   "workaround": "goto 10382 -6379.56 37.6876 first (succeeded), then goto 10380 -6320 33.6 (succeeded)",
+   "at": 1790382034205
+  },
+  {
+   "step": "face-guid <wyrm> before Smite pull (kills 1,2,4,5,7,8)",
+   "output": {
+    "command": "face-guid",
+    "data": null,
+    "error": {
+     "message": "target_stale",
+     "stage": "command"
+    },
+    "events": [],
+    "kind": "error"
+   },
+   "workaround": "none needed: cast 585 <guid> still hit the target each time and fight completed; face-guid succeeded for kills 3 and 6"
+  },
+  {
+   "step": "fight 0xf130003baa073c41",
+   "at": 1790382098512,
+   "face": "{\"command\":\"face-guid\",\"data\":null,\"error\":{\"message\":\"target_stale\",\"stage\":\"command\"},\"events\":[],\"kind\":\"error\"}",
+   "cast": "{\"command\":\"cast\",\"data\":null,\"error\":null,\"events\":[],\"kind\":\"intent\"}",
+   "lastOutcome": {
+    "kind": "cast",
+    "status": "failed",
+    "spellId": 585,
+    "result": 12,
+    "at": 1790382095492
+   },
+   "output": "{\"command\":\"fight\",\"data\":null,\"error\":{\"message\":\"target_dead\",\"stage\":\"command\"},\"events\":[],\"kind\":\"error\"}",
+   "note": "OPERATOR ERROR: harness picked the already-dead wyrm from kill 1 (health 0). Smite failed result 12 and fight refused target_dead. Not a tuicraft defect; filtering health>0 afterwards."
+  },
+  {
+   "step": "wyrms beyond ~26 yd before kills 3, 4, 5, 6, 7, 8",
+   "workaround": "face <radians> + move forward <ms> legs (no goto) until within ~22 yd, then face-guid/cast 585/fight"
+  },
+  {
+   "step": "goto 10380 -6320 33.6 from post-fight pose (10399.3,-6261.8,27.4)",
+   "at": 1790382218086,
+   "output": "{\"command\":\"goto\",\"data\":null,\"error\":{\"message\":\"stop: pathfind_find_height failed (UNKNOWN_HEIGHT)\",\"stage\":\"command\"},\"events\":[],\"kind\":\"error\"}",
+   "workaround": "face + move forward legs back toward (10378,-6285) then (10380,-6318), then goto"
+  },
+  {
+   "step": "accept-quest after auto-accept select-quest",
+   "output": {
+    "command": "accept-quest",
+    "data": null,
+    "error": {
+     "message": "quest_already_in_log",
+     "stage": "command"
+    },
+    "events": [],
+    "kind": "error"
+   },
+   "workaround": "expected: AUTO_ACCEPT quest (flags 524424 includes 0x80000) is already in the log after select-quest"
+  },
+  {
+   "step": "fight <wyrm> alone",
+   "note": "not retried in this run; the probe showed unverified_hostile_relation for neutral Mana Wyrms, so every fight was preceded by the Smite pull (cast 585)"
+  }
+ ],
+ "notes": [
+  "Kill 1 awarded 51 XP (lastXp.total 51); kills 2-8 awarded 50 each. Recorded as observed; cause not investigated.",
+  "Tactics (Jev) runs all ended with TACTICS stopped reason 'completed' (not 'server_kill_credit' as the brief anticipated).",
+  "Level-up 1->2 happened on kill 8 (xp 351 -> level 2, xp 1, nextLevelXp 900); COMBAT level_up and learned events in that read.",
+  "QUEST 'completed' event (source quest_log) arrived in the kill-8 read together with slot flags=1.",
+  "Turn-in: select-quest on gossip icon 4 recorded lastIntent action 'complete'; server answered directly with an offer dialog (no request-items).",
+  "No GM commands used; daemon stopped at the end (status: not_running)."
+ ],
+ "outcome": "positive"
+}
