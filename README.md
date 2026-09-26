@@ -147,7 +147,7 @@ tuicraft cycle 0xa 0xb --max 3 --instruction stay alive # explicit GUID queue fr
 tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
 tuicraft cycle --quest 8325    # pick quest targets itself until the log slot completes
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
-tuicraft goto 1 2 [3]      # ground route; Z from the unique ground column when omitted
+tuicraft goto 1 2 [3]      # ground route; Z from the unique ground column when omitted; redirects an active route
 tuicraft navigation --json # route state, refusal and conservative next step
 tuicraft recovery        # observed life and corpse-reclaim conditions
 tuicraft query-corpse      # request corpse information

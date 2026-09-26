@@ -117,7 +117,9 @@ function planDestination(
 }
 
 function navigateTo(rt: Runtimes, destination: NavDestination): void {
-  rt.override();
+  rt.override(
+    rt.control.navigationState().active ? "navigation_replaced" : undefined,
+  );
   const { x, y, z } = destination;
   if (![x, y, z ?? 0].every(Number.isFinite))
     throw new Error("stop: invalid_destination");
