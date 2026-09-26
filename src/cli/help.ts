@@ -61,6 +61,7 @@ USAGE
   tuicraft cancel-interaction  Request close; wait for observed close
                             OK is intent, not accepted/completed/rewarded state
   tuicraft inventory [--json]  Observed carried items, coinage and unknown fields
+  tuicraft experience [--json]  Observed level and XP fields, last XP gain and level-up notices
   tuicraft loot [--json]      Loot offer, pending intent and inventory evidence
   tuicraft open-loot <guid>  Request loot from an observed lootable corpse
   tuicraft take-loot <slot>  Request an offered uint8 loot slot (0-255)
@@ -97,7 +98,8 @@ JSON OUTPUT
   keeps the original kind and data. All JSON errors print to stdout.
   logs and skill remain raw; --json is unsupported for them, setup, help, version,
   interactive mode and internal daemon mode.
-  Without --json, cycling, recovery, inventory and loot print readable summaries.
+  Without --json, cycling, recovery, inventory, experience and loot print readable
+  summaries.
   Control actions print daemon request acceptance, not a server result.
   fight and cycle reply when the run ends; check tactics or cycling for the outcome.
 

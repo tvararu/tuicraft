@@ -18,6 +18,7 @@ import {
   buildAttackSwing,
   type XpGain,
 } from "wow/protocol/combat";
+import type { LevelUpInfo } from "wow/protocol/experience";
 import type { CreateSpline, MonsterMove } from "wow/protocol/monster-move";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type {
@@ -96,6 +97,7 @@ export type CombatState = {
   targetAuras: CombatAura[];
   lastOutcome: CombatOutcome | undefined;
   lastXp: CombatXp | undefined;
+  lastLevelUp: (LevelUpInfo & { at: number }) | undefined;
 };
 
 export type CombatEventType =
@@ -109,6 +111,7 @@ export type CombatEventType =
   | "attack_stopped"
   | "aura"
   | "xp"
+  | "level_up"
   | "learned"
   | "outcome";
 
@@ -143,6 +146,7 @@ export class CombatRuntime {
   private attackTarget: bigint | undefined;
   private lastOutcome: CombatOutcome | undefined;
   private lastXp: CombatXp | undefined;
+  private lastLevelUp: CombatState["lastLevelUp"];
 
   constructor(deps: CombatDeps) {
     this.deps = deps;
@@ -192,6 +196,7 @@ export class CombatRuntime {
       targetAuras: selected ? this.auras.forUnit(selected) : [],
       lastOutcome: this.lastOutcome,
       lastXp: this.lastXp,
+      lastLevelUp: this.lastLevelUp,
     };
   }
 
@@ -452,6 +457,11 @@ export class CombatRuntime {
       at: this.deps.now(),
     };
     this.emit("xp");
+  }
+
+  applyLevelUp(packet: LevelUpInfo): void {
+    this.lastLevelUp = { ...packet, at: this.deps.now() };
+    this.emit("level_up");
   }
 
   applyMonsterMove(packet: MonsterMove, mapId: number): void {

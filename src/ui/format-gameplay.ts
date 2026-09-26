@@ -4,6 +4,7 @@ import type {
   CycleState,
   CycleTargetRecord,
 } from "wow/encounter-cycle";
+import type { ExperienceState } from "wow/experience";
 import type { InventoryState } from "wow/inventory";
 import type { RecoveryState } from "wow/recovery";
 import type { RewardsState } from "wow/rewards";
@@ -126,4 +127,19 @@ export function formatRewardsState(state: RewardsState): string[] {
   if (pending) lines.push(`Request: ${pending.action} ${pending.status}`);
   lines.push(`Carried coinage: ${show(state.inventory.coinage)}`);
   return [...lines, ...formatLootErrors(state)];
+}
+
+export function formatExperienceState(state: ExperienceState): string[] {
+  const lines = [
+    `Level: ${show(state.level)}`,
+    `XP: ${show(state.xp)} / ${show(state.nextLevelXp)}`,
+  ];
+  const { lastXp, lastLevelUp } = state;
+  if (lastXp) {
+    const source =
+      lastXp.kind === "kill" ? `kill ${formatGuid(lastXp.victim)}` : "other";
+    lines.push(`Last XP gain: ${lastXp.total} (${source})`);
+  }
+  if (lastLevelUp) lines.push(`Last level up: ${lastLevelUp.level}`);
+  return lines;
 }

@@ -11,6 +11,7 @@ const INSPECTIONS = [
   "recovery",
   "quests",
   "inventory",
+  "experience",
   "loot",
 ] as const;
 

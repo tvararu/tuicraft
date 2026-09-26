@@ -12,6 +12,7 @@ import {
   parseDeathReleaseLocation,
   parseResurrectRequest,
 } from "wow/protocol/death";
+import { parseLevelUpInfo } from "wow/protocol/experience";
 import { parseGossipMessage } from "wow/protocol/gossip";
 import { parseInventoryChangeFailure } from "wow/protocol/inventory";
 import {
@@ -122,6 +123,9 @@ function registerMeleeHandlers(conn: WorldConn): void {
     conn.combat?.applyAuraAll(parseAuraUpdateAll(r)),
   );
   on(GameOpcode.SMSG_LOG_XPGAIN, (r) => conn.combat?.applyXp(parseXpGain(r)));
+  on(GameOpcode.SMSG_LEVELUP_INFO, (r) =>
+    conn.combat?.applyLevelUp(parseLevelUpInfo(r)),
+  );
   on(GameOpcode.SMSG_MONSTER_MOVE, (r) =>
     conn.combat?.applyMonsterMove(
       parseMonsterMove(r),

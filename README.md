@@ -149,6 +149,7 @@ tuicraft choose-reward 0   # choose an offered reward (zero-based 0-5)
 tuicraft abandon-quest 0   # request abandonment of a log slot (zero-based 0-24)
 tuicraft cancel-interaction # request dialog close; wait for observed closure
 tuicraft inventory       # carried item stacks, free slots and coinage
+tuicraft experience      # observed level, XP and XP/level-up notices
 tuicraft loot            # current offer and unanswered requests
 tuicraft open-loot 0xabc   # request loot from an observed lootable corpse
 tuicraft take-loot 0 [--json] # request a slot actually present in that offer
@@ -211,7 +212,7 @@ it stops a daemon and a `not_running` result when none exists.
 Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 
-Without `--json`, `cycling`, `recovery`, `inventory`, and `loot` print readable
+Without `--json`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` print readable
 summaries. Control actions report daemon request acceptance, not server success;
 `fight` and `cycle` reply when the run ends and say so.
 Use `--json` for the full observed state and for scripts.
@@ -277,6 +278,10 @@ offered dialog. Reward indices and abandonment slots are zero-based.
 and rewards require a server reward notification. Unanswered metadata is unknown,
 not missing. `cancel-interaction` requests closure and does not immediately unlock
 another mutation. Do not retry before an observed close or authoritative outcome.
+
+`experience` reads the observed level, XP and next-level XP fields beside the
+last XP-gain and level-up notices. A notice is not an XP change; compare the
+fields before and after a kill or turn-in.
 
 `inventory` exposes observed carried items, bag capacity and coinage. Unknown
 counts and capacity remain unknown. `loot` separates the current offer, pending

@@ -97,6 +97,7 @@ export type CliAction =
   | { mode: "abandon_quest"; slot: number; json?: true }
   | { mode: "cancel_interaction"; json?: true }
   | { mode: "inventory"; json: boolean }
+  | { mode: "experience"; json: boolean }
   | { mode: "loot"; json: boolean }
   | { mode: "open_loot"; guid: bigint; json?: true }
   | { mode: "take_loot"; slot: number; json?: true }
@@ -154,6 +155,7 @@ const SUBCOMMANDS = new Set([
   "abandon-quest",
   "cancel-interaction",
   "inventory",
+  "experience",
   "loot",
   "open-loot",
   "take-loot",
@@ -199,6 +201,7 @@ const INSPECTIONS = [
   "recovery",
   "quests",
   "inventory",
+  "experience",
   "loot",
 ] as const;
 

@@ -24,7 +24,7 @@ tuicraft quests [--json] | talk <guid> | query-quest <id>
 tuicraft select-option <id> [code] | select-quest <id> | accept-quest
 tuicraft complete-quest <id> | request-reward | choose-reward <index>
 tuicraft abandon-quest <slot> | cancel-interaction
-tuicraft inventory [--json] | loot [--json] | open-loot <guid>
+tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
@@ -388,6 +388,10 @@ Scope excludes bank and buyback. Unknown GUID halves, counts, ownership, bag cap
 An observed item identity does not imply count 1. Slot state distinguishes unknown, empty, and occupied.
 `freeSlots` counts physical empty backpack/equipped-bag cells only. It does not prove bag-family eligibility or stack capacity.
 
+`tuicraft experience` [`--json`]
+:: Print the observed self level, `xp` and `nextLevelXp` fields, the last XP-gain notice (`lastXp`, kill or other), and the last level-up notice (`lastLevelUp`: level with health, power and stat deltas).
+Fields are unknown until the self player is observed. A notice is not a field change; compare `xp`/`level` before and after a kill or quest turn-in.
+
 `tuicraft loot` [`--json`]
 :: Print loot phase/offer, unanswered intent, inventory observations, inventory/loot errors, and item/money/release notices.
 The `data` object separates `loot`, `pending`, `inventory`, `lastItemPush`, `lastMoneyNotice`, and `lastRelease`.
@@ -462,7 +466,7 @@ continuous JSONL: parse one envelope per line. See [Output Format](#output-forma
 
 Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
 `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`,
-`inventory`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
+`inventory`, `experience`, `loot`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
 `goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
@@ -671,4 +675,4 @@ and exit with status 1. With `--json`, they print one error envelope on stdout
 and exit with status 1. Human control actions print daemon request acceptance,
 not a server result. `fight` and `cycle` reply when the run ends and print
 that it ended; `tactics` or `cycling` holds the outcome. `cycling`,
-`recovery`, `inventory`, and `loot` print readable summaries.
+`recovery`, `inventory`, `experience`, and `loot` print readable summaries.
