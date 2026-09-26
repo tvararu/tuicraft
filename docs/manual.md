@@ -526,20 +526,28 @@ the stop reason. A request for money or an item slot does not prove a gain.
 
 `tuicraft goto` _x_ _y_ [_z_] | _guid_
 :: Request a ground route. Missing navigation data fails with `ERR`.
-Without _z_, the destination height comes from the native ground column at
-_x_ _y_; a column with more than one floor refuses with
-`pick_destination` before any movement. With _z_, it must match the one
-ground height there. An entity's observed Z need not be a unique ground
-height. Do not pass `nearby` coordinates to `goto` without ground validation;
-prefer the two-coordinate form. The start and destination must each have one
-ground height. Along the route, a column may also hold surfaces below the
-walked ground or more than 1.6 yards (the agent height) above it, such as a
-canopy or a bridge overhead. A route still refuses a surface within 1.6 yards
-above the walked ground and a step of more than 1 yard between 0.5-yard
-samples (`ambiguous ground column at route`). A native path corner may sit up
-to 1.25 yards above the ground (the navmesh's climb plus one cell), but no
-other surface may be closer to it. A `goto` while a route is active stops the
-old route with a `movement_stopped` CONTROL event whose reason is
+A floor is a surface in the native ground column at _x_ _y_ with no other
+surface from 0.25 to 1.6 yards (the agent height) above it; terrain under a
+low platform is not a floor. Without _z_, the destination height is the one
+floor there. A column with more than one floor refuses with
+`ambiguous ground column at destination (floors …)` and
+`refusal=pick_destination` before any movement. With _z_, it must be within
+0.25 yards of a floor, so `goto` _x_ _y_ _floor_ picks one of the listed
+floors. A _z_ on no floor refuses with `destination is not on a ground floor
+(floors …)`, also `pick_destination`. `navigation --json` lists the floors,
+highest first, in `floors`. The route must still end on the chosen floor
+through connected ground; a floor it cannot reach refuses and nothing moves.
+An entity's observed Z need not be a floor. Do not pass `nearby`
+coordinates to `goto` without ground validation; prefer the two-coordinate
+form. The start pose must be on a floor of its column, so a character on a
+platform or upper level can plan from there. Along the route, a column may
+also hold surfaces below the walked ground or more than 1.6 yards above it,
+such as a canopy or a bridge overhead. A route still refuses a surface within
+1.6 yards above the walked ground and a step of more than 1 yard between
+0.5-yard samples (`ambiguous ground column at route`). A native path corner
+may sit up to 1.25 yards above the ground (the navmesh's climb plus one cell),
+but no other surface may be closer to it. A `goto` while a route is active
+stops the old route with a `movement_stopped` CONTROL event whose reason is
 `navigation_replaced`, then plans from the stopped pose. If that plan is
 refused, the character stays stopped.
 
@@ -573,10 +581,11 @@ stops the route with `target_lost`.
 `nextStep`. For `obstructed`, choose another route and inspect the ground.
 For `height_unresolved`, choose a different short heading or a known
 grounded waypoint; do not repeat the failed heading. For `ambiguous ground
-column at destination` (`refusal=pick_destination`), choose a destination
-with one ground height; do not guess Z. `ambiguous ground column at start`
-means the character stands where the column has more than one floor, such as
-inside a building; move to open ground first. `at route` means the route
+column at destination` or `destination is not on a ground floor`
+(`refusal=pick_destination`), repeat the `goto` with one of `floors` as _z_,
+or choose another destination; do not guess Z. `ambiguous ground column at start`
+means a surface sits less than 1.6 yards above the character's pose, so the
+pose is not on a floor; move to open ground first. `at route` means the route
 crosses such ground; choose another destination or waypoint. Both stop.
 `refusal=unreachable` means the navigation mesh cannot connect the start to
 the destination: native `UNKNOWN_PATH`, a path that ends away from the

@@ -165,12 +165,14 @@ describe("dispatchCommand", () => {
     );
   });
 
-  test("navigation refuses an ambiguous column without guessing Z", async () => {
+  test("navigation lists the floors of an ambiguous destination without guessing Z", async () => {
     const handle = attachControl(createMockHandle());
     handle.getNavigationState.mockReturnValue({
       active: false,
-      blockedReason: "ambiguous ground column at destination",
-      destination: { x: 8713.8, y: -6625.3, z: 70 },
+      blockedReason:
+        "ambiguous ground column at destination (floors 50.68, 25.27)",
+      destination: { x: 10_300.3, y: -6353.6 },
+      floors: [50.68, 25.27],
       owner: "none",
       refusal: "pick_destination",
       remaining: undefined,
@@ -186,9 +188,10 @@ describe("dispatchCommand", () => {
       },
     );
     const state = JSON.parse(socket.written().trim());
-    expect(state.blockedReason).toBe("ambiguous ground column at destination");
+    expect(state.floors).toEqual([50.68, 25.27]);
+    expect(state.destination).toEqual({ x: 10_300.3, y: -6353.6 });
     expect(state.refusal).toBe("pick_destination");
-    expect(state.nextStep).toContain("one ground height");
+    expect(state.nextStep).toContain("one of floors as Z");
     expect(state.nextStep).toContain("Do not guess Z");
   });
 

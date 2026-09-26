@@ -86,34 +86,41 @@ describe("goTo without Z", () => {
     }
   });
 
-  test("refuses an ambiguous column at pick_destination before any motion", () => {
+  test("refuses an ambiguous column at pick_destination with its floors, then walks to a chosen floor", () => {
     const f = fixture((x) =>
       x > 8715 ? [70.34, 80.34] : [70.34 + (x - 8709.46) / 100],
     );
     const start = must(f.runtime.snapshot().pose);
     expect(() => f.handle.goTo(point(start.x + 10, start.y))).toThrow(
-      "pick_destination: ambiguous ground column",
+      "pick_destination: ambiguous ground column at destination (floors 80.34, 70.34)",
     );
     expect(f.runtime.navigationState()).toMatchObject({
       active: false,
       destination: { x: start.x + 10, y: start.y },
       refusal: "pick_destination",
+      floors: [80.34, 70.34],
     });
     expect(f.runtime.navigationState().destination).not.toHaveProperty("z");
     expect(f.sent.filter((packet) => MOTION.has(packet.opcode))).toEqual([]);
     expect(f.runtime.snapshot().moving).toBe(false);
+    f.handle.goTo(point(start.x + 10, start.y, 70.34));
+    expect(f.runtime.navigationState()).toMatchObject({
+      active: true,
+      destination: { x: start.x + 10, y: start.y, z: 70.34 },
+    });
+    expect(f.runtime.navigationState()).not.toHaveProperty("floors");
   });
 
-  test("keeps an explicit Z on the grounded-point plan", () => {
+  test("refuses a guessed Z at pick_destination with the floors instead of replacing it", () => {
     const f = fixture(() => [70.34]);
     const start = must(f.runtime.snapshot().pose);
     expect(() => f.handle.goTo(point(start.x + 5, start.y, 90))).toThrow(
-      "wait: position disagrees with ground height",
+      "pick_destination: destination is not on a ground floor (floors 70.34)",
     );
-    expect(f.runtime.navigationState().destination).toEqual({
-      x: start.x + 5,
-      y: start.y,
-      z: 90,
+    expect(f.runtime.navigationState()).toMatchObject({
+      destination: { x: start.x + 5, y: start.y, z: 90 },
+      refusal: "pick_destination",
+      floors: [70.34],
     });
     f.handle.goTo(point(start.x + 5, start.y, 70.34));
     expect(f.runtime.navigationState().active).toBe(true);

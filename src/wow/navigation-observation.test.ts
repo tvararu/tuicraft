@@ -34,9 +34,12 @@ describe("nextStepFor", () => {
   });
 
   test("gives each ambiguous-column site its own advice", () => {
-    expect(nextStepFor("ambiguous ground column at destination")).toContain(
-      "Choose a destination with one ground height",
-    );
+    expect(
+      nextStepFor("ambiguous ground column at destination (floors 30, 20)"),
+    ).toContain("one of floors as Z");
+    expect(
+      nextStepFor("destination is not on a ground floor (floors 30)"),
+    ).toContain("one of floors as Z");
     expect(nextStepFor("ambiguous ground column at start")).toContain(
       "Move to open ground",
     );

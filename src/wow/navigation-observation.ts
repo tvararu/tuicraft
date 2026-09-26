@@ -13,9 +13,13 @@ export function nextStepFor(reason: string | undefined): string | null {
   if (reason === "too_steep")
     return "The ground ahead rises or drops more than a character can walk. Turn along the slope or pick another heading.";
   if (reason?.includes("ambiguous ground column at start"))
-    return "The current position has more than one floor. Move to open ground with one ground height before planning again.";
+    return "The current position is under a surface less than a character's height above it. Move to open ground before planning again.";
   if (reason?.includes("ambiguous ground column at route"))
     return "The route crosses ground with more than one floor. Choose a different destination or an open-ground waypoint.";
+  if (reason?.includes("ambiguous ground column at destination"))
+    return "The destination has more than one floor. Repeat the goto with one of floors as Z, or choose another destination. Do not guess Z.";
+  if (reason?.includes("destination is not on a ground floor"))
+    return "The requested Z is not on a floor at this destination. Repeat the goto with one of floors as Z. Do not guess Z.";
   if (reason?.includes("ambiguous ground column"))
     return "Choose a destination with one ground height. Do not guess Z.";
   if (reason === "target_lost")
