@@ -152,6 +152,8 @@ JSON OUTPUT
   Control actions print daemon request acceptance, not a server result.
   fight replies when the run ends with its outcome line, for example
   "completed: server_kill_credit, XP 60"; cycle says that it ended.
+  If Jev is unavailable (refused key, repeated network failure), they print
+  ERR jev_unavailable: <cause> and exit 1; the cycle queue stays resumable.
   walk-toward --json returns the terminal outcome as data; a stop also sets error and exits 1:
     {"command":"walk-toward","data":{"status":"stopped","reason":"target_stale","traveled":0,"pose":{...}},"error":{"message":"walk stopped without completion","stage":"command"},"events":[],"kind":"result"}
 

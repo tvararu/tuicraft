@@ -4,6 +4,7 @@ import { messageOf } from "lib/errors";
 import { ignoreFailure } from "lib/ignore-failure";
 import type { FramingVariant } from "wow/framing";
 import type { JevActionResult, JevCandidate, JevSelect } from "wow/jev";
+import { JevTransportError, JevUnavailableError } from "wow/jev-failure";
 
 const WAIT = {
   id: "wait",
@@ -17,6 +18,7 @@ const DEFAULT_INTERVAL_MS = 200;
 const DEFAULT_TIMEOUT_MS = 5000;
 export const MAX_CONSECUTIVE_TIMEOUTS = 3;
 export const SERVER_REJECTION = "server_action_rejected:";
+export const TRANSPORT_LIMIT = 3;
 
 export type TacticsContext = {
   targetGuid: bigint;
@@ -108,6 +110,7 @@ type Run = {
   abort: AbortController;
   detach: () => void;
   timeouts: number;
+  transportFailures: number;
 };
 
 type Decision = {
@@ -148,7 +151,7 @@ export class TacticsLoop {
   async start(context: TacticsContext, signal?: AbortSignal): Promise<void> {
     this.stop("replaced");
     const apiKey = this.deps.apiKey;
-    if (!apiKey) throw new Error("missing_jev_key");
+    if (!apiKey) throw new JevUnavailableError("missing_jev_key");
     if (signal?.aborted) throw abortReason(signal);
     const run = this.begin(context, apiKey, signal);
     try {
@@ -161,7 +164,9 @@ export class TacticsLoop {
     try {
       await this.decide(run);
     } catch (error) {
+      const live = this.live(run);
       this.fail(run, error, true);
+      if (live && error instanceof JevUnavailableError) throw error;
     }
   }
 
@@ -220,6 +225,7 @@ export class TacticsLoop {
       abort: new AbortController(),
       detach: () => external?.removeEventListener("abort", onExternal),
       timeouts: 0,
+      transportFailures: 0,
     };
     const onExternal = () => {
       if (this.live(run)) this.stop("aborted");
@@ -316,18 +322,31 @@ export class TacticsLoop {
     try {
       const result = await this.select(run, frame);
       run.timeouts = 0;
+      run.transportFailures = 0;
       this.state.timeouts.consecutive = 0;
       return result;
     } catch (error) {
-      if (!this.live(run) || messageOf(error) !== TIMEOUT) throw error;
-      run.timeouts += 1;
-      this.state.timeouts.consecutive = run.timeouts;
-      this.state.timeouts.total += 1;
-      if (run.timeouts >= MAX_CONSECUTIVE_TIMEOUTS) throw error;
-      this.state.lastDiscardReason = TIMEOUT;
-      this.emit({ type: "transport", runId: run.runId, error: TIMEOUT });
+      if (!this.live(run)) throw error;
+      this.retry(run, error);
+      const reason = messageOf(error);
+      this.state.lastDiscardReason = reason;
+      this.emit({ type: "transport", runId: run.runId, error: reason });
       return undefined;
     }
+  }
+
+  private retry(run: Run, error: unknown): void {
+    if (error instanceof JevTransportError) {
+      run.transportFailures += 1;
+      if (run.transportFailures < TRANSPORT_LIMIT) return;
+      const detail = `transport ${error.message} (${TRANSPORT_LIMIT} in a row)`;
+      throw new JevUnavailableError(detail, { cause: error });
+    }
+    if (messageOf(error) !== TIMEOUT) throw error;
+    run.timeouts += 1;
+    this.state.timeouts.consecutive = run.timeouts;
+    this.state.timeouts.total += 1;
+    if (run.timeouts >= MAX_CONSECUTIVE_TIMEOUTS) throw error;
   }
 
   private async select(

@@ -2,9 +2,10 @@ import { Emitter, type Unsubscribe } from "lib/emitter";
 import { messageOf } from "lib/errors";
 import type { ControlEvent, ControlRuntime, ControlState } from "wow/control";
 import { type CycleRecovery, recoverCorpse } from "wow/corpse-run";
-import type { CycleStop } from "wow/cycle-stop";
+import { type CycleStop, cycleStop } from "wow/cycle-stop";
 import type { EntityEvent } from "wow/entity-store";
 import { EventWaiter } from "wow/event-waiter";
+import { JEV_UNAVAILABLE, JevUnavailableError } from "wow/jev-failure";
 import { lootCorpse } from "wow/loot-run";
 import type { ObjectivePick, ObjectiveProgress } from "wow/quest-objective";
 import type { RecoveryEvent, RecoveryRuntime } from "wow/recovery";
@@ -222,6 +223,9 @@ export class EncounterCycleRuntime {
     } catch (error) {
       if (!run.signal.aborted) throw error;
     }
+    const { stopCause, stopDetail } = this.state;
+    if (this.run === run && stopCause === JEV_UNAVAILABLE)
+      throw new JevUnavailableError(String(stopDetail?.["reason"]));
   }
 
   stop(reason: string, detail?: Record<string, unknown>): void {
@@ -318,6 +322,8 @@ export class EncounterCycleRuntime {
       await tactics.start(context, signal);
     } catch (error) {
       signal.throwIfAborted();
+      if (error instanceof JevUnavailableError)
+        return cycleStop(JEV_UNAVAILABLE, { reason: error.detail });
       const outcome = tactics.snapshot().lastOutcome;
       return skip(record, messageOf(error, "fight_failed"), outcome);
     }
