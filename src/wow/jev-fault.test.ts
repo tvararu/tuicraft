@@ -41,8 +41,29 @@ describe("parseJevFault", () => {
     expect(parseJevFault("transport")).toEqual({ kind: "transport" });
   });
 
+  test("limits a fault to one numbered request with @", () => {
+    expect(parseJevFault("delay:6000@3")).toEqual({
+      kind: "delay",
+      delayMs: 6000,
+      request: 3,
+    });
+    expect(faultMarker({ kind: "http", status: 503, request: 2 })).toBe(
+      "http:503@2",
+    );
+  });
+
   test("rejects anything else", () => {
-    for (const raw of ["delay", "delay:-1", "http:99", "503", "network"])
+    for (const raw of [
+      "delay",
+      "delay:-1",
+      "http:99",
+      "503",
+      "network",
+      "transport@0",
+      "transport@",
+      "transport@1@2",
+      "delay:1@1.5",
+    ])
       expect(() => parseJevFault(raw)).toThrow("Unknown JEV_FAULT");
   });
 });
@@ -73,6 +94,19 @@ describe("createFaultSelect", () => {
     const select = createFaultSelect({ kind: "transport" }, base);
     await expect(select(mockRequest, options())).rejects.toThrow(
       "fetch failed",
+    );
+  });
+
+  test("faults only the numbered request", async () => {
+    const select = createFaultSelect({ kind: "transport", request: 2 }, base);
+    expect((await select(mockRequest, options())).choice).toBe(
+      "spell:585:target",
+    );
+    await expect(select(mockRequest, options())).rejects.toThrow(
+      "fetch failed",
+    );
+    expect((await select(mockRequest, options())).choice).toBe(
+      "spell:585:target",
     );
   });
 
