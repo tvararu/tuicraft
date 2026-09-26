@@ -135,7 +135,7 @@ tuicraft walk-toward 2 <grounded-x> <grounded-y> <grounded-z> # direct leg towar
 tuicraft target 0xabc      # request selection (0 clears); uint64 hex or decimal
 tuicraft combat [--json]   # vitals, cast, learned IDs
 tuicraft spells [--json]   # learned spellbook
-tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self)
+tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self); outcome in combat --json .lastOutcome, e.g. reason out_of_range
 tuicraft attack 0xabc      # auto-attack
 tuicraft cancel-cast        # interrupt the current cast
 tuicraft stop-attack       # stop auto-attack

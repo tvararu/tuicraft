@@ -254,6 +254,36 @@ test("cancellation requests do not hide other server errors", () => {
   });
 });
 
+test("failed and interrupted casts name the server result next to its code", () => {
+  const { combat } = setup();
+  const events: { type: string; reason?: string }[] = [];
+  combat.onEvent((event) => events.push(event));
+  combat.cast(17, 2n);
+  combat.applyCastFailed(failure(1, 97));
+  expect(combat.snapshot().lastOutcome).toMatchObject({
+    status: "failed",
+    result: 97,
+    reason: "out_of_range",
+  });
+  combat.cast(17, 2n);
+  combat.applySpellFailure({
+    caster: 1n,
+    extraCasts: 2,
+    spellId: 17,
+    result: 40,
+  });
+  expect(combat.snapshot().lastOutcome).toMatchObject({
+    status: "interrupted",
+    result: 40,
+    reason: "interrupted",
+  });
+  expect(
+    events
+      .filter((event) => event.type.startsWith("cast_") && event.reason)
+      .map((event) => event.reason),
+  ).toEqual(["cast_failed:out_of_range", "spell_failure:interrupted"]);
+});
+
 test("full creature aura snapshots preserve unsigned GUID halves", () => {
   const guid = 0xf130003fd20009e5n;
   const combat = new CombatRuntime({

@@ -114,6 +114,7 @@ export class CombatActions {
               status: state.lastOutcome.status,
               spellId: state.lastOutcome.spellId,
               result: state.lastOutcome.result,
+              reason: state.lastOutcome.reason,
               error: state.lastOutcome.error,
               at: state.lastOutcome.at,
             }
@@ -353,7 +354,7 @@ export class CombatActions {
     )
       return {
         status: "blocked",
-        reason: `server_action_rejected:${last.error ?? last.result ?? "interrupted"}`,
+        reason: `server_action_rejected:${last.error ?? last.reason ?? "interrupted"}`,
       };
     return undefined;
   }

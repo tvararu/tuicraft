@@ -9,6 +9,7 @@ import {
   type SpellGo,
   type SpellStart,
 } from "wow/protocol/spell";
+import { spellCastReason } from "wow/protocol/spell-cast-result";
 
 type CastDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
@@ -201,6 +202,7 @@ export class CombatCasts {
       status,
       spellId,
       result,
+      reason: spellCastReason(result),
       at: this.deps.now(),
       ...(cast.item && { item: cast.item }),
     };
