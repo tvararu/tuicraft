@@ -1,0 +1,151 @@
+# 17:45:48 A: unchanged main f2f363d (branch changes stashed)
+$ tuicraft start  # 17:45:48
+tc-FAC6AB804BE7A: character Fgkliaelohk
+CONNECTED
+
+$ tuicraft control --json  # 17:45:48
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444748782,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444748782,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 17:45:48 daemon pid 787715: /home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/auto-work-run-327-20260926T1732/src/main.ts --daemon 
+
+$ tuicraft goto 10397.599609375 -6339.2900390625 --json  # 17:45:48
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"goto","data":null,"error":{"message":"stop: ground corridor collision","stage":"command"},"events":[],"kind":"error"}
+
+$ tuicraft navigation --json  # 17:45:49
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":false,"destination":{"x":10397.599609375,"y":-6339.2900390625},"owner":"none","blockedReason":"ground corridor collision","refusal":"stop","nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 17:45:49
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":"ground corridor collision","direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444748782,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444748782,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 17:45:49
+tc-FAC6AB804BE7A: character Fgkliaelohk
+OK
+
+# 17:46:00 B: this branch f2f363d + working tree (step rule)
+$ tuicraft start  # 17:46:00
+tc-FAC6AB804BE7A: character Fgkliaelohk
+CONNECTED
+
+$ tuicraft control --json  # 17:46:00
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444760892,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444760892,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft goto 10397.599609375 -6339.2900390625 --json  # 17:46:00
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+# 17:46:01 daemon pid 789279: /home/deity/.local/share/mise/installs/bun/1.4.2/bin/bun /home/deity/orca/workspaces/tuicraft/auto-work-run-327-20260926T1732/src/main.ts --daemon 
+726eac667000-726eac67a000 r--p 00000000 08:02 770605                     /home/deity/orca/workspaces/tuicraft/auto-work-run-327-20260926T1732/tmp/namigator/libnamigator.so
+
+$ tuicraft navigation --json  # 17:46:03
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"remaining":37.29090397889552,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":102.60980795779103,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:05
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"remaining":22.555903978895532,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":102.60980795779103,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:07
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"remaining":8.5349039788955,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":102.60980795779103,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:09
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":false,"destination":{"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":51.30490397889552,"elapsedMs":7331,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":102.60980795779103,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 17:46:10
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-0.006779557146811427,"source":"predicted","updatedAt":1790444769090,"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":5.316050052642822,"source":"server","updatedAt":1790444760892,"x":10349.599609375,"y":-6357.2900390625,"z":33.4025993347168},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 17:46:10
+tc-FAC6AB804BE7A: character Fgkliaelohk
+OK
+
+# 17:46:13 relogin
+$ tuicraft start  # 17:46:13
+tc-FAC6AB804BE7A: character Fgkliaelohk
+CONNECTED
+
+$ tuicraft control --json  # 17:46:13
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-0.006779557093977928,"source":"server","updatedAt":1790444773357,"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":-0.006779557093977928,"source":"server","updatedAt":1790444773357,"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 17:46:30 B: back to the spawn (the same edge as a step up)
+$ tuicraft goto 10349.599609375 -6357.2900390625 --json  # 17:46:30
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+$ tuicraft navigation --json  # 17:46:32
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"remaining":41.459961680983284,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":110.96192336196657,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:34
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"remaining":26.7319616809833,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":110.96192336196657,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:36
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"remaining":12.696961680983264,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":110.96192336196657,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:39
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":false,"destination":{"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":55.480961680983285,"elapsedMs":7926,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":110.96192336196657,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 17:46:39
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":-2.9085902314154035,"source":"predicted","updatedAt":1790444798810,"x":10349.599609375,"y":-6357.2900390625,"z":33.40286636352539},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":-0.006779557093977928,"source":"server","updatedAt":1790444773357,"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+# 17:46:39 B: issue route, spawn -> (10280, -6340)
+$ tuicraft goto 10280 -6340 --json  # 17:46:39
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"goto","data":null,"error":null,"events":[],"kind":"intent"}
+
+$ tuicraft navigation --json  # 17:46:41
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":60.20609042501855,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:43
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":45.485090425018555,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:45
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":31.471090425018524,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:47
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":16.75709042501847,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:49
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":true,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":2.7430904250184227,"owner":"manual","replan":{"plans":1,"traveled":0,"elapsedMs":0,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft navigation --json  # 17:46:51
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"navigation","data":{"active":false,"destination":{"x":10280,"y":-6340,"z":23.04463005065918},"remaining":0,"owner":"none","replan":{"plans":1,"traveled":74.24809042501855,"elapsedMs":10609,"interruptions":[],"pending":false,"limits":{"plans":4,"elapsedMs":60000,"traveled":148.4961808500371,"displacement":2}},"nextStep":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft control --json  # 17:46:51
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":3.0387020721239746,"source":"predicted","updatedAt":1790444809817,"x":10280,"y":-6340,"z":23.04463005065918},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":-0.006779557093977928,"source":"server","updatedAt":1790444773357,"x":10397.599609375,"y":-6339.2900390625,"z":35.56693649291992},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 17:46:51
+tc-FAC6AB804BE7A: character Fgkliaelohk
+OK
+
+# 17:46:54 relogin
+$ tuicraft start  # 17:46:54
+tc-FAC6AB804BE7A: character Fgkliaelohk
+CONNECTED
+
+$ tuicraft control --json  # 17:46:54
+tc-FAC6AB804BE7A: character Fgkliaelohk
+{"command":"control","data":{"blockedReason":null,"direction":null,"movementAllowed":true,"moving":false,"nextStep":null,"owner":"none","pose":{"mapId":530,"orientation":3.0387020111083984,"source":"server","updatedAt":1790444814896,"x":10280,"y":-6340,"z":23.04463005065918},"requestedTarget":null,"selfGuid":"0xb7c","serverPose":{"mapId":530,"orientation":3.0387020111083984,"source":"server","updatedAt":1790444814896,"x":10280,"y":-6340,"z":23.04463005065918},"speed":7,"target":null},"error":null,"events":[],"kind":"result"}
+
+$ tuicraft stop  # 17:47:02
+tc-FAC6AB804BE7A: character Fgkliaelohk
+OK
+
