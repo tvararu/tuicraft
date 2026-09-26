@@ -1,6 +1,11 @@
+import {
+  type IpcSocket,
+  readWait,
+  tailWait,
+  writeLines,
+} from "daemon/event-wait";
 import { formatNearbyLine, formatNearbyObj } from "daemon/nearby";
 import type { IpcCommand } from "daemon/parse";
-import { waitUnlessAborted } from "lib/abort";
 import { messageOf } from "lib/errors";
 import type { RingBuffer } from "lib/ring-buffer";
 import {
@@ -22,6 +27,7 @@ import {
 import { formatControlState, formatControlStateObj } from "ui/format-control";
 import {
   formatCycleState,
+  formatDefenseState,
   formatExperienceState,
   formatInventoryState,
   formatRecoveryState,
@@ -34,16 +40,6 @@ import { formatVendorState } from "ui/format-vendor";
 import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
-
-export type IpcSocket = {
-  write: (data: string | Uint8Array) => number;
-  end: () => void;
-};
-
-export function writeLines(socket: IpcSocket, lines: string[]): void {
-  for (const line of lines) socket.write(`${line}\n`);
-  socket.write("\n");
-}
 
 type EventFormat = (entries: EventEntry[]) => string[];
 
@@ -80,47 +76,6 @@ function acknowledge(socket: IpcSocket): false {
 
 function send(socket: IpcSocket, lines: string[]): false {
   writeLines(socket, lines);
-  return false;
-}
-
-function readWait(
-  ctx: DispatchContext,
-  { ms, since }: { ms: number; since?: number },
-  format: EventFormat,
-): Promise<false> {
-  const { promise, resolve } = Promise.withResolvers<false>();
-  const collect = () =>
-    format(since === undefined ? ctx.events.drain() : ctx.events.take(since));
-  const ready = collect();
-  if (ready.length > 0 || ms === 0)
-    return Promise.resolve(send(ctx.socket, ready));
-  if (ctx.abort?.aborted) return Promise.resolve(false);
-  const finish = (lines: string[] | undefined) => {
-    clearTimeout(timer);
-    unsubscribe();
-    ctx.abort?.removeEventListener("abort", onAbort);
-    if (lines) send(ctx.socket, lines);
-    resolve(false);
-  };
-  const onAbort = () => finish(undefined);
-  const timer = setTimeout(() => finish([]), ms);
-  const unsubscribe = ctx.events.subscribe(() => {
-    const lines = collect();
-    if (lines.length > 0) finish(lines);
-  });
-  ctx.abort?.addEventListener("abort", onAbort, { once: true });
-  return promise;
-}
-
-async function tailWait(
-  ctx: DispatchContext,
-  ms: number,
-  format: EventFormat,
-): Promise<false> {
-  const start = ctx.events.writePos;
-  const aborted = await waitUnlessAborted(ms, ctx.abort);
-  if (aborted) return false;
-  writeLines(ctx.socket, format(ctx.events.slice(start)));
   return false;
 }
 
@@ -219,6 +174,19 @@ const HANDLERS: Handlers = {
     handle.declineInvite();
     return acknowledge(socket);
   },
+  defend: (cmd, { handle, socket }) =>
+    reply(
+      socket,
+      () =>
+        cmd.enabled
+          ? handle.armDefense(cmd.instruction ?? "")
+          : handle.disarmDefense(),
+      ok,
+    ),
+  defense: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getDefenseState(), formatDefenseState),
+  defense_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getDefenseState(), json),
   del_friend: (cmd, { handle, socket }) => {
     handle.removeFriend(cmd.target);
     return acknowledge(socket);

@@ -6,6 +6,7 @@ import {
   parseCast,
   parseCycle,
   parseCycleResume,
+  parseDefend,
   parseFace,
   parseFight,
   parseGoto,
@@ -41,6 +42,17 @@ function parseSelectOption(rest: string[]): CliAction {
   return { code, mode: "select_option", optionId };
 }
 
+function parseRun(
+  cmd: "fight" | "cycle" | "defend",
+  rest: string[],
+): CliAction {
+  if (cmd === "fight") return parseFightArgs(rest);
+  if (cmd === "defend") return { mode: "defend", ...take(parseDefend(rest)) };
+  return rest.includes("--resume")
+    ? { mode: "cycle_resume", ...take(parseCycleResume(rest)) }
+    : { mode: "cycle", ...take(parseCycle(rest)) };
+}
+
 export function parseGameplay(
   cmd: string,
   rest: string[],
@@ -61,11 +73,9 @@ export function parseGameplay(
     case "attack":
       return { mode: "attack", ...take(parseGuidArg(rest)) };
     case "fight":
-      return parseFightArgs(rest);
     case "cycle":
-      return rest.includes("--resume")
-        ? { mode: "cycle_resume", ...take(parseCycleResume(rest)) }
-        : { mode: "cycle", ...take(parseCycle(rest)) };
+    case "defend":
+      return parseRun(cmd, rest);
     case "goto":
       return { mode: "goto", ...take(parseGoto(rest)) };
     case "spirit-healer":

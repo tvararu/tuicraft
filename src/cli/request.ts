@@ -8,6 +8,7 @@ const INSPECTIONS = [
   "spells",
   "tactics",
   "cycling",
+  "defense",
   "navigation",
   "recovery",
   "quests",
@@ -137,6 +138,8 @@ function requestArgs(action: Request): Arg[] {
     case "cycle":
     case "cycle_resume":
       return cycleArgs(action);
+    case "defend":
+      return action.enabled ? ["on", action.instruction ?? ""] : ["off"];
     case "goto":
       return gotoArgs(action.target);
     case "query_quest":

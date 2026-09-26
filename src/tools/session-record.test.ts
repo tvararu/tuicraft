@@ -186,4 +186,29 @@ describe("sessionRecord", () => {
       { at: 2000, kind: "halt", scope: "cycle" },
     ]);
   });
+
+  test("counts self-defence and a halt that disarms it once", () => {
+    const defense = (at: number, type: string, reason?: string) =>
+      line(at, "DEFENSE", { at, reason, type });
+    const log = [
+      defense(100, "armed"),
+      defense(200, "started"),
+      defense(900, "stopped", "server_kill_credit"),
+      defense(1000, "started"),
+      tactics(1000, "d1", "started"),
+      tactics(1500, "d1", "stopped", { reason: "halt" }),
+      defense(1500, "stopped", "halt"),
+      defense(1501, "disarmed", "halt"),
+    ];
+    const recorded = sessionRecord(log.join("\n"));
+    expect(recorded.defense).toEqual({
+      armed: 1,
+      disarmedByReason: { halt: 1 },
+      started: 2,
+      stoppedByReason: { halt: 1, server_kill_credit: 1 },
+    });
+    expect(recorded.interventions).toEqual([
+      { at: 1501, kind: "halt", scope: "defense" },
+    ]);
+  });
 });

@@ -147,6 +147,8 @@ tuicraft cycle 0xa 0xb --max 3 --instruction stay alive # explicit GUID queue fr
 tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
 tuicraft cycle --quest 8325    # pick quest targets itself until the log slot completes
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
+tuicraft defend on             # opt-in: fight back when attacked while idle; halt disarms
+tuicraft defense --json        # self-defence state
 tuicraft goto 1 2 [3]      # ground route; Z from the unique ground column when omitted; redirects an active route
 tuicraft goto 0xabc        # once to an observed creature; target_lost if it disappears, unreachable is never retried
 tuicraft navigation --json # route state, refusal and conservative next step
@@ -314,6 +316,12 @@ an optional new `--instruction` and a fresh `--max` budget. It emits a
 `resumed` CYCLE event and fails with `cycle_active` or
 `cycle_nothing_to_resume`; while dead or a ghost it recovers first even when
 no target is left.
+`defend on [instruction...]` arms opt-in self-defence: when a creature attacks
+the character and no cycle, fight, manual movement or route owns control, it
+fights back (Jev tactics with a key, otherwise face and auto-attack) and logs
+DEFENSE `started`/`stopped` events. `halt` disarms it; a manual command or a new
+fight or cycle takes over and it leaves that attacker alone. `defense --json`
+shows its state and `record` counts it.
 A kill whose corpse has no loot is recorded as `loot: "none"` on its queue
 entry and the loop continues; `target_death_unconfirmed` stops it when the server
 never shows the corpse dead.

@@ -12,6 +12,7 @@ import { controlMethods } from "wow/client-control";
 import {
   combatMethods,
   cycleMethods,
+  defenseMethods,
   questMethods,
   questRewardMethods,
   recoveryMethods,
@@ -52,6 +53,7 @@ import type { RecoveryEvent, RecoveryState } from "wow/recovery";
 import type { RemoteMotionEvent, RemotePose } from "wow/remote-motion";
 import type { RewardsEvent } from "wow/rewards";
 import { createRuntimes, type Runtimes } from "wow/runtime";
+import type { DefenseEvent, DefenseState } from "wow/self-defense";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 import type { TrainerEvent } from "wow/trainer";
@@ -301,6 +303,10 @@ export type WorldHandle = {
   buyItem: (slot: number, count?: number) => void;
   repairAll: () => void;
   onVendorEvent: (cb: (event: VendorEvent) => void) => Unsubscribe;
+  armDefense: (instruction: string) => void;
+  disarmDefense: () => void;
+  getDefenseState: () => DefenseState;
+  onDefenseEvent: (cb: (event: DefenseEvent) => void) => Unsubscribe;
 };
 
 type SessionHandle = {
@@ -332,6 +338,7 @@ function createHandle(session: SessionHandle): WorldHandle {
     ...cycleMethods(conn, rt),
     ...trainerMethods(conn, rt),
     ...vendorMethods(conn, rt),
+    ...defenseMethods(conn, rt),
   };
   return handle;
 }

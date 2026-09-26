@@ -19,6 +19,7 @@ tuicraft cast <id> <guid> | attack <guid> | cancel-cast | stop-attack
 tuicraft fight [--framing <variant>] <guid> [instruction...] | goto <x> <y> [<z>]
 tuicraft cycle <guid...> [--instruction ...] [--max N] [--json] | cycle --resume [--instruction ...] [--max N] [--json] | cycling [--json]
 tuicraft cycle --quest <id> [--source <entry>...] [--instruction ...] [--max N] [--json]
+tuicraft defend on [instruction...] | defend off | defense [--json]
 tuicraft recovery [--json] | query-corpse | release-spirit | reclaim-corpse
 tuicraft spirit-healer <guid> | resurrect accept|decline
 tuicraft quests [--json] | talk <guid> | query-quest <id>
@@ -444,6 +445,35 @@ an `objective_targets_*` stop. Travel to and from the quest giver, acceptance
 and turn-in stay explicit supervisor steps. `cycling` shows the server
 counters in `objective`.
 
+`tuicraft defend on` [_instruction_...] | `tuicraft defend off`
+:: Arm or disarm opt-in self-defence. It is off by default and ends with the
+daemon. While armed, the daemon checks twice a second and on every incoming
+`SMSG_ATTACKSTART`. If a live creature is attacking the character, the
+character is alive, and nothing owns combat or movement (no `cycle`, no
+`fight` or other tactics run, no manual movement lease or route), it fights
+the attacker. With a Jev key it runs Jev tactics against the attacker with the
+instruction (default: the `fight` default). Without a key it faces the
+attacker and auto-attacks. It picks one attacker at a time, and the next
+attacker after the fight ends.
+Ownership rules: `halt` ends the engagement and **disarms** self-defence
+(`disarmReason: "halt"`); arm it again with `defend on`. Any manual command,
+a new `cycle` or `cycle --resume` ends the engagement with `manual_override`,
+and a new `fight` ends it with `replaced`; self-defence then leaves that
+attacker alone while it keeps attacking, so it never fights the new owner or
+pulls the character back into a fight the operator took over. A new attacker
+still triggers it. `defend off` disarms with reason `command`.
+DEFENSE events in `read`/`tail` and the session log: `armed`, `started`
+(`attacker`), `stopped` (`attacker`, `reason`: the tactics outcome such as
+`server_kill_credit`, `no_progress` or `self_dead`, or `halt`,
+`manual_override`, `replaced`, `attacker_gone`), and `disarmed` (`reason`).
+`tuicraft record` counts them under `defense`, and a HALT that disarms it is an
+intervention with scope `defense`.
+
+`tuicraft defense` [`--json`]
+:: Print self-defence state: `armed`, `mode` (`jev` or `auto_attack`),
+`instruction`, the `active` engagement, `engagements`, `yielded` attackers,
+`lastStop` and `disarmReason`.
+
 `tuicraft cycling` [`--json`]
 :: Print cycle state: `active`, `phase`, the GUID `queue` with per-target
 `status` (`queued`, `done`, or `skipped`), skip `cause`, and `loot`
@@ -836,7 +866,8 @@ reason, including lone `fight` runs); `completions` (`targetsDone`,
 `max_starts_reached`, `halt` or `manual_override`); `recoveries` (`deaths`
 counted per transition to dead, `recovered`, `byOutcome`); `interventions`
 (`halt`, `manual_override`, `resume`, `instruction_change`, each with `at`
-and `scope` `cycle` or `fight`); `staleActions` (Jev results discarded, by
+and `scope` `cycle`, `fight` or `defense`); `defense` (`armed`,
+`started`, `stoppedByReason`, `disarmedByReason`); `staleActions` (Jev results discarded, by
 reason such as `stale_age`, `aborted`, `unavailable`); and `latency`.
 `latency` gives two rates that must be quoted together: `loopRatePerSec`,
 Jev requests per second of active tactics time (`activeMs`, from each run's

@@ -6,6 +6,7 @@ import {
   parseCast,
   parseCycle,
   parseCycleResume,
+  parseDefend,
   parseFace,
   parseFight,
   parseGoto,
@@ -30,6 +31,7 @@ const INSPECTIONS = new Map<string, IpcCommand>(
       "spells",
       "tactics",
       "cycling",
+      "defense",
       "navigation",
       "recovery",
       "quests",
@@ -188,6 +190,8 @@ function parseMotion(
         type: "cycle_resume",
         ...v,
       }));
+    case "DEFEND":
+      return from(parseDefend(tokens), (v) => ({ type: "defend", ...v }));
     case "GOTO":
       return from(parseGoto(tokens), (v) => ({ type: "goto", ...v }));
     case "RESURRECT":

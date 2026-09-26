@@ -1,10 +1,6 @@
 import { mkdir, unlink, writeFile } from "node:fs/promises";
-import {
-  dispatchCommand,
-  type EventEntry,
-  type IpcSocket,
-  writeLines,
-} from "daemon/commands";
+import { dispatchCommand, type EventEntry } from "daemon/commands";
+import { type IpcSocket, writeLines } from "daemon/event-wait";
 import {
   onChatMessage,
   onControlEvent,
@@ -248,6 +244,7 @@ function subscribeDomainEvents(
     onDomainEvent("tactics", event, sink, formatTacticsEventText),
   );
   handle.onCycleEvent((event) => onDomainEvent("cycle", event, sink));
+  handle.onDefenseEvent((event) => onDomainEvent("defense", event, sink));
   handle.onRecoveryEvent((event) => onDomainEvent("recovery", event, sink));
   handle.onQuestEvent((event) =>
     onDomainEvent("quest", event, sink, formatQuestEventText),

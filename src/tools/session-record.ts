@@ -33,7 +33,7 @@ export type CycleRunSummary = {
 export type Intervention = {
   at: number;
   kind: "halt" | "manual_override" | "resume" | "instruction_change";
-  scope: "cycle" | "fight";
+  scope: "cycle" | "fight" | "defense";
   detail?: string;
 };
 
@@ -59,6 +59,12 @@ export type SessionRecord = {
   };
   interventions: Intervention[];
   staleActions: { discarded: number; byReason: Record<string, number> };
+  defense: {
+    armed: number;
+    disarmedByReason: Record<string, number>;
+    started: number;
+    stoppedByReason: Record<string, number>;
+  };
   latency: SessionLatency;
 };
 
@@ -67,6 +73,11 @@ const INTERVENTIONS: Record<string, Intervention["kind"]> = {
   manual_override: "manual_override",
 };
 const HALT_ECHO_MS = 50;
+const SCOPE_RANK: Record<Intervention["scope"], number> = {
+  cycle: 2,
+  defense: 1,
+  fight: 0,
+};
 const UNBLOCKED_STOPS: Record<string, true> = {
   halt: true,
   manual_override: true,
@@ -94,6 +105,12 @@ export function sessionRecord(text: string, since = 0): SessionRecord {
     record: {
       blocked: { cycleStops: [], skipsByCause: {}, targetsSkipped: 0 },
       completions: { serverKillCredit: 0, targetsDone: 0 },
+      defense: {
+        armed: 0,
+        disarmedByReason: {},
+        started: 0,
+        stoppedByReason: {},
+      },
       fights: { byReason: {}, byStatus: {}, started: 0 },
       interventions: [],
       recoveries: { byOutcome: {}, deaths: 0, recovered: 0 },
@@ -116,6 +133,30 @@ function reduce(draft: Draft, entry: Entry): void {
   if (entry.type === "CYCLE") onCycle(draft, entry);
   else if (entry.type === "TACTICS") onTactics(draft, entry);
   else if (entry.type === "RECOVERY") onRecovery(draft, entry);
+  else if (entry.type === "DEFENSE") onDefense(draft, entry);
+}
+
+function onDefense(draft: Draft, { at, data }: Entry): void {
+  const { defense } = draft.record;
+  const reason = str(data["reason"]) ?? "unknown";
+  switch (str(data["type"])) {
+    case "armed":
+      defense.armed++;
+      return;
+    case "started":
+      defense.started++;
+      return;
+    case "stopped":
+      bump(defense.stoppedByReason, reason);
+      return;
+    case "disarmed":
+      bump(defense.disarmedByReason, reason);
+      if (reason === "halt")
+        intervene(draft, { at, kind: "halt", scope: "defense" });
+      return;
+    default:
+      return;
+  }
 }
 
 function onCycle(draft: Draft, { at, data }: Entry): void {
@@ -256,8 +297,10 @@ function intervene(draft: Draft, intervention: Intervention): void {
       other.scope !== intervention.scope &&
       Math.abs(other.at - intervention.at) <= HALT_ECHO_MS,
   );
-  if (echo === -1) interventions.push(intervention);
-  else if (intervention.scope === "cycle") interventions[echo] = intervention;
+  const existing = interventions[echo];
+  if (!existing) interventions.push(intervention);
+  else if (SCOPE_RANK[intervention.scope] > SCOPE_RANK[existing.scope])
+    interventions[echo] = intervention;
 }
 
 function parseEntries(text: string): Entry[] {
