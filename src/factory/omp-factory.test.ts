@@ -1,0 +1,146 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readlink,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolvePaths } from "lib/paths";
+import { git, gitEnv } from "test/git";
+
+const launcher = `${import.meta.dir}/omp-factory`;
+const fakeOmp = `#!/usr/bin/env bash
+printf '%s\\n' "\${XDG_CONFIG_HOME:-}" "\${XDG_RUNTIME_DIR:-}" "\${XDG_STATE_HOME:-}" "$@"
+`;
+
+type Launch = {
+  config: string;
+  runtime: string;
+  state: string;
+  args: string[];
+};
+
+let home: string;
+let main: string;
+let worktree: string;
+let other: string;
+
+async function launch(cwd: string, prompt: string): Promise<Launch> {
+  const env = gitEnv();
+  delete env["XDG_CONFIG_HOME"];
+  delete env["XDG_STATE_HOME"];
+  const proc = Bun.spawn([launcher, prompt], {
+    cwd,
+    env: {
+      ...env,
+      HOME: home,
+      PATH: `${home}/bin:${Bun.env["PATH"]}`,
+      XDG_RUNTIME_DIR: `${home}/run`,
+    },
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+  const [out, err, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  if (code !== 0) throw new Error(`omp-factory exited ${code}: ${err}`);
+  const [config = "", runtime = "", state = "", ...args] = out
+    .trimEnd()
+    .split("\n");
+  return { args, config, runtime, state };
+}
+
+async function mirrored(dir: string): Promise<Record<string, string>> {
+  const links: Record<string, string> = {};
+  for (const name of await readdir(dir))
+    links[name] = await readlink(`${dir}/${name}`);
+  return links;
+}
+
+beforeAll(async () => {
+  home = await realpath(await mkdtemp(`${tmpdir()}/omp-factory-`));
+  await mkdir(`${home}/bin`);
+  await writeFile(`${home}/bin/omp`, fakeOmp, { mode: 0o755 });
+  for (const dir of [
+    ".config/gh",
+    ".config/tuicraft",
+    ".local/state/mise",
+    ".local/state/tuicraft",
+    "run/tuicraft",
+  ])
+    await mkdir(`${home}/${dir}`, { recursive: true });
+  await writeFile(`${home}/run/bus`, "");
+  main = `${home}/code/tuicraft`;
+  worktree = `${home}/wt`;
+  other = `${home}/other`;
+  await mkdir(main, { recursive: true });
+  await mkdir(other);
+  await git(main, "init", "-q", "-b", "main");
+  await git(
+    main,
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@t",
+    "commit",
+    "-q",
+    "--allow-empty",
+    "-m",
+    "init",
+  );
+  await git(main, "worktree", "add", "-q", worktree);
+});
+
+afterAll(() => rm(home, { force: true, recursive: true }));
+
+describe("omp-factory", () => {
+  test("keeps the default XDG dirs outside tuicraft worktrees", async () => {
+    for (const cwd of [main, other]) {
+      const run = await launch(cwd, "hello");
+      expect(run).toEqual({
+        args: ["hello"],
+        config: "",
+        runtime: `${home}/run`,
+        state: "",
+      });
+    }
+  });
+
+  test("gives a linked worktree per-run dirs mirroring all but tuicraft", async () => {
+    const run = await launch(worktree, "hello");
+    const base = `${worktree}/tmp/.xdg`;
+    expect(run).toEqual({
+      args: ["hello"],
+      config: `${base}/config`,
+      runtime: `${base}/runtime`,
+      state: `${base}/state`,
+    });
+    expect(await mirrored(run.config)).toEqual({ gh: `${home}/.config/gh` });
+    expect(await mirrored(run.runtime)).toEqual({ bus: `${home}/run/bus` });
+    expect(await mirrored(run.state)).toEqual({
+      mise: `${home}/.local/state/mise`,
+    });
+    const paths = resolvePaths({
+      XDG_CONFIG_HOME: run.config,
+      XDG_RUNTIME_DIR: run.runtime,
+      XDG_STATE_HOME: run.state,
+    });
+    expect(paths.configPath).toBe(`${base}/config/tuicraft/config.toml`);
+    expect(paths.socketPath).toBe(`${base}/runtime/tuicraft/sock`);
+  });
+
+  test("isolates a factory role even outside a tuicraft worktree", async () => {
+    const run = await launch(other, "[factory:qa] go");
+    expect(run.config).toBe(`${other}/tmp/.xdg/config`);
+    expect(run.runtime).toBe(`${other}/tmp/.xdg/runtime`);
+    expect(run.state).toBe(`${other}/tmp/.xdg/state`);
+    expect(run.args).toContain("[factory:qa] go");
+    expect(await mirrored(run.config)).toEqual({ gh: `${home}/.config/gh` });
+  });
+});

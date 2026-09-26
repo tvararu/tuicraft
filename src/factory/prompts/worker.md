@@ -105,19 +105,29 @@ to do, push anything you have, run `bun $F status N blocked`, and stop.
 Create one account and character for this run:
 
 ```sh
-acct=$(bun $F soap create eversong10)
-eval "$(printf '%s' "$acct" | jq -r '.env|to_entries[]|"export \(.key)=\(.value)"')"
+bun $F soap create eversong10
 ```
 
 Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
-`max80` (level 80, Dalaran). Record `.account` and `.character` in the
-workpad. Run tuicraft with this environment only; never use the
-maintainer's or the live-test accounts. Filter playerbot chat; invite only
-factory characters by exact name. At the end, always:
+`max80` (level 80, Dalaran). The JSON it prints has `.account`,
+`.character` and `.wrapper`, the executable `tmp/tc-<ACCOUNT>`. Record all
+three in the workpad. The wrapper is the only way to run tuicraft as that
+character: `tmp/tc-<ACCOUNT> start`, `tmp/tc-<ACCOUNT> status` and so on run
+this worktree's `bun src/main.ts` with the account's own config, socket and
+session log, name the character on stderr, and refuse to run if its daemon
+would log in anyone else.
+`omp-factory` gives this run XDG directories of its own without the
+default tuicraft config, so plain `bun src/main.ts` logs in nobody. Never
+use the maintainer's or the live-test accounts. Filter playerbot chat;
+invite only factory characters by exact name. At the end, stop the daemon
+(`tmp/tc-<ACCOUNT> stop`) and always run:
 
 ```sh
-bun $F soap delete "$(printf '%s' "$acct" | jq -r .account)"
+bun $F soap delete <ACCOUNT>
 ```
+
+It also deletes the wrapper and the account's directories, session log
+included, so copy what the proof needs first.
 
 ## 6. Proof
 

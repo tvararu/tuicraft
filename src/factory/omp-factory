@@ -17,6 +17,39 @@ real_omp() {
   return 127
 }
 
+mirror() {
+  local real=$1 dir=$2 entry
+  mkdir -p "$dir"
+  chmod 700 "$dir"
+  [[ -n $real && -d $real && $real != "$dir" ]] || return 0
+  for entry in "$real"/* "$real"/.[!.]* "$real"/..?*; do
+    [[ -e $entry || -L $entry ]] || continue
+    [[ ${entry##*/} == tuicraft ]] && continue
+    [[ -e $dir/${entry##*/} || -L $dir/${entry##*/} ]] && continue
+    ln -sfn -- "$entry" "$dir/${entry##*/}"
+  done
+}
+
+isolate() {
+  local base=$1/tmp/.xdg
+  mirror "${XDG_CONFIG_HOME:-$HOME/.config}" "$base/config"
+  mirror "${XDG_RUNTIME_DIR:-}" "$base/runtime"
+  mirror "${XDG_STATE_HOME:-$HOME/.local/state}" "$base/state"
+  export XDG_CONFIG_HOME=$base/config
+  export XDG_RUNTIME_DIR=$base/runtime
+  export XDG_STATE_HOME=$base/state
+}
+
+tuicraft_worktree() {
+  local main common top
+  main=$(readlink -f "$HOME/code/tuicraft")
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) ||
+    return 1
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+  [[ $common == "$main/.git" && $top != "$main" ]] || return 1
+  printf '%s\n' "$top"
+}
+
 role=""
 for arg in "$@"; do
   if [[ $arg =~ ^\[factory:(worker|reviewer|merger|qa)\] ]]; then
@@ -26,6 +59,12 @@ for arg in "$@"; do
 done
 
 omp=$(real_omp)
+
+if worktree=$(tuicraft_worktree); then
+  isolate "$worktree"
+elif [[ -n $role ]]; then
+  isolate "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
 
 if [[ -z $role ]]; then
   exec "$omp" "$@"

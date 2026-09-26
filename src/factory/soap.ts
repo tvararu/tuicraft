@@ -1,6 +1,12 @@
 import { chmod, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { factoryConfigDir, factoryStateDir } from "factory/config";
+import {
+  accountFiles,
+  removeAccountFiles,
+  writeWrapper,
+  xdgEnv,
+} from "factory/soap-wrapper";
 import { type Config, parseConfig, serializeConfig } from "lib/config";
 
 export type Preset = "fresh" | "eversong10" | "max80";
@@ -11,10 +17,10 @@ export type Ledger = Names & {
   preset: Preset;
   createdAt: string;
   owner: string;
+  root?: string;
 };
 export type CreateOptions = {
   preset: Preset;
-  dir?: string;
   owner?: string;
   gm?: number;
 };
@@ -22,7 +28,7 @@ export type Session = Names & {
   preset: Preset;
   password: string;
   dir: string;
-  env: Record<"XDG_CONFIG_HOME" | "XDG_RUNTIME_DIR" | "XDG_STATE_HOME", string>;
+  wrapper: string;
 };
 
 export const presets: Preset[] = ["fresh", "eversong10", "max80"];
@@ -266,16 +272,12 @@ async function navConfig(): Promise<Nav> {
 }
 
 async function writeSession(
-  entry: Ledger,
-  dir: string,
+  entry: Ledger & { root: string },
   nav: Nav,
 ): Promise<Session> {
-  const env = {
-    XDG_CONFIG_HOME: `${dir}/config`,
-    XDG_RUNTIME_DIR: `${dir}/runtime`,
-    XDG_STATE_HOME: `${dir}/state`,
-  };
-  const { account, password, character, preset } = entry;
+  const { account, password, character, preset, root } = entry;
+  const { dir } = accountFiles(root, account);
+  const env = xdgEnv(dir);
   const config: Config = {
     account,
     character,
@@ -298,7 +300,8 @@ async function writeSession(
     `${serializeConfig(config)}\n`,
     { mode: 0o600 },
   );
-  return { account, character, dir, env, password, preset };
+  const wrapper = await writeWrapper({ account, character, root });
+  return { account, character, dir, password, preset, wrapper };
 }
 
 async function copyTemplate(template: string, names: Names): Promise<void> {
@@ -332,18 +335,19 @@ async function verifyCharacter({ account, character }: Names): Promise<void> {
 
 export async function createAccount({
   preset,
-  dir,
   gm,
   owner,
 }: CreateOptions): Promise<Session> {
   const [template, nav] = await Promise.all([templateFor(preset), navConfig()]);
   const names = newNames();
-  const entry: Ledger = {
+  const root = process.cwd();
+  const entry = {
     ...names,
     createdAt: new Date().toISOString(),
-    owner: owner ?? process.cwd(),
+    owner: owner ?? root,
     password: newPassword(),
     preset,
+    root,
   };
   await must(`account create ${entry.account} ${entry.password}`);
   try {
@@ -351,11 +355,7 @@ export async function createAccount({
     await copyTemplate(template, names);
     if (gm) await must(`account set gmlevel ${entry.account} ${gm} -1`);
     await verifyCharacter(names);
-    return await writeSession(
-      entry,
-      dir ?? `${process.cwd()}/tmp/factory-account-${entry.account}`,
-      nav,
-    );
+    return await writeSession(entry, nav);
   } catch (err) {
     await deleteAccount(entry.account).catch((e) =>
       console.error(`cleanup of ${entry.account} failed: ${e}`),
@@ -391,6 +391,7 @@ export async function deleteAccount(account: string): Promise<void> {
   if (!(res.ok || accountMissing.test(res.text)))
     throw new Error(`account delete ${account}: ${res.text}`);
   await verifyDeleted(account, entry?.character);
+  if (entry?.root) await removeAccountFiles(entry.root, account);
   await rm(ledgerPath(account), { force: true });
 }
 

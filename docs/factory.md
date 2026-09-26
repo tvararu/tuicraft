@@ -42,6 +42,22 @@ is live within one reaper tick of landing. `bun src/factory/main.ts setup
 automations --apply` is still how automations are created or their other
 fields changed.
 
+`omp-factory` also keeps agents away from the maintainer's character. Every
+omp it starts for a factory role, or in any tuicraft worktree other than the
+main checkout (which covers the coordinator's `orca-ide worktree create
+--agent omp` launches), gets per-run `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`
+and `XDG_STATE_HOME` under the worktree's `tmp/.xdg/`. Each links every
+entry of the real directory except `tuicraft`, so `gh`, git, `mise` and
+`systemctl --user` work as before, while plain `bun src/main.ts` finds no
+config and cannot reach the default daemon socket. The main checkout and
+other repositories keep the default directories. Live characters come from
+`bun src/factory/main.ts soap create <preset>`, which also writes
+`tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
+`tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config
+or running daemon names another character, prints the character on
+stderr, and runs `bun src/main.ts "$@"`. `soap delete <ACCOUNT>` removes
+the wrapper and those directories.
+
 ## Status
 
 | Status | Moved there by | Meaning |
