@@ -25,6 +25,7 @@ import {
   socialMethods,
 } from "wow/client-social";
 import { type NamedTrainerState, trainerMethods } from "wow/client-trainer";
+import { type NamedVendorState, vendorMethods } from "wow/client-vendor";
 import type { CombatEvent, CombatState } from "wow/combat";
 import type {
   ControlEvent,
@@ -54,6 +55,7 @@ import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 import type { TrainerEvent } from "wow/trainer";
+import type { VendorEvent } from "wow/vendor";
 import type { WorldConn } from "wow/world-conn";
 
 export type ClientConfig = {
@@ -293,6 +295,12 @@ export type WorldHandle = {
   openTrainer: (guid: bigint) => void;
   trainSpell: (spellId: number) => void;
   onTrainerEvent: (cb: (event: TrainerEvent) => void) => Unsubscribe;
+  getVendorState: () => NamedVendorState;
+  openVendor: (guid: bigint) => void;
+  sellItem: (bag: number, slot: number, count?: number) => void;
+  buyItem: (slot: number, count?: number) => void;
+  repairAll: () => void;
+  onVendorEvent: (cb: (event: VendorEvent) => void) => Unsubscribe;
 };
 
 type SessionHandle = {
@@ -323,6 +331,7 @@ function createHandle(session: SessionHandle): WorldHandle {
     ...rewardsMethods(conn, rt),
     ...cycleMethods(conn, rt),
     ...trainerMethods(conn, rt),
+    ...vendorMethods(conn, rt),
   };
   return handle;
 }

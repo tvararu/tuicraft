@@ -114,6 +114,12 @@ export type IpcCommand =
   | { type: "trainer_json" }
   | { type: "open_trainer"; guid: bigint }
   | { type: "train"; spellId: number }
+  | { type: "vendor" }
+  | { type: "vendor_json" }
+  | { type: "open_vendor"; guid: bigint }
+  | { type: "sell"; bag: number; slot: number; count?: number }
+  | { type: "buy"; slot: number; count: number }
+  | { type: "repair" }
   | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }

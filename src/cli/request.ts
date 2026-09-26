@@ -16,6 +16,7 @@ const INSPECTIONS = [
   "loot",
   "group",
   "trainer",
+  "vendor",
 ] as const;
 
 const LOCAL = [
@@ -106,6 +107,12 @@ function fightArgs(action: Extract<Request, { mode: "fight" }>): Arg[] {
   return [...framing, action.guid, action.instruction];
 }
 
+function walkArgs(action: Extract<Request, { mode: "walk_toward" }>): Arg[] {
+  const { target } = action;
+  if (target.kind === "guid") return [action.yards, target.guid];
+  return [action.yards, target.x, target.y, target.z];
+}
+
 function requestArgs(action: Request): Arg[] {
   switch (action.mode) {
     case "move":
@@ -118,13 +125,11 @@ function requestArgs(action: Request): Arg[] {
     case "talk":
     case "open_loot":
     case "open_trainer":
+    case "open_vendor":
     case "spirit_healer":
       return [action.guid];
-    case "walk_toward": {
-      const { target } = action;
-      if (target.kind === "guid") return [action.yards, target.guid];
-      return [action.yards, target.x, target.y, target.z];
-    }
+    case "walk_toward":
+      return walkArgs(action);
     case "cast":
       return [action.spellId, action.guid];
     case "fight":
@@ -149,6 +154,10 @@ function requestArgs(action: Request): Arg[] {
       return [action.bag, action.slot];
     case "train":
       return [action.spellId];
+    case "sell":
+      return [action.bag, action.slot, ...(action.count ? [action.count] : [])];
+    case "buy":
+      return [action.slot, action.count];
     case "resurrect":
       return [action.accept ? "accept" : "decline"];
     default:

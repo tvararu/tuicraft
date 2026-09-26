@@ -95,6 +95,12 @@ USAGE
   tuicraft open-trainer <guid>  Request an observed trainer's spell list
   tuicraft train <spell-id>  Learn an available offered spell
                             Confirmed by the server, the learned spell and the coinage drop
+  tuicraft vendor [--json]    Listed goods (name, price, stock, slot) and last vendor outcome
+  tuicraft open-vendor <guid>  Request an observed vendor's goods
+  tuicraft sell <bag> <slot> [count]  Sell a carried stack to the listed vendor
+  tuicraft buy <vendor-slot> [count]  Buy from the listed vendor
+  tuicraft repair            Repair all damaged items at a listed repair vendor
+                            Confirmed by observed coinage and item changes; refusals are named
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)
@@ -137,8 +143,8 @@ JSON OUTPUT
   details -> accept-quest (unless already in the log); requestItems -> request-reward;
   offer -> choose-reward <i>.
   Without --json, combat, tactics, cycling, recovery, quests, inventory, experience,
-  loot and trainer print readable summaries; QUEST lines in read name the quest,
-  counts, reward and error.
+  loot, trainer and vendor print readable summaries; QUEST lines in read name the
+  quest, counts, reward and error.
   Control actions print daemon request acceptance, not a server result.
   fight replies when the run ends with its outcome line, for example
   "completed: server_kill_credit, XP 60"; cycle says that it ended.

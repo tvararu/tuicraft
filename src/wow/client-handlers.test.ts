@@ -1,9 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, jest, test } from "bun:test";
+import { MARNIEL, MARNIEL_LIST_INVENTORY } from "test/vendor-fixtures";
 import {
   registerGameHandlers,
   registerWorldHandlers,
 } from "wow/client-handlers";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { PacketReader } from "wow/protocol/packet";
 import { STUBS } from "wow/protocol/stubs";
 import { OpcodeDispatch } from "wow/protocol/world";
 import type { WorldConn } from "wow/world-conn";
@@ -38,5 +40,28 @@ describe("registerWorldHandlers", () => {
       .filter(([, count]) => count > 1)
       .map(([opcode]) => names.get(opcode) ?? `0x${opcode.toString(16)}`);
     expect(duplicates).toEqual([]);
+  });
+
+  test("routes a vendor list to both the quest request and the vendor window", () => {
+    const dispatch = new OpcodeDispatch();
+    const receiveInventory = jest.fn();
+    const receiveWindow = jest.fn();
+    const events = { message: { size: 0, emit: () => {} } };
+    registerWorldHandlers({
+      dispatch,
+      events,
+      quests: { receiveWindow },
+      vendor: { receiveInventory },
+    } as unknown as WorldConn);
+    dispatch.handle(
+      GameOpcode.SMSG_LIST_INVENTORY,
+      new PacketReader(MARNIEL_LIST_INVENTORY),
+    );
+    expect(receiveWindow.mock.calls).toEqual([[MARNIEL, "vendor"]]);
+    expect(receiveInventory).toHaveBeenCalledTimes(1);
+    expect(receiveInventory.mock.calls[0]?.[0]).toMatchObject({
+      guid: MARNIEL,
+      emptyReason: undefined,
+    });
   });
 });

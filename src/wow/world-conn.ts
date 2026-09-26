@@ -18,6 +18,7 @@ import type { RemoteMotion } from "wow/remote-motion";
 import type { RewardsRuntime } from "wow/rewards";
 import type { TacticsLoop } from "wow/tactics";
 import type { TrainerRuntime } from "wow/trainer";
+import type { VendorRuntime } from "wow/vendor";
 import type { WorldEvents } from "wow/world-events";
 
 export type WorldConn = {
@@ -58,5 +59,6 @@ export type WorldConn = {
   itemTemplates?: ItemTemplates;
   cycle?: EncounterCycleRuntime;
   trainer?: TrainerRuntime;
+  vendor?: VendorRuntime;
   tactics?: TacticsLoop;
 };

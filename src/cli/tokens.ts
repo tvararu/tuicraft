@@ -205,6 +205,35 @@ export function parseSpellId(tokens: string[]): Parsed<{ spellId: number }> {
   return parsed.ok ? ok({ spellId: parsed.value }) : parsed;
 }
 
+export function parseSell(
+  tokens: string[],
+): Parsed<{ bag: number; slot: number; count?: number }> {
+  const [rawBag, rawSlot, rawCount] = tokens;
+  if (tokens.length < 2 || tokens.length > 3) return fail("invalid sell");
+  const bag = rawBag === undefined ? undefined : parseUnsigned(rawBag, 0, 255);
+  const slot =
+    rawSlot === undefined ? undefined : parseUnsigned(rawSlot, 0, 255);
+  if (bag === undefined || slot === undefined)
+    return fail("invalid bag or slot");
+  if (rawCount === undefined) return ok({ bag, slot });
+  const count = parseUnsigned(rawCount, 1, MAX_UINT32);
+  return count === undefined
+    ? fail("invalid sell count")
+    : ok({ bag, count, slot });
+}
+
+export function parseBuy(
+  tokens: string[],
+): Parsed<{ slot: number; count: number }> {
+  const [rawSlot, rawCount = "1"] = tokens;
+  if (tokens.length === 0 || tokens.length > 2) return fail("invalid buy");
+  const slot =
+    rawSlot === undefined ? undefined : parseUnsigned(rawSlot, 1, 255);
+  if (slot === undefined) return fail("invalid vendor slot");
+  const count = parseUnsigned(rawCount, 1, 255);
+  return count === undefined ? fail("invalid buy count") : ok({ count, slot });
+}
+
 export function parseOptionId(raw: string | undefined): number | undefined {
   return raw === undefined ? undefined : parseUnsigned(raw, 0, MAX_UINT32);
 }

@@ -50,3 +50,21 @@ export async function pause(ms: number, signal: AbortSignal): Promise<void> {
     clearTimeout(timer);
   }
 }
+
+export function waitUnlessAborted(
+  ms: number,
+  abort?: AbortSignal,
+): Promise<boolean> {
+  if (abort?.aborted) return Promise.resolve(true);
+  const { promise, resolve } = Promise.withResolvers<boolean>();
+  const timer = setTimeout(() => resolve(false), ms);
+  abort?.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      resolve(true);
+    },
+    { once: true },
+  );
+  return promise;
+}

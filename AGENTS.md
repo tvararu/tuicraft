@@ -42,7 +42,8 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   temporary `refs/signoff/<sha>` ref so the not-yet-pushed commit can be
   signed off, deletes that ref, and fails the push if signoff fails
 - `mise test:live` — live server tests (`bun test ./src/test/live.ts
-  ./src/test/live-quest.ts ./src/test/live-remote-motion.ts`); needs two game accounts via `WOW_*` (see Testing)
+  ./src/test/live-quest.ts ./src/test/live-remote-motion.ts
+  ./src/test/live-vendor.ts`); needs two game accounts via `WOW_*` (see Testing)
 - `mise namigator:build` — build `libnamigator.so` from the pinned upstream
   commit plus the patches in `vendor/namigator/` into `tmp/namigator/`
 - `bun src/factory/main.ts <precheck|qa-changes|soap|reap|setup>` — the dev

@@ -26,6 +26,7 @@ import { RewardsRuntime } from "wow/rewards";
 import { loadSpellCatalog } from "wow/spell-catalog";
 import { TacticsLoop } from "wow/tactics";
 import { TrainerRuntime } from "wow/trainer";
+import { VendorRuntime } from "wow/vendor";
 import type { WorldConn } from "wow/world-conn";
 import { selfGuid, sendPacket } from "wow/world-handlers";
 
@@ -39,6 +40,7 @@ export type Runtimes = {
   items: ItemTemplates;
   cycle: EncounterCycleRuntime;
   trainer: TrainerRuntime;
+  vendor: VendorRuntime;
   prepareCatalog: () => Promise<void>;
   navigation: () => Navigation;
   observedTarget: (guid: bigint) => NavPoint;
@@ -65,6 +67,7 @@ type RuntimeParts = {
   items: ItemTemplates;
   cycle: EncounterCycleRuntime;
   trainer: TrainerRuntime;
+  vendor: VendorRuntime;
 };
 
 function createControl(
@@ -178,6 +181,7 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
     cycle,
     tactics,
     trainer,
+    vendor,
   } = parts;
   const { events } = conn;
   const detach = [
@@ -208,6 +212,7 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
     }),
     cycle.onEvent((event) => events.cycle.emit(event)),
     trainer.onEvent((event) => events.trainer.emit(event)),
+    vendor.onEvent((event) => events.vendor.emit(event)),
   ];
   return () => {
     for (const off of detach) off();
@@ -246,6 +251,7 @@ function disposeParts(
     rewards,
     cycle,
     trainer,
+    vendor,
   } = parts;
   options.unwire();
   if (options.sendStop) options.halt();
@@ -259,6 +265,7 @@ function disposeParts(
   parts.items.dispose();
   cycle.dispose();
   trainer.dispose();
+  vendor.dispose();
   lazy.navigation?.close();
 }
 
@@ -273,7 +280,10 @@ function createSupportRuntimes(
   conn: WorldConn,
   runtimeDeps: RuntimeDeps,
   parts: Pick<RuntimeParts, "control" | "tactics">,
-): Pick<RuntimeParts, "recovery" | "quests" | "rewards" | "items" | "cycle"> {
+): Pick<
+  RuntimeParts,
+  "recovery" | "quests" | "rewards" | "items" | "cycle" | "vendor"
+> {
   const { control, tactics } = parts;
   const recovery = new RecoveryRuntime({
     ...runtimeDeps,
@@ -294,7 +304,9 @@ function createSupportRuntimes(
     now: runtimeDeps.now,
   });
   conn.cycle = cycle;
-  return { recovery, quests, rewards, items, cycle };
+  const vendor = new VendorRuntime(runtimeDeps);
+  conn.vendor = vendor;
+  return { recovery, quests, rewards, items, cycle, vendor };
 }
 
 function createCombat(

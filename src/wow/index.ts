@@ -13,6 +13,7 @@ export type {
   NamedTrainerSpell,
   NamedTrainerState,
 } from "wow/client-trainer";
+export type { NamedVendorGood, NamedVendorState } from "wow/client-vendor";
 export type { CombatEvent, CombatState, CombatUnit } from "wow/combat";
 export type {
   ControlEvent,
@@ -84,3 +85,4 @@ export {
   type TacticsState,
 } from "wow/tactics";
 export type { TrainerOutcome, TrainerRequest } from "wow/trainer";
+export type { VendorOutcome, VendorRequest } from "wow/vendor";

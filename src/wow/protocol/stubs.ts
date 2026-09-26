@@ -29,7 +29,6 @@ export const STUBS: [opcode: number, label: string][] = [
   [GameOpcode.SMSG_EQUIPMENT_SET_LIST, "Equipment sets"],
   [GameOpcode.SMSG_TRADE_STATUS, "Trade window"],
   [GameOpcode.SMSG_TRADE_STATUS_EXTENDED, "Trade update"],
-  [GameOpcode.SMSG_BUY_FAILED, "Purchase failed"],
   [GameOpcode.SMSG_AUCTION_LIST_RESULT, "Auction results"],
   [GameOpcode.SMSG_AUCTION_OWNER_NOTIFICATION, "Auction sold"],
   [GameOpcode.SMSG_AUCTION_BIDDER_NOTIFICATION, "Auction outbid"],
