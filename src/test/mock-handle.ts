@@ -13,6 +13,7 @@ import type { Entity, EntityEvent } from "wow/entity-store";
 import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
+import { type NearbyQuery, queryNearby } from "wow/nearby";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import type { RemotePose } from "wow/remote-motion";
@@ -20,7 +21,7 @@ import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 import { createWorldEvents } from "wow/world-events";
 
-export function createMockHandle(): WorldHandle & {
+type MockHandle = WorldHandle & {
   triggerMessage: (msg: ChatMessage) => void;
   triggerGroupEvent: (event: GroupEvent) => void;
   triggerDuelEvent: (event: DuelEvent) => void;
@@ -35,7 +36,9 @@ export function createMockHandle(): WorldHandle & {
   triggerQuestEvent: (event: QuestEvent) => void;
   triggerRewardsEvent: (event: RewardsEvent) => void;
   resolveClosed: () => void;
-} {
+};
+
+export function createMockHandle(): MockHandle {
   const controlState: ControlState = {
     blockedReason: undefined,
     direction: undefined,
@@ -99,7 +102,7 @@ export function createMockHandle(): WorldHandle & {
   });
   let lastChatMode: ChatMode = { type: "say" };
 
-  return {
+  const handle: MockHandle = {
     abandonQuest: jest.fn(),
     acceptGuildInvite: jest.fn(),
     acceptInvite: jest.fn(),
@@ -215,6 +218,17 @@ export function createMockHandle(): WorldHandle & {
     },
     openLoot: jest.fn(),
     queryCorpse: jest.fn(),
+    queryNearby: jest.fn((query?: NearbyQuery) =>
+      queryNearby(
+        {
+          control: handle.getControlState(),
+          entities: handle.getNearbyEntities(),
+          now: Date.now(),
+          remotePoses: handle.getRemotePoses(),
+        },
+        query,
+      ),
+    ),
     queryQuest: jest.fn(),
     reclaimCorpse: jest.fn(),
     releaseLoot: jest.fn(),
@@ -309,4 +323,5 @@ export function createMockHandle(): WorldHandle & {
     }),
     who: jest.fn(async () => []),
   };
+  return handle;
 }

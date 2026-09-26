@@ -438,6 +438,13 @@ describe("entity tracking", () => {
         .getNearbyEntities()
         .filter((e) => e.name === config2.character);
       expect(inStore.length).toBe(1);
+
+      const rows = handle1.queryNearby();
+      expect(rows[0]?.self).toBe(true);
+      expect(rows[0]?.distance).toBe(0);
+      const beside = rows.find((r) => r.entity.name === config2.character);
+      expect(beside?.distance).toBeLessThan(100);
+      expect(beside?.originSource).not.toBeNull();
     } finally {
       await restore?.();
       handle2?.close();
