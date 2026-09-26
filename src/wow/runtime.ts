@@ -74,13 +74,14 @@ function createControl(
     now: () => Date.now(),
     selfGuid: () => selfGuid(conn),
     findHeight: (mapId, x, y, from) => {
-      let height: number | undefined;
+      const navigation = getNavigation();
       try {
-        height = getNavigation().height(mapId, x, y, from);
+        return from
+          ? navigation.stepHeight(mapId, x, y, from)
+          : navigation.height(mapId, x, y);
       } catch {
-        height = undefined;
+        return Number.NaN;
       }
-      return height;
     },
     isPathClear: (mapId, from, to) => {
       try {

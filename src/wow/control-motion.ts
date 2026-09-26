@@ -1,5 +1,10 @@
 import type { Position } from "wow/entity-store";
-import { collisionFree, GROUND_ERROR, type NavPoint } from "wow/navigation";
+import {
+  collisionFree,
+  GROUND_ERROR,
+  type NavPoint,
+  withinStep,
+} from "wow/navigation";
 import { MovementFlag } from "wow/protocol/entity-fields";
 
 export type Ground = {
@@ -12,10 +17,18 @@ export type Ground = {
   isPathClear: (mapId: number, from: NavPoint, to: NavPoint) => boolean;
 };
 
-export type StepRefusal =
-  | "obstructed"
-  | "height_unresolved"
-  | "ground_height_unavailable";
+const STEP_REFUSALS = [
+  "obstructed",
+  "height_unresolved",
+  "ground_height_unavailable",
+  "too_steep",
+] as const;
+
+export type StepRefusal = (typeof STEP_REFUSALS)[number];
+
+export function isStepRefusal(reason: string): reason is StepRefusal {
+  return STEP_REFUSALS.some((refusal) => refusal === reason);
+}
 
 export type Step = { ok: true; z: number } | { ok: false; reason: StepRefusal };
 
@@ -46,6 +59,7 @@ export function groundStep(
   const z = finite(ground.findHeight(pose.mapId, x, y, pose));
   if (z === undefined)
     return { ok: false, reason: blockedStep(ground, pose, x, y) };
+  if (!withinStep(pose, { x, y, z })) return { ok: false, reason: "too_steep" };
   const reason = directed
     ? directedRefusal(ground, pose, { x, y, z })
     : undefined;
@@ -60,7 +74,10 @@ function blockedStep(
 ): StepRefusal {
   const z = finite(ground.findHeight(pose.mapId, pose.x, pose.y, pose));
   if (z === undefined) return "ground_height_unavailable";
-  return ground.isPathClear(pose.mapId, pose, { x, y, z })
+  const start = { x: pose.x, y: pose.y, z };
+  const ray = (a: NavPoint, b: NavPoint) =>
+    ground.isPathClear(pose.mapId, a, b);
+  return collisionFree(ray, start, { x, y, z })
     ? "height_unresolved"
     : "obstructed";
 }

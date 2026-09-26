@@ -1,30 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { native, navigation } from "test/navigation-fixtures";
 import {
   collisionFree,
   createNavigation,
   GroundRoute,
   type NavPoint,
 } from "wow/navigation";
-import { groundError, type NativeMap } from "wow/navigation-native";
-
-function native(over: Partial<NativeMap> = {}): NativeMap {
-  return {
-    loadAdtAt: () => {},
-    findHeights: () => [0],
-    findHeight: () => 0,
-    findPath: (from, to) => [{ ...from }, { ...to }],
-    lineOfSight: () => true,
-    close: () => {},
-    ...over,
-  };
-}
-
-function navigation(map: NativeMap) {
-  return createNavigation(
-    { dataPath: "fixture", libraryPath: "fixture" },
-    () => map,
-  );
-}
+import { groundError } from "wow/navigation-native";
 
 const start: NavPoint = { x: 0, y: 0, z: 0 };
 const end: NavPoint = { x: 10, y: 0, z: 0 };
@@ -467,6 +449,18 @@ describe("ground destinations", () => {
       /ambiguous ground column/,
     );
   });
+
+  test("a distant query under a tree keeps the navmesh ground, not the canopy", () => {
+    const map = native({
+      findHeight: () => 70.34,
+      findHeights: () => [93.42, 70.34],
+    });
+    const nav = navigation(map);
+    const from = { x: 0, y: 0, z: 70.3 };
+    for (const d of [5, 20, 30])
+      expect(nav.height(530, d, 0, from)).toBeCloseTo(70.34);
+  });
+
   test("primes the origin tile before the connected height query", () => {
     const loaded: [number, number][] = [];
     const map = native({

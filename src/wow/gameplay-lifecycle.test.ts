@@ -331,6 +331,12 @@ describe("gameplay forced-close lifecycle", () => {
         setMode.call(this, mode);
         if (mode === "jev") control = this;
       });
+    const createNavigation = navigation.createNavigation;
+    const nav = jest
+      .spyOn(navigation, "createNavigation")
+      .mockImplementation((options) =>
+        createNavigation(options, () => flatMap()),
+      );
     const send = jest.spyOn(worldHandlers, "sendPacket");
     let f: Fixture | undefined;
     try {
@@ -386,6 +392,7 @@ describe("gameplay forced-close lifecycle", () => {
         provider.mockRestore();
         factions.mockRestore();
         spells.mockRestore();
+        nav.mockRestore();
       }
     }
   });

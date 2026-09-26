@@ -1,5 +1,6 @@
 import { messageOf } from "lib/errors";
 import type { ControlEvent } from "wow/control";
+import { isStepRefusal } from "wow/control-motion";
 import type { CorpseRun } from "wow/corpse-run";
 import { type CycleStop, cycleStop as stop } from "wow/cycle-stop";
 import { bearing, distance, normalizeAngle } from "wow/geometry";
@@ -51,10 +52,9 @@ async function travelLeg(run: CorpseRun, heading: Heading): Promise<Leg> {
     );
     run.control.move("forward", ms);
   } catch (error) {
-    return stop("corpse_unreachable", {
-      pose: before,
-      error: messageOf(error),
-    });
+    const reason = messageOf(error);
+    if (isStepRefusal(reason)) return { ok: true, stalled: true };
+    return stop("corpse_unreachable", { pose: before, error: reason });
   }
   const stopped = (event: ControlEvent) => event.type === "movement_stopped";
   await run.motion.find(stopped, ms + STOP_MARGIN_MS, run.signal);

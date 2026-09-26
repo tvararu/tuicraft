@@ -142,6 +142,7 @@ Rules:
 - Duration is an integer from 1 through 10000 milliseconds. The default is 1000 milliseconds.
 - Invalid duration sends no movement packet.
 - Repeating the same direction extends an active manual lease without a stop.
+- `move` walks half-yard steps onto the highest reachable surface (rise at most one navmesh cell (0.25 yd) plus the navmesh's 50° walkable slope, drop at most 13 yd, below the server's fall-damage distance). If the first half yard cannot be walked it sends nothing and returns `ERR obstructed`, `ERR height_unresolved`, `ERR too_steep`, or `ERR ground_height_unavailable`; turn and try another heading rather than repeating it. `ERR rooted` also means you are dead: check `recovery`. `ERR missing_navigation` means the daemon has no navigation data configured. A leg that stops later leaves `blockedReason` and `nextStep` in `control --json`.
 - A manual command stops Jev or cycle before it takes control.
 - `face` takes one finite radian number.
 - `face-guid` needs a nonzero GUID with an observed position on the current map.
