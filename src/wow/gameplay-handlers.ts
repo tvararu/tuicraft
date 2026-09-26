@@ -57,7 +57,7 @@ import {
   parseSpellStart,
   parseSupersededSpell,
 } from "wow/protocol/spell";
-import type { QuestDialog } from "wow/quests";
+import type { QuestDialog } from "wow/quests-requests";
 import type { WorldConn } from "wow/world-conn";
 
 export function registerCombatHandlers(conn: WorldConn): void {
@@ -165,6 +165,19 @@ export function registerQuestHandlers(conn: WorldConn): void {
   on(GameOpcode.SMSG_QUEST_QUERY_RESPONSE, (r) =>
     conn.quests?.receiveQuery(parseQuestQueryResponse(r)),
   );
+  on(GameOpcode.SMSG_TRAINER_LIST, (r) =>
+    conn.quests?.receiveWindow(r.uint64LE(), "trainer"),
+  );
+  on(GameOpcode.SMSG_LIST_INVENTORY, (r) =>
+    conn.quests?.receiveWindow(r.uint64LE(), "vendor"),
+  );
+  on(GameOpcode.SMSG_SHOW_BANK, (r) =>
+    conn.quests?.receiveWindow(r.uint64LE(), "bank"),
+  );
+  on(GameOpcode.SMSG_SHOWTAXINODES, (r) => {
+    r.uint32LE();
+    conn.quests?.receiveWindow(r.uint64LE(), "taxi");
+  });
   registerQuestProgressHandlers(conn);
 }
 
