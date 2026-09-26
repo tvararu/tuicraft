@@ -1,7 +1,6 @@
 import { Emitter, type Unsubscribe } from "lib/emitter";
 import type { ControlPose } from "wow/control";
 import { type EntityEvent, type EntityLookup, isUnit } from "wow/entity-store";
-import { distance } from "wow/geometry";
 import {
   type PlayerLife,
   type PlayerLifeState,
@@ -20,6 +19,7 @@ import {
 import { NpcFlag, ObjectType } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type { Vec3 } from "wow/protocol/packet";
+import { reclaimGate } from "wow/recovery-reclaim";
 
 export type RecoveryDeps = {
   send: (opcode: number, body?: Uint8Array) => void;
@@ -85,6 +85,14 @@ export type RecoveryReclaim = {
   pose: ControlPose | undefined;
 };
 
+export const SPIRIT_HEALER_TIMEOUT_MS = 10_000;
+export type SpiritHealerCleared = {
+  guid: bigint;
+  requestedAt: number;
+  clearedAt: number;
+  reason: "timeout" | "halt";
+};
+
 export type RecoveryState = PlayerLifeState & {
   selfGuid: bigint;
   epoch: number;
@@ -95,6 +103,7 @@ export type RecoveryState = PlayerLifeState & {
   graveyard: DeathReleaseLocation | undefined;
   resurrection: RecoveryResurrection | undefined;
   request: RecoveryRequest | undefined;
+  spiritHealerCleared: SpiritHealerCleared | undefined;
   disposed: boolean;
 };
 
@@ -111,6 +120,7 @@ export type RecoveryEvent = {
     | "release_requested"
     | "reclaim_requested"
     | "spirit_healer_requested"
+    | "spirit_healer_cleared"
     | "resurrection_response_requested";
   at: number;
   state: RecoveryState;
@@ -156,6 +166,7 @@ export class RecoveryRuntime {
         guid: bigint;
       }
     | undefined;
+  private spiritHealerCleared: SpiritHealerCleared | undefined;
   private offer:
     | {
         packet: ResurrectRequest;
@@ -190,10 +201,19 @@ export class RecoveryRuntime {
           }
         : undefined,
       reclaimDelay: this.delay ? { ...this.delay } : undefined,
-      reclaim: this.reclaimState(life.life),
+      reclaim: reclaimGate({
+        life: life.life,
+        corpse: this.corpse,
+        delay: this.delay,
+        pose: this.deps.pose(),
+        now: this.deps.now(),
+      }),
       graveyard: copyGraveyard(this.graveyard),
       resurrection: this.resurrectionState(),
       request: request ? { ...request } : undefined,
+      spiritHealerCleared: this.spiritHealerCleared
+        ? { ...this.spiritHealerCleared }
+        : undefined,
       disposed: this.disposed,
     };
   }
@@ -251,7 +271,13 @@ export class RecoveryRuntime {
   reclaimCorpse(): RecoveryState {
     this.active();
     this.observeLife();
-    const gate = this.reclaimState(this.life().life);
+    const gate = reclaimGate({
+      life: this.life().life,
+      corpse: this.corpse,
+      delay: this.delay,
+      pose: this.deps.pose(),
+      now: this.deps.now(),
+    });
     if (!gate.canRequest)
       throw new Error(`Cannot request reclaim: ${gate.reason}`);
     const requestedAt = this.deps.now();
@@ -271,8 +297,16 @@ export class RecoveryRuntime {
     this.observeLife();
     if (this.life().life !== "ghost")
       throw new Error("Spirit-healer activation requires observed ghost state");
-    if (this.spiritHealerPending || this.request?.action === "spirit-healer")
-      throw new Error("Previous spirit-healer request remains unanswered");
+    const pending = this.spiritHealerPending;
+    if (
+      pending &&
+      this.deps.now() - pending.requestedAt >= SPIRIT_HEALER_TIMEOUT_MS
+    )
+      this.clearSpiritHealer("timeout");
+    if (this.spiritHealerPending)
+      throw new Error(
+        "Previous spirit-healer request remains unanswered; retry after 10 s or halt",
+      );
     if (guid === 0n) throw new Error("Spirit-healer GUID is unknown");
     const healer = this.deps.getEntity(guid);
     if (
@@ -295,6 +329,21 @@ export class RecoveryRuntime {
     };
     this.request = this.spiritHealerPending;
     return this.emit("spirit_healer_requested");
+  }
+
+  clearSpiritHealer(reason: SpiritHealerCleared["reason"]): void {
+    const pending = this.spiritHealerPending;
+    if (this.disposed || !pending) return;
+    const { guid, requestedAt } = pending;
+    this.spiritHealerCleared = {
+      guid,
+      requestedAt,
+      clearedAt: this.deps.now(),
+      reason,
+    };
+    this.spiritHealerPending = undefined;
+    if (this.request === pending) this.request = undefined;
+    this.emit("spirit_healer_cleared");
   }
 
   respondResurrection(accept: boolean): RecoveryState {
@@ -445,65 +494,6 @@ export class RecoveryRuntime {
         : receivedAt + packet.delayMs;
     const name = packet.name || this.deps.getEntity(packet.guid)?.name || "";
     return { ...packet, name, receivedAt, readyAt, response };
-  }
-
-  private reclaimState(life: PlayerLife): RecoveryReclaim {
-    const pose = this.deps.pose();
-    const remainingMs = this.delay
-      ? Math.max(0, this.delay.readyAt - this.deps.now())
-      : undefined;
-    const result: RecoveryReclaim = {
-      canRequest: false,
-      readiness: "blocked",
-      reason: undefined,
-      distance: undefined,
-      remainingMs,
-      pose: pose ? { ...pose } : undefined,
-    };
-    result.reason = this.reclaimBlocker(life, pose);
-    if (result.reason || this.corpse.status !== "found" || !pose) return result;
-    const point = this.corpse.position;
-    result.distance = distance(pose, point);
-    if (result.distance > 39) result.reason = "corpse_out_of_range";
-    else if (remainingMs !== undefined && remainingMs > 0)
-      result.reason = "reclaim_delay";
-    else {
-      result.canRequest = true;
-      result.readiness = remainingMs === undefined ? "unverified" : "ready";
-    }
-    return result;
-  }
-
-  private reclaimBlocker(
-    life: PlayerLife,
-    pose: ControlPose | undefined,
-  ): string | undefined {
-    if (life === "unknown") return "life_unknown";
-    if (life !== "ghost") return "not_ghost";
-    if (this.corpse.status === "unknown") return "corpse_unknown";
-    if (this.corpse.status === "absent") return "corpse_absent";
-    if (this.corpse.mapId !== this.corpse.corpseMapId || this.corpse.mapId < 0)
-      return "corpse_position_unknown";
-    if (
-      !(
-        pose &&
-        Number.isFinite(pose.x) &&
-        Number.isFinite(pose.y) &&
-        Number.isFinite(pose.z)
-      )
-    )
-      return "pose_unknown";
-    if (pose.mapId !== this.corpse.corpseMapId) return "corpse_map_mismatch";
-    const point = this.corpse.position;
-    if (
-      !(
-        Number.isFinite(point.x) &&
-        Number.isFinite(point.y) &&
-        Number.isFinite(point.z)
-      )
-    )
-      return "corpse_position_unknown";
-    return undefined;
   }
 
   private emit(type: RecoveryEvent["type"]): RecoveryState {

@@ -217,7 +217,7 @@ use. Inspect `control --json`: `requestedTarget` is intent, `target` is the last
 server observation.
 
 `tuicraft halt`
-:: Stop motion, cast, attack, tactics, navigation, and cycle. The daemon stays connected.
+:: Stop motion, cast, attack, tactics, navigation, and cycle, and clear an unanswered spirit-healer request. The daemon stays connected.
 HALT on one IPC socket interrupts pending work and drops older queued
 RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
@@ -477,7 +477,7 @@ If all other guards pass, one explicit request is allowed with unknown timing an
 This command takes no corpse GUID. The server finds the authenticated player's corpse.
 
 `tuicraft spirit-healer` `<guid>`
-:: Request resurrection from one observed creature whose NPC flags carry the healer bit (0x4000). Requires observed ghost state and rejects an unanswered duplicate request. Never auto-activates and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
+:: Request resurrection from one observed creature whose NPC flags carry the healer bit (0x4000). Requires observed ghost state and rejects a duplicate while the previous request is unanswered, for 10 s or until `halt`. After 10 s a new request replaces the unanswered one; `halt` clears it at once. Either way `recovery --json` records `spiritHealerCleared` (`guid`, `requestedAt`, `clearedAt`, `reason` `timeout` or `halt`) and a `spirit_healer_cleared` RECOVERY event. The server silently ignores a request from out of interaction range, so move within a few yards before retrying. Never auto-activates and never reports success on intent. Server spirit resurrection may incur durability loss. Gossip selection stays silent for this path. After `OK`, inspect `recovery --json` for observed `life=alive`.
 
 `tuicraft resurrect` `accept`|`decline`
 :: Answer the current unanswered resurrection offer once. It requires observed dead or ghost state. A known future offer delay blocks `accept`, not `decline`. `OK` is request intent; confirm observed `life=alive` after an accept.

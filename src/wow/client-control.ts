@@ -167,6 +167,7 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
     halt() {
       rt.tactics.stop("halt");
       rt.cycle.stop("halt");
+      rt.recovery.clearSpiritHealer("halt");
       rt.halt();
     },
     goTo(x: number, y: number, z?: number) {
