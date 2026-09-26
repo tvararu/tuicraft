@@ -106,8 +106,12 @@ describe("bounded replanning", () => {
       formatControlStateObj(s.runtime.snapshot()),
       ...s.events.map(formatControlEventObj),
     ];
-    expect(control.map((obj) => obj.blockedReason)).toContain(UNKNOWN);
-    expect(control.map((obj) => obj.nextStep)).toEqual(control.map(() => null));
+    expect(control.map(({ blockedReason }) => blockedReason)).toContain(
+      UNKNOWN,
+    );
+    expect(control.map(({ nextStep }) => nextStep)).toEqual(
+      control.map(() => null),
+    );
     const navigation = observeNavigation(s.runtime.navigationState());
     expect(navigation).toMatchObject({
       blockedReason: UNKNOWN,
