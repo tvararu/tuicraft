@@ -98,3 +98,139 @@ blocked branches reported as blocked, never inferred.
 - Denied/full/empty loot and current-offer resurrection were unexercised
   live. Release-only opening denial still requires an ordinary reconnect;
   none of these records proves denial/retry support.
+  The 2026-09-26 section below records later live runs of these branches.
+
+## Unexercised branches and the spirit-healer gossip, 2026-09-26
+
+Record: [unexercised-branches-2026-09-26.json](unexercised-branches-2026-09-26.json)
+(issue #201). One live session on three throwaway factory characters, all
+deleted afterwards: A `Fgklhcpcnhl` (`0xa4a`, eversong10 priest, level 10,
+the actor), B `Fgklhcpcnek` (`0xa4b`, eversong10 priest, level 10) and G
+`Fgklhcpcobf` (`0xa4c`, `fresh --gm 2`, used only to type GM commands).
+Build `90c148a`. The record holds every command with its raw output (long
+outputs truncated and marked), the matching session-log lines, and the
+incoming packets for each branch.
+
+A's daemon ran under a throwaway wrapper, not committed, that logged every
+incoming opcode with its body and whether a handler exists. No source file
+changed. The login banner says the server also runs a "Loot aoe" module; its
+source is not available here, so any effect it has on loot is unknown.
+
+### GM commands (setup only)
+
+All typed by G in chat. None touched a fight, a loot roll or the
+resurrection itself.
+
+| When (epoch ms) | Command | Purpose |
+|---|---|---|
+| 1790390116180 | `.appear Fgklhcpcnhl` | reach A |
+| 1790390124443 | `.die` (A selected) | first death, for the resurrection offer |
+| 1790390152419 | `.die` (A selected) | second death, for the gossip diagnosis |
+| 1790390350828 | `.appear Fgklhcpcnhl` | reach A |
+| 1790390354952 | `.additem 2318 -1` | remove A's partial Light Leather stack so loot cannot stack into it |
+| 1790390356009 | `.additem 25 104` | fill A's 104 free slots |
+| 1790390501439 | `.appear Fgklhcpcnhl` | reach A |
+| 1790390505569 | `.additem 25 -1` | free one slot |
+| 1790390525396 | `.additem 25 -3` | free three more for the denial run |
+| 1790390871001 | `.revive` (G itself) | G had been killed while idle |
+| 1790390872060 | `.appear Fgklhcpcnhl` | reach A |
+| 1790390876183 | `.additem 25 -100` | remove the remaining filler |
+
+### Spirit-healer gossip: the select is answered, the client drops the answer
+
+The 2026-09-24 record called the gossip select "swallowed". It is not.
+A ghost 5.44 yd from the Fairbreeze Spirit Healer `0xf13000195b0009f1`
+sent `talk`, which opened menu 83 with one option, `Return me to life.`,
+and then `select-option 0`:
+
+    1790390168294 $ tuicraft select-option 0
+    Daemon accepted request. No server result confirmed.
+    probe 1790390168347 op 0x222 UNKNOWN handled=false body f109005b190030f1
+
+0x222 is `SMSG_SPIRIT_HEALER_CONFIRM`, and its body is the healer's packed
+GUID. In AzerothCore, `Player::OnGossipSelect` handles
+`GOSSIP_OPTION_SPIRITHEALER` by having the healer cast spell 17251, and the
+script for that spell (`spell_gen_spirit_healer_res`) sends this packet. The
+Blizzard client then shows a confirmation and answers with
+`CMSG_SPIRIT_HEALER_ACTIVATE`. tuicraft has no opcode entry and no handler
+for 0x222, so `OpcodeDispatch.handle` drops it and nothing follows. Filed as
+#200. From the same spot, `tuicraft spirit-healer <guid>` sends
+`CMSG_SPIRIT_HEALER_ACTIVATE` directly and revived the ghost in 52 ms
+(`life_observed alive`, epoch 3 to 4).
+
+The other case, a direct request that gets no answer (#178, PR #187), is a
+different path. `HandleSpiritHealerActivateOpcode` returns without replying
+when `GetNPCIfCanInteractWith` fails, and that check includes
+`INTERACTION_DISTANCE` (5.5 yd). That fits PR #187's live result (no answer
+at 17.8 yd, revived at 3.8 yd). It is inference for the 12 yd M6 request.
+
+### Resurrection offer accepted
+
+A was killed with a GM `.die` and did not release. B cast Resurrection
+(2006) on A. A received `SMSG_RESURRECT_REQUEST` from `0xa4b`, and
+`recovery --json` held it as a current offer:
+
+    "resurrection":{"guid":"0xa4b","name":"","reserved":0,"sickness":0,
+      "receivedAt":1790390139789,"response":"unanswered"}
+    1790390144491 $ tuicraft resurrect accept
+    Daemon accepted request. Check tuicraft recovery for observed results.
+
+The session log shows `resurrection_offered`, then
+`resurrection_response_requested`, then `life_observed alive` at 70 health,
+epoch 1 to 2, 4.8 s after the offer. The text form of `recovery` does not
+print the offer; only `--json` shows it.
+
+### Loot with full bags
+
+With 0 free slots, `cycle` on Springpaw Stalker `0xf130003d23078460` killed
+it (server kill credit, 40 XP), opened loot offering one Lynx Meat (27668),
+requested slot 0, and stopped:
+
+    Target 0xf130003d23078460: done (server_kill_credit), 40 XP
+    Stop reason: loot_inventory_full
+
+The server answered the take with inventory error 50,
+`EQUIP_ERR_INVENTORY_FULL`. The cycle left the loot window open with the take
+still `unanswered`; a separate `release-loot` closed it (release status 1).
+
+### Loot denied: two forms, both by direct command
+
+Neither was produced inside a `cycle`. The cycle loots straight after its own
+kill, and in these runs every corpse it opened was in range and lootable.
+
+- **Release-only.** `open-loot` about 14.4 yd from the corpse (A's server
+  pose after the reconnect against the corpse position then observed) was
+  answered only by
+  `SMSG_LOOT_RELEASE_RESPONSE` (the server's out-of-range path in
+  `Player::SendLoot`). The client kept loot phase `opening` with the request
+  `unanswered`. After that, `release-loot` gave
+  `ERR No open loot window to close` and a second `open-loot` gave
+  `ERR Previous loot window has not closed`. Only a daemon restart cleared
+  it, as the help text says.
+- **Server error.** A throwaway socket script took both offered items,
+  released, and reopened the same corpse 1 ms after the release was
+  observed. That was before the update clearing the lootable flag arrived,
+  so the local lootable check passed. The server answered
+  `SMSG_LOOT_RESPONSE` type 0 with error 0, `LOOT_ERROR_DIDNT_KILL`, from
+  the lootable-flag check in `Player::SendLoot`. The client recorded
+  `lastLootError {"error":0}` and went back to `closed`. Inside a cycle this
+  would become `loot_denied:0` through `lootError` in `src/wow/loot-run.ts`.
+  That is read from source, not observed.
+
+### Empty loot: not lootable by A, not an empty table
+
+A and B were grouped (group loot, A leader) and A ran `cycle --max 2`. The
+first kill was looted. For the second, `0xf130003d23078486`, the cycle
+recorded loot `none`, sent no loot request, and stopped `queue_exhausted`,
+which is the corpse branch `src/wow/loot-run.ts` treats as empty. The
+server's `SMSG_LOOT_LIST` (0x3f9, no handler) named B `0xa4b` as round-robin
+looter, and B's own client saw the corpse as lootable. B's `open-loot` from
+out of range was then answered release-only. So the corpse had loot, just
+not for A. A kill with no loot at all, or a server window with no items and
+no money, was not observed.
+
+### Still unexercised
+
+- A denial or a release-only answer inside a running `cycle`.
+- A creature whose loot is empty for everyone.
+- Declining a resurrection offer, and accepting one after release.
