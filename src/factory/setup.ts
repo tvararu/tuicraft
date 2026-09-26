@@ -1,4 +1,5 @@
 import {
+  automationNames,
   labels,
   mainCheckout,
   type PaceLevel,
@@ -99,7 +100,7 @@ const roles: [Role, string][] = [
 export function desiredAutomations(enable: boolean, level: PaceLevel): Spec[] {
   return roles.map(([role, prompt]) => ({
     enable,
-    name: `factory-${role}`,
+    name: automationNames[role],
     precheck: `bun ${runner}/src/factory/main.ts precheck ${role}`,
     prompt,
     rrule: level.schedules[role],

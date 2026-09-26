@@ -43,10 +43,11 @@ describe("missingLabels", () => {
 
 describe("desiredAutomations", () => {
   test("every prompt starts with its role marker for omp-factory", () => {
-    for (const spec of desiredAutomations(false, paces.default)) {
-      const role = spec.name.replace("factory-", "");
+    const specs = desiredAutomations(false, paces.default);
+    expect(specs.map((s) => s.name)).toEqual(["work", "review", "merge", "qa"]);
+    for (const spec of specs) {
+      const role = spec.precheck.split(" ").at(-1);
       expect(spec.prompt.split("\n")[0]).toBe(`[factory:${role}]`);
-      expect(spec.precheck).toEndWith(`main.ts precheck ${role}`);
     }
   });
 });

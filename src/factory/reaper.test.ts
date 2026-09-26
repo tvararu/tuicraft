@@ -49,10 +49,10 @@ const coord = wt({
 describe("ownerOf", () => {
   test("auto run worktrees belong to the reaper with the automation's role", () => {
     const run = wt({
-      displayName: "auto-factory-reviewer-run-4-20260925T1200",
+      displayName: "auto-review-run-4-20260925T1200",
     });
     expect(ownerOf(run, [])).toEqual({
-      automation: "factory-reviewer",
+      automation: "review",
       kind: "reaper",
       role: "reviewer",
     });
@@ -83,9 +83,11 @@ describe("ownerOf", () => {
 });
 
 describe("roleOf", () => {
-  test("reads the role from factory-<role>", () => {
-    expect(roleOf("factory-qa")).toBe("qa");
-    expect(roleOf("factory-merger")).toBe("merger");
+  test("reads the role from the automation name", () => {
+    expect(roleOf("qa")).toBe("qa");
+    expect(roleOf("merge")).toBe("merger");
+    expect(roleOf("review")).toBe("reviewer");
+    expect(roleOf("work")).toBe("worker");
   });
 
   test("unknown automations get the longest cap", () => {
