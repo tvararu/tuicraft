@@ -3,6 +3,8 @@ import type { ControlPose, MovementDirection, WalkOutcome } from "wow/control";
 import { bearing } from "wow/geometry";
 import {
   classifyNavigationRefusal,
+  type GroundRoute,
+  type NavDestination,
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
@@ -97,19 +99,34 @@ async function walkTowardTarget(
   }
 }
 
-function navigateTo(rt: Runtimes, destination: NavPoint): void {
+function planDestination(
+  navigation: Navigation,
+  pose: ControlPose,
+  destination: NavDestination,
+): { route: GroundRoute; resolved: NavPoint } {
+  const { x, y, z } = destination;
+  if (z !== undefined)
+    return {
+      route: navigation.plan(pose.mapId, pose, { x, y, z }),
+      resolved: { x, y, z },
+    };
+  const route = navigation.planGround(pose.mapId, pose, { x, y });
+  const end = route.points.at(-1);
+  if (end === undefined) throw new Error("navigation_route_empty");
+  return { route, resolved: { x, y, z: end.z } };
+}
+
+function navigateTo(rt: Runtimes, destination: NavDestination): void {
   rt.override();
   const { x, y, z } = destination;
-  if (![x, y, z].every(Number.isFinite))
+  if (![x, y, z ?? 0].every(Number.isFinite))
     throw new Error("stop: invalid_destination");
   const pose = rt.control.snapshot().pose;
   if (!pose) throw new Error("stop: no_pose");
   const navigation = rt.navigation();
   try {
-    rt.control.navigate(
-      navigation.plan(pose.mapId, pose, destination),
-      destination,
-    );
+    const { route, resolved } = planDestination(navigation, pose, destination);
+    rt.control.navigate(route, resolved);
   } catch (error) {
     const raw = error instanceof Error ? error.message : "navigation_failed";
     const refusal = classifyNavigationRefusal(raw);
@@ -152,8 +169,8 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
       rt.cycle.stop("halt");
       rt.halt();
     },
-    goTo(x, y, z) {
-      navigateTo(rt, { x, y, z });
+    goTo(x: number, y: number, z?: number) {
+      navigateTo(rt, z === undefined ? { x, y } : { x, y, z });
     },
     getNavigationState() {
       return control.navigationState();

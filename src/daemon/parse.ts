@@ -68,7 +68,7 @@ export type IpcCommand =
   | { type: "cycle_resume"; instruction?: string; maxStarts?: number }
   | { type: "cycling" }
   | { type: "cycling_json" }
-  | { type: "goto"; x: number; y: number; z: number }
+  | { type: "goto"; x: number; y: number; z?: number }
   | { type: "navigation" }
   | { type: "navigation_json" }
   | { type: "recovery" }

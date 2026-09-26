@@ -106,7 +106,9 @@ function requestArgs(action: Request): Arg[] {
     case "cycle_resume":
       return cycleArgs(action);
     case "goto":
-      return [action.x, action.y, action.z];
+      return action.z === undefined
+        ? [action.x, action.y]
+        : [action.x, action.y, action.z];
     case "query_quest":
     case "select_quest":
     case "complete_quest":
