@@ -178,6 +178,10 @@ export class OpcodeDispatch {
   }
 
   on(opcode: number, handler: (reader: PacketReader) => void) {
+    if (this.handlers.has(opcode))
+      throw new Error(
+        `Opcode 0x${opcode.toString(16)} already has a handler; compose in its owner`,
+      );
     this.handlers.set(opcode, handler);
   }
 
