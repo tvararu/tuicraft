@@ -6,6 +6,7 @@ import {
   type Navigation,
   type NavPoint,
 } from "wow/navigation";
+import { queryNearby } from "wow/nearby";
 import type { Runtimes } from "wow/runtime";
 import type { WorldConn } from "wow/world-conn";
 
@@ -161,6 +162,17 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
     },
     getRemotePoses() {
       return conn.remoteMotion.all();
+    },
+    queryNearby(query) {
+      return queryNearby(
+        {
+          control: control.snapshot(),
+          entities: conn.entityStore.all(),
+          now: Date.now(),
+          remotePoses: conn.remoteMotion.all(),
+        },
+        query,
+      );
     },
     onRemoteMotionEvent(cb) {
       return conn.events.remoteMotion.subscribe(cb);

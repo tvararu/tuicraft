@@ -1,8 +1,4 @@
-import {
-  formatNearbyLine,
-  formatNearbyObj,
-  prepareNearbyEntities,
-} from "daemon/nearby";
+import { formatNearbyLine, formatNearbyObj } from "daemon/nearby";
 import type { IpcCommand } from "daemon/parse";
 import { messageOf } from "lib/errors";
 import type { RingBuffer } from "lib/ring-buffer";
@@ -347,13 +343,13 @@ const HANDLERS: Handlers = {
   navigation_json: (_cmd, { handle, socket }) =>
     reply(socket, () => navigationObservation(handle), json),
   nearby: (cmd, { handle, socket }) =>
-    send(socket, prepareNearbyEntities(handle, cmd.all).map(formatNearbyLine)),
+    send(socket, handle.queryNearby({ all: cmd.all }).map(formatNearbyLine)),
   nearby_json: (cmd, { handle, socket }) =>
     send(
       socket,
-      prepareNearbyEntities(handle, cmd.all).map((p) =>
-        JSON.stringify(formatNearbyObj(p)),
-      ),
+      handle
+        .queryNearby({ all: cmd.all })
+        .map((p) => JSON.stringify(formatNearbyObj(p))),
     ),
   open_loot: (cmd, { handle, socket }) =>
     reply(socket, () => handle.openLoot(cmd.guid), ok),

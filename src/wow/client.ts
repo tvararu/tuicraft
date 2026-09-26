@@ -40,6 +40,7 @@ import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { InventoryState } from "wow/inventory";
+import type { NearbyQuery, NearbyRow } from "wow/nearby";
 import type { WhoResult } from "wow/protocol/chat";
 import { Language } from "wow/protocol/opcodes";
 import type { QuestEvent, QuestState } from "wow/quests";
@@ -212,6 +213,7 @@ export type WorldHandle = {
   halt: () => void;
   onControlEvent: (cb: (event: ControlEvent) => void) => Unsubscribe;
   getRemotePoses: () => RemotePose[];
+  queryNearby: (query?: NearbyQuery) => NearbyRow[];
   onRemoteMotionEvent: (cb: (event: RemoteMotionEvent) => void) => Unsubscribe;
   getCombatState: () => CombatState;
   getSpellbook: () => Promise<SpellDefinition[]>;

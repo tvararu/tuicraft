@@ -34,10 +34,10 @@ export type {
 export type { ExperienceState } from "wow/experience";
 export { type FramingVariant, parseFramingVariant } from "wow/framing";
 export type { FriendEntry, FriendEvent } from "wow/friend-store";
-export { bearing, distance2d, normalizeAngle } from "wow/geometry";
 export type { GuildEvent, GuildMember, GuildRoster } from "wow/guild-store";
 export type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 export type { InventoryState } from "wow/inventory";
+export type { NearbyQuery, NearbyRow } from "wow/nearby";
 export type { WhoResult } from "wow/protocol/chat";
 export { ObjectType } from "wow/protocol/entity-fields";
 export {

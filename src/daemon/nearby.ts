@@ -1,16 +1,11 @@
 import { formatGuid } from "ui/format";
 import {
-  bearing,
-  type ControlPose,
-  distance2d,
   type Entity,
   type GameObjectEntity,
-  normalizeAngle,
+  type NearbyRow,
   ObjectType,
-  type Position,
   type RemotePose,
   type UnitEntity,
-  type WorldHandle,
 } from "wow";
 
 function objectTypeName(type: ObjectType): string {
@@ -30,7 +25,7 @@ function formatPosition(position: Entity["position"]): string {
     : "";
 }
 
-function formatSpatial(p: PreparedNearbyEntity): string {
+function formatSpatial(p: NearbyRow): string {
   const distance =
     p.distance === null ? "distance=unknown" : `${p.distance.toFixed(2)} yd`;
   const xy =
@@ -43,7 +38,7 @@ function formatSpatial(p: PreparedNearbyEntity): string {
   return ` [${distance} ${xy} face=${face} turn=${turn} origin=${p.originSource ?? "unknown"}]`;
 }
 
-export function formatNearbyLine(p: PreparedNearbyEntity): string {
+export function formatNearbyLine(p: NearbyRow): string {
   const entity = p.entity;
   const guid = formatGuid(entity.guid);
   const spatial = formatSpatial(p);
@@ -80,130 +75,6 @@ function objectTypeString(type: ObjectType): string {
   }
 }
 
-const NEARBY_DEFAULT_RANGE = 100;
-
-type PreparedNearbyEntity = {
-  entity: Entity;
-  position: Entity["position"];
-  distance: number | null;
-  horizontalDistance: number | null;
-  bearingRadians: number | null;
-  turnRadians: number | null;
-  originSource: "predicted" | "server" | "self_entity" | null;
-  originUpdatedAt: number | null;
-  self: boolean;
-  remotePose: RemotePose | undefined;
-  preparedAt: number;
-};
-
-type Origin = ControlPose | Position;
-
-type Measurement = Pick<
-  PreparedNearbyEntity,
-  "distance" | "horizontalDistance" | "bearingRadians" | "turnRadians"
->;
-
-function measure(
-  entity: Entity,
-  isSelf: boolean,
-  selfPos: Origin | undefined,
-): Measurement {
-  const measurement: Measurement = {
-    bearingRadians: null,
-    distance: null,
-    horizontalDistance: null,
-    turnRadians: null,
-  };
-  if (isSelf) {
-    measurement.distance = 0;
-    if (selfPos) measurement.horizontalDistance = 0;
-    return measurement;
-  }
-  if (!(selfPos && entity.position && selfPos.mapId === entity.position.mapId))
-    return measurement;
-  const horizontalDistance = distance2d(entity.position, selfPos);
-  measurement.horizontalDistance = horizontalDistance;
-  measurement.distance = Math.hypot(
-    horizontalDistance,
-    entity.position.z - selfPos.z,
-  );
-  if (horizontalDistance > 0) {
-    const angle = bearing(selfPos, entity.position);
-    const bearingRadians = angle < 0 ? angle + Math.PI * 2 : angle;
-    measurement.bearingRadians = bearingRadians;
-    const turn = bearingRadians - selfPos.orientation;
-    measurement.turnRadians = normalizeAngle(turn + Math.PI) - Math.PI;
-  }
-  return measurement;
-}
-
-function compareGuid(a: Entity, b: Entity): number {
-  if (a.guid < b.guid) return -1;
-  if (a.guid > b.guid) return 1;
-  return 0;
-}
-
-function compareNearby(a: PreparedNearbyEntity, b: PreparedNearbyEntity) {
-  if (a.self && !b.self) return -1;
-  if (!a.self && b.self) return 1;
-  if (a.distance !== null && b.distance !== null) {
-    if (a.distance !== b.distance) return a.distance - b.distance;
-    return compareGuid(a.entity, b.entity);
-  }
-  if (a.distance !== null) return -1;
-  if (b.distance !== null) return 1;
-  return compareGuid(a.entity, b.entity);
-}
-
-function withinDefaultRange(p: PreparedNearbyEntity, mapId: number): boolean {
-  if (p.self) return true;
-  if (p.distance !== null) return p.distance <= NEARBY_DEFAULT_RANGE;
-  return !p.entity.position || p.entity.position.mapId === mapId;
-}
-
-export function prepareNearbyEntities(
-  handle: WorldHandle,
-  all = false,
-): PreparedNearbyEntity[] {
-  const controlState = handle.getControlState();
-  const selfGuid = controlState.selfGuid;
-  const entities = handle.getNearbyEntities();
-  const selfEntity = entities.find((e) => e.guid === selfGuid);
-  const selfPose = controlState.pose;
-  const selfPos = selfPose ?? selfEntity?.position;
-  const originSource = selfPose?.source ?? (selfPos ? "self_entity" : null);
-  const originUpdatedAt = selfPose?.updatedAt ?? null;
-  const poses = new Map(handle.getRemotePoses().map((p) => [p.guid, p]));
-  const preparedAt = Date.now();
-
-  const prepared: PreparedNearbyEntity[] = entities.map((entity) => {
-    const isSelf = entity.guid === selfGuid;
-    const { bearingRadians, distance, horizontalDistance, turnRadians } =
-      measure(entity, isSelf, selfPos);
-    return {
-      bearingRadians,
-      distance,
-      entity,
-      horizontalDistance,
-      originSource,
-      originUpdatedAt,
-      position: isSelf ? selfPos : entity.position,
-      preparedAt,
-      remotePose: poses.get(entity.guid),
-      self: isSelf,
-      turnRadians,
-    };
-  });
-
-  prepared.sort(compareNearby);
-
-  if (!all && selfPos) {
-    return prepared.filter((p) => withinDefaultRange(p, selfPos.mapId));
-  }
-
-  return prepared;
-}
-
 function formatRemotePose(
   pose: RemotePose,
   now: number,
@@ -226,9 +97,7 @@ function formatRemotePose(
   };
 }
 
-export function formatNearbyObj(
-  p: PreparedNearbyEntity,
-): Record<string, unknown> {
+export function formatNearbyObj(p: NearbyRow): Record<string, unknown> {
   const {
     entity,
     position,
