@@ -8,6 +8,15 @@ const FAR = Number.POSITIVE_INFINITY;
 
 type Baseline = { at: number; health: number; range: number | undefined };
 
+export function approached(
+  range: number | undefined,
+  from: number | undefined,
+): boolean {
+  return (
+    range !== undefined && from !== undefined && range <= from - APPROACH_YARDS
+  );
+}
+
 export class ProgressWatch {
   private baseline: Baseline | undefined;
 
@@ -25,11 +34,7 @@ export class ProgressWatch {
     }
     if (last.range === undefined) last.range = range;
     const damaged = health < last.health;
-    const approached =
-      range !== undefined &&
-      last.range !== undefined &&
-      range <= last.range - APPROACH_YARDS;
-    if (damaged || approached) {
+    if (damaged || approached(range, last.range)) {
       this.baseline = {
         at: now,
         health: Math.min(health, last.health),

@@ -23,7 +23,7 @@ import {
   unsupportedSpell,
 } from "wow/combat-actions-spells";
 import { targetReason, targetRelation } from "wow/combat-actions-target";
-import { ProgressWatch } from "wow/combat-progress";
+import { approached, ProgressWatch } from "wow/combat-progress";
 import { RejectionTracker } from "wow/combat-rejections";
 import type { ControlRuntime } from "wow/control";
 import { type EntityLookup, isUnit } from "wow/entity-store";
@@ -54,7 +54,7 @@ export class CombatActions {
   private readonly deps: ActionDeps;
   private startedAt = 0;
   private deadAt: number | undefined;
-  private unreachableAt: number | undefined;
+  private unreachable: { at: number; range: number | undefined } | undefined;
   private readonly progress = new ProgressWatch();
   private readonly rejections = new RejectionTracker();
 
@@ -68,7 +68,7 @@ export class CombatActions {
     if (reason) throw new Error(reason);
     this.startedAt = this.deps.now();
     this.deadAt = undefined;
-    this.unreachableAt = undefined;
+    this.unreachable = undefined;
     this.progress.reset();
     this.rejections.reset(this.startedAt);
     this.deps.control.halt();
@@ -364,12 +364,18 @@ export class CombatActions {
     )
       return { status: "blocked", reason: "no_supported_combat_actions" };
     if (this.targetReachable(context, state, spells)) {
-      this.unreachableAt = undefined;
-    } else {
-      this.unreachableAt ??= now;
-      if (now - this.unreachableAt >= UNREACHABLE_TIMEOUT_MS)
-        return { status: "blocked", reason: "target_unreachable" };
+      this.unreachable = undefined;
+      return undefined;
     }
+    const range = separation(state);
+    const last = this.unreachable;
+    if (!last || approached(range, last.range)) {
+      this.unreachable = { at: now, range };
+      return undefined;
+    }
+    last.range ??= range;
+    if (now - last.at >= UNREACHABLE_TIMEOUT_MS)
+      return { status: "blocked", reason: "target_unreachable" };
     return undefined;
   }
 

@@ -293,7 +293,9 @@ the relation as `lastOutcome.observation.targetRelation`. A structural lack of
 supported combat actions stops with a reason; cooldown and server-response waits
 do not. A fight in which the target takes no damage and the separation does not
 close by at least 1 yd for 30 s blocks with `no_progress` (a `cycle` skips the
-target). Inspect `tactics` for terminal observations. Jev may choose directional
+target). A target out of melee and spell range blocks with `target_unreachable`
+only after 5 s in which the character does not close 1 yd on it. Inspect
+`tactics` for terminal observations. Jev may choose directional
 movement under a renewable lease (`wait` holds, `stop_moving` releases). A slow
 Jev reply (over 5 s) is discarded and retried; 3 in a row stop the fight with
 `jev_timeout`, keeping auto-attack on a live attacker (`tactics.defense`). A
