@@ -82,6 +82,8 @@ export async function readPace(file = paceFile()): Promise<Pace> {
 
 export const idleHours = 12;
 
+export const stalledRunQuietHours = 10 / 60;
+
 export function factoryConfigDir(): string {
   return `${homedir()}/.config/tuicraft-factory`;
 }

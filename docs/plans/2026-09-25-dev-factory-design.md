@@ -319,7 +319,7 @@ session at 0.7-1.1 GB RSS, plus about 140 MB for each omp broker process.
 
 | Worktree | Owner | Where the owner is recorded | Owner removes it when |
 |---|---|---|---|
-| `auto-<automation>-run-N-<ts>` | Reaper | The automation run's `workspaceId` (`orca-ide automations runs --json`) | The run is `completed`, or past its role's time cap |
+| `auto-<automation>-run-N-<ts>` | Reaper | The automation run's `workspaceId` (`orca-ide automations runs --json`) | The run is `completed` or `failed`, a `dispatch_failed` run's terminals have been quiet for 10 minutes, or it is past its role's time cap |
 | Created by an agent with `orca-ide worktree create` (mostly the coordinator) | The agent that created it | Orca lineage: `parentWorktreeId` is the creator's worktree and `cliProvenance.kind` is `created-by-cli` | Its work is integrated on `main`, or its PR is merged |
 | Created by Theo in the Orca app | Theo | No `cliProvenance` ([INFERENCE]; check on Theo's first new worktree in phase 1) | Theo decides |
 | Main checkout (`~/code/tuicraft`) | Theo | `isMainWorktree` | Never |
@@ -350,9 +350,15 @@ which is why the flag must be explicit. Factory runs never create worktrees
 checkout.** A systemd user timer runs it every 5 minutes, from the main
 checkout, never from a worktree it might delete. Each pass:
 
-1. `auto-*` worktrees. When the run is `completed`, or is older than its
-   role's time cap (worker 3 h, QA 2 h, reviewer and merger 1 h; Theo left
-   the choice to the factory, 2026-09-25, tune from phase 1 run times):
+1. `auto-*` worktrees. When the run is `completed` or `failed`, or is
+   older than its role's time cap (worker 3 h, QA 2 h, reviewer and merger
+   1 h; Theo left the choice to the factory, 2026-09-25, tune from phase 1
+   run times). A `dispatch_failed` run also counts as finished once all its
+   terminals and the worktree have been quiet for 10 minutes: from
+   2026-09-26 Orca marked every QA run `dispatch_failed` with error
+   `timeout` although its agent started, worked and went idle, and a
+   running omp agent redraws its status line every second, so a quiet
+   terminal means the agent has stopped. Then:
    - If the tree is clean and every commit is on a remote branch
      (`git rev-list <branch> --not --remotes` is empty), run
      `orca-ide worktree rm`. For runs, "clean" ignores gitignored scratch
