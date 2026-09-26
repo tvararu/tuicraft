@@ -1,0 +1,377 @@
+# M6 supervised session journal — Fgklhbcangn (0xa0b)
+Session start epoch ms: 1790384179360
+
+- 1790384200345 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 71.78yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201039 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201222 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201386 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201550 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201711 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384201883 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384202044 `t1 walk-toward 20 0xf130003d2306ba89 --json` — travel toward Springpaw Stalker L6 0xf130003d2306ba89 at 69.88yd → ERROR {"message": "walk stopped without completion", "stage": "command"}
+- 1790384207676 `t1 face 3.068` — travel toward Springpaw Stalker L6 0x..ba89 (~72yd S) (face) → Daemon accepted request. No server result confirmed.
+- 1790384207704 `t1 move forward 5000 --json` — travel toward Springpaw Stalker L6 0x..ba89 (~72yd S) → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8717,-6557)
+- 1790384220915 `t1 face 3.073` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384220935 `t1 move forward 6746 --json` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8717,-6557)
+- 1790384228540 `t1 face 3.473` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384228560 `t1 move forward 3000 --json` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8717,-6557)
+- 1790384232420 `t1 face 2.673` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384232443 `t1 move forward 3000 --json` — travel toward Springpaw Stalker L6 0x..ba89 [dist 69yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.0yd to (8698,-6547)
+- 1790384236330 `t1 face -3.048` — travel toward Springpaw Stalker L6 0x..ba89 [dist 51yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384236349 `t1 move forward 4077 --json` — travel toward Springpaw Stalker L6 0x..ba89 [dist 51yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 28.5yd to (8670,-6550)
+- 1790384250546 `t1 cycle 0xf130003d2306ba89 --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 1: Springpaw Stalker L6 (ft38, verified hostile) at 22yd S; single-target warmup
+  - 1790384262667 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2306ba89:done loot=looted]
+- 1790384277074 `t1 face 1.292` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 73yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384277094 `t1 move forward 8000 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 73yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8685,-6496)
+- 1790384285974 `t1 face 1.294` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 17yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384285994 `t1 move forward 2114 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 17yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8686,-6493)
+- 1790384288988 `t1 face 1.294` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384289008 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8686,-6493)
+- 1790384291508 `t1 face 1.694` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384291528 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8686,-6493)
+- 1790384294039 `t1 face 0.894` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384294059 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8686,-6493)
+- 1790384296533 `t1 face 2.094` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384296552 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8686,-6493)
+- 1790384299028 `t1 face 0.494` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset -0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384299051 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset -0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8686,-6493)
+- 1790384301538 `t1 face 2.494` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 1.2] (face) → Daemon accepted request. No server result confirmed.
+- 1790384301557 `t1 move forward 1614 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 13yd, offset 1.2] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 11.3yd to (8677,-6486)
+- 1790384304052 `t1 face 0.442` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 14yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384304072 `t1 move forward 1712 --json` — explore W/NW of Fairbreeze for non-Stalker creature types [dist 14yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 12.0yd to (8688,-6481)
+- 1790384310804 `t1 face -0.234` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 48yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384310824 `t1 move forward 3750 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 48yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8692,-6482)
+- 1790384315452 `t1 face -0.234` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384315472 `t1 move forward 3250 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8692,-6482)
+- 1790384319583 `t1 face 0.166` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384319602 `t1 move forward 3000 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8692,-6482)
+- 1790384323462 `t1 face -0.634` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384323482 `t1 move forward 3000 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 45yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 10.5yd to (8700,-6488)
+- 1790384327390 `t1 face -0.118` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 35yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384327409 `t1 move forward 1901 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 35yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8703,-6488)
+- 1790384330201 `t1 face -0.119` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 32yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384330226 `t1 move forward 1401 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 32yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8703,-6488)
+- 1790384332489 `t1 face 0.281` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 32yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384332508 `t1 move forward 1401 --json` — travel toward Springpaw Stalker L6 0xf130003d2307505e [dist 32yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 9.8yd to (8713,-6486)
+- 1790384339539 `t1 cycle 0xf130003d2307505e --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 2: Springpaw Stalker L6 (ft38) at 23yd; plan: HALT mid-fight then resume with new instruction
+- 1790384343582 `t1 halt --json` — HALT #1 mid-fight: tactics status was active (verified via `t1 tactics --json` just before) → {"command":"halt","data":null,"error":null,"events":[],"kind":"intent"}
+  - 1790384345124 after HALT: `t1 cycling --json` → stopCause=halt detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2307505e:queued]
+- 1790384348025 `t1 cycle --resume --instruction 'finish the target fast, spend mana freely' --max 3 --json` — RESUME #1 after HALT #1 with different instruction (I2: fast/spend mana)
+  - 1790384357046 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=1 lastRecovery=None queue=[0xf130003d2307505e:done loot=none]
+- 1790384361622 `t1 face 0.589` — travel toward Crazed Dragonhawk L7 0xf130003d2207501f [dist 52yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384361641 `t1 move forward 3577 --json` — travel toward Crazed Dragonhawk L7 0xf130003d2207501f [dist 52yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 25.0yd to (8734,-6472)
+- 1790384370170 `t1 cycle 0xf130003d2207501f --instruction 'defeat the target while keeping the character alive' --max 2 --json` — Encounter 3: Crazed Dragonhawk L7 (ft7) at 27yd — observe hostility check once (expect unverified_hostile_relation)
+  - 1790384373192 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2207501f:skipped/unverified_hostile_relation]
+- 1790384377594 `t1 face 1.107` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 89yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384377613 `t1 move forward 8000 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 89yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8759,-6422)
+- 1790384386494 `t1 face 1.107` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 33yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384386513 `t1 move forward 4491 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 33yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 7.0yd to (8762,-6415)
+- 1790384391892 `t1 face 1.108` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384391912 `t1 move forward 3491 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8762,-6415)
+- 1790384396270 `t1 face 1.508` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384396290 `t1 move forward 3000 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8762,-6415)
+- 1790384400151 `t1 face 0.708` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384400172 `t1 move forward 3000 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 26yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 7.0yd to (8767,-6411)
+- 1790384404055 `t1 face 1.243` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 20yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384404074 `t1 move forward 2596 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 20yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+  - (supervisor tooling note: previous travel command interrupted by my own tool timeout; retrying)
+- 1790384411168 `t1 face 1.210` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384411193 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+- 1790384414946 `t1 face 1.610` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384414966 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+- 1790384418707 `t1 face 0.810` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384418747 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+- 1790384422483 `t1 face 2.010` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384422512 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+- 1790384426247 `t1 face 0.410` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset -0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384426267 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset -0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8767,-6411)
+- 1790384430001 `t1 face 2.410` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 1.2] (face) → Daemon accepted request. No server result confirmed.
+- 1790384430021 `t1 move forward 2875 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 22yd, offset 1.2] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 20.1yd to (8752,-6397)
+- 1790384433788 `t1 face 0.309` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 24yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384433816 `t1 move forward 3129 --json` — explore further W/NW for Wretched/Mana Wyrm/Lynx [dist 24yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.9yd to (8773,-6391)
+- 1790384463878 `t1 face -0.211` — travel toward Springpaw Stalker L6 0xf130003d23074fbe [dist 50yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384463898 `t1 move forward 4064 --json` — travel toward Springpaw Stalker L6 0xf130003d23074fbe [dist 50yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 28.4yd to (8801,-6397)
+- 1790384472509 `t1 cycle 0xf130003d23074fbe 0xf130003d23074e27 --instruction 'conserve mana; use melee and wands when possible' --max 4 --json` — Encounter 4: two Springpaw Stalkers L6 (ft38) at 22yd and 78yd (second is a far-target test); instruction I3 conserve mana
+  - 1790384487534 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=2 resumes=0 lastRecovery=None queue=[0xf130003d23074fbe:skipped/server_action_rejected:bad_facing; 0xf130003d23074e27:skipped/target_unreachable]
+  - note: cycle moved character ~60yd NW/downhill (z 54→26) during encounter 4; stalker 4fbe left at 95/120 hp; 4e27 now 25yd
+- 1790384496164 `t1 cycle 0xf130003d23074e27 0xf130003d23074fbe --instruction 'conserve mana; use melee and wands when possible' --max 4 --json` — Encounter 5: retry Springpaw Stalkers L6: 4e27 now 25yd, 4fbe 48yd (95/120hp); keep I3
+  - 1790384517186 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=2 resumes=0 lastRecovery=None queue=[0xf130003d23074e27:skipped/height_unresolved; 0xf130003d23074fbe:done loot=looted]
+- 1790384521831 `t1 face 1.681` — explore W toward Sunsail Anchorage (Wretched reported there) [dist 91yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384521850 `t1 move forward 8000 --json` — explore W toward Sunsail Anchorage (Wretched reported there) [dist 91yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8808,-6342)
+- 1790384530729 `t1 face 1.682` — explore W toward Sunsail Anchorage (Wretched reported there) [dist 35yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384530750 `t1 move forward 4221 --json` — explore W toward Sunsail Anchorage (Wretched reported there) [dist 35yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 29.5yd to (8805,-6313)
+- 1790384540125 `t1 face 2.214` — explore SW toward Sunsail Anchorage [dist 100yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384540166 `t1 move forward 8000 --json` — explore SW toward Sunsail Anchorage [dist 100yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8771,-6268)
+- 1790384549046 `t1 face 2.215` — explore SW toward Sunsail Anchorage [dist 44yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384549067 `t1 move forward 5570 --json` — explore SW toward Sunsail Anchorage [dist 44yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.0yd to (8758,-6251)
+- 1790384555516 `t1 face 2.214` — explore SW toward Sunsail Anchorage [dist 23yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384555540 `t1 move forward 2568 --json` — explore SW toward Sunsail Anchorage [dist 23yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8758,-6251)
+- 1790384558968 `t1 face 2.614` — explore SW toward Sunsail Anchorage [dist 23yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384558987 `t1 move forward 2568 --json` — explore SW toward Sunsail Anchorage [dist 23yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 7.0yd to (8752,-6247)
+- 1790384562439 `t1 face 2.051` — explore SW toward Sunsail Anchorage [dist 17yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384562460 `t1 move forward 1678 --json` — explore SW toward Sunsail Anchorage [dist 17yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8752,-6247)
+- 1790384565000 `t1 face 2.451` — explore SW toward Sunsail Anchorage [dist 17yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384565021 `t1 move forward 1678 --json` — explore SW toward Sunsail Anchorage [dist 17yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 11.7yd to (8743,-6240)
+- 1790384571409 `t1 face 0.707` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384571443 `t1 move forward 6048 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8743,-6240)
+- 1790384578352 `t1 face 1.107` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384578374 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8743,-6240)
+- 1790384582238 `t1 face 0.307` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384582257 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 64yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8747,-6239)
+- 1790384586157 `t1 face 0.729` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384586176 `t1 move forward 5589 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8747,-6239)
+- 1790384592634 `t1 face 1.129` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384592654 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8747,-6239)
+- 1790384596515 `t1 face 0.329` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790384596536 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8747,-6239)
+- 1790384600397 `t1 face 1.529` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384600416 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8747,-6239)
+- 1790384604278 `t1 face -0.071` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset -0.8] (face) → Daemon accepted request. No server result confirmed.
+- 1790384604297 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset -0.8] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8747,-6239)
+- 1790384608159 `t1 face 1.929` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 1.2] (face) → Daemon accepted request. No server result confirmed.
+- 1790384608180 `t1 move forward 3000 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 61yd, offset 1.2] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.0yd to (8739,-6219)
+- 1790384612066 `t1 face 0.378` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 57yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384612088 `t1 move forward 4997 --json` — travel toward Wretched Hooligan L6 0xf130003f22024f40 [dist 57yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 35.0yd to (8772,-6206)
+- 1790384623755 `t1 cycle 0xf130003f22024f40 0xf130003f220740e4 --instruction 'finish the target fast, spend mana freely' --max 4 --json` — Encounter 6 (new creature type): Wretched Hooligans L6 (ft16) at 22yd and 25yd; I2; plan HALT #2 mid-fight
+- 1790384628801 `t1 halt --json` — HALT #2 mid-fight: `t1 tactics --json` status=active target=0xf130003f22024f40 instruction='finish the target fast, spend mana freely' just before → {"command":"halt","data":null,"error":null,"events":[],"kind":"intent"}
+  - 1790384630341 after HALT: `t1 cycling --json` → stopCause=halt detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003f22024f40:queued; 0xf130003f220740e4:queued]
+- 1790384633146 `t1 cycle --resume --instruction 'conserve mana; use melee and wands when possible' --max 4 --json` — RESUME #2 after HALT #2 with different instruction (I2 → I3 conserve mana)
+  - 1790384660168 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=2 resumes=1 lastRecovery=None queue=[0xf130003f22024f40:done loot=looted; 0xf130003f220740e4:done loot=looted]
+- 1790384667943 `t1 face 1.579` — travel toward Wretched Thug L8 0xf130003d1d074138 [dist 36yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384667969 `t1 move forward 1997 --json` — travel toward Wretched Thug L8 0xf130003d1d074138 [dist 36yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 14.0yd to (8771,-6171)
+- 1790384670867 `t1 cycle 0xf130003d1d074138 0xf130003f220196da --instruction 'defeat the target while keeping the character alive' --max 4 --json` — Encounter 7 (new type): Wretched Thug L8 (ft16) ~25yd W, then Wretched Hooligan L7 ~51yd; I1
+  - 1790384694889 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=2 resumes=0 lastRecovery=None queue=[0xf130003d1d074138:done loot=looted; 0xf130003f220196da:skipped/obstructed]
+- 1790384698574 (supervisor wait 45s, no command) — regen after encounter 7: hp 148/217 mana 205/607
+- 1790384756482 `t1 face 1.283` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0] (face) → ERR rooted
+- 1790384756502 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384759115 `t1 face 1.683` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0.4] (face) → ERR rooted
+- 1790384759134 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384761753 `t1 face 0.883` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -0.4] (face) → ERR rooted
+- 1790384761773 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384764385 `t1 face 2.083` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0.8] (face) → ERR rooted
+- 1790384764405 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384767020 `t1 face 0.483` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -0.8] (face) → ERR rooted
+- 1790384767051 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384769663 `t1 face 2.483` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 1.2] (face) → ERR rooted
+- 1790384769682 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset 1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+- 1790384772299 `t1 face 0.083` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -1.2] (face) → ERR rooted
+- 1790384772319 `t1 move forward 1751 --json` — travel toward Wretched Hooligan L7 0xf130003f22074167 [dist 34yd, offset -1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8783,-6168)
+  - travel stuck: all headings obstructed
+- 1790384774993 `t1 cycle 0xf130003f22074167 --instruction 'conserve mana; use melee and wands when possible' --max 3 --json` — Encounter 8: Wretched Hooligan L7 ft16 35yd; instruction 'conserve mana; use melee and wands when possible'
+  - 1790384829018 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery={'outcome': 'reclaimed', 'detail': {'pose': {'mapId': 530, 'x': 8777.134006605718, 'y': -6200.307678124267, 'z': 8.197342872619629, 'orientation': 1.4057302477821452, 'source': 'predicted', 'updatedAt': 1790384821617}, 'range': 35.064600574604086, 'legs': 17}, 'at': 1790384821650} queue=[0xf130003f22074167:skipped/target_unreachable]
+- 1790384829064 (supervisor wait 40s, no command) — regen: "health": 117, "maxHealth": 217, "power": 350, "maxPower": 607, 
+- 1790384869106 `t1 cycle 0xf130003f22074155 0xf130003f22074167 --instruction 'finish the target fast, spend mana freely' --max 4 --json` — Encounter 9: Wretched Hooligan L6 ft16 20yd, Wretched Hooligan L7 ft16 38yd; instruction 'finish the target fast, spend mana freely'
+  - 1790384875129 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=2 resumes=0 lastRecovery=None queue=[0xf130003f22074155:skipped/obstructed; 0xf130003f22074167:skipped/server_action_rejected:47]
+- 1790384875223 `t1 cycle 0xf130003f22074155 --instruction 'keep health above half; heal before attacking again if needed' --max 3 --json` — Encounter 10: Wretched Hooligan L6 ft16 27yd; instruction 'keep health above half; heal before attacking again if needed'
+  - 1790384884244 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003f22074155:skipped/target_unreachable]
+- 1790384884419 `t1 face -0.986` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 45yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384884439 `t1 move forward 3278 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 45yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8793,-6158)
+- 1790384888595 `t1 face -0.986` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790384888617 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8793,-6158)
+- 1790384892255 `t1 face -0.586` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0.4] (face) → ERR rooted
+- 1790384892274 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+- 1790384895924 `t1 face -1.386` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -0.4] (face) → ERR rooted
+- 1790384895950 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+- 1790384899594 `t1 face -0.186` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0.8] (face) → ERR rooted
+- 1790384899613 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+- 1790384903269 `t1 face -1.786` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -0.8] (face) → ERR rooted
+- 1790384903288 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+- 1790384906929 `t1 face 0.214` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 1.2] (face) → ERR rooted
+- 1790384906948 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset 1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+- 1790384910606 `t1 face -2.186` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -1.2] (face) → ERR rooted
+- 1790384910628 `t1 move forward 2778 --json` — travel toward Wretched Hooligan L7 0xf130003f220196da [dist 41yd, offset -1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8793,-6158)
+  - travel stuck: all headings obstructed
+- 1790384914339 `t1 cycle 0xf130003f220196da --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 11: Wretched Hooligan L7 ft16 44yd; instruction 'defeat the target while keeping the character alive'
+  - 1790384989365 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery={'outcome': 'reclaimed', 'detail': {'pose': {'mapId': 530, 'x': 8787.557394803569, 'y': -6184.845342334117, 'z': 7.621503829956055, 'orientation': 1.3901034291008898, 'source': 'predicted', 'updatedAt': 1790384962558}, 'range': 31.104939363712205, 'legs': 18}, 'at': 1790384976443} queue=[0xf130003f220196da:done loot=looted]
+- 1790384989420 (supervisor wait 40s, no command) — regen: "health": 36, "maxHealth": 217, "power": 102, "maxPower": 607, 
+- 1790385054900 SURPRISE/FAILURES found on inspection of automated encounter batch (encounters 8-11):
+  - Encounter 8 (Wretched Hooligan L7 4167, I3): character DIED mid-cycle; cycle's own recovery reclaimed corpse (legs 17, range 35yd, at 1790384821651); target then skipped target_unreachable.
+  - Encounter 9 (Hooligans 4155/4167, I2): skipped obstructed / server_action_rejected:47.
+  - Encounter 10 (Hooligan 4155, I4 'keep health above half; heal before attacking again if needed'): skipped target_unreachable.
+  - Encounter 11 (Hooligan L7 196da, I1): DIED again mid-cycle; cycle recovery reclaimed (legs 18, range 31yd, at 1790384976443), then target killed + looted.
+  - After encounter 11 ended (queue_exhausted, hp 36/217) the character DIED a THIRD time outside any cycle (~1790384994838, reclaim delay now 120s). `t1 recovery --json`: life=dead, not released. Likely aggro from nearby Wretched camp while at low hp; I (supervisor) should have rested/moved away before inspection. Record: deaths 3, recovered 2.
+- 1790385070180 `t1 cycle --resume --instruction defeat the target while keeping the character alive --max 2 --json` — death outside cycle: rule says try `cycle --resume` first → ERROR {"message": "cycle_nothing_to_resume", "stage": "command"}
+- 1790385076934 `t1 cycle 0xf130003f2207598f --instruction 'keep the character alive above all: shield first and heal early' --max 2 --json` — death outside cycle; --resume had nothing to resume, so start a new cycle while dead on Wretched Hooligan L7 598f (8.8yd from corpse, likely the killer) to let the cycle's own recovery handle release/reclaim; new instruction I5
+  - 1790385238005 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery={'outcome': 'reclaimed', 'detail': {'pose': {'mapId': 530, 'x': 8790.516952635946, 'y': -6218.207454173622, 'z': 10.66935920715332, 'orientation': 1.370805140935543, 'source': 'predicted', 'updatedAt': 1790385121582}, 'range': 30.11532895723984, 'legs': 16}, 'at': 1790385199045} queue=[0xf130003f2207598f:skipped/target_unreachable]
+  - 1790385243365 result: cycle started while dead DID run its recovery (release → ghost → 16 legs → reclaim at 30yd, at 1790385199045); character alive, hp 247/247 (maxHealth grew 217→247), mana 126/607. Target 598f then skipped target_unreachable. Deaths 3, recovered 3 (third via new cycle).
+- 1790385247508 `t1 face -1.789` — retreat E away from Wretched camp to regen safely (mana 126/607) [dist 46yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385247531 `t1 move forward 6156 --json` — retreat E away from Wretched camp to regen safely (mana 126/607) [dist 46yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 43.1yd to (8780,-6265)
+- 1790385254547 (supervisor wait 60s, no command) — regen after reclaim
+- 1790385324414 `t1 face 1.411` — travel toward Wretched Hooligan L7 0xf130003f2207598f [dist 67yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385324433 `t1 move forward 6399 --json` — travel toward Wretched Hooligan L7 0xf130003f2207598f [dist 67yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 44.8yd to (8787,-6220)
+- 1790385331791 `t1 cycle 0xf130003f2207598f --instruction 'finish the target fast, spend mana freely' --max 3 --json` — Encounter 12: single pull Wretched Hooligan L7 ft16 22yd (single target to avoid camp adds after 3 deaths); instruction 'finish the target fast, spend mana freely'
+  - 1790385343814 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003f2207598f:done loot=looted]
+- 1790385346165 `t1 face 1.932` — travel toward Wretched Hooligan L6 0xf130003f220759db [dist 39yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385346185 `t1 move forward 2490 --json` — travel toward Wretched Hooligan L6 0xf130003f220759db [dist 39yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 17.4yd to (8781,-6204)
+- 1790385349614 `t1 cycle 0xf130003f220759db --instruction 'keep health above half; heal before attacking again if needed' --max 3 --json` — Encounter 13: single pull Wretched Hooligan L6 ft16 22yd (single target to avoid camp adds after 3 deaths); instruction 'keep health above half; heal before attacking again if needed'
+- 1790385354675 `t1 halt --json` — HALT #3 mid-fight: `t1 tactics --json` status=active target=0xf130003f220759db instruction='keep health above half; heal before attacking again if needed' just before → {"command":"halt","data":null,"error":null,"events":[],"kind":"intent"}
+  - 1790385356215 after HALT: `t1 cycling --json` → stopCause=halt detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003f220759db:queued]
+- 1790385356215 `t1 cycle --resume --instruction 'defeat the target while keeping the character alive' --max 3 --json` — RESUME after HALT #3 with different instruction 'defeat the target while keeping the character alive'
+  - 1790385368238 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=1 lastRecovery=None queue=[0xf130003f220759db:done loot=looted]
+- 1790385372543 (supervisor wait, no command) — rest before next pull: hp 204/247 mana 278/607
+  - after rest: hp 0/217 mana 0
+- 1790385469225 `t1 face 0.264` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0] (face) → ERR rooted
+- 1790385469264 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385472473 `t1 face 0.664` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0.4] (face) → ERR rooted
+- 1790385472493 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385475698 `t1 face -0.136` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -0.4] (face) → ERR rooted
+- 1790385475721 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385478942 `t1 face 1.064` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0.8] (face) → ERR rooted
+- 1790385478962 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385482164 `t1 face -0.536` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -0.8] (face) → ERR rooted
+- 1790385482190 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385485396 `t1 face 1.464` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 1.2] (face) → ERR rooted
+- 1790385485416 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset 1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+- 1790385488617 `t1 face -0.936` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -1.2] (face) → ERR rooted
+- 1790385488637 `t1 move forward 2341 --json` — travel toward Wretched Hooligan L6 0xf130003f22075e5e [dist 38yd, offset -1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8781,-6204)
+  - travel stuck: all headings obstructed
+- 1790385491898 `t1 cycle 0xf130003f22075e5e --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 14: single pull Wretched Hooligan L6 ft16 38yd (single target to avoid camp adds after 3 deaths); instruction 'defeat the target while keeping the character alive'
+  - 1790385623932 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery={'outcome': 'reclaimed', 'detail': {'pose': {'mapId': 530, 'x': 8776.182874919448, 'y': -6232.8456898195545, 'z': 9.398898124694824, 'orientation': 1.395511189270585, 'source': 'predicted', 'updatedAt': 1790385535410}, 'range': 29.312396969984263, 'legs': 16}, 'at': 1790385613956} queue=[0xf130003f22075e5e:skipped/target_unreachable]
+  - FAILURE: during travel toward Hooligan 5e5e every face/move returned `rooted` (character rooted, apparently already under attack — my supervisor loop did not check combat before travel). Cycle 14 then started from 38yd; character DIED (death #4); cycle's own recovery reclaimed corpse (16 legs, range 29yd, at 1790385613956); target then skipped target_unreachable. Deaths 4, recovered 4.
+- 1790385635884 DECISION: Wretched camp at Sunsail edge (~8780,-6200) respawns fast and pulls adds; leaving it. Non-Stalker types already fought (Wretched Hooligan x4 kills, Wretched Thug x1). Returning E toward the Springpaw area near the Eversong Ranger post (~8800,-6310).
+- 1790385638700 `t1 face -1.494` — return E out of Wretched camp toward ranger post/Springpaw area [dist 115yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385638719 `t1 move forward 8000 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 115yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8791,-6242)
+- 1790385647609 `t1 face -1.494` — return E out of Wretched camp toward ranger post/Springpaw area [dist 59yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385647647 `t1 move forward 7642 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 59yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 31.6yd to (8793,-6273)
+- 1790385656183 `t1 face -1.495` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385656204 `t1 move forward 3130 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8793,-6273)
+- 1790385660197 `t1 face -1.095` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790385660219 `t1 move forward 3000 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8793,-6273)
+- 1790385664081 `t1 face -1.895` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790385664102 `t1 move forward 3000 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 27yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.0yd to (8786,-6293)
+- 1790385667984 `t1 face -0.671` — return E out of Wretched camp toward ranger post/Springpaw area [dist 11yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385668005 `t1 move forward 878 --json` — return E out of Wretched camp toward ranger post/Springpaw area [dist 11yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 6.1yd to (8791,-6297)
+- 1790385680369 `t1 face 3.088` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 78yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385680389 `t1 move forward 8000 --json` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 78yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 49.0yd to (8742,-6294)
+- 1790385689280 `t1 face 3.087` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385689303 `t1 move forward 1007 --json` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8742,-6294)
+- 1790385691172 `t1 face 3.487` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790385691193 `t1 move forward 1007 --json` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8742,-6294)
+- 1790385693091 `t1 face 2.687` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset -0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790385693112 `t1 move forward 1007 --json` — travel toward Springpaw Stalker L6 0xf130003d2302126f [dist 29yd, offset -0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 7.0yd to (8736,-6291)
+- 1790385695060 `t1 cycle 0xf130003d2302126f --instruction 'conserve mana; use melee and wands when possible' --max 3 --json` — Encounter 15: single pull Springpaw Stalker L6 ft38 23yd (nearest eligible); instruction 'conserve mana; use melee and wands when possible'
+  - 1790385704081 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2302126f:skipped/server_action_rejected:134]
+- 1790385704181 `t1 cycle 0xf130003d2302126f --instruction 'finish the target fast, spend mana freely' --max 3 --json` — Encounter 16: single pull Springpaw Stalker L6 ft38 9yd (it is attacking me (target=0xa0b)); instruction 'finish the target fast, spend mana freely'
+  - 1790385710202 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2302126f:done loot=looted]
+- 1790385710466 `t1 face 2.556` — travel toward Springpaw Stalker L7 0xf130003d23068551 [dist 43yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790385710491 `t1 move forward 3050 --json` — travel toward Springpaw Stalker L7 0xf130003d23068551 [dist 43yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.4yd to (8695,-6272)
+- 1790385714484 `t1 cycle 0xf130003d23068551 --instruction 'keep health above half; heal before attacking again if needed' --max 3 --json` — Encounter 17: single pull Springpaw Stalker L7 ft38 22yd (nearest eligible); instruction 'keep health above half; heal before attacking again if needed'
+  - 1790386014516 CYCLE END: stopCause=None detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d23068551:queued]
+- 1790386014707 `t1 cycle 0xf130003d23068551 --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 18: single pull Springpaw Stalker L7 ft38 22yd (nearest eligible); instruction 'defeat the target while keeping the character alive'
+  - 1790386026736 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d23068551:done loot=looted]
+- 1790386027008 `t1 face 1.583` — travel toward Springpaw Stalker L7 0xf130003d2301b90c [dist 77yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386027027 `t1 move forward 7791 --json` — travel toward Springpaw Stalker L7 0xf130003d2301b90c [dist 77yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 54.5yd to (8694,-6217)
+- 1790386035756 `t1 cycle 0xf130003d2301b90c --instruction 'conserve mana; use melee and wands when possible' --max 3 --json` — Encounter 19: single pull Springpaw Stalker L7 ft38 26yd (nearest eligible); instruction 'conserve mana; use melee and wands when possible'
+  - 1790386056778 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2301b90c:done loot=looted]
+- 1790386056923 (supervisor wait, no command) — rest before next pull: hp 154/217 mana 607/607
+  - after rest: hp 214/217 mana 607
+- 1790386065126 `t1 face 2.411` — travel toward Springpaw Stalker L7 0xf130003d23057694 [dist 65yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386065146 `t1 move forward 6182 --json` — travel toward Springpaw Stalker L7 0xf130003d23057694 [dist 65yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 43.3yd to (8661,-6165)
+- 1790386072276 `t1 cycle 0xf130003d23057694 --instruction 'finish the target fast, spend mana freely' --max 3 --json` — Encounter 20: single pull Springpaw Stalker L7 ft38 22yd (nearest eligible); instruction 'finish the target fast, spend mana freely'
+  - 1790386084298 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d23057694:done loot=looted]
+- 1790386084579 `t1 face -2.409` — travel toward Springpaw Stalker L6 0xf130003d23068332 [dist 62yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386084598 `t1 move forward 5643 --json` — travel toward Springpaw Stalker L6 0xf130003d23068332 [dist 62yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 39.5yd to (8631,-6191)
+- 1790386091181 `t1 cycle 0xf130003d23068332 --instruction 'keep health above half; heal before attacking again if needed' --max 3 --json` — Encounter 21: single pull Springpaw Stalker L6 ft38 22yd (nearest eligible); instruction 'keep health above half; heal before attacking again if needed'
+  - 1790386157215 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d23068332:done loot=looted]
+- 1790386157491 `t1 face -2.455` — travel toward Springpaw Stalker L6 0xf130003d2306835a [dist 40yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386157518 `t1 move forward 2563 --json` — travel toward Springpaw Stalker L6 0xf130003d2306835a [dist 40yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 17.9yd to (8617,-6203)
+- 1790386161031 `t1 cycle 0xf130003d2306835a --instruction 'defeat the target while keeping the character alive' --max 3 --json` — Encounter 22: single pull Springpaw Stalker L6 ft38 22yd (nearest eligible); instruction 'defeat the target while keeping the character alive'
+  - 1790386173053 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d2306835a:done loot=looted]
+- 1790386173205 (supervisor wait, no command) — rest before next pull: hp 217/217 mana 348/607
+  - after rest: hp 217/217 mana 488
+- 1790386197496 no eligible hostile in range; exploring S
+- 1790386197544 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386197565 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8564,-6221)
+- 1790386206636 no eligible hostile in range; exploring S
+- 1790386206675 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386206693 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8511,-6238)
+- 1790386215751 no eligible hostile in range; exploring S
+- 1790386215790 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386215810 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8458,-6256)
+- 1790386224876 no eligible hostile in range; exploring S
+- 1790386224918 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386224938 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8405,-6274)
+- 1790386234006 no eligible hostile in range; exploring S
+- 1790386234058 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386234079 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8352,-6291)
+- 1790386243219 no eligible hostile in range; exploring S
+- 1790386243293 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386243325 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8299,-6309)
+- 1790386252395 no eligible hostile in range; exploring S
+- 1790386252439 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386252458 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8245,-6327)
+- 1790386261434 (supervisor wait, no command) — rest before next pull: hp 155/217 mana 607/607
+  - after rest: hp 0/217 mana 0
+- 1790386358139 no eligible hostile in range; exploring S
+- 1790386358177 `t1 face -2.820` — explore S for Springpaw Stalkers [dist 63yd, offset 0] (face) → ERR rooted
+- 1790386358197 `t1 move forward 8000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386367071 `t1 face -2.420` — explore S for Springpaw Stalkers [dist 63yd, offset 0.4] (face) → ERR rooted
+- 1790386367093 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386370965 `t1 face -3.220` — explore S for Springpaw Stalkers [dist 63yd, offset -0.4] (face) → ERR rooted
+- 1790386370986 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset -0.4] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386374849 `t1 face -2.020` — explore S for Springpaw Stalkers [dist 63yd, offset 0.8] (face) → ERR rooted
+- 1790386374868 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386378730 `t1 face -3.620` — explore S for Springpaw Stalkers [dist 63yd, offset -0.8] (face) → ERR rooted
+- 1790386378750 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset -0.8] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386382610 `t1 face -1.620` — explore S for Springpaw Stalkers [dist 63yd, offset 1.2] (face) → ERR rooted
+- 1790386382631 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset 1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+- 1790386386491 `t1 face -4.020` — explore S for Springpaw Stalkers [dist 63yd, offset -1.2] (face) → ERR rooted
+- 1790386386510 `t1 move forward 3000 --json` — explore S for Springpaw Stalkers [dist 63yd, offset -1.2] → {"command":"move","data":null,"error":{"message":"rooted","stage":"command"},"events":[],"kind":"error"}; moved 0.0yd to (8245,-6327)
+  - travel stuck: all headings obstructed
+- 1790386409424 FAILURE/DEATH #5 (outside any cycle): my exploration fallback (no eligible ft16/38 target) walked the character ~500yd S to (8245,-6327) into a Withered Green Keeper area (L9-10, factionTemplate 91, a creature type my filter did not consider). While I was resting (no cycle running) it was attacked and died at ~1790386279096 (reclaim delay 60s). Subsequent travel legs returned `rooted` (dead). Supervisor error: exploration loop should have stopped and checked combat.
+  - Also: Encounter 17 (Springpaw Stalker L7 8551) — my 300s wait expired with `cycling` still showing stopCause=None, queue queued, startsUsed=1 (cycle apparently stalled ~5 min); my loop then started a new cycle on the same target (Encounter 18), which replaced the stalled one and killed it (done, looted). Surprise worth noting.
+- 1790386409424 `t1 cycle --resume --instruction keep the character alive above all: shield first and heal early --max 2 --json` — death outside cycle: try `cycle --resume` first per rule → ERROR {"message": "cycle_nothing_to_resume", "stage": "command"}
+- 1790386412700 `t1 cycle 0xf130003d1507515b --instruction 'keep the character alive above all: shield first and heal early' --max 2 --json` — death #5 recovery: --resume had nothing; start new cycle on nearest Withered Green Keeper L9 (ft91, 38yd from corpse; likely attacker) so the cycle's own recovery releases/reclaims; instruction I5
+  - 1790386421724 CYCLE END: stopCause=corpse_unreachable detail={'pose': {'mapId': 530, 'x': 8696.075354281016, 'y': -6663.740003242283, 'z': 75.12203216552734, 'orientation': 0.9994232268643115, 'source': 'predicted', 'updatedAt': 1790386420841}, 'range': 562.693858540369, 'legs': 14} startsUsed=0 resumes=0 lastRecovery=None queue=[0xf130003d1507515b:queued]
+  - 1790386426670 cycle stopped with named recovery cause corpse_unreachable: ghost at Fairbreeze graveyard (8696,-6664), 563yd from corpse, after 14 legs. Per rule, try `cycle --resume` first.
+- 1790386426670 `t1 cycle --resume --instruction 'defeat the target while keeping the character alive' --max 2 --json` — resume after corpse_unreachable (rule: first try cycle --resume); instruction back to I1
+  - 1790386432695 CYCLE END: stopCause=corpse_unreachable detail={'pose': {'mapId': 530, 'x': 8696.075354281016, 'y': -6663.740003242283, 'z': 75.12203216552734, 'orientation': 0.9994232268643115, 'source': 'predicted', 'updatedAt': 1790386431746}, 'range': 562.693858540369, 'legs': 11} startsUsed=0 resumes=1 lastRecovery=None queue=[0xf130003d1507515b:queued]
+- 1790386442472 DECISION: cycle --resume also stopped corpse_unreachable (11 legs, ghost did not leave graveyard). Corpse is ~563yd away inside the Withered Green Keeper area (reclaiming there invites death #6). Supervisor recovery via the Spirit Healer 12yd away instead (level 10: no resurrection sickness expected).
+- 1790386442472 `t1 spirit-healer 0xf13000195b0009f1 --json` — manual recovery: Spirit Healer 0x..09f1 at 12yd → kind=intent
+- 1790386455267 `t1 face-guid 0xf13000195b0009f1 --json` — ghost: face Spirit Healer (12yd) to get into interaction range → ERROR {"message": "target_stale", "stage": "command"}
+- 1790386455288 `t1 move forward 1100 --json` — ghost: close to Spirit Healer → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; healer now 11.71yd
+- 1790386457350 `t1 spirit-healer 0xf13000195b0009f1 --json` — manual recovery retry: Spirit Healer now in range → ERROR {"message": "Previous spirit-healer request remains unanswered", "stage": "command"}
+- 1790386476950 `t1 face -0.727` — ghost: walk toward Spirit Healer (daemon pose 12yd away; server pose 5yd) (face) → Daemon accepted request. No server result confirmed.
+- 1790386476970 `t1 move forward 1200 --json` — ghost: walk toward Spirit Healer (daemon pose 12yd away; server pose 5yd) → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8696,-6664)
+- 1790386485265 `t1 face -0.227` — ghost: retry toward Spirit Healer offset 0.5 (face) → Daemon accepted request. No server result confirmed.
+- 1790386485285 `t1 move forward 1500 --json` — ghost: retry toward Spirit Healer offset 0.5 → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 15.8yd to (8711,-6667)
+- 1790386490836 `t1 spirit-healer 0xf13000195b0009f1 --json` — manual recovery retry: Spirit Healer now 8.17yd → ERROR {"message": "Previous spirit-healer request remains unanswered", "stage": "command"}
+- 1790386500771 `t1 face -2.688` — ghost: close to <5yd of Spirit Healer (face) → Daemon accepted request. No server result confirmed.
+- 1790386500796 `t1 move forward 700 --json` — ghost: close to <5yd of Spirit Healer → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 7.4yd to (8705,-6671)
+- 1790386502379 `t1 halt --json` — clear the unanswered spirit-healer request (not a fight HALT) → kind=intent
+- 1790386502398 `t1 spirit-healer 0xf13000195b0009f1 --json` — manual recovery retry after halt: Spirit Healer 0.83yd → ERROR {"message": "Previous spirit-healer request remains unanswered", "stage": "command"}
+- 1790386514026 FAILURE: first `spirit-healer` request (sent from 12yd, likely out of interaction range) was never answered by the server; every retry (at 8yd, after a `halt`, at 0.8yd) is refused locally with 'Previous spirit-healer request remains unanswered'. No way to clear it short of a daemon restart. Restarting daemon once (t1 stop / t1 start).
+- 1790386514026 `t1 stop --json` — daemon restart #1 to clear stuck unanswered spirit-healer request → kind=intent
+- 1790386517046 `t1 start --json` — daemon restart #1 (start; inherits TYPESAFE_API_KEY from this shell env) → kind=result
+- 1790386521007 MISTAKE: the restart above was issued from my Python eval kernel, whose env lacks TYPESAFE_API_KEY; restarting again from bash so the daemon has the Jev key.
+- 1790386524669661111 `t1 stop --json` (from bash) — daemon restart #2, to relaunch with TYPESAFE_API_KEY → {"command":"stop","data":null,"error":null,"events":[],"kind":"intent"}
+- 1790386527726145075 `t1 start --json` (from bash) — daemon restart #2 → {"command":"start","data":{"socket":"responsive","started":true},"error":null,"events":[],"kind":"result"}
+  - (the two bash lines above carry nanosecond timestamps by mistake — `date +%s%3N` printed ns on this host; epoch ms = first 13 digits: 1790386524669 and 1790386527726)
+- 1790386540732 `t1 spirit-healer 0xf13000195b0009f1 --json` — manual recovery after restart: Spirit Healer 0.8yd → kind=intent
+  - 1790386543823 after spirit-healer: `t1 recovery --json` life=alive; vitals (123, 217, 315)
+- 1790386548635 (supervisor wait, no command) — rest before next pull: hp 153/217 mana 341/607
+  - after rest: hp 217/217 mana 498
+- 1790386577094 `t1 face 1.717` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 102yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386577114 `t1 move forward 8000 --json` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 102yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 3.5yd to (8704,-6667)
+- 1790386586001 `t1 face 1.717` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 98yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386586025 `t1 move forward 8000 --json` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 98yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 0.0yd to (8704,-6667)
+- 1790386594887 `t1 face 2.117` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 98yd, offset 0.4] (face) → Daemon accepted request. No server result confirmed.
+- 1790386594906 `t1 move forward 3000 --json` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 98yd, offset 0.4] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 21.0yd to (8693,-6649)
+- 1790386598789 `t1 face 1.614` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 79yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386598808 `t1 move forward 8000 --json` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 79yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 56.0yd to (8691,-6593)
+- 1790386607706 `t1 face 1.613` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 23yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386607725 `t1 move forward 2593 --json` — travel N from Fairbreeze graveyard to the starting Springpaw area for a final encounter after restart [dist 23yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 18.2yd to (8690,-6575)
+- 1790386615020 `t1 face 2.599` — travel toward Springpaw Stalker L7 0xf130003d230754cf [dist 46yd, offset 0] (face) → Daemon accepted request. No server result confirmed.
+- 1790386615041 `t1 move forward 3435 --json` — travel toward Springpaw Stalker L7 0xf130003d230754cf [dist 46yd, offset 0] → {"command":"move","data":null,"error":null,"events":[],"kind":"intent"}; moved 24.0yd to (8670,-6563)
+- 1790386619381 `t1 cycle 0xf130003d230754cf --instruction 'conserve mana; use melee and wands when possible' --max 3 --json` — Final encounter 23: Springpaw Stalker L7 (ft38) ~22.39yd, first cycle on the restarted daemon; I3
+  - 1790386625403 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d230754cf:skipped/server_action_rejected:134]
+- 1790386629819 `t1 cycle 0xf130003d230754cf --instruction 'finish the target fast, spend mana freely' --max 3 --json` — Final encounter 24: retry same Springpaw Stalker L7 after server_action_rejected:134 (earlier the same cause cleared on retry); I2
+  - 1790386638841 CYCLE END: stopCause=queue_exhausted detail=None startsUsed=1 resumes=0 lastRecovery=None queue=[0xf130003d230754cf:done loot=looted]
+
+## Session summary
+- Cycles in record: 30 (includes resumed runs); kills (server_kill_credit): 16 — Springpaw Stalker x10, Wretched Hooligan x5, Wretched Thug x1. Crazed Dragonhawk refused once (unverified_hostile_relation); Withered Green Keeper (ft91) killed me but was never fought by a cycle (queued only during corpse_unreachable runs).
+- Deaths 5; cycle-recovered 4 (reclaimed); death #5 recovered manually via Spirit Healer after two corpse_unreachable stops and a daemon restart.
+- HALT→resume: #1 halt 1790384343602 → resume 1790384348044 (I1→'finish the target fast, spend mana freely'); #2 halt 1790384628820 → resume 1790384633165 (I2→'conserve mana; use melee and wands when possible'); #3 halt 1790385354694 → resume 1790385356237 (I4→'defeat the target while keeping the character alive').
+- Record saved: tmp/live-m6/session-record.json (`t1 record --since 1790384179360`).
+Session end epoch ms: 1790386643151
+Total wall-clock minutes: 41.1
