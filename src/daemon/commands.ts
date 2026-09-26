@@ -13,11 +13,7 @@ import {
   formatWhoResultsJson,
   jsonSafe,
 } from "ui/format";
-import {
-  formatControlState,
-  formatControlStateObj,
-  nextStepFor,
-} from "ui/format-control";
+import { formatControlState, formatControlStateObj } from "ui/format-control";
 import {
   formatCycleState,
   formatExperienceState,
@@ -339,9 +335,9 @@ const HANDLERS: Handlers = {
   move: (cmd, { handle, socket }) =>
     reply(socket, () => handle.move(cmd.direction, cmd.durationMs), ok),
   navigation: (_cmd, { handle, socket }) =>
-    reply(socket, () => navigationObservation(handle), pretty),
+    reply(socket, () => handle.observeNavigation(), pretty),
   navigation_json: (_cmd, { handle, socket }) =>
-    reply(socket, () => navigationObservation(handle), json),
+    reply(socket, () => handle.observeNavigation(), json),
   nearby: (cmd, { handle, socket }) =>
     send(socket, handle.queryNearby({ all: cmd.all }).map(formatNearbyLine)),
   nearby_json: (cmd, { handle, socket }) =>
@@ -481,9 +477,4 @@ async function reply<T>(
     writeLines(socket, [`ERR ${messageOf(error, "internal")}`]);
   }
   return false;
-}
-
-function navigationObservation(handle: WorldHandle) {
-  const state = handle.getNavigationState();
-  return { ...state, nextStep: nextStepFor(state.blockedReason) };
 }

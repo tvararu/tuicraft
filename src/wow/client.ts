@@ -40,6 +40,7 @@ import type { FriendEntry, FriendEvent } from "wow/friend-store";
 import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import type { InventoryState } from "wow/inventory";
+import type { NavigationObservation } from "wow/navigation-observation";
 import type { NearbyQuery, NearbyRow } from "wow/nearby";
 import type { WhoResult } from "wow/protocol/chat";
 import { Language } from "wow/protocol/opcodes";
@@ -230,6 +231,7 @@ export type WorldHandle = {
   getTacticsState: () => TacticsState;
   goTo: (x: number, y: number, z: number) => void;
   getNavigationState: () => NavigationState;
+  observeNavigation: () => NavigationObservation;
   onCombatEvent: (cb: (event: CombatEvent) => void) => Unsubscribe;
   onTacticsEvent: (cb: (event: TacticsEvent) => void) => Unsubscribe;
   getRecoveryState: () => RecoveryState;
