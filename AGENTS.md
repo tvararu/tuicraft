@@ -33,8 +33,11 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 - `mise format:fix` — fix formatting (`biome format --write`)
 - `mise lint` — lint rules and assist actions (`biome check --formatter-enabled=false --error-on-warnings`)
 - `mise lint:fix` — apply safe lint fixes and assist actions (`biome check --write`)
+- `mise lint:docs` — check the docs agents read as current instructions
+  for dated history and dead references (`bun src/tools/stale-docs.ts`)
 - `mise ci` — `mise ci:checks` (`typecheck`, `test:coverage`, `format`,
-  `lint`), then `gh signoff ci` posts a green `signoff/ci` status for HEAD.
+  `lint`, `lint:docs`), then `gh signoff ci` posts a green `signoff/ci`
+  status for HEAD.
   Signoff runs only after the checks pass and only for a HEAD that was clean
   throughout and is pushed to its upstream; otherwise it prints a note and
   exits 0. No remote CI
@@ -184,28 +187,25 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Branches and archives
 
-- The old `vibe` branch is archived as the tag `archive/vibe` (commit
-  `5fbe7bf`). The maintainer retired the branch on 2026-09-26: `main` now has
-  reviewed replacements for its pieces (`src/wow/navigation-native.ts` for
-  the `bun:ffi` namigator bridge, `src/wow/combat-actions-*`). The ruling of
-  2026-09-21 still holds for the tag: Fable created the work around June
-  2026, nobody reviewed it, and unreviewed code must not enter `main`
-  disguised as progress. Read it freely for patterns
-  (`git show archive/vibe:<path>`), never merge, rebase or cherry-pick it
-  without the maintainer saying so, and never treat its journals as roadmap
-  evidence.
+- Unreviewed work from the `vibe` branch lives in the tag `archive/vibe`
+  (commit `5fbe7bf`); there is no `vibe` branch. `main` has reviewed
+  replacements for its pieces (`src/wow/navigation-native.ts` for the
+  `bun:ffi` namigator bridge, `src/wow/combat-actions-*`). Nobody reviewed
+  the tag's code, and unreviewed code must not enter `main` disguised as
+  progress. Read it freely for patterns (`git show archive/vibe:<path>`),
+  never merge, rebase or cherry-pick it without the maintainer saying so,
+  and never treat its journals as roadmap evidence.
 - `main` has a GitHub `required_linear_history` rule and allows only
-  squash merges (since 2026-09-26), so **merge commits are rejected at push
-  time**. Local merges, hooks and `mise ci` all pass first, and the push
-  then fails with `GH013: Repository rule violations found` naming only a
-  commit hash, which reads as an auth or branch-protection fault rather
-  than a history-shape one. The maintainer's admin bypass is the only direct
-  push to `main`; it integrates by cherry-picking commits in order, never by
+  squash merges, so **merge commits are rejected at push time**. Local
+  merges, hooks and `mise ci` all pass first, and the push then fails with
+  `GH013: Repository rule violations found` naming only a commit hash,
+  which reads as an auth or branch-protection fault rather than a
+  history-shape one. The maintainer's admin bypass is the only direct push
+  to `main`; it integrates by cherry-picking commits in order, never by
   merging. Note that `git cherry-pick --continue` opens an editor, so pass
   `-c core.editor=true`.
 - `tmp/` is ephemeral: keep nothing there that matters, and accept that
-  it can be lost. The 2026-09-21 archive of the Astra run's `gameplay-*`
-  worktrees was deleted on 2026-09-26 at the maintainer's request.
+  it can be lost.
 
 ## Worktree lifecycle
 
@@ -308,6 +308,14 @@ The maintainer must never find stale worktrees or idle agents in Orca.
 
 - When adding user-visible features, update all four: `src/cli/help.ts`,
   `docs/manual.md`, `.claude/skills/tuicraft/SKILL.md`, and `README.md`
+- Docs state the current rule or state in the present tense. History
+  belongs in commit messages and `docs/plans/`: don't narrate when, why or
+  at whose request a rule changed ("since <date>", "deleted on <date>"),
+  and never point a reader at something that no longer exists or lives
+  only in `tmp/`. Keep a date only where it is the fact a reader needs,
+  such as when an evidence record was taken. `mise lint:docs` checks the
+  common forms in the files agents read as current instructions (listed
+  in `src/tools/stale-docs.ts`)
 
 ## Commits
 

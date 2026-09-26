@@ -3,11 +3,11 @@
 Method: read-only. AzerothCore server source at
 `../azerothcore-wotlk-playerbots`, protocol definitions at
 `../wow_messages`, client references at `../wowser` and
-`../wow-chat-client`, plus the 3.3.5 client DBC extracts at
-`tmp/gameplay-data/raw/` read through tuicraft's own
-`src/wow/spell-catalog.ts` decoder. No game client run, no live tests.
-Paths below are relative to the repo that holds each file, unless noted
-as `tuicraft:` for this repo.
+`../wow-chat-client`, plus the build-12340 client DBC files (the
+`spell_data_dir` set, see `tuicraft:docs/manual.md`) read through
+tuicraft's own `src/wow/spell-catalog.ts` decoder. No game client run, no
+live tests. Paths below are relative to the repo that holds each file,
+unless noted as `tuicraft:` for this repo.
 
 ## Q1. Does the server interrupt an in-progress cast when it receives a movement start opcode?
 
@@ -236,8 +236,8 @@ start-refusal is movement-specific.
 ## Q5. Level 10 priest abilities: which are movement-compatible?
 
 Cast types below are established from the 3.3.5 client data itself,
-not from memory: `Spell.dbc` + `SpellCastTimes.dbc` from
-`tuicraft:tmp/gameplay-data/raw/`, decoded with
+not from memory: `Spell.dbc` + `SpellCastTimes.dbc` from the build-12340
+client DBC files, decoded with
 `tuicraft:src/wow/spell-catalog.ts` (cast-time index is Spell field 28,
 InterruptFlags field 31, AuraInterruptFlags 32, ChannelInterruptFlags
 33). Ranks shown are those with `spellLevel <= 10`. No sibling source
