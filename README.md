@@ -179,6 +179,7 @@ tuicraft vendor [--json]   # goods by name, price and slot; last sale or purchas
 tuicraft sell 255 28 [n]   # sell a carried stack (bag and slot as in inventory)
 tuicraft buy 2 [n]         # buy from a listed vendor slot
 tuicraft repair            # repair all damaged items at a repair vendor
+tuicraft loot-roll 0xabc 0 need # answer a pending group loot roll (need|greed|pass)
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
@@ -404,6 +405,11 @@ If none follows within 3 seconds, or the corpse despawns first, the open fails:
 `loot` goes back to `closed`, says why in `Last open failed:` (`lastOpenFailure`
 in `--json`), and the next corpse can be opened without a reconnect.
 
+In a party on group loot, uncommon and better items are rolled for instead of
+taken. `loot` lists pending rolls with their item, slot, time left and allowed
+votes; `loot-roll <guid> <slot> need|greed|pass` answers one, and `loot` then
+shows the other votes and the winner, whose bags receive the item.
+
 ## Roadmap
 
 See [docs/roadmap.md](docs/roadmap.md) for current direction. That document is
@@ -486,7 +492,7 @@ that the official game client does.
 | Pathfinding / navigation     | Ground routes on map 530 |
 | Spells / auras    | Learned-spell casts, observed auras |
 | Combat log        | ❌     |
-| Loot              | Bounded creature offers |
+| Loot              | Bounded creature offers, group loot rolls |
 | Items / inventory | Observed carried state |
 
 ### 📜 PvE

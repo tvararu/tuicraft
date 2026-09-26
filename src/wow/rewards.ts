@@ -1,6 +1,7 @@
 import { Emitter, type Unsubscribe } from "lib/emitter";
 import { type EntityEvent, type EntityLookup, fieldOf } from "wow/entity-store";
 import { type InventoryState, readInventory } from "wow/inventory";
+import { LootRolls, type RewardsRolls } from "wow/loot-rolls";
 import { readLife } from "wow/player-state";
 import { ObjectType, UNIT_FIELDS } from "wow/protocol/entity-fields";
 import {
@@ -85,6 +86,7 @@ export type RewardsState = {
   lastItemPush: RewardsItemPush | undefined;
   lastMoneyNotice: RewardsMoneyNotice | undefined;
   lastRelease: RewardsRelease | undefined;
+  rolls: RewardsRolls;
   disposed: boolean;
 };
 
@@ -105,7 +107,12 @@ export type RewardsEvent = {
     | "item_push"
     | "money_notice"
     | "inventory_observed"
-    | "loot_invalidated";
+    | "loot_invalidated"
+    | "loot_roll_started"
+    | "loot_roll_requested"
+    | "loot_roll_observed"
+    | "loot_roll_won"
+    | "loot_roll_all_passed";
   at: number;
   state: RewardsState;
 };
@@ -152,9 +159,20 @@ export class RewardsRuntime {
   private lastInventory: InventoryState | undefined;
 
   private readonly deps: RewardsDeps;
+  readonly rolls: LootRolls;
 
   constructor(deps: RewardsDeps) {
     this.deps = deps;
+    this.rolls = new LootRolls({
+      changed: (type) => {
+        if (!this.disposed) this.emit(type);
+      },
+      lootGuid: () =>
+        this.loot.phase === "closed" ? undefined : this.loot.guid,
+      now: deps.now,
+      selfGuid: deps.selfGuid,
+      send: deps.send,
+    });
   }
 
   onEvent(listener: (event: RewardsEvent) => void): Unsubscribe {
@@ -178,6 +196,7 @@ export class RewardsRuntime {
         ? { ...this.lastMoneyNotice }
         : undefined,
       lastRelease: this.lastRelease ? { ...this.lastRelease } : undefined,
+      rolls: this.rolls.snapshot(),
       disposed: this.disposed,
     };
   }
@@ -279,6 +298,7 @@ export class RewardsRuntime {
       invalidatedReason: this.loot.invalidatedReason,
     };
     this.pending = undefined;
+    this.rolls.observeOffer(response.guid, response.items);
     this.emit("loot_opened");
   }
 
@@ -399,6 +419,7 @@ export class RewardsRuntime {
     this.lastOpenFailure = undefined;
     this.stopReleaseOnlyTimer();
     this.lastInventory = undefined;
+    this.rolls.clear();
   }
 
   private active(): void {

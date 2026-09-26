@@ -105,6 +105,9 @@ USAGE
   tuicraft buy <vendor-slot> [count]  Buy from the listed vendor
   tuicraft repair            Repair all damaged items at a listed repair vendor
                             Confirmed by observed coinage and item changes; refusals are named
+  tuicraft loot-roll <guid> <slot> need|greed|pass  Answer a pending group loot roll
+                            guid: roll or corpse GUID from loot --json rolls.pending
+                            OK is intent; loot shows votes and the winner
   tuicraft stop [--json]      Stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)

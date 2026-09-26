@@ -164,7 +164,13 @@ export function decodeWalkReply(
   };
 }
 
-const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
+const LOOT = [
+  "open-loot",
+  "take-loot",
+  "take-money",
+  "release-loot",
+  "loot-roll",
+];
 const TRAINER = ["open-trainer", "train"];
 const VENDOR = ["open-vendor", "sell", "buy", "repair"];
 const RECOVERY = [

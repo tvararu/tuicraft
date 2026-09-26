@@ -12,6 +12,7 @@ import {
   parseGoto,
   parseGuidArg,
   parseItemSlot,
+  parseLootRoll,
   parseMove,
   parseOptionId,
   parseQuestId,
@@ -196,6 +197,8 @@ function parseMotion(
       return from(parseGoto(tokens), (v) => ({ type: "goto", ...v }));
     case "RESURRECT":
       return from(parseResurrect(tokens), (v) => ({ type: "resurrect", ...v }));
+    case "LOOT_ROLL":
+      return from(parseLootRoll(tokens), (v) => ({ type: "loot_roll", ...v }));
     case "SELECT_OPTION":
       return parseSelectOption(tokens, rest);
     default:

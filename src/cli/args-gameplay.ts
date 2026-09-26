@@ -12,6 +12,7 @@ import {
   parseGoto,
   parseGuidArg,
   parseItemSlot,
+  parseLootRoll,
   parseMove,
   parseOptionId,
   parseQuestId,
@@ -128,6 +129,8 @@ function parseItemVerb(cmd: string, rest: string[]): CliAction | undefined {
       return { mode: "sell", ...take(parseSell(rest)) };
     case "buy":
       return { mode: "buy", ...take(parseBuy(rest)) };
+    case "loot-roll":
+      return { mode: "loot_roll", ...take(parseLootRoll(rest)) };
     default:
       return parseTrainerVerb(cmd, rest);
   }

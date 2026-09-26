@@ -18,10 +18,14 @@ import { parseInventoryChangeFailure } from "wow/protocol/inventory";
 import { parseItemQueryResponse } from "wow/protocol/item";
 import {
   parseItemPushResult,
+  parseLootAllPassed,
   parseLootMoneyNotify,
   parseLootReleaseResponse,
   parseLootRemoved,
   parseLootResponse,
+  parseLootRoll,
+  parseLootRollWon,
+  parseLootStartRoll,
 } from "wow/protocol/loot";
 import { parseMonsterMove } from "wow/protocol/monster-move";
 import { GameOpcode } from "wow/protocol/opcodes";
@@ -250,6 +254,18 @@ export function registerLootHandlers(conn: WorldConn): void {
   );
   on(GameOpcode.SMSG_LOOT_CLEAR_MONEY, () =>
     conn.rewards?.receiveLootMoneyCleared(),
+  );
+  on(GameOpcode.SMSG_LOOT_START_ROLL, (r) =>
+    conn.rewards?.rolls.receiveStart(parseLootStartRoll(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_ROLL, (r) =>
+    conn.rewards?.rolls.receiveRoll(parseLootRoll(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_ROLL_WON, (r) =>
+    conn.rewards?.rolls.receiveWon(parseLootRollWon(r)),
+  );
+  on(GameOpcode.SMSG_LOOT_ALL_PASSED, (r) =>
+    conn.rewards?.rolls.receiveAllPassed(parseLootAllPassed(r)),
   );
   on(GameOpcode.SMSG_ITEM_PUSH_RESULT, (r) => {
     const push = parseItemPushResult(r);

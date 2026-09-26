@@ -231,6 +231,49 @@ describe("formatRewardsState", () => {
     );
   });
 
+  test("shows pending rolls and who won the last one", () => {
+    const output = rewards({
+      rolls: {
+        last: {
+          corpseGuid: TARGET,
+          guid: 0xbn,
+          itemId: 7108,
+          mine: true,
+          myChoice: "need",
+          observedAt: 1,
+          outcome: "won",
+          rolled: 77,
+          slot: 0,
+          winner: 0xcn,
+          winnerChoice: "need",
+        },
+        pending: [
+          {
+            allowed: ["pass", "need", "greed"],
+            choice: undefined,
+            corpseGuid: undefined,
+            count: 1,
+            countdownMs: 60_000,
+            expiresAt: 61_000,
+            guid: 0xan,
+            itemId: 2589,
+            mapId: 530,
+            randomPropertyId: 0,
+            randomSuffix: 0,
+            remainingMs: 41_500,
+            slot: 2,
+            startedAt: 1000,
+            votes: [],
+          },
+        ],
+      },
+    });
+    expect(output).toContain(
+      "Roll 0xa slot 2: item 2589 x1, 42 s left, allowed pass/need/greed, unanswered",
+    );
+    expect(output).toContain("Last roll: item 7108 won by you (need 77)");
+  });
+
   test("names answered offers and labels slots that allow pickup", () => {
     const item = {
       displayId: 0,
