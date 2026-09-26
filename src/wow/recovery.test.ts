@@ -11,7 +11,11 @@ import {
 } from "wow/protocol/death";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { PacketReader } from "wow/protocol/packet";
-import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
+import {
+  type RecoveryEvent,
+  RecoveryRuntime,
+  SPIRIT_HEALER_TIMEOUT_MS,
+} from "wow/recovery";
 
 function fixture(health = 0, flags = 0) {
   const self: Entity = {
@@ -65,6 +69,18 @@ function fixture(health = 0, flags = 0) {
 const corpse = "01 12020000 00000000 00000000 00000000 12020000 00000000";
 const offer = "6300000000000000 01000000 00 00 00";
 const healerGuid = 0x0102030405060708n;
+
+function ghostWithHealer() {
+  const ghost = fixture(1, 0x10);
+  const healer = {
+    guid: healerGuid,
+    objectType: ObjectType.UNIT,
+    rawFields: new Map(),
+    npcFlags: 0x40_00,
+  } as unknown as Entity;
+  ghost.others.set(healerGuid, healer);
+  return ghost;
+}
 
 describe("ordinary-player recovery", () => {
   test("release and graveyard packets do not invent ghost or alive state", () => {
@@ -381,6 +397,44 @@ describe("ordinary-player recovery", () => {
 
     ghost.life(100, 0);
     expect(ghost.runtime.snapshot().request).toBeUndefined();
+  });
+
+  test("an unanswered spirit-healer request stops blocking after the timeout", () => {
+    const ghost = ghostWithHealer();
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    ghost.clock.now += SPIRIT_HEALER_TIMEOUT_MS - 1;
+    expect(() => ghost.runtime.activateSpiritHealer(healerGuid)).toThrow(
+      "Previous spirit-healer request remains unanswered",
+    );
+    ghost.clock.now += 1;
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    expect(ghost.sent.filter((p) => p.opcode === 0x2_1c)).toHaveLength(2);
+    expect(ghost.runtime.snapshot()).toMatchObject({
+      request: { action: "spirit-healer", requestedAt: 11_000 },
+      spiritHealerCleared: {
+        clearedAt: 11_000,
+        guid: healerGuid,
+        reason: "timeout",
+        requestedAt: 1000,
+      },
+    });
+    expect(ghost.events.map((event) => event.type).slice(-2)).toEqual([
+      "spirit_healer_cleared",
+      "spirit_healer_requested",
+    ]);
+  });
+
+  test("halt clears an unanswered spirit-healer request at once", () => {
+    const ghost = ghostWithHealer();
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    ghost.clock.now += 500;
+    ghost.runtime.clearSpiritHealer("halt");
+    expect(ghost.runtime.snapshot()).toMatchObject({
+      request: undefined,
+      spiritHealerCleared: { clearedAt: 1500, reason: "halt" },
+    });
+    ghost.runtime.activateSpiritHealer(healerGuid);
+    expect(ghost.sent.filter((p) => p.opcode === 0x2_1c)).toHaveLength(2);
   });
 });
 
