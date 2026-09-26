@@ -224,6 +224,10 @@ export function createMockHandle(): WorldHandle & {
       closeResolve();
     },
     respondResurrection: jest.fn(),
+    resumeCycle: jest.fn(
+      (instruction: string | undefined, maxStarts: number | undefined) =>
+        cycle.resume({ instruction, maxStarts }),
+    ),
     selectGossipOption: jest.fn(),
     selectQuest: jest.fn(),
     selectTarget: jest.fn(),

@@ -405,6 +405,19 @@ describe("main CLI against a daemon socket", () => {
     });
   });
 
+  test("JSON cycle resume reports as cycle and surfaces the refusal", async () => {
+    handle = createMockHandle();
+    const { code, out } = await runMain(["cycle", "--resume", "--json"]);
+    expect(code).toBe(1);
+    expect(JSON.parse(out)).toEqual({
+      command: "cycle",
+      data: null,
+      error: { message: "cycle_nothing_to_resume", stage: "command" },
+      events: [],
+      kind: "error",
+    });
+  });
+
   test("missing wait value fails before sending JSON chat", async () => {
     handle = createMockHandle();
     const { code, out, error } = await runMain([

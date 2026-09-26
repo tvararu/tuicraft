@@ -222,6 +222,8 @@ const HANDLERS: Handlers = {
       () => handle.startCycle(cmd.guids, cmd.instruction, cmd.maxStarts),
       ok,
     ),
+  cycle_resume: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.resumeCycle(cmd.instruction, cmd.maxStarts), ok),
   cycling: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getCycleState(), formatCycleState),
   cycling_json: (_cmd, { handle, socket }) =>

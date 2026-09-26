@@ -215,6 +215,7 @@ describe("cycle IPC boundary", () => {
         maxStarts: 10,
         phase: "fighting",
         queue: [{ guid: 1n, status: "queued" }],
+        resumes: 0,
         startedAt: 1000,
         startsUsed: 1,
         stopCause: undefined,

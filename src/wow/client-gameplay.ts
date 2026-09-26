@@ -180,6 +180,10 @@ export function cycleMethods(conn: WorldConn, rt: Runtimes) {
       rt.override();
       await cycle.start({ guids, instruction, maxStarts });
     },
+    async resumeCycle(instruction, maxStarts) {
+      rt.override();
+      await cycle.resume({ instruction, maxStarts });
+    },
     stopCycle() {
       cycle.stop("manual_override");
     },

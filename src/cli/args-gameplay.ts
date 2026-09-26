@@ -4,6 +4,7 @@ import {
   parseBoundedArg,
   parseCast,
   parseCycle,
+  parseCycleResume,
   parseFace,
   parseFight,
   parseGoto,
@@ -58,7 +59,9 @@ export function parseGameplay(
     case "fight":
       return parseFightArgs(rest);
     case "cycle":
-      return { mode: "cycle", ...take(parseCycle(rest)) };
+      return rest.includes("--resume")
+        ? { mode: "cycle_resume", ...take(parseCycleResume(rest)) }
+        : { mode: "cycle", ...take(parseCycle(rest)) };
     case "goto":
       return { mode: "goto", ...take(parseGoto(rest)) };
     case "spirit-healer":

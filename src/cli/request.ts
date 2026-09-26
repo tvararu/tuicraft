@@ -92,6 +92,13 @@ function requestArgs(action: Request): Arg[] {
       const max = action.maxStarts ? ["--max", action.maxStarts] : [];
       return [...action.guids, ...max, "--instruction", action.instruction];
     }
+    case "cycle_resume": {
+      const max = action.maxStarts ? ["--max", action.maxStarts] : [];
+      const { instruction } = action;
+      const words =
+        instruction === undefined ? [] : ["--instruction", instruction];
+      return [...max, ...words];
+    }
     case "goto":
       return [action.x, action.y, action.z];
     case "query_quest":

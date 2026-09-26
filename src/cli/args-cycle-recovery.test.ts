@@ -56,6 +56,19 @@ describe("cycle arguments", () => {
       parseArgs(["cycle", "0xa", "--instruction", "line1\nline2"]),
     ).toThrow("instruction must not contain line breaks");
   });
+
+  test("resume keeps the instruction unless one is given", () => {
+    expect(parseArgs(["cycle", "--resume"])).toEqual({ mode: "cycle_resume" });
+    expect(
+      parseArgs(["cycle", "--resume", "--instruction", "kite", "--max", "2"]),
+    ).toEqual({ instruction: "kite", maxStarts: 2, mode: "cycle_resume" });
+    expect(
+      parseArgs(["cycle", "--instruction", "hold", "aggro", "--resume"]),
+    ).toEqual({ instruction: "hold aggro", mode: "cycle_resume" });
+    expect(() => parseArgs(["cycle", "--resume", "0xa"])).toThrow(
+      "cycle --resume takes no guids",
+    );
+  });
 });
 
 describe("recovery arguments", () => {

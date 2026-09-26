@@ -207,6 +207,7 @@ These commands inspect or act. They do not invent a spell rotation.
     tuicraft fight <observed-hostile-guid> conserve mana and stay alive
     tuicraft tactics [--json]
     tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]
+    tuicraft cycle --resume [--instruction ...] [--max N] [--json]
     tuicraft cycling [--json]
     tuicraft goto <grounded-x> <grounded-y> <grounded-z>
     tuicraft navigation [--json]
@@ -224,8 +225,9 @@ Rules:
 - Choose current creature GUIDs from `nearby --json` (`data[]`) and hand them to `cycle <guid...>` in order. The cycle never auto-acquires; at least one nonzero GUID is required. `--instruction` applies to all targets and defaults like `fight`; `cycle` has no `--framing`. `--max N` caps tactics-loop starts (positive integer, default 10).
 - A cycle target that dies, is unreachable, or fails to fight is skipped (not a loop stop) with a recorded cause; the loop advances to the next queued GUID. A mid-fight death runs bounded recovery: release, one corpse query, up to 40 `face` + `move forward` legs (heading from the pose each leg; a leg that gains less than 1 yd toward the corpse, for example one stopped at once by `height_unresolved`, retries at offsets of +/-0.3, 0.6, 0.9, 1.2, 1.5 rad) until the ghost is about 30 yd from the corpse, the reclaim-delay wait, `reclaim-corpse`, and a confirmed `alive`. Then the cycle stops with `reclaimed` (`stopDetail` has `pose`, `range`, `legs`), or `resurrected` after an accepted offer; the rest of the queue stays `queued`. Check the killer's position and health before starting a new cycle. The leg bound stops with `corpse_out_of_range`; exhausted offsets stop with `corpse_unreachable`.
 - After a kill the cycle awaits the corpse death update. No lootable flag (or a despawn) records `loot: "none"` on that queue entry and the loop continues; `loot: "looted"` marks an opened corpse. No death update within the settle time stops with `target_death_unconfirmed`.
-- Inspect `cycling --json` for `phase`, per-target `queue` status/cause/loot, `startsUsed`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `reclaimed`, `resurrected`, `target_death_unconfirmed`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_release_only_reconnect_required`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
+- Inspect `cycling --json` for `phase`, per-target `queue` status/cause/loot, `instruction`, `startsUsed`, `resumes`, `stopCause`, `stopDetail`, and `lastLoot`. `stopCause` is an open string: examples are `queue_exhausted`, `max_starts_reached`, `halt`, `reclaimed`, `resurrected`, `target_death_unconfirmed`, `loot_denied:*` (including `loot_denied:timeout` for an unanswered take), `loot_inventory_full`, `loot_release_only_reconnect_required`, `loot_release_unconfirmed`, and recovery causes. The loop waits for the server release acknowledgement after close before recording loot. Inspect `stopDetail`.
 - `lastLoot.slotsTaken` records requested slots, `moneyTaken` records offered money, and before/after coinage is observed when known. None of these proves item storage. Check raw inventory slot/count changes before claiming a gain.
+- `cycle --resume` continues a stopped cycle from the first target at or after `currentIndex` that is still `queued`: a fight halted mid-way is fought again, a `done` target (halt during loot) is not. `--instruction` replaces the instruction for the remaining targets (omit it to keep the old one); `--max` sets the cap for the resumed run, and `startsUsed` restarts at 0. It works after any stop cause, emits a `resumed` CYCLE event, increments `resumes`, and fails with `cycle_active` or `cycle_nothing_to_resume`. It repairs nothing: after a non-`halt` stop, check `nearby` and `recovery` before resuming.
 - Starting a new `cycle` replaces any running cycle. `halt` stops it. CYCLE events in `read`/`tail` carry the same `CycleState` snapshot as `cycling --json`, in `data.state`.
 - The fight instruction must be one line. CR or LF is rejected before IPC.
 - `goto` takes three finite coordinates. It is not a named-place planner.
@@ -234,7 +236,7 @@ Rules:
 - `navigation --json` retains `blockedReason` and `refusal` and adds `nextStep`. After `obstructed`, choose another route. After `height_unresolved`, try a different short heading or known grounded waypoint. After `ambiguous ground column`, choose a destination with one ground height. Do not guess Z or repeat an unsafe heading. No hint proves the next route safe.
 - Configure `spell_data_dir`, `navigation_data_dir`, and `navigation_library` in the account config as needed. Supply `TYPESAFE_API_KEY` through the daemon environment, never through config or logs. Restart the daemon after changes. See `docs/manual.md` for the required build-12340 tables.
 
-IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
+IPC: COMBAT, COMBAT_JSON, SPELLS, SPELLS_JSON, CAST, ATTACK, CANCEL_CAST, STOP_ATTACK, FIGHT, TACTICS, TACTICS_JSON, CYCLE, CYCLE_RESUME, CYCLING, CYCLING_JSON, GOTO, NAVIGATION, NAVIGATION_JSON.
 
 ## Ordinary death recovery
 
