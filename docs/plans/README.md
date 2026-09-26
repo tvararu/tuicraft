@@ -64,3 +64,4 @@ Design and plan documents, oldest first. The sole roadmap is
 | [2026-09-25-pi-harness-spike/](2026-09-25-pi-harness-spike/README.md) | Current | Throwaway prototype code referenced by the Pi harness design |
 
 The factory lands each pull request as one squash commit.
+Squash commits carry Refs, PR and Co-authored-by trailers.
