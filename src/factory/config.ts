@@ -17,6 +17,7 @@ export const board = {
     "in-progress": "47fc9ee4",
     "in-review": "aba860b9",
     ready: "e18bf179",
+    triage: "9bdaa34c",
   },
   project: "PVT_kwHOABkwu84BktxO",
 } as const;
