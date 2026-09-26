@@ -517,6 +517,25 @@ route does not follow the creature. If the creature disappears from the
 entity store while the route is active, for example by leaving visibility
 range, the route stops with `blockedReason=target_lost` and is not replanned.
 
+A route that stops mid-walk on a ground refusal (a route sample that fails,
+such as `pathfind_find_height failed (UNKNOWN_HEIGHT)`) or on a server
+position correction is replanned, within limits. The character stops, sends
+the stop, and after 250 ms plans again to the same destination from the
+stopped pose (the server pose after a correction). `navigation --json` shows
+`replan` with `plans`, `traveled`, `elapsedMs`, `interruptions`, `pending`
+and `limits`. A replan needs at least 2 yards of displacement from the
+previous plan origin, at most 4 plans in total, at most 60 s since the
+`goto`, and less than twice the first route length walked (at least 20
+yards). Otherwise navigation stops with `replan_no_progress`,
+`replan_plan_limit`, `replan_time_limit` or `replan_distance_limit`. A
+planner refusal during a replan is also a terminal stop, named
+`replan_refused: <planner reason>` (for example
+`replan_refused: pathfind_find_height failed (UNKNOWN_HEIGHT)`), with the
+counts. HALT, any manual action, a new `goto`, teleport, root, loss of
+control and loss of a `goto <guid>` creature cancel a pending replan and
+never start one. A replanned route keeps the creature GUID, so its loss still
+stops the route with `target_lost`.
+
 `tuicraft navigation` [`--json`]
 :: Print navigation state, including raw `blockedReason`, `refusal` and
 `nextStep`. For `obstructed`, choose another route and inspect the ground.

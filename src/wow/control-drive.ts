@@ -7,8 +7,13 @@ import {
 } from "wow/control-core";
 import { groundStep, MOVING_BITS } from "wow/control-motion";
 import { normalizeAngle } from "wow/geometry";
-import { classifyNavigationRefusal, type GroundRoute } from "wow/navigation";
+import {
+  classifyNavigationRefusal,
+  type GroundRoute,
+  type NavDestination,
+} from "wow/navigation";
 import { GameOpcode } from "wow/protocol/opcodes";
+import { REPLAN_LIMITS, replannable } from "wow/route-session";
 
 const HEARTBEAT_MS = 500;
 const ROUTE_HEARTBEAT_MS = 100;
@@ -81,9 +86,11 @@ export class ControlDrive extends ControlCore {
   protected stopMoving(reason: string, sendStop: boolean): void {
     this.integrate();
     this.haltMovement(reason, sendStop);
+    this.cancelReplan(reason);
   }
 
   protected abortUnsafe(reason: string): void {
+    this.cancelReplan(reason);
     this.endMotion(reason, reason, false);
   }
 
@@ -183,16 +190,18 @@ export class ControlDrive extends ControlCore {
     advance: number,
     now: number,
   ): void {
-    this.routeDistance = Math.min(route.length, this.routeDistance + advance);
+    const distance = Math.min(route.length, this.routeDistance + advance);
     try {
       this.predicted = {
         ...predicted,
-        ...route.sample(this.routeDistance),
+        ...route.sample(distance),
         source: "predicted",
         updatedAt: now,
       };
-      this.navigation.remaining = route.length - this.routeDistance;
+      this.routeDistance = distance;
+      this.navigation.remaining = route.length - distance;
     } catch (error) {
+      this.sampleFailure = true;
       this.fail(
         error instanceof Error ? error.message : "navigation_sample_failed",
       );
@@ -290,6 +299,15 @@ export class ControlDrive extends ControlCore {
 
   private endNavigation(reason: string): void {
     if (!this.route) return;
+    const session = this.session;
+    const replan =
+      session !== undefined &&
+      reason !== "arrived" &&
+      replannable(reason, this.sampleFailure);
+    this.sampleFailure = false;
+    session?.walked(this.routeDistance, this.deps.now());
+    if (replan) session?.interrupted(reason);
+    else this.session = undefined;
     this.navigation = {
       ...this.navigation,
       active: false,
@@ -297,8 +315,103 @@ export class ControlDrive extends ControlCore {
       blockedReason: reason === "arrived" ? undefined : reason,
       refusal:
         reason === "arrived" ? undefined : classifyNavigationRefusal(reason),
+      replan: session?.snapshot(),
     };
     this.route = undefined;
+    if (replan)
+      this.replanTimer = setTimeout(
+        () => this.replanNow(),
+        REPLAN_LIMITS.delayMs,
+      );
+  }
+
+  protected startRoute(
+    route: GroundRoute,
+    destination: NavDestination,
+    target?: bigint,
+  ): void {
+    if (route.length === 0) {
+      this.navigation = {
+        active: false,
+        destination,
+        remaining: 0,
+        owner: "none",
+        blockedReason: undefined,
+        refusal: undefined,
+        replan: this.session?.snapshot(),
+        target,
+      };
+      this.session = undefined;
+      return;
+    }
+    this.applyFacing(route.sample(0).orientation);
+    this.route = route;
+    this.routeDistance = 0;
+    this.navigation = {
+      active: true,
+      destination: { ...destination },
+      remaining: route.length,
+      owner: this.mode === "none" ? "manual" : this.mode,
+      blockedReason: undefined,
+      refusal: undefined,
+      replan: this.session?.snapshot(),
+      target,
+    };
+    this.startMoving(
+      "forward",
+      Math.min(
+        MAX_DURATION_MS,
+        (route.length / (this.runSpeed ?? Number.NaN)) * 1000,
+      ),
+    );
+  }
+
+  private replanNow(): void {
+    this.replanTimer = undefined;
+    const session = this.session;
+    const destination = this.navigation.destination;
+    if (!(session && destination)) return;
+    session.settle(this.deps.now());
+    const { x, y, z } = this.requirePose();
+    const origin = { x, y, z };
+    const limit = this.blockReason() ?? session.limitReached(origin);
+    if (limit) {
+      this.finishReplan(limit, true);
+      return;
+    }
+    let route: GroundRoute;
+    try {
+      route = session.replan(origin);
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : "replan_failed";
+      this.finishReplan(`replan_refused: ${raw}`, true);
+      return;
+    }
+    session.planned(route);
+    this.emit("control_changed", "replanned");
+    this.startRoute(route, destination, this.navigation.target);
+  }
+
+  protected cancelReplan(reason: string): void {
+    if (this.replanTimer === undefined) return;
+    clearTimeout(this.replanTimer);
+    this.replanTimer = undefined;
+    this.session?.settle(this.deps.now());
+    this.finishReplan(reason, false);
+  }
+
+  private finishReplan(reason: string, error: boolean): void {
+    const session = this.session;
+    this.session = undefined;
+    this.navigation = {
+      ...this.navigation,
+      active: false,
+      owner: "none",
+      blockedReason: reason,
+      refusal: classifyNavigationRefusal(reason),
+      replan: session?.snapshot(),
+    };
+    if (error) this.emit("control_error", reason);
   }
 
   private clearTimers(): void {

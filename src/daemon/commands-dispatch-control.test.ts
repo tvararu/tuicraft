@@ -192,6 +192,45 @@ describe("dispatchCommand", () => {
     expect(state.nextStep).toContain("Do not guess Z");
   });
 
+  test("navigation tells the caller to wait while a replan is pending", async () => {
+    const handle = attachControl(createMockHandle());
+    const blockedReason = "pathfind_find_height failed (UNKNOWN_HEIGHT)";
+    handle.getNavigationState.mockReturnValue({
+      active: false,
+      blockedReason,
+      destination: { x: 1, y: 2, z: 3 },
+      owner: "none",
+      refusal: "stop",
+      remaining: 10,
+      replan: { pending: true, plans: 1 },
+    });
+    const context = {
+      cleanup: jest.fn(),
+      events: new RingBuffer<EventEntry>(10),
+      handle,
+    };
+    const pending = createMockSocket();
+    await dispatchCommand(
+      { type: "navigation_json" },
+      { ...context, socket: pending },
+    );
+    expect(JSON.parse(pending.written().trim()).nextStep).toContain("Wait");
+    handle.getNavigationState.mockReturnValue({
+      active: false,
+      blockedReason: "replan_no_progress",
+      owner: "none",
+      replan: { pending: false, plans: 2 },
+    });
+    const stopped = createMockSocket();
+    await dispatchCommand(
+      { type: "navigation_json" },
+      { ...context, socket: stopped },
+    );
+    expect(JSON.parse(stopped.written().trim()).nextStep).toContain(
+      "Choose another destination",
+    );
+  });
+
   test("control text distinguishes predicted from server pose", async () => {
     const handle = attachControl(createMockHandle());
     handle.getControlState.mockReturnValue(sampleState());
