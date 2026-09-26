@@ -38,9 +38,23 @@ results are the issues you file, never your exit code or final reply.
 
 ## 2. What changed
 
-If `$prev` is set, `git log --format='%h %s%n%b' $prev..<sha>` and the PRs
-and issues those commits name are your focus. Otherwise test the core
-loop only.
+If `$prev` is not set, test the core loop only. Otherwise map the landed
+commits to their PRs and issues:
+
+```sh
+mkdir -p tmp && bun $F qa-changes $prev <sha> > tmp/qa-changes.json
+```
+
+It prints JSON with `commits` (each with `source`, `prs` and `issues`),
+`prs` (with the `proof` section) and `issues` (with the `acceptance`
+criteria). It reads the `Refs:` and `PR:` trailers the merger adds, and asks
+GitHub (`commits/<sha>/pulls`) only for commits without them. A `null`
+`acceptance` or `proof` means the section is missing: read the issue or PR
+itself (`gh issue view`, `gh pr view`).
+
+For each issue, decide from its acceptance criteria whether it changed
+something a user can see (commands, output, TUI, gameplay). Commits with
+`source` `"none"` have no PR: use their `subject` and `body` instead.
 
 ## 3. Smoke
 
@@ -62,8 +76,10 @@ Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
 
 - the core loop: start the daemon, log in, read events, `who`, say and
   whisper to your own character, nearby entities, stop the daemon;
-- a scenario for each user-visible change found in step 2, following the
-  documentation as a new user would.
+- at least one scenario for each landed issue with a user-visible change,
+  built from that issue's acceptance criteria and its PR's Proof section,
+  following the documentation as a new user would; for commits with no PR,
+  a scenario from the commit message.
 
 Filter playerbot chat; invite only factory characters by exact name. Record
 each command and its output. TUI screens: capture them with a detached tmux
@@ -82,8 +98,9 @@ For each distinct problem:
 2. File:
    `gh issue create -R tvararu/tuicraft --label qa:found --label needs:pm --title "<short symptom>" --body-file <file>`.
    The body has: the tested SHA, steps to reproduce, expected and actual
-   behaviour, the exact commands and output, and the commit range from
-   step 2 that probably caused it.
+   behaviour, the exact commands and output, and the PR and issue whose
+   change probably caused it (from step 2's `qa-changes` output), or the
+   commit when it has no PR.
 
 If `main` is badly broken (it does not build, `mise ci` fails, or login
 fails), file one issue only. Find the first bad commit in `$prev..<sha>`
