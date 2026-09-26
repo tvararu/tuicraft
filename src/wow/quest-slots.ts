@@ -24,6 +24,15 @@ export type QuestLogChange = {
 const COMPLETE = 1;
 const FAILED = 2;
 
+export function questSlotStatus(
+  slot: QuestLogSlot,
+): "complete" | "failed" | "in progress" {
+  const flags = slot.flags ?? 0;
+  if (flags & FAILED) return "failed";
+  if (flags & COMPLETE) return "complete";
+  return "in progress";
+}
+
 function logSlot(
   entity: Entity | undefined,
   slot: number,

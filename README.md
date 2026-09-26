@@ -156,7 +156,7 @@ tuicraft release-spirit    # request release while observed dead
 tuicraft reclaim-corpse    # request guarded reclaim near the actual corpse
 tuicraft spirit-healer 0xabc  # request resurrection from an observed healer-flagged creature
 tuicraft resurrect accept # answer a current offer (recovery shows it); decline is also supported
-tuicraft quests --json     # offered dialog, observed log and unanswered intent
+tuicraft quests            # dialog, next verb, held log slots; --json for all fields
 tuicraft talk 0xabc        # request conversation with an observed giver
 tuicraft query-quest 42    # request metadata, not permission to accept
 tuicraft select-option 0   # choose an offered gossip option; optional quoted code
@@ -257,10 +257,11 @@ instruction change), discarded Jev results, and latency. Its loop rate
 Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 
-Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `inventory`,
-`experience`, and `loot` print readable summaries. Control actions report daemon
-request acceptance, not server success; `fight` replies when the run ends with
-its outcome (`completed: server_kill_credit, XP 60`), and `cycle` says it ended.
+Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `quests`,
+`inventory`, `experience`, and `loot` print readable summaries; QUEST lines in
+`read` name the quest, counts, reward and error reason. Control actions report
+daemon request acceptance, not server success; `fight` replies when the run ends
+with its outcome (`completed: server_kill_credit, XP 60`), and `cycle` says it ended.
 Use `--json` for the full observed state and for scripts.
 
 ## Gameplay notes

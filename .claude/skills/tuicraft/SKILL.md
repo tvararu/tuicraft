@@ -354,6 +354,7 @@ Rules:
 - Pending cancel blocks another mutation until observed close or a confirmed world reset. A late error/menu is not sufficient.
 - HALT drops older queued conversational mutations, abandonment and cancellation. It retains quest metadata queries and newer requests.
 - HALT cannot undo an already-sent request and is not proof of dialog closure.
+- Human `quests` summarises the dialog (kind, giver, offered quests or options, required items or reward choices with indices, and `Next: tuicraft <verb>`), pending and unresolved requests, the held log slots with counts and carried quest items, and the last error (reason named) and reward. Empty log slots are not listed. Human QUEST lines in `read` carry the quest ID and title, progress counts (including collected items), reward XP/money and error reasons, for example `[quest] progress 8325 Reclaiming Sunstrider Isle: 3/8`.
 - `OK` always means intent, never accepted/completed/rewarded/removed state. Inspect actual log and server notifications for those facts.
 - Quest action and inspection errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 

@@ -28,6 +28,7 @@ import {
   formatRewardsEventText,
   formatTacticsEventText,
 } from "ui/format-events";
+import { formatQuestEventText } from "ui/format-quests";
 import type { WorldHandle } from "wow";
 import { type authHandshake, authWithRetry, worldSession } from "wow/session";
 
@@ -250,7 +251,9 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   );
   handle.onCycleEvent((event) => onDomainEvent("cycle", event, sink));
   handle.onRecoveryEvent((event) => onDomainEvent("recovery", event, sink));
-  handle.onQuestEvent((event) => onDomainEvent("quest", event, sink));
+  handle.onQuestEvent((event) =>
+    onDomainEvent("quest", event, sink, formatQuestEventText),
+  );
   handle.onRewardsEvent((event) =>
     onDomainEvent("rewards", event, sink, formatRewardsEventText),
   );

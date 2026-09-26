@@ -538,6 +538,26 @@ A sent acceptance request is not an accepted quest. Acceptance and removal requi
 Log counters are server quest words, not inferred inventory counts. Unknown quest IDs stay unknown.
 Item objectives never appear in the log counters (AzerothCore sends no SMSG_QUESTUPDATE_ADD_ITEM). `items` lists each required item of a logged quest whose query is known, with the carried count read from the bags. Each item push for such an item waits in `itemPushes` until the bags hold its server total, then emits a QUEST `progress` event (source `inventory`) whose `lastProgress` is `{kind: "collect", questId, itemId, required, carried, pushed, totalCount, bag, slot}`. Query the quest first; pushes for unknown objectives are not correlated.
 A query with no reply remains unanswered, not missing. Metadata never authorizes quest mutation.
+Without `--json` it prints a summary: the dialog kind, giver GUID and quest,
+its gossip options (`Option <id>: <text>`), offered quests
+(`Quest <id> (level N): <title>`), required items, or reward choices
+(`Reward choice <index>: item <entry> xN`) and fixed rewards, then
+`Next: tuicraft <verb>` for the step that advances that dialog. It follows with
+any unanswered request and each unresolved one (`Unresolved: <action> <quest>`),
+the held log slots only
+(`Slot 0: quest 8325 Reclaiming Sunstrider Isle, in progress, 3/8`, with
+required counts once the quest metadata is known, and carried items as
+`item 20797 5/8` from `items`), the last error with its reason named, and the
+last reward. `--json` is unchanged.
+
+QUEST lines in human `read`/`tail` name the quest and its facts:
+`[quest] accepted 8325 Reclaiming Sunstrider Isle`,
+`[quest] progress 8325 Reclaiming Sunstrider Isle: creature 15274 4/8` (or the
+log counts, or `item 20797 3/8` for a collected item),
+`[quest] rewarded 8325 … +100 XP +30 copper`,
+`[quest] error invalid: already on that quest`, and
+`[quest] dialog requestItems 8326 …, next: request-reward`. Titles appear once
+the server has answered the quest query.
 
 `tuicraft talk` _guid_
 :: Request a conversation with an observed giver. _guid_ is a nonzero uint64 in decimal or `0x` hex.
