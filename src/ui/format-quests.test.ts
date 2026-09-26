@@ -267,8 +267,8 @@ describe("quest read lines", () => {
     expect(event({ detail: "trainer", type: "window" })).toBe(
       "[quest] window trainer",
     );
-    expect(event({ detail: "unsupported_window:vendor", type: "window" })).toBe(
-      "[quest] window unsupported_window:vendor",
+    expect(event({ detail: "unsupported_window:bank", type: "window" })).toBe(
+      "[quest] window unsupported_window:bank",
     );
   });
 

@@ -2,6 +2,7 @@ import type { CliAction } from "cli/args";
 import {
   type Parsed,
   parseBoundedArg,
+  parseBuy,
   parseCast,
   parseCycle,
   parseCycleResume,
@@ -14,6 +15,7 @@ import {
   parseOptionId,
   parseQuestId,
   parseResurrect,
+  parseSell,
   parseSpellId,
   parseWalkToward,
 } from "cli/tokens";
@@ -95,6 +97,13 @@ function parseInteraction(cmd: string, rest: string[]): CliAction | undefined {
     }
     case "select-option":
       return parseSelectOption(rest);
+    default:
+      return parseItemVerb(cmd, rest);
+  }
+}
+
+function parseItemVerb(cmd: string, rest: string[]): CliAction | undefined {
+  switch (cmd) {
     case "open-loot":
       return { mode: "open_loot", ...take(parseGuidArg(rest, true)) };
     case "take-loot": {
@@ -103,6 +112,12 @@ function parseInteraction(cmd: string, rest: string[]): CliAction | undefined {
     }
     case "use":
       return { mode: "use", ...take(parseItemSlot(rest)) };
+    case "open-vendor":
+      return { mode: "open_vendor", ...take(parseGuidArg(rest, true)) };
+    case "sell":
+      return { mode: "sell", ...take(parseSell(rest)) };
+    case "buy":
+      return { mode: "buy", ...take(parseBuy(rest)) };
     default:
       return parseTrainerVerb(cmd, rest);
   }

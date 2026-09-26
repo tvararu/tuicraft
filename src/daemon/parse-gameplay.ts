@@ -2,6 +2,7 @@ import {
   type Parsed,
   parseBare,
   parseBoundedArg,
+  parseBuy,
   parseCast,
   parseCycle,
   parseCycleResume,
@@ -14,6 +15,7 @@ import {
   parseOptionId,
   parseQuestId,
   parseResurrect,
+  parseSell,
   parseSpellId,
   parseWalkToward,
   tokenize,
@@ -36,6 +38,7 @@ const INSPECTIONS = new Map<string, IpcCommand>(
       "loot",
       "group",
       "trainer",
+      "vendor",
     ] as const
   ).flatMap((view): [string, IpcCommand][] => [
     [view.toUpperCase(), { type: view }],
@@ -60,6 +63,7 @@ const STRICT = new Map<string, IpcCommand>(
       "cancel_interaction",
       "take_money",
       "release_loot",
+      "repair",
     ] as const
   ).map((type): [string, IpcCommand] => [type.toUpperCase(), { type }]),
 );
@@ -97,7 +101,8 @@ type GuidIpcType =
   | "spirit_healer"
   | "talk"
   | "open_loot"
-  | "open_trainer";
+  | "open_trainer"
+  | "open_vendor";
 
 const GUID_VERBS = new Map<string, { nonzero: boolean; type: GuidIpcType }>([
   ["FACE_GUID", { nonzero: true, type: "face_guid" }],
@@ -107,6 +112,7 @@ const GUID_VERBS = new Map<string, { nonzero: boolean; type: GuidIpcType }>([
   ["TALK", { nonzero: true, type: "talk" }],
   ["OPEN_LOOT", { nonzero: true, type: "open_loot" }],
   ["OPEN_TRAINER", { nonzero: true, type: "open_trainer" }],
+  ["OPEN_VENDOR", { nonzero: true, type: "open_vendor" }],
 ]);
 
 const QUEST_VERBS = new Map<
@@ -147,6 +153,10 @@ function parseIndexed(verb: string, tokens: string[]): IpcCommand | undefined {
       return from(parseItemSlot(tokens), (at) => ({ ...at, type: "use" }));
     case "TRAIN":
       return from(parseSpellId(tokens), (v) => ({ type: "train", ...v }));
+    case "SELL":
+      return from(parseSell(tokens), (v) => ({ type: "sell", ...v }));
+    case "BUY":
+      return from(parseBuy(tokens), (v) => ({ type: "buy", ...v }));
     default:
       return;
   }

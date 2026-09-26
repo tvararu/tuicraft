@@ -28,6 +28,8 @@ tuicraft abandon-quest <slot> | cancel-interaction
 tuicraft inventory [--json] | experience [--json] | loot [--json] | open-loot <guid>
 tuicraft take-loot <slot> | take-money | release-loot | use <bag> <slot>
 tuicraft trainer [--json] | open-trainer <guid> | train <spell-id>
+tuicraft vendor [--json] | open-vendor <guid> | sell <bag> <slot> [count]
+tuicraft buy <vendor-slot> [count] | repair
 tuicraft move <dir> [ms] | face <radians> | target <guid> | halt
 tuicraft face-guid <guid> | walk-toward <yards> <guid>|<x> <y> <z>
 tuicraft logs | record [--since MS] | skill | help | version
@@ -257,8 +259,8 @@ HALT on one IPC socket interrupts pending work and drops older queued
 RELEASE_SPIRIT/RECLAIM_CORPSE/SPIRIT_HEALER/RESURRECT. Older queued read waits
 are dropped. Corpse and metadata queries remain queued; newer requests run.
 HALT also drops older queued TALK/SELECT_OPTION/SELECT_QUEST/ACCEPT_QUEST/COMPLETE_QUEST/REQUEST_REWARD/CHOOSE_REWARD/ABANDON_QUEST/CANCEL_INTERACTION.
-HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE and OPEN_TRAINER/TRAIN commands as well.
-Metadata queries and inventory/loot inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
+HALT drops older OPEN_LOOT/TAKE_LOOT/TAKE_MONEY/RELEASE_LOOT/USE, OPEN_TRAINER/TRAIN and OPEN_VENDOR/SELL/BUY/REPAIR commands as well.
+Metadata queries and inventory/loot/vendor inspections remain queued. HALT cannot undo sent requests or prove dialog/loot closure.
 An enemy already attacking can continue after `halt`; stopping client actions
 does not disengage combat.
 
@@ -640,7 +642,7 @@ The quest remains until an authoritative log observation removes it. Removal alo
 Wait for observed close or a confirmed world reset before another mutation. Late menu/error packets do not unlock a pending cancel.
 
 All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending; another verb fails with `quest_reply_unanswered: <action> <guid> unanswered for <s>s; it expires as no_reply after 5s, or run cancel-interaction`.
-A request the server has not answered within 5 s expires: QUEST `expired no_reply`, and it moves to `unresolved` with `reason` `no_reply`. A trainer list from the same giver answers a `talk` or `select-option` with QUEST `window trainer` and opens the offer in `trainer`. A vendor, bank or flight-master window answers it with QUEST `window unsupported_window:<kind>` and `lastError` `{kind: "unsupported_window", window, guid}`; tuicraft does not handle those windows. An expired request is not a failure or a success; the quest log or a reward packet can still settle it, and a reply that arrives after expiry is a stale dialog.
+A request the server has not answered within 5 s expires: QUEST `expired no_reply`, and it moves to `unresolved` with `reason` `no_reply`. A trainer list from the same giver answers a `talk` or `select-option` with QUEST `window trainer` and opens the offer in `trainer`; a vendor list answers it with QUEST `window vendor` and opens the goods in `vendor`. A bank or flight-master window answers it with QUEST `window unsupported_window:<kind>` and `lastError` `{kind: "unsupported_window", window, guid}`; tuicraft does not handle those windows. An expired request is not a failure or a success; the quest log or a reward packet can still settle it, and a reply that arrives after expiry is a stale dialog.
 `OK` is request intent only. It does not establish acceptance, completion, reward, abandonment, or cancellation success.
 Quest action and inspection errors exit with status 1. Human mode prints `ERR`;
 JSON mode returns an error envelope. Do not retry an unanswered interaction automatically.
@@ -735,6 +737,66 @@ cost. Server refusals are named: `unavailable`, `not_enough_money` or
 `unanswered`. Local refusals print `ERR`: `No listed trainer`,
 `Spell is not offered by this trainer`, `Spell is too_low` (or `unavailable`,
 `known`) and `Previous trainer request remains unanswered`.
+
+`tuicraft vendor` [`--json`]
+:: Print the listed vendor's goods, the unanswered vendor request, the last
+settled request with its observed money change, and carried coinage. Goods
+keep the server's 1-based vendor slot, which can skip numbers:
+`Slot 2: item 159 Refreshing Spring Water x5 for 23 copper (stock unlimited)`.
+`x5` is how many items one purchase gives, and the price is what one purchase
+costs this character after any reputation discount. The last request reads
+`Last: sell item 4813 x1 from bag 255 slot 28: confirmed, +33 copper (coinage 49979 -> 50012)`,
+and a purchase reads `Last: buy 1 purchase of item 159 from slot 2 for 23 copper`.
+In `--json`, `data` holds `window` (`guid`, `items`, `emptyReason`,
+`openedAt`, `invalidatedReason`), `pending`, `lastOutcome` and `coinage`. Each
+item has `slot`, `itemId`, `name`, `quality`, `price`, `stock` (`null` when
+unlimited), `buyCount`, `maxDurability`, `displayId` and `extendedCost`.
+`lastOutcome` has `action` (`list`, `sell`, `buy` or `repair`), `status`,
+`reason`, the original `request` with its `coinageBefore`, `coinageAfter`
+and `moneyDelta`. A buy `request.count` counts purchases, not items; one
+purchase gives the good's `buyCount` items.
+
+`tuicraft open-vendor` _guid_
+:: Ask an observed creature with the vendor NPC flag for its goods
+(CMSG_LIST_INVENTORY). The window opens when the server's list arrives. A list
+that arrives after choosing a vendor option in `talk` gossip opens the window
+too. Stand within interaction range: from further away the server refuses with
+`cant_find_vendor`.
+
+`tuicraft sell` _bag_ _slot_ [_count_]
+:: Sell the carried stack at _bag_ _slot_, as `inventory` prints them, to the
+listed vendor. Without _count_ the whole stack is sold. The sale is confirmed
+only when the stack leaves the slot (or shrinks by _count_) and coinage rises.
+The money can be below the item's sell price when the item was damaged.
+
+`tuicraft buy` _vendor-slot_ [_count_]
+:: Buy _count_ purchases (default 1, at most 255) from a listed vendor slot.
+The purchase is confirmed by the server's purchase reply together with the
+coinage falling by the paid amount.
+
+`tuicraft repair`
+:: Repair every damaged carried and equipped item at the listed vendor, which
+must have the repair NPC flag. The repair is confirmed when every item that was
+damaged is back at full durability and coinage has fallen.
+
+Vendor outcomes have a `status` of `confirmed`, `refused`, `partial` or
+`unanswered`. Server refusals are named: selling gives `cant_find_item`,
+`cant_sell_item`, `cant_find_vendor`, `you_dont_own_that_item`,
+`only_empty_bag`, `cant_sell_to_this_merchant` or `must_repair_item`; buying
+gives `cant_find_item`, `item_already_sold`, `not_enough_money`,
+`seller_dont_like_you`, `distance_too_far`, `item_sold_out`,
+`cant_carry_more`, `rank_require`, `reputation_require`, `inventory_full`,
+`bag_full` or `inventory_result_<code>`. The server sends no reply for a
+repair it cannot pay for, so a repair still pending after 5 seconds ends as
+`partial` (some items repaired) or `unanswered`, both with reason
+`not_repaired`. Any other request still pending after 5 seconds ends as
+`unanswered` with `server_unanswered`. One vendor request can be pending at a
+time. Local refusals print `ERR`: `Creature is not an observed vendor`,
+`No listed vendor`, `No carried bag item at bag B slot S`,
+`Sell count exceeds the stack`, `Vendor slot was not offered`,
+`Vendor does not repair`, `Nothing needs repair`, and
+`Previous vendor request remains unanswered`. Vendor actions use the manual
+override path; `vendor` inspection does not change control ownership.
 All acknowledgements are intent only. Action and inspection errors exit with status 1.
 Human mode prints `ERR`; JSON mode returns an error envelope.
 
@@ -824,14 +886,14 @@ continuous JSONL: parse one envelope per line. See [Output Format](#output-forma
 
 Supported commands include `read`, `tail`, `who`, `nearby`, `control`, `combat`,
 `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`,
-`inventory`, `experience`, `loot`, `trainer`, `send` and chat flags, and `start`, `status`, `stop`.
+`inventory`, `experience`, `loot`, `trainer`, `vendor`, `send` and chat flags, and `start`, `status`, `stop`.
 All daemon-backed gameplay actions also accept `--json`: `move`, `face`,
 `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`,
 `goto`, `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`,
 `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`,
 `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`,
 `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`,
-`use`, `open-trainer`, and `train`.
+`use`, `open-trainer`, `train`, `open-vendor`, `sell`, `buy`, and `repair`.
 `logs` and `skill` remain raw. `--json` is unsupported for them, `setup`,
 `help`, `version`, interactive mode, and internal daemon mode.
 
@@ -1178,5 +1240,5 @@ and exit with status 1. Human control actions print daemon request acceptance,
 not a server result. `fight` replies when the run ends and prints its outcome
 line, for example `completed: server_kill_credit, XP 60`. `cycle` replies when
 the run ends and prints that it ended; `cycling` holds the outcome. `combat`,
-`tactics`, `cycling`, `recovery`, `inventory`, `experience`, `loot`, and
-`trainer` print readable summaries.
+`tactics`, `cycling`, `recovery`, `inventory`, `experience`, `loot`,
+`trainer`, and `vendor` print readable summaries.

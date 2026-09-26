@@ -120,6 +120,11 @@ export type CliAction =
   | { mode: "trainer"; json: boolean }
   | { mode: "open_trainer"; guid: bigint; json?: true }
   | { mode: "train"; spellId: number; json?: true }
+  | { mode: "vendor"; json: boolean }
+  | { mode: "open_vendor"; guid: bigint; json?: true }
+  | { mode: "sell"; bag: number; slot: number; count?: number; json?: true }
+  | { mode: "buy"; slot: number; count: number; json?: true }
+  | { mode: "repair"; json?: true }
   | { mode: "skill" };
 
 const SUBCOMMANDS = new Set([
@@ -184,6 +189,11 @@ const SUBCOMMANDS = new Set([
   "trainer",
   "open-trainer",
   "train",
+  "vendor",
+  "open-vendor",
+  "sell",
+  "buy",
+  "repair",
 ]);
 
 const FIXED = new Map<string, CliAction>([
@@ -210,6 +220,7 @@ const STRICT = new Map<string, CliAction>(
       "cancel_interaction",
       "take_money",
       "release_loot",
+      "repair",
     ] as const
   ).map((mode): [string, CliAction] => [mode.replaceAll("_", "-"), { mode }]),
 );
@@ -228,6 +239,7 @@ const INSPECTIONS = [
   "loot",
   "group",
   "trainer",
+  "vendor",
 ] as const;
 
 function isInspection(cmd: string): cmd is (typeof INSPECTIONS)[number] {

@@ -5,6 +5,7 @@ import {
   registerLootHandlers,
   registerQuestHandlers,
   registerTrainerHandlers,
+  registerVendorHandlers,
 } from "wow/gameplay-handlers";
 import {
   ITEM_FIELDS,
@@ -16,6 +17,7 @@ import { PacketReader } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { TrainerRuntime } from "wow/trainer";
+import { VendorRuntime } from "wow/vendor";
 import type { WorldConn } from "wow/world-conn";
 
 export function questCapture(self: bigint) {
@@ -44,11 +46,23 @@ export function questCapture(self: bigint) {
     selfGuid: () => self,
     send: () => undefined,
   });
+  const vendor = new VendorRuntime({
+    getEntity: (guid) => entities.get(guid),
+    now: () => clock,
+    selfGuid: () => self,
+    send: () => undefined,
+  });
   const dispatch = new OpcodeDispatch();
-  const conn = { dispatch, quests: runtime, trainer } as unknown as WorldConn;
+  const conn = {
+    dispatch,
+    quests: runtime,
+    trainer,
+    vendor,
+  } as unknown as WorldConn;
   registerQuestHandlers(conn);
   registerLootHandlers(conn);
   registerTrainerHandlers(conn);
+  registerVendorHandlers(conn);
   const packet = (opcode: number, hex: string) =>
     dispatch.handle(opcode, new PacketReader(hexBytes(hex)));
   const logQuest = (questId: number, flags: number, counters = 0) => {
@@ -94,5 +108,6 @@ export function questCapture(self: bigint) {
     runtime,
     sent,
     trainer,
+    vendor,
   };
 }

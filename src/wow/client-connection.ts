@@ -144,6 +144,7 @@ function routeEntityEvent(conn: WorldConn, event: EntityEvent): void {
   conn.itemTemplates?.observeEntity(event);
   conn.cycle?.observeEntity(event);
   conn.trainer?.observe();
+  conn.vendor?.observeEntity(event);
   conn.events.entity.emit(event);
 }
 
@@ -188,6 +189,11 @@ export function createWorldConn(): WorldConn {
   conn.events.rewards.subscribe((event) =>
     conn.itemTemplates?.observeRewards(event),
   );
+  conn.events.vendor.subscribe(({ type, state }) => {
+    if (type !== "listed") return;
+    for (const good of state.window?.items ?? [])
+      conn.itemTemplates?.label(good.itemId);
+  });
   conn.friendStore.onEvent((event) => conn.events.friend.emit(event));
   conn.ignoreStore.onEvent((event) => conn.events.ignore.emit(event));
   conn.guildStore.onEvent((event) => conn.events.guild.emit(event));

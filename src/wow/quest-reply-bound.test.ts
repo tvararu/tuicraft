@@ -29,21 +29,37 @@ describe("an unanswered quest request is bounded", () => {
     expect(runtime.snapshot().dialog?.kind).toBe("gossip");
   });
 
-  test("a vendor list answers the option as an unsupported window", () => {
-    const { events, packet, runtime } = setup();
+  test("a vendor list answers the option and opens the goods", () => {
+    const { events, packet, runtime, vendor } = setup();
     runtime.talk(ARENA_GUID);
     packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured215.arenaGossip);
     runtime.selectOption(0);
     packet(GameOpcode.SMSG_LIST_INVENTORY, "ee4900b43b0030f100");
     expect(runtime.snapshot()).toMatchObject({
+      dialog: undefined,
+      giver: undefined,
+      lastError: undefined,
+      pending: undefined,
+    });
+    expect(events.at(-1)).toMatchObject({ detail: "vendor", type: "window" });
+    expect(vendor.snapshot().window?.guid).toBe(ARENA_GUID);
+  });
+
+  test("a bank window still answers the option as an unsupported window", () => {
+    const { events, packet, runtime } = setup();
+    runtime.talk(ARENA_GUID);
+    packet(GameOpcode.SMSG_GOSSIP_MESSAGE, captured215.arenaGossip);
+    runtime.selectOption(0);
+    packet(GameOpcode.SMSG_SHOW_BANK, "ee4900b43b0030f1");
+    expect(runtime.snapshot()).toMatchObject({
       lastError: {
         guid: ARENA_GUID,
         kind: "unsupported_window",
-        window: "vendor",
+        window: "bank",
       },
       pending: undefined,
     });
-    expect(events.at(-1)?.detail).toBe("unsupported_window:vendor");
+    expect(events.at(-1)?.detail).toBe("unsupported_window:bank");
   });
 
   test("another giver's trainer list does not answer the pending request", () => {

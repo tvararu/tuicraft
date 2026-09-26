@@ -166,6 +166,7 @@ export function decodeWalkReply(
 
 const LOOT = ["open-loot", "take-loot", "take-money", "release-loot"];
 const TRAINER = ["open-trainer", "train"];
+const VENDOR = ["open-vendor", "sell", "buy", "repair"];
 const RECOVERY = [
   "query-corpse",
   "release-spirit",
@@ -190,6 +191,7 @@ export function formatHumanIntent(command: string, lines: string[]): string[] {
   else if (RECOVERY.includes(command)) inspection = "recovery";
   else if (command === "use") inspection = "combat";
   else if (TRAINER.includes(command)) inspection = "trainer";
+  else if (VENDOR.includes(command)) inspection = "vendor";
   return [
     `Daemon accepted request. ${inspection ? `Check tuicraft ${inspection} for observed results.` : "No server result confirmed."}`,
   ];

@@ -22,6 +22,7 @@ import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import type { RemotePose } from "wow/remote-motion";
 import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
+import { type VendorEvent, VendorRuntime } from "wow/vendor";
 import { createWorldEvents } from "wow/world-events";
 
 type MockHandle = WorldHandle & {
@@ -38,6 +39,7 @@ type MockHandle = WorldHandle & {
   triggerRecoveryEvent: (event: RecoveryEvent) => void;
   triggerQuestEvent: (event: QuestEvent) => void;
   triggerRewardsEvent: (event: RewardsEvent) => void;
+  triggerVendorEvent: (event: VendorEvent) => void;
   resolveClosed: () => void;
 };
 
@@ -72,6 +74,7 @@ export function createMockHandle(): MockHandle {
   });
   const quests = new QuestRuntime(runtimeDeps);
   const rewards = new RewardsRuntime(runtimeDeps);
+  const vendor = new VendorRuntime(runtimeDeps);
   const tacticsState: TacticsState = {
     instruction: "",
     lastDecision: undefined,
@@ -116,6 +119,7 @@ export function createMockHandle(): MockHandle {
     addFriend: jest.fn(),
     addIgnore: jest.fn(),
     attack: jest.fn(),
+    buyItem: jest.fn(),
     cancelCast: jest.fn(),
     cancelInteraction: jest.fn(),
     cast: jest.fn(),
@@ -168,6 +172,10 @@ export function createMockHandle(): MockHandle {
       level: undefined,
       offer: undefined,
       pending: undefined,
+    })),
+    getVendorState: jest.fn(() => ({
+      ...vendor.snapshot(),
+      window: undefined,
     })),
     goTo: jest.fn(),
     guildDemote: jest.fn(),
@@ -239,8 +247,12 @@ export function createMockHandle(): MockHandle {
     onTrainerEvent(cb) {
       return events.trainer.subscribe(cb);
     },
+    onVendorEvent(cb) {
+      return events.vendor.subscribe(cb);
+    },
     openLoot: jest.fn(),
     openTrainer: jest.fn(),
+    openVendor: jest.fn(),
     queryCorpse: jest.fn(),
     queryNearby: jest.fn((query?: NearbyQuery) =>
       queryNearby(
@@ -259,6 +271,7 @@ export function createMockHandle(): MockHandle {
     releaseSpirit: jest.fn(),
     removeFriend: jest.fn(),
     removeIgnore: jest.fn(),
+    repairAll: jest.fn(),
     requestGuildRoster: jest.fn(
       async (): Promise<GuildRoster | undefined> => undefined,
     ),
@@ -274,6 +287,7 @@ export function createMockHandle(): MockHandle {
     selectGossipOption: jest.fn(),
     selectQuest: jest.fn(),
     selectTarget: jest.fn(),
+    sellItem: jest.fn(),
     sendAfk: jest.fn(),
     sendChannel: jest.fn(),
     sendDnd: jest.fn(),
@@ -342,6 +356,9 @@ export function createMockHandle(): MockHandle {
     },
     triggerTacticsEvent(event) {
       events.tactics.emit(event);
+    },
+    triggerVendorEvent(event) {
+      events.vendor.emit(event);
     },
     uninvite: jest.fn(),
     useItem: jest.fn(async () => {}),

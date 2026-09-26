@@ -61,6 +61,11 @@ test("help text includes all subcommands", () => {
     "trainer",
     "open-trainer",
     "train",
+    "vendor",
+    "open-vendor",
+    "sell",
+    "buy",
+    "repair",
     "help",
   ])
     expect(text).toContain(cmd);
