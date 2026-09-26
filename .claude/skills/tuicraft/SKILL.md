@@ -22,6 +22,27 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 - `tuicraft logs` prints the raw JSONL session log. `tuicraft record [--since MS]` prints one JSON session record built from the logged CYCLE, TACTICS and RECOVERY events (see Session record below). `tuicraft skill` prints this document. `tuicraft version` (`-v`, `--version`) prints the version. `tuicraft help` (`-h`, `--help`) prints usage. `tuicraft` with no arguments starts the interactive TUI, which is for humans.
 - `tuicraft setup` configures the account. With no flags it runs an interactive wizard; non-interactively pass `--account NAME --password PASS --character NAME` and optionally `--host` (default `t1`), `--port` (`3724`), `--language` (`1`, Orcish; `7` for Alliance) and `--timeout_minutes` (`30`).
 
+Files follow the XDG variables, with fallbacks:
+
+- Config: `$XDG_CONFIG_HOME/tuicraft/config.toml`, else `~/.config/tuicraft/config.toml`.
+- Socket and pidfile: `$XDG_RUNTIME_DIR/tuicraft/sock` and `.../pid` when `XDG_RUNTIME_DIR` is set (most Linux logins), else `$TMPDIR/tuicraft-<uid>/sock` and `.../pid` (`/tmp` when `TMPDIR` is unset).
+- Session log: `$XDG_STATE_HOME/tuicraft/session.log`, else `~/.local/state/tuicraft/session.log`.
+
+The raw IPC examples below use `$SOCK`. Set it for either layout with:
+
+    SOCK="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/tuicraft/sock}"
+    SOCK="${SOCK:-${TMPDIR:-/tmp}/tuicraft-$(id -u)/sock}"
+
+Two characters at once: give each its own `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR` and `XDG_STATE_HOME`, so each has its own config, daemon socket and session log, and run every command for a character with its variables:
+
+    export A="XDG_CONFIG_HOME=$HOME/tc/a/config XDG_RUNTIME_DIR=$HOME/tc/a/run XDG_STATE_HOME=$HOME/tc/a/state"
+    env $A tuicraft setup --account ACC_A --password ... --character NameA
+    env $A tuicraft start
+    env $B tuicraft start      # B defined the same way with its own directories
+    env $A tuicraft send "/invite NameB"
+
+Without separate directories the second `start` finds the first daemon and reports `Daemon is already running.`
+
 ## JSON output
 
 Use `--json` with these daemon-backed commands:
