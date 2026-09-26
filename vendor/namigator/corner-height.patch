@@ -1,0 +1,115 @@
+diff --git a/pathfind/Map.cpp b/pathfind/Map.cpp
+index d9e4d9f..0366f53 100644
+--- a/pathfind/Map.cpp
++++ b/pathfind/Map.cpp
+@@ -90,6 +90,71 @@ float random_between_0_and_1() {
+     return static_cast<float>(dis(gen));
+ }
+ 
++const float* VertexAt(const dtNavMesh& mesh, dtPolyRef ref, const float* pos)
++{
++    const dtMeshTile* tile = nullptr;
++    const dtPoly* poly = nullptr;
++    if (dtStatusFailed(mesh.getTileAndPolyByRef(ref, &tile, &poly)) ||
++        poly->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)
++        return nullptr;
++
++    for (int i = 0; i < poly->vertCount; ++i)
++    {
++        const float* v = &tile->verts[poly->verts[i] * 3];
++        if (v[0] == pos[0] && v[2] == pos[2])
++            return v;
++    }
++
++    return nullptr;
++}
++
++// findNearestPoly() picks one of the polygons that share a vertex.  When the
++// source is exactly that vertex and the ray leaves the chosen polygon at the
++// source (t == 0), restart it from each other polygon sharing the vertex and
++// keep the first ray that reaches the target.
++void RaycastFromSharedVertex(const dtNavMesh& mesh,
++                             const dtNavMeshQuery& query,
++                             const dtQueryFilter& filter, dtPolyRef startRef,
++                             const float* source, const float* target,
++                             const float* extents, dtRaycastHit& hit)
++{
++    const float* vertex = VertexAt(mesh, startRef, source);
++    if (!vertex)
++        return;
++
++    dtPolyRef polys[32];
++    int polyCount = 0;
++    if (dtStatusFailed(query.queryPolygons(source, extents, &filter, polys,
++                                           &polyCount, 32)))
++        return;
++
++    for (int i = 0; i < polyCount; ++i)
++    {
++        if (polys[i] == startRef)
++            continue;
++
++        const float* other = VertexAt(mesh, polys[i], source);
++        if (!other || other[1] != vertex[1])
++            continue;
++
++        dtPolyRef path[100];
++        dtRaycastHit retry;
++        retry.path = path;
++        retry.maxPath = std::min(hit.maxPath, 100);
++        if (query.raycast(polys[i], source, target, &filter, 0, &retry) !=
++                DT_SUCCESS ||
++            retry.t != std::numeric_limits<float>::max())
++            continue;
++
++        std::copy(path, path + retry.pathCount, hit.path);
++        hit.pathCount = retry.pathCount;
++        hit.t = retry.t;
++        hit.hitEdgeIndex = retry.hitEdgeIndex;
++        dtVcopy(hit.hitNormal, retry.hitNormal);
++        return;
++    }
++}
++
+ } // anonymous namespace
+ 
+ namespace pathfind
+@@ -840,15 +905,35 @@ bool Map::FindHeight(const math::Vertex& source, float x, float y, float& z) con
+                            0, &hit) != DT_SUCCESS)
+         return false;
+ 
++    if (hit.t == 0.f)
++        RaycastFromSharedVertex(m_navMesh, m_navQuery, m_queryFilter, startRef,
++                                recastSource, recastTarget, extents, hit);
++
+     if (!hit.pathCount)
+         return false;
+ 
+     // if we reach here, it means we have a path and know the poly ref for
+     // the poly where the ray hit.  so let's use that reference and query
+     // the height at the requested x,y.
+-    if (m_navQuery.getPolyHeight(hit.path[hit.pathCount - 1], recastTarget,
+-                                 &z) != DT_SUCCESS)
+-        return false;
++    auto const endRef = hit.path[hit.pathCount - 1];
++    if (m_navQuery.getPolyHeight(endRef, recastTarget, &z) != DT_SUCCESS)
++    {
++        // raycast() reports t == FLT_MAX only when its boundary-inclusive
++        // test places the target inside endRef.  getPolyHeight() gates on
++        // the half-open dtPointInPolygon(), which gives a shared vertex or
++        // edge to at most one polygon and so rejects some of those targets.
++        // A target on the boundary lies on a detail boundary edge, whose
++        // height closestPointOnPoly() returns without that gate.
++        if (hit.t != std::numeric_limits<float>::max())
++            return false;
++
++        float closest[3];
++        if (m_navQuery.closestPointOnPoly(endRef, recastTarget, closest,
++                                          nullptr) != DT_SUCCESS)
++            return false;
++
++        z = closest[1];
++    }
+ 
+     auto const tile = GetTile(x, y);
+ 
