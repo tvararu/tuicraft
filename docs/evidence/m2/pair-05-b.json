@@ -1,0 +1,1441 @@
+{
+  "cadence": {
+    "decisions": 61,
+    "elapsedMs": 17148,
+    "perSecond": 3.557
+  },
+  "character": {
+    "level": 10,
+    "maxHealth": 217,
+    "maxPower": 607
+  },
+  "decisions": [
+    {
+      "applied": true,
+      "choice": "spell:8092:target",
+      "confidence": 0.19,
+      "latencyMs": 236.074537999928,
+      "n": 1,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:8092:target",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "probabilities": {
+        "move_forward": 0.04,
+        "wait": 0.19,
+        "spell:594:target": 0.11,
+        "spell:1243:self": 0.01,
+        "strafe_left": 0.01,
+        "spell:17:self": 0.03,
+        "spell:585:target": 0.12,
+        "spell:589:target": 0.08,
+        "stop_moving": 0.08,
+        "move_backward": 0.02,
+        "strafe_right": 0.01,
+        "spell:591:target": 0.06,
+        "spell:8092:target": 0.24
+      },
+      "appliedAgeMs": 236.51776499999687
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.07,
+      "latencyMs": 236.7028580000624,
+      "n": 2,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.46,
+        "wait": 0.54
+      },
+      "appliedAgeMs": 237.1161480001174
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.07,
+      "latencyMs": 225.57586700003594,
+      "n": 3,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.47,
+        "wait": 0.53
+      },
+      "appliedAgeMs": 226.071735000005
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.1,
+      "latencyMs": 261.56405299995095,
+      "n": 4,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.55,
+        "cancel": 0.45
+      },
+      "appliedAgeMs": 262.03970300010405
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.1,
+      "latencyMs": 247.6026449999772,
+      "n": 5,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.45,
+        "wait": 0.55
+      },
+      "appliedAgeMs": 248.11098699993454
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.01,
+      "latencyMs": 235.07485500001349,
+      "n": 6,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.51,
+        "wait": 0.49
+      },
+      "appliedAgeMs": 235.60842499998398
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.42,
+      "latencyMs": 255.69321800000034,
+      "n": 7,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving"
+      ],
+      "probabilities": {
+        "stop_moving": 0.27,
+        "move_forward": 0.17,
+        "strafe_left": 0.01,
+        "wait": 0.51,
+        "strafe_right": 0.02,
+        "move_backward": 0.02
+      },
+      "appliedAgeMs": 256.27994000003673
+    },
+    {
+      "applied": true,
+      "choice": "spell:8092:target",
+      "confidence": 0.31,
+      "latencyMs": 223.7638610000722,
+      "n": 8,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:8092:target",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "probabilities": {
+        "spell:17:self": 0.03,
+        "spell:585:target": 0.14,
+        "spell:591:target": 0.05,
+        "move_backward": 0.02,
+        "strafe_right": 0.01,
+        "strafe_left": 0,
+        "stop_moving": 0.06,
+        "spell:589:target": 0.07,
+        "wait": 0.11,
+        "spell:8092:target": 0.36,
+        "spell:594:target": 0.1,
+        "spell:1243:self": 0.02,
+        "move_forward": 0.03
+      },
+      "appliedAgeMs": 224.16972800018266
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.12,
+      "latencyMs": 259.2174759998452,
+      "n": 9,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.44,
+        "wait": 0.56
+      },
+      "appliedAgeMs": 259.58961799996905
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.06,
+      "latencyMs": 240.36808199994266,
+      "n": 10,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.53,
+        "cancel": 0.47
+      },
+      "appliedAgeMs": 240.92111899983138
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.13,
+      "latencyMs": 240.89640099997632,
+      "n": 11,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.57,
+        "cancel": 0.43
+      },
+      "appliedAgeMs": 241.3178969998844
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.11,
+      "latencyMs": 237.8032180001028,
+      "n": 12,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.55,
+        "cancel": 0.45
+      },
+      "appliedAgeMs": 238.30580900004134
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.16,
+      "latencyMs": 258.36660799989477,
+      "n": 13,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.42,
+        "wait": 0.58
+      },
+      "appliedAgeMs": 258.8711520000361
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.08,
+      "latencyMs": 274.22226599999703,
+      "n": 14,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.54,
+        "cancel": 0.46
+      },
+      "appliedAgeMs": 274.68864699988626
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.24,
+      "latencyMs": 238.16754300007597,
+      "n": 15,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "probabilities": {
+        "spell:585:target": 0.29,
+        "spell:17:self": 0.05,
+        "move_forward": 0.03,
+        "move_backward": 0.01,
+        "strafe_left": 0.01,
+        "strafe_right": 0.01,
+        "stop_moving": 0.05,
+        "spell:589:target": 0.16,
+        "wait": 0.11,
+        "spell:594:target": 0.09,
+        "spell:1243:self": 0.01,
+        "spell:591:target": 0.18
+      },
+      "appliedAgeMs": 238.6206189999357
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.37,
+      "latencyMs": 215.3198080000002,
+      "n": 16,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.69,
+        "cancel": 0.31
+      },
+      "appliedAgeMs": 215.67954499996267
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.18,
+      "latencyMs": 279.8756220000796,
+      "n": 17,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.59,
+        "cancel": 0.41
+      },
+      "appliedAgeMs": 280.52811999991536
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.17,
+      "latencyMs": 266.4000919999089,
+      "n": 18,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.42,
+        "wait": 0.58
+      },
+      "appliedAgeMs": 266.922069999855
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.08,
+      "latencyMs": 264.85313500021584,
+      "n": 19,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.46,
+        "cancel": 0.54
+      },
+      "appliedAgeMs": 265.4147079999093
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.43,
+      "latencyMs": 260.8750589999836,
+      "n": 20,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving"
+      ],
+      "probabilities": {
+        "stop_moving": 0.22,
+        "strafe_left": 0.01,
+        "move_forward": 0.2,
+        "wait": 0.52,
+        "strafe_right": 0.02,
+        "move_backward": 0.03
+      },
+      "appliedAgeMs": 261.4782320000231
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.36,
+      "latencyMs": 268.2393160001375,
+      "n": 21,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving"
+      ],
+      "probabilities": {
+        "strafe_left": 0.01,
+        "stop_moving": 0.24,
+        "move_forward": 0.23,
+        "strafe_right": 0.02,
+        "wait": 0.47000000000000003,
+        "move_backward": 0.03
+      },
+      "appliedAgeMs": 268.7815829999745
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.22,
+      "latencyMs": 270.1230469997972,
+      "n": 22,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:591:target",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:585:target",
+        "spell:589:target"
+      ],
+      "probabilities": {
+        "move_forward": 0.04,
+        "strafe_right": 0.01,
+        "stop_moving": 0.07,
+        "strafe_left": 0.01,
+        "wait": 0.12,
+        "spell:17:self": 0.04,
+        "spell:1243:self": 0.01,
+        "spell:591:target": 0.2,
+        "spell:589:target": 0.1,
+        "spell:585:target": 0.27999999999999997,
+        "spell:594:target": 0.11,
+        "move_backward": 0.01
+      },
+      "appliedAgeMs": 270.56645500008017
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.3,
+      "latencyMs": 254.68268099986017,
+      "n": 23,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.65,
+        "cancel": 0.35
+      },
+      "appliedAgeMs": 255.14940300001763
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.04,
+      "latencyMs": 257.98323899996467,
+      "n": 24,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.52,
+        "cancel": 0.48
+      },
+      "appliedAgeMs": 258.50270299986005
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.13,
+      "latencyMs": 289.9362399999518,
+      "n": 25,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.43,
+        "wait": 0.57
+      },
+      "appliedAgeMs": 290.4228000000585
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.13,
+      "latencyMs": 236.290279999841,
+      "n": 26,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.56,
+        "cancel": 0.44
+      },
+      "appliedAgeMs": 236.78278200002387
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.1,
+      "latencyMs": 251.84097600006498,
+      "n": 27,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.45,
+        "wait": 0.55
+      },
+      "appliedAgeMs": 252.37900600000285
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.13,
+      "latencyMs": 277.2773309999611,
+      "n": 28,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.56,
+        "cancel": 0.44
+      },
+      "appliedAgeMs": 277.82463799999095
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.02,
+      "latencyMs": 217.9231180001516,
+      "n": 29,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.49,
+        "cancel": 0.51
+      },
+      "appliedAgeMs": 218.4384129999671
+    },
+    {
+      "applied": true,
+      "choice": "attack",
+      "confidence": 0.71,
+      "latencyMs": 234.2545280000195,
+      "n": 30,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "attack"
+      ],
+      "probabilities": {
+        "move_backward": 0,
+        "spell:2053:self": 0,
+        "spell:594:target": 0.06,
+        "spell:139:self": 0,
+        "spell:585:target": 0.06,
+        "attack": 0.73,
+        "strafe_right": 0,
+        "spell:591:target": 0.04,
+        "move_forward": 0,
+        "spell:2050:self": 0,
+        "spell:2052:self": 0,
+        "stop_moving": 0.01,
+        "spell:589:target": 0.04,
+        "spell:17:self": 0.03,
+        "wait": 0.02,
+        "spell:1243:self": 0.01,
+        "strafe_left": 0
+      },
+      "appliedAgeMs": 234.7867050000932
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.22,
+      "latencyMs": 233.05158799979836,
+      "n": 31,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "wait": 0.26,
+        "spell:17:self": 0.06,
+        "spell:591:target": 0.1,
+        "spell:2052:self": 0.01,
+        "spell:594:target": 0.11,
+        "move_backward": 0.01,
+        "spell:1243:self": 0.01,
+        "spell:139:self": 0.01,
+        "spell:2053:self": 0.01,
+        "spell:589:target": 0.08,
+        "strafe_left": 0,
+        "spell:2050:self": 0.01,
+        "stop_moving": 0.03,
+        "move_forward": 0.02,
+        "stop_attack": 0.05,
+        "spell:585:target": 0.22,
+        "strafe_right": 0.01
+      },
+      "appliedAgeMs": 233.50141800008714
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.2,
+      "latencyMs": 251.03472299990244,
+      "n": 32,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "spell:1243:self": 0.02,
+        "wait": 0.2,
+        "spell:2052:self": 0.01,
+        "spell:589:target": 0.1,
+        "spell:139:self": 0.01,
+        "spell:585:target": 0.24,
+        "move_backward": 0.01,
+        "spell:17:self": 0.07,
+        "spell:594:target": 0.11,
+        "spell:2050:self": 0.01,
+        "strafe_right": 0.01,
+        "move_forward": 0.02,
+        "strafe_left": 0,
+        "stop_attack": 0.03,
+        "spell:591:target": 0.1,
+        "spell:2053:self": 0.01,
+        "stop_moving": 0.05
+      },
+      "appliedAgeMs": 251.48869100003503
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.27,
+      "latencyMs": 224.06184200011194,
+      "n": 33,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.36,
+        "wait": 0.64
+      },
+      "appliedAgeMs": 224.53561799996532
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.04,
+      "latencyMs": 273.39509800006635,
+      "n": 34,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.48,
+        "cancel": 0.52
+      },
+      "appliedAgeMs": 273.8838110000361
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.38,
+      "latencyMs": 305.16116799996234,
+      "n": 35,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "strafe_right": 0.02,
+        "wait": 0.47,
+        "move_forward": 0.05,
+        "strafe_left": 0.01,
+        "move_backward": 0.03,
+        "stop_moving": 0.13,
+        "stop_attack": 0.29
+      },
+      "appliedAgeMs": 305.7291939998977
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.36,
+      "latencyMs": 232.80508500011638,
+      "n": 36,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "move_forward": 0.06,
+        "wait": 0.46,
+        "stop_attack": 0.21,
+        "move_backward": 0.04,
+        "strafe_left": 0.01,
+        "strafe_right": 0.02,
+        "stop_moving": 0.2
+      },
+      "appliedAgeMs": 233.37403199984692
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.28,
+      "latencyMs": 252.66706200013869,
+      "n": 37,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "move_backward": 0.03,
+        "wait": 0.38,
+        "move_forward": 0.06,
+        "stop_moving": 0.19,
+        "strafe_right": 0.03,
+        "strafe_left": 0.01,
+        "stop_attack": 0.3
+      },
+      "appliedAgeMs": 253.15362300002016
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.26,
+      "latencyMs": 271.55678099999204,
+      "n": 38,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "stop_moving": 0.18,
+        "strafe_left": 0.01,
+        "move_forward": 0.08,
+        "wait": 0.38,
+        "stop_attack": 0.27,
+        "strafe_right": 0.03,
+        "move_backward": 0.05
+      },
+      "appliedAgeMs": 272.1170619998593
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.24,
+      "latencyMs": 233.75281400000677,
+      "n": 39,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "spell:2052:self": 0.010101010101010098,
+        "spell:2050:self": 0.010101010101010098,
+        "spell:589:target": 0.12121212121212119,
+        "spell:2053:self": 0.010101010101010098,
+        "wait": 0.17171717171717168,
+        "spell:585:target": 0.29292929292929293,
+        "spell:591:target": 0.0707070707070707,
+        "strafe_left": 0,
+        "stop_moving": 0.040404040404040394,
+        "strafe_right": 0.010101010101010098,
+        "spell:594:target": 0.101010101010101,
+        "move_forward": 0.010101010101010098,
+        "spell:17:self": 0.08080808080808079,
+        "move_backward": 0.010101010101010098,
+        "spell:139:self": 0.010101010101010098,
+        "stop_attack": 0.040404040404040394,
+        "spell:1243:self": 0.010101010101010098
+      },
+      "appliedAgeMs": 234.25456300005317
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.26,
+      "latencyMs": 249.81948700011708,
+      "n": 40,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.37,
+        "wait": 0.63
+      },
+      "appliedAgeMs": 250.19272100017406
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.01,
+      "latencyMs": 248.53222699998878,
+      "n": 41,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.49,
+        "cancel": 0.51
+      },
+      "appliedAgeMs": 249.07095699990168
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.31,
+      "latencyMs": 242.6730450000614,
+      "n": 42,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "wait": 0.41,
+        "move_backward": 0.03,
+        "stop_attack": 0.29,
+        "stop_moving": 0.15,
+        "move_forward": 0.09,
+        "strafe_left": 0.01,
+        "strafe_right": 0.02
+      },
+      "appliedAgeMs": 243.28147799987346
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.3,
+      "latencyMs": 298.6069269999862,
+      "n": 43,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "move_backward": 0.03,
+        "strafe_right": 0.03,
+        "move_forward": 0.11,
+        "stop_attack": 0.23,
+        "strafe_left": 0.01,
+        "stop_moving": 0.19,
+        "wait": 0.4
+      },
+      "appliedAgeMs": 299.13558800006285
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.3,
+      "latencyMs": 269.65425200015306,
+      "n": 44,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "stop_moving": 0.2,
+        "stop_attack": 0.26,
+        "move_backward": 0.03,
+        "wait": 0.4,
+        "strafe_left": 0.01,
+        "strafe_right": 0.02,
+        "move_forward": 0.08
+      },
+      "appliedAgeMs": 270.16332499985583
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.28,
+      "latencyMs": 243.1519889999181,
+      "n": 45,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "stop_attack": 0.31,
+        "stop_moving": 0.18,
+        "wait": 0.38,
+        "strafe_right": 0.03,
+        "strafe_left": 0.01,
+        "move_backward": 0.03,
+        "move_forward": 0.06
+      },
+      "appliedAgeMs": 243.6785160000436
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.29,
+      "latencyMs": 240.97432699985802,
+      "n": 46,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:8092:target",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "stop_moving": 0.04,
+        "spell:2050:self": 0,
+        "spell:589:target": 0.1,
+        "move_backward": 0.01,
+        "strafe_left": 0,
+        "spell:1243:self": 0.01,
+        "spell:8092:target": 0.09,
+        "spell:594:target": 0.11,
+        "spell:17:self": 0.03,
+        "move_forward": 0.01,
+        "wait": 0.08,
+        "spell:2052:self": 0,
+        "spell:2053:self": 0,
+        "spell:139:self": 0.02,
+        "stop_attack": 0.07,
+        "spell:585:target": 0.33,
+        "spell:591:target": 0.09,
+        "strafe_right": 0.01
+      },
+      "appliedAgeMs": 245.89591399999335
+    },
+    {
+      "applied": false,
+      "choice": "wait",
+      "confidence": 0.2,
+      "latencyMs": 245.532229000004,
+      "n": 47,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.6,
+        "cancel": 0.4
+      }
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.06,
+      "latencyMs": 261.8932550000027,
+      "n": 48,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.53,
+        "cancel": 0.47
+      },
+      "appliedAgeMs": 262.4083189999219
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.07,
+      "latencyMs": 264.1962460000068,
+      "n": 49,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.46,
+        "wait": 0.54
+      },
+      "appliedAgeMs": 264.6779169999063
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.03,
+      "latencyMs": 234.0357920001261,
+      "n": 50,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.48,
+        "wait": 0.52
+      },
+      "appliedAgeMs": 234.51987700001337
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.03,
+      "latencyMs": 241.9546880000271,
+      "n": 51,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.48,
+        "cancel": 0.52
+      },
+      "appliedAgeMs": 242.46112699992955
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.3,
+      "latencyMs": 272.20804900000803,
+      "n": 52,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "move_forward": 0.06,
+        "stop_attack": 0.29,
+        "strafe_left": 0.01,
+        "move_backward": 0.03,
+        "stop_moving": 0.19,
+        "strafe_right": 0.02,
+        "wait": 0.4
+      },
+      "appliedAgeMs": 272.79623400000855
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.27,
+      "latencyMs": 247.15801400016062,
+      "n": 53,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:8092:target",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "spell:8092:target": 0.1,
+        "spell:17:self": 0.04,
+        "strafe_right": 0.01,
+        "move_backward": 0.01,
+        "spell:591:target": 0.09,
+        "wait": 0.07,
+        "spell:139:self": 0.02,
+        "spell:589:target": 0.11,
+        "strafe_left": 0,
+        "spell:594:target": 0.14,
+        "spell:2052:self": 0,
+        "stop_moving": 0.02,
+        "stop_attack": 0.05,
+        "spell:585:target": 0.32,
+        "spell:2053:self": 0,
+        "spell:1243:self": 0.01,
+        "spell:2050:self": 0,
+        "move_forward": 0.01
+      },
+      "appliedAgeMs": 247.6389429999981
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.19,
+      "latencyMs": 217.11696900008246,
+      "n": 54,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.59,
+        "cancel": 0.41
+      },
+      "appliedAgeMs": 217.4393249999266
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.16,
+      "latencyMs": 261.7231360001024,
+      "n": 55,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.58,
+        "cancel": 0.42
+      },
+      "appliedAgeMs": 262.18975799996406
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.07,
+      "latencyMs": 262.02156599983573,
+      "n": 56,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.53,
+        "cancel": 0.47
+      },
+      "appliedAgeMs": 262.5074050000403
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.09,
+      "latencyMs": 265.94620699994266,
+      "n": 57,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "cancel": 0.54,
+        "wait": 0.46
+      },
+      "appliedAgeMs": 266.46988800005056
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.32,
+      "latencyMs": 273.6763839998748,
+      "n": 58,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "wait": 0.42,
+        "stop_attack": 0.26,
+        "move_forward": 0.08,
+        "stop_moving": 0.18,
+        "move_backward": 0.03,
+        "strafe_left": 0.01,
+        "strafe_right": 0.02
+      },
+      "appliedAgeMs": 274.3041039998643
+    },
+    {
+      "applied": true,
+      "choice": "wait",
+      "confidence": 0.3,
+      "latencyMs": 269.72991899983026,
+      "n": 59,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "stop_moving": 0.1616161616161616,
+        "move_forward": 0.0909090909090909,
+        "wait": 0.40404040404040403,
+        "strafe_right": 0.0202020202020202,
+        "stop_attack": 0.2828282828282828,
+        "strafe_left": 0.0101010101010101,
+        "move_backward": 0.0303030303030303
+      },
+      "appliedAgeMs": 270.23188899992965
+    },
+    {
+      "applied": true,
+      "choice": "spell:585:target",
+      "confidence": 0.24,
+      "latencyMs": 276.16030999994837,
+      "n": 60,
+      "offered": [
+        "wait",
+        "move_forward",
+        "move_backward",
+        "strafe_left",
+        "strafe_right",
+        "stop_moving",
+        "spell:8092:target",
+        "spell:2053:self",
+        "spell:2052:self",
+        "spell:591:target",
+        "spell:139:self",
+        "spell:594:target",
+        "spell:1243:self",
+        "spell:17:self",
+        "spell:2050:self",
+        "spell:585:target",
+        "spell:589:target",
+        "stop_attack"
+      ],
+      "probabilities": {
+        "strafe_left": 0,
+        "spell:589:target": 0.11,
+        "spell:591:target": 0.09,
+        "spell:139:self": 0.02,
+        "strafe_right": 0.01,
+        "stop_attack": 0.06,
+        "spell:585:target": 0.27999999999999997,
+        "spell:2053:self": 0,
+        "wait": 0.06,
+        "stop_moving": 0.04,
+        "spell:8092:target": 0.12,
+        "spell:2050:self": 0.01,
+        "spell:594:target": 0.12,
+        "move_forward": 0.02,
+        "spell:1243:self": 0.01,
+        "move_backward": 0.01,
+        "spell:2052:self": 0,
+        "spell:17:self": 0.04
+      },
+      "appliedAgeMs": 276.71120199980214
+    },
+    {
+      "applied": true,
+      "choice": "cancel",
+      "confidence": 0.07,
+      "latencyMs": 256.7585620000027,
+      "n": 61,
+      "offered": [
+        "wait",
+        "cancel"
+      ],
+      "probabilities": {
+        "wait": 0.46,
+        "cancel": 0.54
+      },
+      "appliedAgeMs": 257.0838639999274
+    }
+  ],
+  "discarded": [],
+  "instruction": "Conserve mana for several encounters. Favor efficient damage and use weapon attacks when useful. Keep enough health to survive safely.",
+  "model": "jev-1.13.0",
+  "outcome": {
+    "reason": "server_kill_credit",
+    "status": "completed"
+  },
+  "promptVariant": "none",
+  "recordedAt": "2026-09-26T02:19:23.674Z",
+  "runId": "056114e3-1f41-4ec8-9bac-76061029bab6",
+  "target": {
+    "guid": "0xf130003d23055450",
+    "level": 7,
+    "maxHealth": 137,
+    "name": "Springpaw Stalker"
+  },
+  "transportErrors": [],
+  "rawLines": 187
+}
