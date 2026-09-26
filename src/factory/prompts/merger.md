@@ -67,9 +67,20 @@ problem on the issue, add `needs:pm`, and skip it.
 For each candidate in order, until the list is empty or you are close to
 the one-hour cap:
 
-1. Claim: `gh issue edit N -R tvararu/tuicraft --add-label agent:landing`.
-   Re-read `gh issue list --label agent:landing`. If another issue has it
-   too, remove yours and stop.
+1. Claim: `gh issue edit N -R tvararu/tuicraft --add-label agent:landing`,
+   then post a claim marker:
+   `gh issue comment N -R tvararu/tuicraft --body "<!-- factory:landing $run -->"`.
+   Race check: `sleep 15`, then re-read
+   `gh issue list -R tvararu/tuicraft --label agent:landing --json number`.
+   If another issue has it too, remove yours, delete your marker
+   (`gh api -X DELETE repos/tvararu/tuicraft/issues/comments/<id>`), and
+   stop. Two runs can also claim the same issue, so find when
+   `agent:landing` was last removed from N:
+   `gh api --paginate repos/tvararu/tuicraft/issues/N/events --jq '.[] | select(.event == "unlabeled" and .label.name == "agent:landing") | .created_at' | tail -1`.
+   Among the `<!-- factory:landing … -->` comments on N created after that
+   time (all of them if it was never removed), the oldest wins. If it is not
+   yours, delete your marker and stop without any other change: the other
+   run owns the landing.
 2. `orca-ide worktree set --worktree active --issue N --workspace-status in-review --comment "landing PR #M"`
 3. Rebase:
    ```sh
