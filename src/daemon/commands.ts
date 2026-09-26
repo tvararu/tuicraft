@@ -28,6 +28,7 @@ import {
 } from "ui/format-gameplay";
 import { formatPartyState } from "ui/format-party";
 import { formatQuestState } from "ui/format-quests";
+import { formatTrainerState } from "ui/format-trainer";
 import type { ChatMode, ControlState, WorldHandle } from "wow";
 
 export type EventEntry = { text: string | undefined; json: string };
@@ -378,6 +379,8 @@ const HANDLERS: Handlers = {
     ),
   open_loot: (cmd, { handle, socket }) =>
     reply(socket, () => handle.openLoot(cmd.guid), ok),
+  open_trainer: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.openTrainer(cmd.guid), ok),
   party: (cmd, { handle, socket }) => {
     handle.sendParty(cmd.message);
     return acknowledge(socket);
@@ -448,6 +451,12 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.talk(cmd.guid), ok),
   target: (cmd, { handle, socket }) =>
     reply(socket, () => handle.selectTarget(cmd.guid), ok),
+  train: (cmd, { handle, socket }) =>
+    reply(socket, () => handle.trainSpell(cmd.spellId), ok),
+  trainer: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getTrainerState(), formatTrainerState),
+  trainer_json: (_cmd, { handle, socket }) =>
+    reply(socket, () => handle.getTrainerState(), json),
   unimplemented: (cmd, { socket }) =>
     send(socket, [`UNIMPLEMENTED ${cmd.feature}`]),
   use: (cmd, { handle, socket }) =>

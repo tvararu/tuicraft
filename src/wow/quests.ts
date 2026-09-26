@@ -401,6 +401,10 @@ export class QuestRuntime {
     if (answered) this.pending = undefined;
     this.dialog = undefined;
     this.giver = undefined;
+    if (window === "trainer") {
+      this.emit("window", "packet", undefined, window);
+      return;
+    }
     this.lastError = {
       kind: "unsupported_window",
       at: this.deps.now(),

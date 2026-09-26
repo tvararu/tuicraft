@@ -110,6 +110,10 @@ export type IpcCommand =
   | { type: "take_money" }
   | { type: "release_loot" }
   | { type: "use"; bag: number; slot: number }
+  | { type: "trainer" }
+  | { type: "trainer_json" }
+  | { type: "open_trainer"; guid: bigint }
+  | { type: "train"; spellId: number }
   | { type: "invalid"; reason: string }
   | { type: "friends" }
   | { type: "friends_json" }

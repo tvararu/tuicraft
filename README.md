@@ -175,6 +175,9 @@ tuicraft take-loot 0 [--json] # request a slot actually present in that offer
 tuicraft take-money        # request offered money
 tuicraft release-loot      # request closure of a window you leave partly looted
 tuicraft use 255 29 [--json] # eat, drink or drink a potion from an inventory bag/slot
+tuicraft open-trainer 0xabc # list a class trainer's spells
+tuicraft trainer [--json]  # offered spells with rank, cost, level and state
+tuicraft train 1243        # learn an available spell
 tuicraft halt              # stop motion, cast, attack, tactics, navigation, cycle
 tuicraft start [--json]    # start background daemon and connect
 tuicraft status [--json]   # daemon socket status, not world-session health
@@ -258,8 +261,8 @@ Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 
 Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `quests`,
-`inventory`, `experience`, and `loot` print readable summaries; QUEST lines in
-`read` name the quest, counts, reward and error reason. Control actions report
+`inventory`, `experience`, `loot`, and `trainer` print readable summaries; QUEST
+lines in `read` name the quest, counts, reward and error reason. Control actions report
 daemon request acceptance, not server success; `fight` replies when the run ends
 with its outcome (`completed: server_kill_credit, XP 60`), and `cycle` says it ended.
 Use `--json` for the full observed state and for scripts.
@@ -364,8 +367,9 @@ another mutation. The cancelled request stays reported as `unresolved` until an
 authoritative outcome. Do not retry before an observed close or authoritative outcome.
 A request the server never answers (for example a `talk` out of range) expires
 after 5 s as `no_reply` and stays in `unresolved`; the next giver then works
-without `cancel-interaction`. A trainer, vendor, bank or flight-master window
-answers the request at once as `unsupported_window`.
+without `cancel-interaction`. A trainer list answers the request at once and
+opens the offer in `trainer`; a vendor, bank or flight-master window answers it
+as `unsupported_window`.
 
 `experience` reads the observed level, XP and next-level XP fields beside the
 last XP-gain and level-up notices. A notice is not an XP change; compare the
