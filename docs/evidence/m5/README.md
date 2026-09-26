@@ -1,4 +1,4 @@
-# M5 evidence: first quest end to end
+# M5 evidence: the selected questing loop
 
 Live record against the real server via `./dist/tuicraft` built at
 `85b38f9`, character Fgklhapghbp (0xa04, `fresh` preset, level 1 blood elf
@@ -64,3 +64,32 @@ tuicraft CLI verbs; no GM commands, no scripts. Operator journal:
 - `talk` uses CMSG_GOSSIP_HELLO. AzerothCore answers it for questgiver-only
   NPCs too: Marsilla Dawnstar (npcflag 2) returned an empty gossip in the
   probe run, so CMSG_QUESTGIVER_HELLO was not needed.
+
+## Cancel with an unresolved request
+
+Record: [cancel-barrier-2026-09-26.json](cancel-barrier-2026-09-26.json),
+outcome `positive`. Character Fgklhbgejpp (0xa12, `fresh` preset), CLI
+verbs only, no GM. The binary was built from the branch's runtime source
+(pre-squash commit `4b5a9b3`; only help text differs) plus an uncommitted
+`TUICRAFT_PACKET_DUMP` patch used solely to capture raw packets.
+
+1. **Unanswered request.** At the waypoint `10382 -6379.56 37.69`, 36.02
+   yd from Erona (still listed by `nearby`), `talk 0xf130003bae004980`
+   sent CMSG_GOSSIP_HELLO. AzerothCore's `GetNPCIfCanInteractWith` refuses
+   at that range and answers nothing. Three seconds later `quests --json`
+   showed `pending` talk `unanswered`, no dialog, `unresolved` empty.
+2. **Cancel.** `cancel-interaction` sent CMSG_QUESTGIVER_CANCEL; the
+   server answered SMSG_GOSSIP_COMPLETE 16 ms later. Events: QUEST
+   `intent` (cancel, with the talk moved into `unresolved`), then `closed`
+   (packet). `quests --json`: `pending` null, `unresolved` holds the talk
+   (`guid` Erona, `at` 1790384152026).
+3. **Second cancel.** Another `cancel-interaction` with nothing pending
+   drew another SMSG_GOSSIP_COMPLETE; `unresolved` still held the talk.
+   Before this change, that cancel overwrote the single `uncertain` field
+   with nothing.
+4. **Later.** The talk was still `unresolved` after two answered talks
+   and after quest 8326 was rewarded; nothing but an authoritative
+   outcome may settle it, and a gossip hello has none.
+
+`src/wow/quest-cancel.test.ts` replays the captured packets, and
+`src/test/live-quest.ts` repeats the scenario under `mise test:live`.
