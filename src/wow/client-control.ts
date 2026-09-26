@@ -158,5 +158,11 @@ export function controlMethods(conn: WorldConn, rt: Runtimes) {
     onControlEvent(cb) {
       return conn.events.control.subscribe(cb);
     },
+    getRemotePoses() {
+      return conn.remoteMotion.all();
+    },
+    onRemoteMotionEvent(cb) {
+      return conn.events.remoteMotion.subscribe(cb);
+    },
   } satisfies Partial<WorldHandle>;
 }

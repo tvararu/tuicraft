@@ -47,6 +47,9 @@ function applyEntry(conn: WorldConn, entry: UpdateEntry): void {
       return;
     case "nearObjects":
       return;
+    case "malformed":
+      conn.remoteMotion.invalidate(entry.guid, "malformed");
+      return;
     default: {
       const unhandled: never = entry;
       throw new Error("unhandled update entry type", { cause: unhandled });
@@ -83,11 +86,16 @@ function applyCreate(conn: WorldConn, entry: Entry<"create">): void {
   const created = guid === self ? conn.entityStore.get(self) : undefined;
   if (created) conn.quests?.observeSelfCreate(created);
   if (position) conn.combat?.observePosition(guid, position, entry.spline);
+  conn.remoteMotion.observe(guid, {
+    position,
+    source: "create",
+    info: entry.movementInfo,
+  });
   if (!name) queryEntityName(conn, guid, objectType, object.entry);
   if (guid !== self && (entry.updateFlags & UpdateFlag.SELF) === 0) return;
   conn.control?.observeSelf({
     position,
-    movementFlags: entry.movementFlags,
+    movementFlags: entry.movementInfo?.flags,
     runSpeed: entry.runSpeed,
     runBackSpeed: entry.runBackSpeed,
     target: extra.target,
@@ -109,6 +117,7 @@ function applyValues(conn: WorldConn, entry: Entry<"values">): void {
     ...merged,
     rawFields: entity.rawFields,
   });
+  if (changed.has("health")) conn.remoteMotion.observeVitals(entry.guid);
   if (entry.guid === selfGuid(conn))
     conn.control?.observeSelf({
       target: extra.target,
@@ -117,12 +126,17 @@ function applyValues(conn: WorldConn, entry: Entry<"values">): void {
 }
 
 function applyMovement(conn: WorldConn, entry: Entry<"movement">): void {
+  conn.remoteMotion.observe(entry.guid, {
+    position: entry.position,
+    source: "update",
+    info: entry.movementInfo,
+  });
   conn.entityStore.setPosition(entry.guid, entry.position);
   conn.combat?.observePosition(entry.guid, entry.position, entry.spline);
   if (entry.guid !== selfGuid(conn)) return;
   conn.control?.observeSelf({
     position: entry.position,
-    movementFlags: entry.movementFlags,
+    movementFlags: entry.movementInfo?.flags,
     runSpeed: entry.runSpeed,
     runBackSpeed: entry.runBackSpeed,
   });

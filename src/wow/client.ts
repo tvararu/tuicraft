@@ -59,6 +59,11 @@ import type {
   RecoveryRuntime,
   RecoveryState,
 } from "wow/recovery";
+import type {
+  RemoteMotion,
+  RemoteMotionEvent,
+  RemotePose,
+} from "wow/remote-motion";
 import type { RewardsEvent, RewardsRuntime, RewardsState } from "wow/rewards";
 import { createRuntimes, type Runtimes } from "wow/runtime";
 import type { SpellDefinition } from "wow/spell-catalog";
@@ -225,6 +230,8 @@ export type WorldHandle = {
   selectTarget: (guid: bigint) => void;
   halt: () => void;
   onControlEvent: (cb: (event: ControlEvent) => void) => Unsubscribe;
+  getRemotePoses: () => RemotePose[];
+  onRemoteMotionEvent: (cb: (event: RemoteMotionEvent) => void) => Unsubscribe;
   getCombatState: () => CombatState;
   getSpellbook: () => Promise<SpellDefinition[]>;
   cast: (spellId: number, targetGuid: bigint) => void;
@@ -301,6 +308,7 @@ export type WorldConn = {
   selfGuidHigh: number;
   partyMembers: Map<string, { guidLow: number; guidHigh: number }>;
   entityStore: EntityStore;
+  remoteMotion: RemoteMotion;
   creatureNameCache: Map<number, string>;
   gameObjectNameCache: Map<number, string>;
   pendingNameQueries: Set<string>;

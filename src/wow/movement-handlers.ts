@@ -12,24 +12,19 @@ import {
 } from "wow/protocol/movement";
 import { GameOpcode } from "wow/protocol/opcodes";
 import type { PacketReader } from "wow/protocol/packet";
+import {
+  observeRemoteMovement,
+  registerRemoteMotionHandlers,
+} from "wow/remote-motion-handlers";
 import { selfGuid } from "wow/world-handlers";
 
 function handleNearTeleport(conn: WorldConn, r: PacketReader): void {
   const guid = r.packedGuidBig();
-  const info = parseMovementInfo(r);
-  if (guid === selfGuid(conn)) {
-    conn.control?.nearTeleport(info);
+  if (guid !== selfGuid(conn)) {
+    observeRemoteMovement(conn, GameOpcode.MSG_MOVE_TELEPORT, guid, r);
     return;
   }
-  const position = {
-    mapId: conn.control?.currentMapId() ?? 0,
-    x: info.x,
-    y: info.y,
-    z: info.z,
-    orientation: info.orientation,
-  };
-  conn.entityStore.setPosition(guid, position);
-  conn.combat?.observePosition(guid, position);
+  conn.control?.nearTeleport(parseMovementInfo(r));
 }
 
 function handleTeleportAckRequest(conn: WorldConn, r: PacketReader): void {
@@ -38,12 +33,14 @@ function handleTeleportAckRequest(conn: WorldConn, r: PacketReader): void {
 
 function handleTransferPending(conn: WorldConn): void {
   conn.control?.handleTransferPending();
+  conn.remoteMotion.beginTransfer();
 }
 
 function handleNewWorld(conn: WorldConn, r: PacketReader): void {
   conn.control?.newWorld(parseWorldPosition(r));
   conn.quests?.resetInteraction();
   conn.entityStore.clear();
+  conn.remoteMotion.endTransfer();
   conn.quests?.observeQuestLog();
 }
 
@@ -77,7 +74,9 @@ function handleCanFly(conn: WorldConn, r: PacketReader, enable: boolean): void {
 
 export function registerMovementHandlers(conn: WorldConn): void {
   conn.dispatch.on(GameOpcode.SMSG_LOGIN_VERIFY_WORLD, (r) => {
-    conn.control?.loginVerified(parseWorldPosition(r));
+    const position = parseWorldPosition(r);
+    conn.control?.loginVerified(position);
+    conn.remoteMotion.mapChanged(position.mapId);
   });
   conn.dispatch.on(GameOpcode.MSG_MOVE_TELEPORT, (r) =>
     handleNearTeleport(conn, r),
@@ -109,4 +108,5 @@ export function registerMovementHandlers(conn: WorldConn): void {
   );
   for (const spec of SPEED_ACKS)
     conn.dispatch.on(spec.smsg, (r) => handleForceSpeedChange(conn, r, spec));
+  registerRemoteMotionHandlers(conn);
 }

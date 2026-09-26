@@ -61,7 +61,7 @@ describe("parseMovementBlock", () => {
     expect(m.orientation).toBeCloseTo(0.5);
     expect(m.runSpeed).toBeCloseTo(7.0);
     expect(m.runBackSpeed).toBeCloseTo(0);
-    expect(m.movementFlags).toBe(0);
+    expect(m.movementInfo?.flags).toBe(0);
     expect(r.remaining).toBe(0);
   });
 

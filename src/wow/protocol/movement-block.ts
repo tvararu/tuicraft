@@ -3,7 +3,7 @@ import {
   type CreateSpline,
   parseCreateSpline,
 } from "wow/protocol/monster-move";
-import { parseMovementInfo } from "wow/protocol/movement";
+import { type MovementInfo, parseMovementInfo } from "wow/protocol/movement";
 import type { PacketReader } from "wow/protocol/packet";
 
 export type MovementData = {
@@ -14,7 +14,7 @@ export type MovementData = {
   orientation: number;
   runSpeed?: number;
   runBackSpeed?: number;
-  movementFlags?: number;
+  movementInfo?: MovementInfo;
   spline?: CreateSpline;
 };
 
@@ -23,7 +23,8 @@ type Placement = Omit<MovementData, "updateFlags">;
 const ORIGIN: Placement = { x: 0, y: 0, z: 0, orientation: 0 };
 
 function readLiving(r: PacketReader): Placement {
-  const { flags, x, y, z, orientation } = parseMovementInfo(r);
+  const movementInfo = parseMovementInfo(r);
+  const { flags, x, y, z, orientation } = movementInfo;
   r.skip(4);
   const runSpeed = r.floatLE();
   const runBackSpeed = r.floatLE();
@@ -37,7 +38,7 @@ function readLiving(r: PacketReader): Placement {
     orientation,
     runSpeed,
     runBackSpeed,
-    movementFlags: flags,
+    movementInfo,
     spline,
   };
 }

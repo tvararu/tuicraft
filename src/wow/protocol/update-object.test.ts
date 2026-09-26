@@ -278,7 +278,7 @@ describe("parseUpdateObject", () => {
     expect(entries).toHaveLength(0);
   });
 
-  test("malformed entry returns partial results", () => {
+  test("malformed movement entry ends parsing and names its guid", () => {
     const w = new PacketWriter();
     w.uint32LE(3);
 
@@ -297,8 +297,9 @@ describe("parseUpdateObject", () => {
 
     const r = new PacketReader(w.finish());
     const entries = parseUpdateObject(r);
-    expect(entries).toHaveLength(2);
+    expect(entries).toHaveLength(3);
     expect(must(entries[0]).type).toBe("values");
     expect(must(entries[1]).type).toBe("values");
+    expect(entries[2]).toEqual({ type: "malformed", guid: 3n });
   });
 });

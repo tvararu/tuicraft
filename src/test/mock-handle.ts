@@ -15,6 +15,7 @@ import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
+import type { RemotePose } from "wow/remote-motion";
 import { type RewardsEvent, RewardsRuntime } from "wow/rewards";
 import type { TacticsEvent, TacticsState } from "wow/tactics";
 import { createWorldEvents } from "wow/world-events";
@@ -144,6 +145,7 @@ export function createMockHandle(): WorldHandle & {
     getNearbyEntities: jest.fn((): Entity[] => []),
     getQuestState: jest.fn(() => quests.snapshot()),
     getRecoveryState: jest.fn(() => recovery.snapshot()),
+    getRemotePoses: jest.fn((): RemotePose[] => []),
     getRewardsState: jest.fn(() => rewards.snapshot()),
     getSpellbook: jest.fn(async () => []),
     getTacticsState: jest.fn(() => tacticsState),
@@ -201,6 +203,9 @@ export function createMockHandle(): WorldHandle & {
     },
     onRecoveryEvent(cb) {
       return events.recovery.subscribe(cb);
+    },
+    onRemoteMotionEvent(cb) {
+      return events.remoteMotion.subscribe(cb);
     },
     onRewardsEvent(cb) {
       return events.rewards.subscribe(cb);

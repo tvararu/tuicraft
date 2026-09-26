@@ -8,6 +8,7 @@ import { writeMovementInfo } from "wow/protocol/movement";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
 import { OpcodeDispatch } from "wow/protocol/world";
+import { RemoteMotion } from "wow/remote-motion";
 
 describe("handleNearTeleport", () => {
   function nearTeleportBody(guidLow: number): Uint8Array {
@@ -33,6 +34,12 @@ describe("handleNearTeleport", () => {
       selfGuidHigh: 0,
       control,
       entityStore: store,
+      remoteMotion: new RemoteMotion({
+        now: () => 0,
+        eligible: () => false,
+        dead: () => false,
+        emit: () => {},
+      }),
     } as unknown as WorldConn;
   }
 
