@@ -51,10 +51,18 @@ const UNREACHABLE = [
 
 export function classifyNavigationRefusal(reason: string): NavigationRefusal {
   if (reason.includes("position disagrees with ground height")) return "wait";
-  if (reason.includes("ambiguous ground column at destination"))
+  if (
+    reason.includes("ambiguous ground column at destination") ||
+    reason.includes("destination is not on a ground floor")
+  )
     return "pick_destination";
   if (UNREACHABLE.some((cause) => reason.includes(cause))) return "unreachable";
   return "stop";
+}
+
+export function refusalFloors(error: unknown): number[] | undefined {
+  if (!(error instanceof Error && "floors" in error)) return undefined;
+  return Array.isArray(error.floors) ? [...error.floors] : undefined;
 }
 
 export function collisionFree(
@@ -158,9 +166,9 @@ export function createNavigation(
       validateNativeXY(to.x, to.y);
       const map = open(mapId, from);
       map.loadAdtAt(from.x, from.y);
-      checkGround(map, from, "start");
+      checkStart(map, from);
       map.loadAdtAt(to.x, to.y);
-      const z = uniqueHeight(map, to.x, to.y, "destination");
+      const z = destinationFloor(map, to.x, to.y);
       return planRoute(map, from, { x: to.x, y: to.y, z });
     },
     height(mapId, x, y, from) {
@@ -192,8 +200,8 @@ export function createNavigation(
 
 function planRoute(map: NativeMap, from: NavPoint, to: NavPoint): GroundRoute {
   loadCorridor(map, from, to);
-  checkGround(map, from, "start");
-  checkGround(map, to, "destination");
+  checkStart(map, from);
+  checkDestination(map, to);
   const points = map.findPath(from, to);
   if (points.length === 0) throw new Error("native path is empty");
   for (const point of points) validateNativePoint(point);
@@ -221,7 +229,7 @@ function groundPath(map: NativeMap, corners: readonly NavPoint[]): NavPoint[] {
   if (first === undefined) throw new Error("ground route has no points");
   validateNativePoint(first);
   map.loadAdtAt(first.x, first.y);
-  checkGround(map, first, "start");
+  checkStart(map, first);
   const initial = groundPoint(map, first, first.x, first.y);
   if (Math.abs(initial.z - first.z) > GROUND_ERROR)
     throw groundError("start is not on connected ground");
@@ -309,29 +317,79 @@ function checkRouteGround(
   from: NavPoint,
 ): void {
   validateNativePoint(point);
-  const heights = map.findHeights(point.x, point.y);
-  if (heights.length === 0 || !heights.every(Number.isFinite))
-    throw groundError("ground height unavailable");
+  const heights = columnHeights(map, point.x, point.y);
   const others = heights.filter(
     (height) => Math.abs(height - point.z) > GROUND_ERROR,
   );
   if (others.length === heights.length)
     throw groundError("position disagrees with ground height");
   if (others.length === 0) return;
-  const headroom = others.every(
-    (height) => height < point.z || height > point.z + MESH_HEIGHT,
-  );
-  if (!headroom || Math.abs(point.z - from.z) > WALKABLE_CLIMB)
+  if (
+    !clearAbove(heights, point.z) ||
+    Math.abs(point.z - from.z) > WALKABLE_CLIMB
+  )
     throw groundError("ambiguous ground column at route");
 }
 
-type GroundSite = "start" | "destination";
-
-function checkGround(map: NativeMap, point: NavPoint, site: GroundSite): void {
+function checkStart(map: NativeMap, point: NavPoint): void {
   validateNativePoint(point);
-  const heights = groundHeights(map, point.x, point.y, site);
-  if (heights.some((height) => Math.abs(height - point.z) > GROUND_ERROR))
+  const heights = columnHeights(map, point.x, point.y);
+  if (heights.every((height) => Math.abs(height - point.z) > GROUND_ERROR))
     throw groundError("position disagrees with ground height");
+  if (!clearAbove(heights, point.z))
+    throw groundError("ambiguous ground column at start");
+}
+
+function checkDestination(map: NativeMap, point: NavPoint): void {
+  validateNativePoint(point);
+  const heights = columnHeights(map, point.x, point.y);
+  const onSurface = heights.some(
+    (height) => Math.abs(height - point.z) <= GROUND_ERROR,
+  );
+  if (onSurface && clearAbove(heights, point.z)) return;
+  throw floorError("destination is not on a ground floor", heights);
+}
+
+function destinationFloor(map: NativeMap, x: number, y: number): number {
+  const heights = columnHeights(map, x, y);
+  const floors = groundFloors(heights);
+  const floor = floors[0];
+  if (floor === undefined) throw groundError("ground height unavailable");
+  if (floors.length > 1)
+    throw floorError("ambiguous ground column at destination", heights);
+  return floor;
+}
+
+function groundFloors(heights: readonly number[]): number[] {
+  const floors: number[] = [];
+  for (const height of heights)
+    if (
+      clearAbove(heights, height) &&
+      !floors.some((floor) => Math.abs(floor - height) <= FLOOR_MERGE)
+    )
+      floors.push(height);
+  return floors.sort((a, b) => b - a);
+}
+
+function clearAbove(heights: readonly number[], z: number): boolean {
+  return !heights.some(
+    (height) => height - z > GROUND_ERROR && height - z <= MESH_HEIGHT,
+  );
+}
+
+function floorError(message: string, heights: readonly number[]): Error {
+  const floors = groundFloors(heights);
+  const listed = floors.map((floor) => floor.toFixed(2)).join(", ");
+  return Object.assign(groundError(`${message} (floors ${listed})`), {
+    floors,
+  });
+}
+
+function columnHeights(map: NativeMap, x: number, y: number): number[] {
+  const heights = map.findHeights(x, y);
+  if (heights.length === 0 || !heights.every(Number.isFinite))
+    throw groundError("ground height unavailable");
+  return heights;
 }
 
 function connectedHeight(
@@ -371,13 +429,8 @@ function probeHeight(
   }
 }
 
-function uniqueHeight(
-  map: NativeMap,
-  x: number,
-  y: number,
-  site?: GroundSite,
-): number {
-  const first = groundHeights(map, x, y, site)[0];
+function uniqueHeight(map: NativeMap, x: number, y: number): number {
+  const first = groundHeights(map, x, y)[0];
   if (first === undefined) throw groundError("ground height unavailable");
   return first;
 }
@@ -418,20 +471,12 @@ function reachableHeight(
   return best;
 }
 
-function groundHeights(
-  map: NativeMap,
-  x: number,
-  y: number,
-  site?: GroundSite,
-): number[] {
-  const heights = map.findHeights(x, y);
+function groundHeights(map: NativeMap, x: number, y: number): number[] {
+  const heights = columnHeights(map, x, y);
   const first = heights[0];
-  if (first === undefined || !heights.every(Number.isFinite))
-    throw groundError("ground height unavailable");
+  if (first === undefined) throw groundError("ground height unavailable");
   if (heights.some((height) => Math.abs(height - first) > FLOOR_MERGE))
-    throw groundError(
-      site ? `ambiguous ground column at ${site}` : "ambiguous ground column",
-    );
+    throw groundError("ambiguous ground column");
   return heights;
 }
 

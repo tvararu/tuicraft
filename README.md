@@ -143,7 +143,7 @@ tuicraft cycle --quest 8325    # pick quest targets itself until the log slot co
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
 tuicraft defend on             # opt-in: fight back when attacked while idle; halt disarms
 tuicraft defense --json        # self-defence state
-tuicraft goto 1 2 [3]      # ground route; Z from the unique ground column when omitted; redirects an active route; bounded replan after a mid-walk refusal
+tuicraft goto 1 2 [3]      # ground route; Z from the one ground floor when omitted, else pick one of the refusal's floors; redirects an active route; bounded replan after a mid-walk refusal
 tuicraft goto 0xabc        # once to an observed creature; target_lost if it disappears, unreachable is never retried
 tuicraft navigation --json # route state, refusal and conservative next step
 tuicraft recovery        # observed life and corpse-reclaim conditions

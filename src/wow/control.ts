@@ -58,6 +58,7 @@ export type NavigationState = {
   refusal: NavigationRefusal | undefined;
   target?: bigint;
   replan?: ReplanState;
+  floors?: number[];
 };
 
 export type ControlEventType =
@@ -96,20 +97,24 @@ export class ControlRuntime extends ControlSync {
   }
 
   navigationState(): NavigationState {
+    const { destination, floors } = this.navigation;
     return {
       ...this.navigation,
-      destination: this.navigation.destination
-        ? { ...this.navigation.destination }
-        : undefined,
+      destination: destination ? { ...destination } : undefined,
+      ...(floors ? { floors: [...floors] } : {}),
     };
   }
 
   navigationError(
     destination: NavDestination | undefined,
     reason: string,
-    refusal?: NavigationRefusal,
-    target?: bigint,
+    detail: {
+      refusal?: NavigationRefusal;
+      target?: bigint;
+      floors?: readonly number[];
+    } = {},
   ): void {
+    const { refusal, target, floors } = detail;
     this.abortUnsafe(reason);
     this.navigation = {
       active: false,
@@ -119,6 +124,7 @@ export class ControlRuntime extends ControlSync {
       blockedReason: reason,
       refusal: refusal ?? classifyNavigationRefusal(reason),
       target,
+      ...(floors ? { floors: [...floors] } : {}),
     };
     this.emit("control_error", reason);
   }

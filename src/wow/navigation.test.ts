@@ -43,11 +43,6 @@ describe("grounded navigation", () => {
     expect(() => nav.plan(530, start, { ...end, z: 100 })).toThrow(/ground/);
   });
 
-  test("rejects distinguishable stacked surfaces rather than selecting a nearby floor", () => {
-    const nav = navigation(native({ findHeights: () => [0, 10] }));
-    expect(() => nav.plan(530, start, end)).toThrow(/ambiguous/);
-  });
-
   test("rejects a connected-height result on a different surface", () => {
     const map = native({ findHeight: (_from, x) => (x >= 5 ? -10 : 0) });
     expect(() => navigation(map).plan(530, start, end)).toThrow(/ground/);
@@ -368,7 +363,7 @@ describe("ground destinations", () => {
 
   test("names the start and route when those columns are ambiguous", () => {
     const atStart = navigation(
-      native({ findHeights: (x) => (x === 0 ? [0, 5] : [0]) }),
+      native({ findHeights: (x) => (x === 0 ? [0, 1] : [0]) }),
     );
     expect(() => atStart.planGround(530, start, end)).toThrow(
       "ambiguous ground column at start",

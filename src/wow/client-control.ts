@@ -7,6 +7,7 @@ import {
   type NavDestination,
   type Navigation,
   type NavPoint,
+  refusalFloors,
 } from "wow/navigation";
 import { observeNavigation } from "wow/navigation-observation";
 import { queryNearby } from "wow/nearby";
@@ -149,7 +150,11 @@ function navigateTo(rt: Runtimes, target: GotoTarget): void {
   } catch (error) {
     const raw = error instanceof Error ? error.message : "navigation_failed";
     const refusal = classifyNavigationRefusal(raw);
-    rt.control.navigationError(destination, raw, refusal, guid);
+    rt.control.navigationError(destination, raw, {
+      refusal,
+      target: guid,
+      floors: refusalFloors(error),
+    });
     throw new Error(`${refusal}: ${raw}`, { cause: error });
   }
 }
