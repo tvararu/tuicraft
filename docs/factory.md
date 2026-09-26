@@ -134,7 +134,6 @@ if it is not on the board. It then removes the legacy labels (these plus
 the repo. With no legacy labels or held issues left, a run only adds
 issues missing from the board to Backlog.
 
-
 ## Landing
 
 `main` is squash-only with linear history. Required statuses: `signoff/ci`
