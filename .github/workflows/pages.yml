@@ -24,7 +24,6 @@ jobs:
         run: |
           mkdir _site
           cp site/* _site/
-          cp .github/install.sh _site/install.sh
       - uses: actions/upload-pages-artifact@v3
       - id: deploy
         uses: actions/deploy-pages@v4

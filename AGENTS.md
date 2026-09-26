@@ -369,4 +369,4 @@ Shipping:
 - Do not force-push, delete branches, or bypass hooks without permission.
   The exception is your own PR branch: force-push it with
   `--force-with-lease` after rebasing it.
-- Releases are paused; do not run release-please or publish versions.
+- There are no releases; do not publish versions.
