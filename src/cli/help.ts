@@ -52,7 +52,7 @@ USAGE
                             OK is request intent, not confirmed recovery
                             Corpse run: inspect, release if dead, use found corpse or query once, face/move, reclaim
                             Near a killer: plan an exit, flee after OK, then inspect observed life
-  tuicraft quests [--json]    Offered dialog, quest log and one pending mutation
+  tuicraft quests [--json]    Offered dialog, quest log, pending and unresolved mutations
   tuicraft talk <guid>        Request a conversation with an observed giver
   tuicraft query-quest <id>   Request quest metadata (not authorization)
   tuicraft select-option <id> [code]  Choose an offered gossip option

@@ -402,7 +402,7 @@ Do not retry unanswered actions automatically. Recovery command and inspection
 errors exit with status 1. Human mode prints `ERR`; JSON mode returns an error envelope.
 
 `tuicraft quests` [`--json`]
-:: Print the current offered dialog/giver, observed quest log, metadata queries, pending/uncertain intent, errors, progress, and reward facts.
+:: Print the current offered dialog/giver, observed quest log, metadata queries, pending intent, unresolved (cancelled or reset) intents, errors, progress, and reward facts.
 A sent acceptance request is not an accepted quest. Acceptance and removal require authoritative same-lifetime quest-log observations.
 Log counters are server quest words, not inferred inventory counts. Unknown quest IDs stay unknown.
 A query with no reply remains unanswered, not missing. Metadata never authorizes quest mutation.
@@ -443,7 +443,7 @@ Only a server quest-complete reward notification establishes a reward fact. It d
 The quest remains until an authoritative log observation removes it. Removal alone is not a reward fact.
 
 `tuicraft cancel-interaction`
-:: Request close of the current interaction and revoke its authorization. The prior unanswered intent remains uncertain.
+:: Request close of the current interaction and revoke its authorization. The prior unanswered intent stays in `unresolved` until the quest log or a reward packet settles it; later cancels never drop it.
 Wait for observed close or a confirmed world reset before another mutation. Late menu/error packets do not unlock a pending cancel.
 
 All conversational mutations use the current offered dialog and giver. Only one unanswered mutation can be pending.

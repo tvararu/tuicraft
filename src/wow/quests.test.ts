@@ -342,7 +342,7 @@ describe("quest packet and lifecycle failures", () => {
       dialog("details"),
     );
     expect(() => runtime.accept()).toThrow("quest_details_not_open");
-    expect(runtime.snapshot().uncertain?.action).toBe("accept");
+    expect(runtime.snapshot().unresolved).toMatchObject([{ action: "accept" }]);
     expect(
       events.some(
         (event) => event.type === "accepted" || event.type === "removed",
@@ -355,7 +355,7 @@ describe("quest packet and lifecycle failures", () => {
     const { runtime, events } = setup();
     runtime.talk(giver);
     runtime.cancel();
-    expect(runtime.snapshot().uncertain?.action).toBe("talk");
+    expect(runtime.snapshot().unresolved).toMatchObject([{ action: "talk" }]);
     packet(runtime, GameOpcode.SMSG_GOSSIP_MESSAGE, menu());
     expect(runtime.snapshot().dialog).toBeUndefined();
     expect(() => runtime.talk(3n)).toThrow("quest_reply_unanswered");

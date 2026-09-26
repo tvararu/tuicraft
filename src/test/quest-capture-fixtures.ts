@@ -12,12 +12,16 @@ export function questCapture(self: bigint) {
   const entities = new EntityStore();
   entities.create(self, ObjectType.PLAYER, { createComplete: true });
   const sent: number[] = [];
+  const bodies: string[] = [];
   const events: QuestEvent[] = [];
   const runtime = new QuestRuntime({
     getEntity: (guid) => entities.get(guid),
     now: () => 1000,
     selfGuid: () => self,
-    send: (opcode) => sent.push(opcode),
+    send: (opcode, body) => {
+      sent.push(opcode);
+      bodies.push(Buffer.from(body ?? []).toString("hex"));
+    },
   });
   runtime.onEvent((event) => events.push(event));
   runtime.observeSelfCreate(must(entities.get(self)));
@@ -33,5 +37,5 @@ export function questCapture(self: bigint) {
       fields.set(base + i, value);
     runtime.observeQuestLog();
   };
-  return { dispatch, entities, events, logQuest, packet, runtime, sent };
+  return { bodies, entities, events, logQuest, packet, runtime, sent };
 }
