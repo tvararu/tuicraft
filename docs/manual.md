@@ -183,7 +183,14 @@ exist, otherwise waits up to _N_ seconds and returns as soon as one arrives.
 `not_running`; this does not verify world-session health.
 
 `tuicraft stop` [`--json`]
-:: Graceful daemon shutdown. Disconnects the session. With `--json`, a
+:: Graceful daemon shutdown. Sends a logout request, like the game
+client's logout: the character leaves the world at once when resting (inn
+or city), after the server's 20 s countdown otherwise, and the daemon exits
+once the server confirms. A refused logout (combat, falling, dueling,
+frozen) or no answer within 30 s closes the connection anyway, and the
+server then keeps the character in the world until its disconnect timeout.
+The socket goes away at once, so `status` reports `not_running` during the
+countdown. The idle timeout logs out the same way. With `--json`, a
 successful stop is intent; an absent daemon returns a result with
 `data: {"socket":"not_running"}`.
 
@@ -1172,7 +1179,7 @@ When running in TUI mode, the following slash commands are available.
 | `/gdecline`                  | Decline guild invitation                   |
 | `/tuicraft entities on\|off` | Toggle entity event display                |
 | `/mail`                      | Report that mail reading is unimplemented  |
-| `/quit`                      | Disconnect and exit                        |
+| `/quit`                      | Log out and exit                           |
 
 ## Output Format
 
@@ -1397,7 +1404,7 @@ set `language = 7` in the config file.
 The daemon buffers up to 1000 events. The idle timeout is configurable via
 `timeout_minutes` in the config file.
 
-`tuicraft stop` disconnects the daemon. `tuicraft halt` cancels movement,
+`tuicraft stop` logs out and stops the daemon. `tuicraft halt` cancels movement,
 navigation, and tactics, and requests cast and auto-attack cancellation without
 disconnecting. A sent request is not server-confirmed completion; inspect combat
 state and events for the outcome.

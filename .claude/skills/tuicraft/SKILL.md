@@ -11,14 +11,14 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 
     tuicraft start                # connect daemon explicitly
     tuicraft status               # show connection status
-    tuicraft stop                 # disconnect and stop daemon
+    tuicraft stop                 # log out and stop daemon
     tuicraft start --json         # socket result (not world-session health)
     tuicraft status --json        # socket responsive or not_running
     tuicraft stop --json          # stop intent, or not_running result
 
 - Without `--json`, `start` prints `Daemon is already running.` or `CONNECTED` on success. `CONNECTED` confirms only that the daemon socket answered the probe. It does not verify the world session. Startup failure exits with status 1.
 - Without `--json`, `status` returns `CONNECTED` or `Daemon is not running.`
-- `stop` gracefully disconnects the session and terminates the daemon. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
+- `stop` logs the character out and terminates the daemon: instant when resting (inn or city), after a 20 s server countdown otherwise. A refused logout (combat, falling, dueling, frozen) or no answer within 30 s disconnects anyway, and the character then lingers until the server's disconnect timeout. With `--json`, successful stop is intent; an absent daemon returns `data: {"socket":"not_running"}`.
 - `tuicraft logs` prints the raw JSONL session log. `tuicraft record [--since MS]` prints one JSON session record built from the logged CYCLE, TACTICS and RECOVERY events (see Session record below). `tuicraft skill` prints this document. `tuicraft version` (`-v`, `--version`) prints the version. `tuicraft help` (`-h`, `--help`) prints usage. `tuicraft` with no arguments starts the interactive TUI, which is for humans.
 - `tuicraft setup` configures the account. With no flags it runs an interactive wizard; non-interactively pass `--account NAME --password PASS --character NAME` and optionally `--host` (default `t1`), `--port` (`3724`), `--language` (`1`, Orcish; `7` for Alliance) and `--timeout_minutes` (`30`).
 
@@ -134,7 +134,7 @@ These commands move, face, or select.
     tuicraft target 0xf130003f520009e5
     tuicraft target 0             # clear target, do not attack
     tuicraft halt                 # stop motion, stay connected
-    tuicraft stop                 # disconnect the daemon
+    tuicraft stop                 # log out and stop the daemon
 
 Rules:
 

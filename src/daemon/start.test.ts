@@ -18,9 +18,9 @@ let closedResolve: () => void;
 function makeMockClient(): {
   authHandshake: ReturnType<typeof jest.fn>;
   worldSession: ReturnType<typeof jest.fn>;
-  mockHandleClose: ReturnType<typeof jest.fn>;
+  mockHandleLogout: ReturnType<typeof jest.fn>;
 } {
-  const mockHandleClose = jest.fn();
+  const mockHandleLogout = jest.fn();
   const closed = new Promise<void>((r) => {
     closedResolve = r;
   });
@@ -33,12 +33,12 @@ function makeMockClient(): {
         sessionKey: new Uint8Array(40),
       }),
     ),
-    mockHandleClose,
+    mockHandleLogout,
     worldSession: jest.fn(
       async (): Promise<WorldHandle> => ({
         ...createMockHandle(),
-        close: mockHandleClose,
         closed,
+        logout: mockHandleLogout,
       }),
     ),
   };
@@ -114,7 +114,7 @@ describe("startDaemon", () => {
     expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
   });
 
-  test("idle timeout triggers process.exit", async () => {
+  test("idle timeout logs out, then exits once the session closes", async () => {
     await writeTestConfig();
     const client = makeMockClient();
     const capturedCallbacks: Array<() => void> = [];
@@ -145,10 +145,12 @@ describe("startDaemon", () => {
         Date.now = origDateNow;
       }
 
-      expect(exitSpy).toHaveBeenCalledWith(0);
+      expect(client.mockHandleLogout).toHaveBeenCalledTimes(1);
+      expect(exitSpy).not.toHaveBeenCalled();
 
       closedResolve();
       await promise;
+      expect(exitSpy).toHaveBeenCalledWith(0);
     } finally {
       intervalSpy.mockRestore();
     }
@@ -163,7 +165,7 @@ describe("startDaemon", () => {
     closedResolve();
     await promise;
 
-    expect(client.mockHandleClose).toHaveBeenCalledTimes(1);
+    expect(client.mockHandleLogout).toHaveBeenCalledTimes(1);
   });
 
   test("registers SIGTERM and SIGINT handlers", async () => {
@@ -202,10 +204,10 @@ describe("startDaemon", () => {
     await unlink(`${rtDir}/pid`);
     closedResolve();
     await promise;
-    expect(client.mockHandleClose).toHaveBeenCalledTimes(1);
+    expect(client.mockHandleLogout).toHaveBeenCalledTimes(1);
   });
 
-  test("STOP cleans up pid file before exit", async () => {
+  test("STOP logs out and exits only after the session closes", async () => {
     await writeTestConfig();
     const client = makeMockClient();
     const promise = startDaemon(client, paths);
@@ -213,7 +215,7 @@ describe("startDaemon", () => {
 
     const lines = await sendToSocket("STOP", `${rtDir}/sock`);
     expect(lines).toEqual(["OK"]);
-    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(client.mockHandleLogout).toHaveBeenCalledTimes(1);
 
     for (let i = 0; i < 50; i++) {
       if (!(await Bun.file(`${rtDir}/pid`).exists())) break;
@@ -221,8 +223,11 @@ describe("startDaemon", () => {
     }
     expect(await Bun.file(`${rtDir}/pid`).exists()).toBe(false);
 
+    expect(exitSpy).not.toHaveBeenCalled();
+
     closedResolve();
     await promise;
+    expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
   test("HALT does not disconnect the daemon", async () => {

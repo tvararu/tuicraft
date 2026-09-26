@@ -299,7 +299,7 @@ The maintainer must never find stale worktrees or idle agents in Orca.
   before a shell uses it
 - `src/test/mock-handle.ts` is the shared WorldHandle mock. The inline mock in
   `src/daemon/start.test.ts` spreads it and overrides only `closed` and
-  `close`, so add new WorldHandle methods to the shared mock only
+  `logout`, so add new WorldHandle methods to the shared mock only
 - `SessionLog.append` expects `LogEntry` (type/sender/message) — non-chat
   events need `as LogEntry` cast
 - `WorldHandle` `on*` hooks are multi-subscriber: each returns an

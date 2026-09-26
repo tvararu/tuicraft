@@ -283,7 +283,7 @@ export function startDaemonServer(args: DaemonServerArgs): DaemonServer {
   function cleanup(): void {
     if (cleaned) return;
     cleaned = true;
-    handle.close();
+    handle.logout();
     server.stop();
     unlink(sock).catch(ignoreFailure);
   }
@@ -341,7 +341,7 @@ export async function startDaemon(
 
   function exit(): void {
     cleanup();
-    process.exit(0);
+    handle.closed.then(() => process.exit(0)).catch(ignoreFailure);
   }
 
   const { cleanup: stopServer } = startDaemonServer({

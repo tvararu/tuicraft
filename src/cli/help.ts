@@ -117,7 +117,7 @@ USAGE
                             OK is intent; loot shows votes and the winner
   tuicraft destroy <bag> <slot> [count]  Destroy a carried stack (whole stack by default)
                             Confirmed from the observed slot; inventory shows the outcome
-  tuicraft stop [--json]      Stop the daemon
+  tuicraft stop [--json]      Log out (instant when resting, 20 s otherwise) and stop the daemon
   tuicraft logs               Print session log
   tuicraft record [--since MS] Session record JSON from the session log (cycles, kills, blocks, recoveries, interventions, discards, latency)
   tuicraft skill              Print SKILL.md for AI agents
@@ -212,7 +212,7 @@ INTERACTIVE COMMANDS (TUI mode)
   /gdecline       Decline guild invitation
   /tuicraft entities on|off  Toggle entity event display
   /mail           Reply that mail reading is unimplemented
-  /quit           Disconnect and exit
+  /quit           Log out and exit
 
 DAEMON
   The daemon starts automatically when needed and stays running
