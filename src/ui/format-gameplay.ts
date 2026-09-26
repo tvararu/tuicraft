@@ -5,6 +5,7 @@ import type {
   CycleLootRecord,
   CycleState,
   CycleTargetRecord,
+  DefenseState,
   ExperienceState,
   NamedInventoryState,
   NamedRewardsState,
@@ -60,6 +61,23 @@ export function formatCycleState(state: CycleState): string[] {
   if (state.lastRecovery)
     lines.push(`Last recovery: ${state.lastRecovery.outcome}`);
   if (state.stopCause) lines.push(`Stop reason: ${state.stopCause}`);
+  return lines;
+}
+
+export function formatDefenseState(state: DefenseState): string[] {
+  const lines = [
+    `Defense: ${state.armed ? `armed (${state.mode})` : "off"}`,
+    `Engagements: ${state.engagements}`,
+  ];
+  if (state.armed) lines.push(`Instruction: ${state.instruction}`);
+  if (state.active)
+    lines.push(`Defending against: ${formatGuid(state.active.attacker)}`);
+  if (state.lastStop)
+    lines.push(
+      `Last stop: ${formatGuid(state.lastStop.attacker)} (${state.lastStop.reason})`,
+    );
+  if (!state.armed && state.disarmReason)
+    lines.push(`Disarmed by: ${state.disarmReason}`);
   return lines;
 }
 

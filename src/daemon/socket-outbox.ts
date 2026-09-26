@@ -1,4 +1,4 @@
-import type { IpcSocket } from "daemon/commands";
+import type { IpcSocket } from "daemon/event-wait";
 
 export type SocketOutbox = IpcSocket & { flush: () => void };
 

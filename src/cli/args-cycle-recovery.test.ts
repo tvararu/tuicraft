@@ -94,6 +94,30 @@ describe("cycle arguments", () => {
   });
 });
 
+describe("defend arguments", () => {
+  test("parses on with an optional instruction, off, and the inspection", () => {
+    expect(parseArgs(["defend", "on"])).toEqual({
+      enabled: true,
+      instruction:
+        "defeat the selected target while keeping the character alive",
+      mode: "defend",
+    });
+    expect(parseArgs(["defend", "on", "kill", "it"])).toMatchObject({
+      instruction: "kill it",
+    });
+    expect(parseArgs(["defend", "off"])).toEqual({
+      enabled: false,
+      mode: "defend",
+    });
+    expect(parseArgs(["defense", "--json"])).toEqual({
+      json: true,
+      mode: "defense",
+    });
+    expect(() => parseArgs(["defend"])).toThrow("invalid defend");
+    expect(() => parseArgs(["defend", "off", "now"])).toThrow("invalid defend");
+  });
+});
+
 describe("recovery arguments", () => {
   test("parses inspection and explicit resurrection decisions", () => {
     expect(parseArgs(["recovery", "--json"])).toEqual({

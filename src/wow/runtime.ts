@@ -10,6 +10,7 @@ import {
   type FactionTemplateCatalog,
   loadFactionTemplates,
 } from "wow/faction-template";
+import { bearing } from "wow/geometry";
 import { ItemTemplates } from "wow/item-use";
 import { type JevSelect, selectJevAction } from "wow/jev";
 import { createFaultSelect, faultMarker, parseJevFault } from "wow/jev-fault";
@@ -23,6 +24,7 @@ import { ObjectType } from "wow/protocol/entity-fields";
 import { QuestRuntime } from "wow/quests";
 import { RecoveryRuntime } from "wow/recovery";
 import { RewardsRuntime } from "wow/rewards";
+import { SelfDefense } from "wow/self-defense";
 import { loadSpellCatalog } from "wow/spell-catalog";
 import { TacticsLoop } from "wow/tactics";
 import { TrainerRuntime } from "wow/trainer";
@@ -41,6 +43,7 @@ export type Runtimes = {
   cycle: EncounterCycleRuntime;
   trainer: TrainerRuntime;
   vendor: VendorRuntime;
+  defense: SelfDefense;
   prepareCatalog: () => Promise<void>;
   navigation: () => Navigation;
   observedTarget: (guid: bigint) => NavPoint;
@@ -68,6 +71,7 @@ type RuntimeParts = {
   cycle: EncounterCycleRuntime;
   trainer: TrainerRuntime;
   vendor: VendorRuntime;
+  defense: SelfDefense;
 };
 
 function createControl(
@@ -213,6 +217,10 @@ function wireEvents(conn: WorldConn, parts: RuntimeParts): Unsubscribe {
     cycle.onEvent((event) => events.cycle.emit(event)),
     trainer.onEvent((event) => events.trainer.emit(event)),
     vendor.onEvent((event) => events.vendor.emit(event)),
+    parts.defense.onEvent((event) => events.defense.emit(event)),
+    combat.onEvent((event) => {
+      if (event.type === "attacked") parts.defense.tick();
+    }),
   ];
   return () => {
     for (const off of detach) off();
@@ -254,6 +262,7 @@ function disposeParts(
     vendor,
   } = parts;
   options.unwire();
+  parts.defense.dispose();
   if (options.sendStop) options.halt();
   lazy.disposed = true;
   control.dispose();
@@ -346,6 +355,37 @@ function runtimeDepsFor(conn: WorldConn): RuntimeDeps {
   };
 }
 
+function createDefense(
+  conn: WorldConn,
+  config: ClientConfig,
+  parts: Omit<RuntimeParts, "defense">,
+): SelfDefense {
+  const { combat, control, tactics, cycle, recovery } = parts;
+  return new SelfDefense({
+    attackers: () => combat.attackers(),
+    attack: (guid) => combat.attack(guid),
+    face(guid) {
+      const pose = control.snapshot().pose;
+      if (!pose) throw new Error("no_pose");
+      control.face(bearing(pose, findObservedTarget(conn, parts, guid)));
+    },
+    tactics: {
+      start: (context) => tactics.start(context),
+      stop: (reason) => tactics.stop(reason),
+      snapshot: () => tactics.snapshot(),
+    },
+    owner() {
+      if (cycle.snapshot().active) return "cycle";
+      if (tactics.snapshot().status !== "idle") return "tactics";
+      const owner = control.snapshot().owner;
+      return owner === "none" ? undefined : owner;
+    },
+    alive: () => recovery.snapshot().life === "alive",
+    jev: () => Boolean(config.jevApiKey),
+    now: () => Date.now(),
+  });
+}
+
 export function createRuntimes(
   conn: WorldConn,
   config: ClientConfig,
@@ -353,7 +393,6 @@ export function createRuntimes(
   const lazy: LazyState = { disposed: false };
   const getNavigation = (): Navigation => loadNavigation(config, lazy);
   conn.control = createControl(conn, getNavigation);
-
   const control = conn.control;
   const runtimeDeps = runtimeDepsFor(conn);
   const { combat, actions, trainer } = createCombat(
@@ -382,15 +421,15 @@ export function createRuntimes(
     defense: { combat, control },
   });
   conn.tactics = tactics;
-  const parts = {
+  const base = {
     control,
     combat,
     tactics,
     ...createSupportRuntimes(conn, runtimeDeps, { control, tactics }),
     trainer,
   };
+  const parts = { ...base, defense: createDefense(conn, config, base) };
   const unwire = wireEvents(conn, parts);
-  const { cycle } = parts;
   return {
     ...parts,
     prepareCatalog,
@@ -398,7 +437,8 @@ export function createRuntimes(
     observedTarget: (guid) => findObservedTarget(conn, parts, guid),
     halt: () => rawHalt(),
     override(reason): void {
-      cycle.stop("manual_override");
+      parts.defense.yieldTo("manual_override");
+      parts.cycle.stop("manual_override");
       tactics.stop("manual_override");
       rawHalt(reason);
     },

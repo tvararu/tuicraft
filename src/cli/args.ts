@@ -84,6 +84,8 @@ export type CliAction =
       json?: true;
     }
   | { mode: "cycling"; json: boolean }
+  | { mode: "defend"; enabled: boolean; instruction?: string; json?: true }
+  | { mode: "defense"; json: boolean }
   | { mode: "goto"; target: GotoTarget; json?: true }
   | { mode: "navigation"; json: boolean }
   | { mode: "recovery"; json: boolean }
@@ -158,6 +160,8 @@ const SUBCOMMANDS = new Set([
   "tactics",
   "cycle",
   "cycling",
+  "defend",
+  "defense",
   "goto",
   "navigation",
   "recovery",
@@ -231,6 +235,7 @@ const INSPECTIONS = [
   "spells",
   "tactics",
   "cycling",
+  "defense",
   "navigation",
   "recovery",
   "quests",

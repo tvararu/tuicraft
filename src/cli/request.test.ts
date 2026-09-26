@@ -30,6 +30,8 @@ describe("requestLine", () => {
       "CYCLE 0xa 0xb --max 2 --instruction defeat the selected target while keeping the character alive",
     ],
     [["cycle", "--resume"], "CYCLE_RESUME"],
+    [["defend", "off"], "DEFEND off"],
+    [["defend", "on", "stay", "alive"], "DEFEND on stay alive"],
     [
       ["cycle", "--resume", "--instruction", "kite", "--max", "2"],
       "CYCLE_RESUME --max 2 --instruction kite",
@@ -52,6 +54,8 @@ describe("requestLine", () => {
     [["cycle", "0xa", "--instruction", "hold", "aggro"]],
     [["cycle", "--resume", "--max", "3", "--instruction", "hold", "aggro"]],
     [["cycle", "--resume"]],
+    [["defend", "on"]],
+    [["defend", "off"]],
     [["select-option", "0"]],
     [["abandon-quest", "24"]],
     [["spirit-healer", "0x1"]],

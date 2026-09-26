@@ -45,6 +45,8 @@ USAGE
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues
   tuicraft cycle --resume [--instruction ...] [--max N] [--json]  Resume a stopped cycle's remaining queue
   tuicraft cycle --quest <id> [--source <entry>...] [--max N] [--json]  Pick targets from a logged quest's objectives until the log slot completes
+  tuicraft defend on [instruction...] | defend off  Opt-in self-defence when attacked while nothing owns combat; halt disarms it
+  tuicraft defense [--json]  Self-defence state: armed, mode, active attacker, last stop
   tuicraft cycling [--json]  Cycle phase, queue (loot: looted|none), loot requests and stop cause
   tuicraft goto <x> <y> [<z>]|<guid> [--json]  Walk a ground route; Z defaults to the unique ground height
                             A goto during a route replaces it (reason navigation_replaced)
