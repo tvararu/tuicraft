@@ -35,6 +35,7 @@ import skillContent from "../.claude/skills/tuicraft/SKILL.md" with {
 const argv = Bun.argv.slice(2);
 let action: CliAction | undefined;
 let failureStage: OutputStage = "arguments";
+const DIGITS = /^\d+$/;
 
 function jsonRequested(): boolean {
   if (action) return "json" in action && action.json === true;
@@ -66,12 +67,6 @@ function emit(reply: OutputEnvelope): void {
 function sendToSocket(command: string): Promise<string[]> {
   failureStage = "command";
   return sendRawToSocket(command);
-}
-
-async function waitForEvents(wait: number | undefined): Promise<void> {
-  if (wait === undefined) return;
-  const lines = await sendToSocket(`READ_WAIT ${wait * 1000}`);
-  for (const line of lines) console.log(line);
 }
 
 function printReply(
@@ -126,11 +121,13 @@ async function printInspection(inspection: Inspection): Promise<void> {
 async function printSendReply(
   lines: string[],
   slash: boolean,
-  wait: number | undefined,
+  wait: string | undefined,
 ): Promise<void> {
   if (!jsonRequested()) {
     for (const line of lines) console.log(line);
-    await waitForEvents(wait);
+    if (wait === undefined) return;
+    for (const line of await sendToSocket(`READ_WAIT ${wait}`))
+      console.log(line);
     return;
   }
 
@@ -140,7 +137,7 @@ async function printSendReply(
       const waited = decodeReply(
         "read",
         "events",
-        await sendToSocket(`READ_WAIT_JSON ${wait * 1000}`),
+        await sendToSocket(`READ_WAIT_JSON ${wait}`),
       );
       reply = waited.error
         ? errorEnvelope("send", "wait", waited.error.message, reply)
@@ -199,21 +196,22 @@ async function runSend(
   >,
 ): Promise<void> {
   await ensureDaemon();
+  let wait: string | undefined;
+  if (sendAction.wait !== undefined) {
+    const [mark = ""] = await sendToSocket("EVENT_MARK");
+    if (!DIGITS.test(mark))
+      throw new Error(`Unexpected EVENT_MARK reply: ${mark}`);
+    wait = `${sendAction.wait * 1000} ${mark}`;
+  }
   if (sendAction.mode === "slash") {
-    const lines = await sendToSocket(sendAction.input);
-    await printSendReply(lines, true, sendAction.wait);
+    await printSendReply(await sendToSocket(sendAction.input), true, wait);
     return;
   }
-  if (sendAction.mode === "whisper") {
-    const lines = await sendToSocket(
-      `WHISPER ${sendAction.target} ${sendAction.message}`,
-    );
-    await printSendReply(lines, false, sendAction.wait);
-    return;
-  }
-  const cmd = `${sendAction.mode.toUpperCase()} ${sendAction.message}`;
-  const lines = await sendToSocket(cmd);
-  await printSendReply(lines, false, sendAction.wait);
+  const command =
+    sendAction.mode === "whisper"
+      ? `WHISPER ${sendAction.target} ${sendAction.message}`
+      : `${sendAction.mode.toUpperCase()} ${sendAction.message}`;
+  await printSendReply(await sendToSocket(command), false, wait);
 }
 
 async function runRead(readAction: ActionOf<"read">): Promise<void> {

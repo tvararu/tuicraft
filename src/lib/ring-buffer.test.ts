@@ -106,4 +106,35 @@ describe("RingBuffer", () => {
     buf.slice(0);
     expect(buf.drain()).toEqual(["a", "b"]);
   });
+
+  test("take consumes from a position and leaves earlier items unread", () => {
+    const buf = new RingBuffer<string>(10);
+    buf.push("a");
+    buf.push("b");
+    buf.push("c");
+    expect(buf.take(1)).toEqual(["b", "c"]);
+    expect(buf.take(1)).toEqual([]);
+    buf.push("d");
+    expect(buf.drain()).toEqual(["a", "d"]);
+    buf.push("e");
+    expect(buf.drain()).toEqual(["e"]);
+  });
+
+  test("take starts at the drain cursor", () => {
+    const buf = new RingBuffer<string>(10);
+    buf.push("a");
+    buf.drain();
+    buf.push("b");
+    expect(buf.take(0)).toEqual(["b"]);
+  });
+
+  test("taken items evicted by overflow stay consumed", () => {
+    const buf = new RingBuffer<string>(3);
+    buf.push("a");
+    buf.push("b");
+    expect(buf.take(0)).toEqual(["a", "b"]);
+    buf.push("c");
+    buf.push("d");
+    expect(buf.drain()).toEqual(["c", "d"]);
+  });
 });

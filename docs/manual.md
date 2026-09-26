@@ -111,7 +111,9 @@ listed in [Interactive Commands](#interactive-commands). `/r`, `/raid`,
 `/`_N_ channel messages, `/quit`, `/tuicraft`, `/join` without a channel,
 and unknown commands are said as plain text, slash included. The chat flags
 except `-s` also work without `send`.
-`--wait` _N_ then returns unread events, as `read --wait` _N_ does.
+`--wait` _N_ then returns only events that arrived after the message was sent,
+waiting up to _N_ seconds for the first one. Events that were already unread
+stay unread for the next `read`.
 
 `tuicraft who` [_filter_] [`--json`]
 : Who query. Optional name/class/level filter.

@@ -44,23 +44,12 @@ export function writeLines(socket: IpcSocket, lines: string[]): void {
   socket.write("\n");
 }
 
-function drainText(events: RingBuffer<EventEntry>): string[] {
-  return events.drain().flatMap((e) => (e.text === undefined ? [] : [e.text]));
-}
+type EventFormat = (entries: EventEntry[]) => string[];
 
-function drainJson(events: RingBuffer<EventEntry>): string[] {
-  return events.drain().map((e) => e.json);
-}
+const asText: EventFormat = (entries) =>
+  entries.flatMap((e) => (e.text === undefined ? [] : [e.text]));
 
-function sliceText(events: RingBuffer<EventEntry>, from: number): string[] {
-  return events
-    .slice(from)
-    .flatMap((e) => (e.text === undefined ? [] : [e.text]));
-}
-
-function sliceJson(events: RingBuffer<EventEntry>, from: number): string[] {
-  return events.slice(from).map((e) => e.json);
-}
+const asJson: EventFormat = (entries) => entries.map((e) => e.json);
 
 function waitUnlessAborted(ms: number, abort?: AbortSignal): Promise<boolean> {
   if (abort?.aborted) return Promise.resolve(true);
@@ -110,11 +99,13 @@ function send(socket: IpcSocket, lines: string[]): false {
 
 function readWait(
   ctx: DispatchContext,
-  ms: number,
-  drain: (events: RingBuffer<EventEntry>) => string[],
+  { ms, since }: { ms: number; since?: number },
+  format: EventFormat,
 ): Promise<false> {
   const { promise, resolve } = Promise.withResolvers<false>();
-  const ready = drain(ctx.events);
+  const collect = () =>
+    format(since === undefined ? ctx.events.drain() : ctx.events.take(since));
+  const ready = collect();
   if (ready.length > 0 || ms === 0)
     return Promise.resolve(send(ctx.socket, ready));
   if (ctx.abort?.aborted) return Promise.resolve(false);
@@ -128,7 +119,7 @@ function readWait(
   const onAbort = () => finish(undefined);
   const timer = setTimeout(() => finish([]), ms);
   const unsubscribe = ctx.events.subscribe(() => {
-    const lines = drain(ctx.events);
+    const lines = collect();
     if (lines.length > 0) finish(lines);
   });
   ctx.abort?.addEventListener("abort", onAbort, { once: true });
@@ -138,12 +129,12 @@ function readWait(
 async function tailWait(
   ctx: DispatchContext,
   ms: number,
-  slice: (events: RingBuffer<EventEntry>, from: number) => string[],
+  format: EventFormat,
 ): Promise<false> {
   const start = ctx.events.writePos;
   const aborted = await waitUnlessAborted(ms, ctx.abort);
   if (aborted) return false;
-  writeLines(ctx.socket, slice(ctx.events, start));
+  writeLines(ctx.socket, format(ctx.events.slice(start)));
   return false;
 }
 
@@ -248,6 +239,8 @@ const HANDLERS: Handlers = {
     handle.sendEmote(cmd.message);
     return acknowledge(socket);
   },
+  event_mark: (_cmd, { events, socket }) =>
+    send(socket, [String(events.writePos)]),
   experience: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getExperienceState(), formatExperienceState),
   experience_json: (_cmd, { handle, socket }) =>
@@ -377,10 +370,10 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.getQuestState(), pretty),
   quests_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getQuestState(), json),
-  read: (_cmd, { events, socket }) => send(socket, drainText(events)),
-  read_json: (_cmd, { events, socket }) => send(socket, drainJson(events)),
-  read_wait: (cmd, ctx) => readWait(ctx, cmd.ms, drainText),
-  read_wait_json: (cmd, ctx) => readWait(ctx, cmd.ms, drainJson),
+  read: (_cmd, { events, socket }) => send(socket, asText(events.drain())),
+  read_json: (_cmd, { events, socket }) => send(socket, asJson(events.drain())),
+  read_wait: (cmd, ctx) => readWait(ctx, cmd, asText),
+  read_wait_json: (cmd, ctx) => readWait(ctx, cmd, asJson),
   reclaim_corpse: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.reclaimCorpse(), ok),
   recovery: (_cmd, { handle, socket }) =>
@@ -425,8 +418,8 @@ const HANDLERS: Handlers = {
     reply(socket, () => handle.getTacticsState(), pretty),
   tactics_json: (_cmd, { handle, socket }) =>
     reply(socket, () => handle.getTacticsState(), json),
-  tail_wait: (cmd, ctx) => tailWait(ctx, cmd.ms, sliceText),
-  tail_wait_json: (cmd, ctx) => tailWait(ctx, cmd.ms, sliceJson),
+  tail_wait: (cmd, ctx) => tailWait(ctx, cmd.ms, asText),
+  tail_wait_json: (cmd, ctx) => tailWait(ctx, cmd.ms, asJson),
   take_loot: (cmd, { handle, socket }) =>
     reply(socket, () => handle.takeLoot(cmd.slot), ok),
   take_money: (_cmd, { handle, socket }) =>

@@ -3,6 +3,7 @@ import type { IpcCommand, TargetIpcType } from "daemon/parse";
 const BARE_SOCIAL = new Map<string, IpcCommand>([
   ["READ", { type: "read" }],
   ["READ_JSON", { type: "read_json" }],
+  ["EVENT_MARK", { type: "event_mark" }],
   ["STOP", { type: "stop" }],
   ["STATUS", { type: "status" }],
   ["ACCEPT", { type: "accept" }],
@@ -74,6 +75,21 @@ function parseWaitMs(rest: string): number | undefined {
   return Math.min(ms, 60_000);
 }
 
+const DIGITS = /^\d+$/;
+
+function parseWait(
+  type: Extract<IpcCommand, { ms: number }>["type"],
+  rest: string,
+): IpcCommand | undefined {
+  const [rawMs = "", rawSince, ...extra] = rest.split(" ").filter(Boolean);
+  const ms = parseWaitMs(rawMs);
+  if (ms === undefined || extra.length > 0) return;
+  if (rawSince === undefined) return { ms, type };
+  if (type !== "read_wait" && type !== "read_wait_json") return;
+  if (!DIGITS.test(rawSince)) return;
+  return { ms, since: Number(rawSince), type };
+}
+
 function parseLeave(rest: string): IpcCommand {
   if (!rest) return { type: "leave" };
   const space = rest.indexOf(" ");
@@ -143,9 +159,6 @@ export function parseSocial(
   const messageType = MESSAGE_SOCIAL.get(verb);
   if (messageType) return { message: rest, type: messageType };
   const waitType = WAIT_SOCIAL.get(verb);
-  if (waitType) {
-    const ms = parseWaitMs(rest);
-    return ms === undefined ? undefined : { ms, type: waitType };
-  }
+  if (waitType) return parseWait(waitType, rest);
   return parseSocialVerb(line, verb, rest);
 }

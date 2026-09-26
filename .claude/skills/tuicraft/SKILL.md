@@ -390,7 +390,9 @@ included; they only work in the TUI:
     tuicraft tail                  # continuous stream (blocks, consumes nothing)
 
 `read`, `read --wait` and `send --wait` share one cursor: each event is
-returned once, so a later `read` never repeats it.
+returned once, so a later `read` never repeats it. `send --wait N` returns
+only events that arrived after its send, waiting up to N seconds for one;
+older unread events stay for the next `read`.
 
 Add `--json` for structured output. `read --json` returns one envelope with
 all event objects in `events[]`, including `events: []` when empty.
