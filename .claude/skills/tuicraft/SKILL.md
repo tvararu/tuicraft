@@ -432,6 +432,13 @@ all event objects in `events[]`, including `events: []` when empty.
 | RAID_LEADER           | Raid leader message                              |
 | RAID_WARNING          | Raid warning                                     |
 | WHISPER_FROM          | Incoming whisper                                 |
+| MONSTER_SAY           | Creature speech (`[monster say]`)                |
+| MONSTER_YELL          | Creature yell (`[monster yell]`)                 |
+| MONSTER_WHISPER       | Creature whisper to you (`[monster whisper]`)    |
+| MONSTER_PARTY         | Creature party message (`[monster party]`)       |
+| MONSTER_EMOTE         | Creature emote, `%s` replaced by its name (`[monster emote]`) |
+| RAID_BOSS_EMOTE       | Boss emote, `%s` replaced by its name (`[boss emote]`) |
+| RAID_BOSS_WHISPER     | Boss whisper (`[boss whisper]`)                  |
 | WHISPER_TO            | Outgoing whisper confirmation                    |
 | CHANNEL               | Custom channel message                           |
 | EMOTE                 | Player emote                                     |

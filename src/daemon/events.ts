@@ -10,10 +10,9 @@ import {
   formatGroupEvent,
   formatIgnoreEvent,
   formatIgnoreEventObj,
-  formatMessage,
-  formatMessageObj,
   jsonSafe,
 } from "ui/format";
+import { formatMessage, formatMessageObj } from "ui/format-chat";
 import { formatControlEvent, formatControlEventObj } from "ui/format-control";
 import {
   type ChatMessage,

@@ -7,10 +7,10 @@ import {
   formatGroupEvent,
   formatGuildRoster,
   formatIgnoreList,
-  formatMessage,
   formatPrompt,
   formatWhoResults,
 } from "ui/format";
+import { formatMessage } from "ui/format-chat";
 import { ChatType, type WorldHandle } from "wow";
 
 export type TuiState = {
