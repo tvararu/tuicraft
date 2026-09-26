@@ -133,7 +133,7 @@ tuicraft face-guid 0xabc   # face a currently observed entity on this map
 tuicraft walk-toward 3 0xabc # direct bounded leg toward one sampled GUID
 tuicraft walk-toward 2 <grounded-x> <grounded-y> <grounded-z> # direct leg toward known ground
 tuicraft target 0xabc      # request selection (0 clears); uint64 hex or decimal
-tuicraft combat [--json]   # vitals, cast, learned IDs
+tuicraft combat [--json]   # vitals, target, auras, cooldowns, last XP
 tuicraft spells [--json]   # learned spellbook
 tuicraft cast 585 0xabc    # cast learned spell at guid (0 = self); outcome in combat --json .lastOutcome, e.g. reason out_of_range
 tuicraft attack 0xabc      # auto-attack
@@ -141,7 +141,7 @@ tuicraft cancel-cast        # interrupt the current cast
 tuicraft stop-attack       # stop auto-attack
 tuicraft fight 0xabc [--json] # Jev tactics; optional --framing none|minimal|mechanics
 tuicraft fight 0xabc conserve mana # extra words are the instruction
-tuicraft tactics [--json]  # tactics loop state and terminal observation
+tuicraft tactics [--json]  # outcome, target, vitals and last XP of the last run
 tuicraft cycle 0xa 0xb --max 3 --instruction stay alive # explicit GUID queue from nearby; no auto-acquire
 tuicraft cycle --resume --instruction "kite" # resume the remaining queue after halt
 tuicraft cycling               # readable phase, kill credit, loot and stop reason
@@ -243,9 +243,10 @@ instruction change), discarded Jev results, and latency. Its loop rate
 Neither accepts `--json`; neither do `setup`, `help`, `version`, the TUI, or
 internal daemon mode.
 
-Without `--json`, `cycling`, `recovery`, `inventory`, `experience`, and `loot` print readable
-summaries. Control actions report daemon request acceptance, not server success;
-`fight` and `cycle` reply when the run ends and say so.
+Without `--json`, `combat`, `tactics`, `cycling`, `recovery`, `inventory`,
+`experience`, and `loot` print readable summaries. Control actions report daemon
+request acceptance, not server success; `fight` replies when the run ends with
+its outcome (`completed: server_kill_credit, XP 60`), and `cycle` says it ended.
 Use `--json` for the full observed state and for scripts.
 
 ## Gameplay notes
