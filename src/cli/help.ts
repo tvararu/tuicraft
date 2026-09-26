@@ -34,7 +34,7 @@ USAGE
   tuicraft attack <guid>     Start auto-attack
   tuicraft cancel-cast       Interrupt current cast
   tuicraft stop-attack       Stop auto-attack
-  tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target)
+  tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target); 30 s without target damage or approach blocks no_progress
                             Engages hostile/neutral creatures; refuses friendly (target_friendly) and players
                             Spell kit needs observed form 0; inspect tactics on refusal
   tuicraft tactics [--json]  Tactics state and terminal observations

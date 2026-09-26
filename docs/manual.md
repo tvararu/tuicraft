@@ -266,6 +266,13 @@ currently attacking the character. `tactics --json` reports the classification
 as `lastOutcome.observation.targetRelation`: `hostile`, `neutral`, `friendly`
 or `unknown`. Inspect `tactics.lastOutcome.observation.unavailable` for spell
 reasons.
+A fight that makes no progress for 30 s blocks with `no_progress`. Progress is
+the target's observed health falling below its lowest value so far in the fight,
+or the separation to the target shrinking at least 1 yd below its closest value
+so far; an unobserved separation never counts. Casting, shielding, healing,
+waiting and facing are not progress on their own; a target that leashes back to
+full health does not reset the bound. In `cycle`, the target is skipped with
+cause `no_progress` and the loop continues.
 Jev may choose directional movement during a fight under a renewable lease:
 `wait` holds the current direction, `stop_moving` releases it, and choosing a
 standing-required spell releases the lease before casting. The observation
