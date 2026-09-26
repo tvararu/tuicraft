@@ -364,7 +364,7 @@ Rules:
 - A server quest-complete reward notification establishes a reward fact. It does not prove that a requested inventory item was gained.
 - Prove a turn-in's actual gains by comparing `inventory --json` (items, `coinage`) and `experience --json` (`xp`, `level`) before and after. `lastXp` and `lastLevelUp` are notices, not field changes.
 - Abandonment slots are zero-based 0–24. An unknown or empty slot cannot authorize abandonment. The log must later show removal.
-- `cancel-interaction` revokes current authorization and requests close. The old pending intent stays in `unresolved` until the quest log or a reward packet settles it; later cancels never drop it.
+- `cancel-interaction` revokes current authorization and requests close. The old pending intent stays in `unresolved`; later cancels never drop it. A `talk`, `select-option`, `select-quest`, `complete-quest` or `request-reward` entry leaves once the server answers a later request (the cancel's close, a dialog or window, a quest error, or the log/reward packet for the pending request). An `accept-quest`, `abandon-quest` or `choose-reward` entry leaves only when the quest log or a reward packet settles it.
 - Pending cancel blocks another mutation until observed close or a confirmed world reset. A late error/menu is not sufficient.
 - HALT drops older queued conversational mutations, abandonment and cancellation. It retains quest metadata queries and newer requests.
 - HALT cannot undo an already-sent request and is not proof of dialog closure.

@@ -392,7 +392,13 @@ and rewards require a server reward notification. Unanswered metadata is unknown
 not missing. `cancel-interaction` requests closure and does not immediately unlock
 another mutation. The cancelled request stays reported as `unresolved` until an
 authoritative outcome. Do not retry before an observed close or authoritative outcome.
-A request the server never answers (for example a `talk` out of range) expires
+A `talk`, `select-option`, `select-quest`, `complete-quest` or `request-reward`
+entry leaves `unresolved` once the server answers a later request (the cancel's
+close, a dialog or window, a quest error, or the log or reward packet for the
+pending request): the server handles requests in order and answers these at
+once, so no reply to them can still arrive. `accept-quest`, `abandon-quest` and
+`choose-reward` entries leave only when the quest log or a reward packet settles
+them. A request the server never answers (for example a `talk` out of range) expires
 after 5 s as `no_reply` and stays in `unresolved`; the next giver then works
 without `cancel-interaction`. A trainer or vendor list answers the request at
 once and opens the offer in `trainer` or the goods in `vendor`; a bank or

@@ -73,7 +73,7 @@ describe("quest dialog", () => {
     }
   }, 60_000);
 
-  test("a cancelled unanswered talk stays unresolved", async () => {
+  test("the cancel's close settles a talk ignored at range", async () => {
     const handle = await worldSession(config1, await authHandshake(config1));
     try {
       const erona = await reachErona(handle);
@@ -83,13 +83,15 @@ describe("quest dialog", () => {
       await Bun.sleep(3000);
       expect(handle.getQuestState().pending?.action).toBe("talk");
       handle.cancelInteraction();
+      expect(handle.getQuestState().unresolved).toMatchObject([
+        { action: "talk", guid: erona.guid, reason: "cancelled" },
+      ]);
       await waitUntil(() => handle.getQuestState().pending === undefined);
+      expect(handle.getQuestState().unresolved).toEqual([]);
       handle.cancelInteraction();
       await waitUntil(() => handle.getQuestState().pending === undefined);
       expect(handle.getQuestState().dialog).toBeUndefined();
-      expect(handle.getQuestState().unresolved).toMatchObject([
-        { action: "talk", guid: erona.guid },
-      ]);
+      expect(handle.getQuestState().unresolved).toEqual([]);
     } finally {
       handle.close();
       await handle.closed;
@@ -146,6 +148,7 @@ describe("quest dialog", () => {
       await Bun.sleep(3000);
       handle.talk(erona.guid);
       await waitUntil(() => handle.getQuestState().dialog?.kind === "gossip");
+      expect(handle.getQuestState().unresolved).toEqual([]);
     } finally {
       handle.close();
       await handle.closed;

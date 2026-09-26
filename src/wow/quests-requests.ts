@@ -64,6 +64,16 @@ export type QuestRequest = {
 
 export const QUEST_REPLY_TIMEOUT_MS = 5000;
 
+export function repliesAtOnce(action: QuestAction): boolean {
+  return (
+    action === "talk" ||
+    action === "selectOption" ||
+    action === "selectQuest" ||
+    action === "complete" ||
+    action === "requestReward"
+  );
+}
+
 export function unansweredError(pending: QuestIntent, now: number): Error {
   const target =
     pending.guid === undefined ? "" : ` 0x${pending.guid.toString(16)}`;
