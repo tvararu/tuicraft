@@ -33,6 +33,7 @@ const INSPECTIONS = new Map<string, IpcCommand>(
       "inventory",
       "experience",
       "loot",
+      "group",
     ] as const
   ).flatMap((view): [string, IpcCommand][] => [
     [view.toUpperCase(), { type: view }],

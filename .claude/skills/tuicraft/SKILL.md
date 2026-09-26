@@ -26,7 +26,7 @@ CLI client for World of Warcraft 3.3.5a. A background daemon maintains the game 
 
 Use `--json` with these daemon-backed commands:
 
-- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`.
+- Inspections: `who`, `control`, `nearby`, `combat`, `spells`, `tactics`, `cycling`, `navigation`, `recovery`, `quests`, `inventory`, `experience`, `loot`, `group`.
 - Chat and events: `send`, chat flags, `read`, `tail`.
 - Movement and combat actions: `move`, `face`, `face-guid`, `walk-toward`, `target`, `halt`, `cast`, `attack`, `cancel-cast`, `stop-attack`, `fight`, `cycle`, `goto`.
 - Recovery, quest, loot, and item actions: `query-corpse`, `release-spirit`, `reclaim-corpse`, `spirit-healer`, `resurrect`, `talk`, `query-quest`, `select-option`, `select-quest`, `accept-quest`, `complete-quest`, `request-reward`, `choose-reward`, `abandon-quest`, `cancel-interaction`, `open-loot`, `take-loot`, `take-money`, `release-loot`, `use`.
@@ -462,7 +462,7 @@ all event objects in `events[]`, including `events: []` when empty.
 | GUILD_COMMAND_RESULT  | Guild command error (permissions, not found)     |
 | GUILD_INVITE_RECEIVED | Incoming guild invitation prompt                 |
 | GUILD_*               | Other guild events (MOTD, joined, left, promotion, signed on/off) |
-| GROUP_*               | Group invite, list, leader change, kick, disband, command result |
+| GROUP_*               | Group invite, list (with `formed`/`added`/`removed`/`loot`), leader change, kick, disband, command result |
 | PARTY_MEMBER_STATS    | Party member health and level                    |
 | DUEL_*                | Duel requested, countdown, complete, winner, bounds |
 | COMBAT                | Combat state change; payload in `data`           |
@@ -499,6 +499,15 @@ The six gameplay events (COMBAT, TACTICS, CYCLE, RECOVERY, QUEST, REWARDS) have 
     tuicraft send "/leader PlayerName"   # transfer leadership
     tuicraft send "/accept"              # accept pending invite (group or duel)
     tuicraft send "/decline"             # decline pending invite (group or duel)
+    tuicraft group [--json]              # party state: leader, loot rule, members' health
+
+`group` shows whether you are in a party, the leader, the loot method,
+threshold and master looter, and each other member's online state, health,
+max health and level (`null` when unobserved). `source` is `unit` while the
+member is in view and `party_stats` for server party stats sent out of range. Human
+`read` prints `[group] Joined a group led by X: ...`, `[group] X joined the
+group`, `[group] X left the group` and `[group] You are no longer in a group`.
+`GROUP_LIST` events add `formed`, `added`, `removed` and `loot`.
 
 Duel events (SMSG_DUEL_REQUESTED, COUNTDOWN, COMPLETE, WINNER,
 OUTOFBOUNDS, INBOUNDS) are surfaced in the event stream as `[duel]`

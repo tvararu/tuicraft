@@ -170,6 +170,31 @@ describe("parseGroupList", () => {
     expect(result.leaderGuidLow).toBe(0x10);
   });
 
+  test("parses loot method, master looter and threshold after the leader", () => {
+    const w = new PacketWriter();
+    for (const byte of [0, 0, 0, 0]) w.uint8(byte);
+    w.uint64LE(0x1f4n);
+    w.uint32LE(3);
+    w.uint32LE(1);
+    w.cString("Fgklhdkmhha");
+    w.uint64LE(0xa5fn);
+    for (const byte of [1, 0, 0, 0]) w.uint8(byte);
+    w.uint64LE(0xa5en);
+    w.uint8(2);
+    w.uint64LE(0xa5en);
+    w.uint8(2);
+    for (const byte of [0, 0, 0]) w.uint8(byte);
+
+    const result = parseGroupList(new PacketReader(w.finish()));
+    expect(result.leaderGuidLow).toBe(0xa_5e);
+    expect(result.loot).toEqual({
+      looterGuidHigh: 0,
+      looterGuidLow: 0xa_5e,
+      method: 2,
+      threshold: 2,
+    });
+  });
+
   test("parses empty group", () => {
     const w = new PacketWriter();
     w.uint8(0);
@@ -185,6 +210,7 @@ describe("parseGroupList", () => {
 
     const result = parseGroupList(new PacketReader(w.finish()));
     expect(result.members).toHaveLength(0);
+    expect(result.loot).toBeUndefined();
   });
 });
 

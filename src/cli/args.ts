@@ -106,6 +106,7 @@ export type CliAction =
   | { mode: "inventory"; json: boolean }
   | { mode: "experience"; json: boolean }
   | { mode: "loot"; json: boolean }
+  | { mode: "group"; json: boolean }
   | { mode: "open_loot"; guid: bigint; json?: true }
   | { mode: "take_loot"; slot: number; json?: true }
   | { mode: "take_money"; json?: true }
@@ -171,6 +172,7 @@ const SUBCOMMANDS = new Set([
   "take-money",
   "release-loot",
   "use",
+  "group",
 ]);
 
 const FIXED = new Map<string, CliAction>([
@@ -213,6 +215,7 @@ const INSPECTIONS = [
   "inventory",
   "experience",
   "loot",
+  "group",
 ] as const;
 
 function isInspection(cmd: string): cmd is (typeof INSPECTIONS)[number] {

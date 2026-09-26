@@ -15,6 +15,7 @@ import type { GuildEvent, GuildRoster } from "wow/guild-store";
 import type { IgnoreEntry, IgnoreEvent } from "wow/ignore-store";
 import { observeNavigation } from "wow/navigation-observation";
 import { type NearbyQuery, queryNearby } from "wow/nearby";
+import { PartyStore } from "wow/party-store";
 import { type QuestEvent, QuestRuntime } from "wow/quests";
 import { type RecoveryEvent, RecoveryRuntime } from "wow/recovery";
 import type { RemotePose } from "wow/remote-motion";
@@ -148,6 +149,7 @@ export function createMockHandle(): MockHandle {
       remaining: undefined,
     })),
     getNearbyEntities: jest.fn((): Entity[] => []),
+    getPartyState: jest.fn(() => new PartyStore().snapshot()),
     getQuestState: jest.fn(() => quests.snapshot()),
     getRecoveryState: jest.fn(() => recovery.snapshot()),
     getRemotePoses: jest.fn((): RemotePose[] => []),

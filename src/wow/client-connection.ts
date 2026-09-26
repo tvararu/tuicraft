@@ -5,6 +5,7 @@ import { EntityStore, isUnit } from "wow/entity-store";
 import { FriendStore } from "wow/friend-store";
 import { GuildStore } from "wow/guild-store";
 import { IgnoreStore } from "wow/ignore-store";
+import { PartyStore } from "wow/party-store";
 import { ObjectType } from "wow/protocol/entity-fields";
 import { GameOpcode } from "wow/protocol/opcodes";
 import { PacketReader, PacketWriter } from "wow/protocol/packet";
@@ -145,6 +146,7 @@ export function createWorldConn(): WorldConn {
     selfGuidLow: 0,
     selfGuidHigh: 0,
     partyMembers: new Map(),
+    party: new PartyStore(),
     entityStore: new EntityStore(),
     remoteMotion: new RemoteMotion({
       now: () => Date.now(),

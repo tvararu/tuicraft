@@ -83,10 +83,18 @@ export type GroupMember = {
   online: boolean;
 };
 
+export type GroupLoot = {
+  method: number;
+  looterGuidLow: number;
+  looterGuidHigh: number;
+  threshold: number;
+};
+
 export type GroupList = {
   members: GroupMember[];
   leaderGuidLow: number;
   leaderGuidHigh: number;
+  loot: GroupLoot | undefined;
 };
 
 export function parseGroupList(r: PacketReader): GroupList {
@@ -111,7 +119,16 @@ export function parseGroupList(r: PacketReader): GroupList {
   }
   const leaderGuidLow = r.uint32LE();
   const leaderGuidHigh = r.uint32LE();
-  return { members, leaderGuidLow, leaderGuidHigh };
+  const loot =
+    memberCount > 0 && r.remaining >= 10
+      ? {
+          method: r.uint8(),
+          looterGuidLow: r.uint32LE(),
+          looterGuidHigh: r.uint32LE(),
+          threshold: r.uint8(),
+        }
+      : undefined;
+  return { members, leaderGuidLow, leaderGuidHigh, loot };
 }
 
 export type PartyMemberStats = {
