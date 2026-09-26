@@ -40,6 +40,7 @@ USAGE
   tuicraft fight [--framing <variant>] <guid> [instruction...] [--json]  Jev tactics (default: stay alive and defeat target); 30 s without target damage or approach blocks no_progress
                             Engages hostile/neutral creatures; refuses friendly (target_friendly) and players
                             Spell kit needs observed form 0; inspect tactics on refusal
+                            3 recoverable server rejections in a row stop a fight; see defense
   tuicraft tactics [--json]  Tactics summary: outcome, target, vitals, last XP
                             3 Jev timeouts in a row stop a fight; see defense
   tuicraft cycle <guid...> [--instruction ...] [--max N] [--json]  Explicit nearby GUID queue; no auto-acquire; a death is recovered, then the queue continues

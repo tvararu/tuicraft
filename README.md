@@ -297,7 +297,10 @@ close by at least 1 yd for 30 s blocks with `no_progress` (a `cycle` skips the
 target). Inspect `tactics` for terminal observations. Jev may choose directional
 movement under a renewable lease (`wait` holds, `stop_moving` releases). A slow
 Jev reply (over 5 s) is discarded and retried; 3 in a row stop the fight with
-`jev_timeout`, keeping auto-attack on a live attacker (`tactics.defense`).
+`jev_timeout`, keeping auto-attack on a live attacker (`tactics.defense`). A
+recoverable server rejection (facing, range, interrupt) is shown to Jev and the
+fight goes on; three in a row stop it with `server_action_rejected:<reason>`,
+also keeping auto-attack on a live attacker.
 
 `cycle` takes an explicit GUID queue selected from `nearby --json`; it does
 not auto-acquire. It runs `fight` over the queue and requests loot after each
