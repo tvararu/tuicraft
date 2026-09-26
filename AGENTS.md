@@ -170,21 +170,21 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Branches and archives
 
-- The `vibe` branch is **reference only and must never be merged**. Theo's
-  ruling, 2026-09-21: Fable created it around June 2026, it was never
-  reviewed, and unreviewed code must not enter `main` disguised as progress.
-  Keep it, never delete it, read it freely for implementation patterns
-  (protocol serialisation, the `bun:ffi` namigator bridge, movement maths).
-  Its acceptance and live-verification journals are **not** roadmap evidence,
-  because nobody reviewed them. Never merge, rebase or cherry-pick it without
-  Theo saying so.
+- The `vibe` branch is **reference only and must never be merged**. The
+  maintainer's ruling, 2026-09-21: Fable created it around June 2026, it was
+  never reviewed, and unreviewed code must not enter `main` disguised as
+  progress. Keep it, never delete it, read it freely for implementation
+  patterns (protocol serialisation, the `bun:ffi` namigator bridge, movement
+  maths). Its acceptance and live-verification journals are **not** roadmap
+  evidence, because nobody reviewed them. Never merge, rebase or cherry-pick
+  it without the maintainer saying so.
 - `main` has a GitHub `required_linear_history` rule and allows only
   squash merges (since 2026-09-26), so **merge commits are rejected at push
   time**. Local merges, hooks and `mise ci` all pass first, and the push
   then fails with `GH013: Repository rule violations found` naming only a
   commit hash, which reads as an auth or branch-protection fault rather
-  than a history-shape one. Theo's admin bypass is the only direct push to
-  `main`; it integrates by cherry-picking commits in order, never by
+  than a history-shape one. The maintainer's admin bypass is the only direct
+  push to `main`; it integrates by cherry-picking commits in order, never by
   merging. Note that `git cherry-pick --continue` opens an editor, so pass
   `-c core.editor=true`.
 - The ten `gameplay-*` worktrees from the Astra run were removed on
@@ -201,13 +201,13 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
 
 ## Worktree lifecycle
 
-Theo must never find stale worktrees or idle agents in Orca.
+The maintainer must never find stale worktrees or idle agents in Orca.
 
 - Every worktree has exactly one owner, recorded in Orca lineage when it is
   created: pass `--parent-worktree active` and
   `--comment "owner: <agent>, <purpose>"`, never `--no-parent`. Factory run
-  worktrees (`auto-*`) belong to the reaper, and ones Theo makes in the
-  app belong to Theo. The main checkout is never removed.
+  worktrees (`auto-*`) belong to the reaper, and ones the maintainer makes
+  in the app belong to the maintainer. The main checkout is never removed.
 - The owner removes its worktree and branch once the work has landed
   (`orca-ide worktree rm --worktree name:<name>`, then `git branch -D`).
   Commit and push before you stop.
@@ -219,7 +219,7 @@ Theo must never find stale worktrees or idle agents in Orca.
   been idle for more than 12 hours. It never deletes a dirty tree: it
   archives a patch to `tmp/worktree-archive-<date>/` in the main checkout
   and opens one `Reaper: <worktree> held (<reason>)` issue with `needs:pm`
-  that tells Theo what to do. It closes that issue itself once the
+  that tells the maintainer what to do. It closes that issue itself once the
   worktree is gone or no longer held, so an open one always needs action.
 
 ## Reference Codebases
@@ -322,17 +322,17 @@ Shipping:
 
 - Everything reaches `main` through a pull request that has green
   `signoff/ci`, `factory/ci` and `factory/review` statuses (the `main`
-  ruleset). Theo's approval is not required right now
+  ruleset). The maintainer's approval is not required right now
   (`required_approving_review_count: 0`, and `pmApproval = false` in
   `src/factory/config.ts`). If it is turned back on, only an approval by
   `tvararu` on github.com counts: approvals clicked inside Orca are sent as
   `OpenHubris`, the PR author.
-- The dev factory works issues that Theo has labelled `ready`: workers open
-  PRs as `OpenHubris` from `factory/<issue>-<slug>` branches, reviewers post
-  `factory/ci` and `factory/review`, and only the merger lands them, by
-  squash merge. Do not land or relabel factory PRs by hand. Adding `ready`
-  is the whole release step: it overrides `needs:pm`, which the worker
-  removes on claim.
+- The dev factory works issues that the maintainer has labelled `ready`:
+  workers open PRs as `OpenHubris` from `factory/<issue>-<slug>` branches,
+  reviewers post `factory/ci` and `factory/review`, and only the merger
+  lands them, by squash merge. Do not land or relabel factory PRs by hand.
+  Adding `ready` is the whole release step: it overrides `needs:pm`, which
+  the worker removes on claim.
 - Work that doesn't come from the factory goes through the same review and
   merger, so give it what their prompts need. File an issue with a
   `## Acceptance criteria` section. Push the work to a branch named
@@ -346,7 +346,7 @@ Shipping:
   prefix. Its body is the PR body's opening paragraph (1-3 sentences of
   why, before `Fixes #N` and any heading), then one trailer block:
   `Refs: #N` for each closed issue, `PR: #M`, and
-  `Co-authored-by: Theodor Vararu <theo@vararu.org>` to credit Theo.
+  `Co-authored-by: Theodor Vararu <theo@vararu.org>` to credit the maintainer.
   `bun src/factory/main.ts squash-message <M>` builds it and fails on a bad
   title or a missing why. Commits inside the PR may be as granular as
   helps; no history cleanup is needed.

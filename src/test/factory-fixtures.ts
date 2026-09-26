@@ -1,6 +1,6 @@
 import type { Issue, LabelEvent, Pr } from "factory/github";
 
-export const theo: LabelEvent = {
+export const maintainer: LabelEvent = {
   actor: "tvararu",
   at: "2026-09-25T10:00:00Z",
   label: "ready",
@@ -14,7 +14,7 @@ export function issue(
   const base = {
     author: "OpenHubris",
     blockers: [],
-    events: [theo],
+    events: [maintainer],
     prs: [],
     title: `issue ${number}`,
   };

@@ -48,7 +48,7 @@ const precheckTimeout = 60;
 export const desiredLabels: Label[] = [
   {
     color: "0E8A16",
-    description: "Theo wants this worked on",
+    description: "The maintainer wants this worked on",
     name: labels.ready,
   },
   {
@@ -83,7 +83,7 @@ export const desiredLabels: Label[] = [
   },
   {
     color: "B60205",
-    description: "Theo must decide something",
+    description: "The maintainer must decide something",
     name: labels.pm,
   },
   { color: "C5DEF5", description: "Filed by factory QA", name: labels.qa },

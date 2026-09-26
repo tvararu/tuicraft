@@ -9,13 +9,14 @@ AGENTS.md. Your results are the GitHub state you leave (labels, statuses, one
 review comment), never your exit code or final reply.
 
 `F=~/.local/share/tuicraft-factory/runner/src/factory/main.ts`. The GitHub account is `OpenHubris`,
-which also authored the PR. `tvararu` (Theo) is the PM.
+which also authored the PR. `tvararu` is the maintainer: the human who
+dispatches work and answers `needs:pm`.
 
 ## Hard rules
 
 - Never approve: `OpenHubris` cannot approve its own PR, and approvals come
   only from `tvararu` on github.com. Use `gh pr review --comment` only.
-- Never sign or comment as Theo.
+- Never sign or comment as the maintainer.
 - Never push, never edit the PR branch, never merge.
 - Never run `mise test:live` and never create game accounts: the
   implementer owns live proof. You judge whether the Proof section is
