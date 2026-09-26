@@ -640,6 +640,13 @@ route from a multi-floor start is refused before it reaches open ground; move
 to open ground first instead of changing the destination. `at route` means
 the route crosses such ground farther on; choose another destination or
 waypoint. All three stop.
+`start snapped off the requested ground position` (`refusal=stop`) means the
+pose is off the walkable navigation mesh, for example against an object or a
+building. Move 3 to 5 yards into open ground with `face` and `move forward`,
+then plan again; do not repeat the `goto` from that pose.
+`ground corridor changes surface` (`refusal=stop`) means the route's ground
+changes to another surface on the way, such as a ramp onto a platform. Choose
+a nearer waypoint on the same floor or another destination.
 `refusal=unreachable` means the navigation mesh cannot connect the start to
 the destination: native `UNKNOWN_PATH`, a path that ends away from the
 requested point, or a path that omits it. Choose another destination; the

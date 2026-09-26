@@ -52,9 +52,26 @@ describe("nextStepFor", () => {
     expect(nextStepFor("pathfind_find_path failed (UNKNOWN_PATH)")).toContain(
       "do not retry this one",
     );
-    expect(nextStepFor("start snapped off the requested ground position")).toBe(
-      null,
-    );
+  });
+
+  test("a snapped start sends the caller into open ground, not to retry", () => {
+    const hint = nextStepFor("start snapped off the requested ground position");
+    expect(hint).toContain("off the walkable mesh");
+    expect(hint).toContain("Move 3 to 5 yards into open ground");
+    expect(hint).toContain("Do not repeat this goto from here");
+    expect(hint).not.toMatch(/NPC/);
+  });
+
+  test("an end snap keeps the unreachable hint", () => {
+    expect(
+      nextStepFor("end snapped off the requested ground position"),
+    ).toContain("do not retry this one");
+  });
+
+  test("a corridor that changes surface names a different route", () => {
+    const hint = nextStepFor("ground corridor changes surface");
+    expect(hint).toContain("changes to another surface");
+    expect(hint).toContain("nearer waypoint on the same floor");
   });
 
   test("other or missing reasons have no hint", () => {
