@@ -46,13 +46,21 @@ fields changed.
 omp it starts for a factory role, or in any tuicraft worktree other than the
 main checkout (which covers the coordinator's `orca-ide worktree create
 --agent omp` launches), gets per-run `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`
-and `XDG_STATE_HOME` under `factory-xdg/` in the worktree's git directory
-(`git rev-parse --absolute-git-dir`), which git status never shows and
-worktree removal deletes. Each links every entry of the real directory
-except `tuicraft`, so `gh`, git, `mise` and `systemctl --user` find their
-usual config, state and sockets, while plain `bun src/main.ts` finds no
-config and cannot reach the default daemon socket. The main checkout and
-other repositories keep the default directories. Live characters come from
+and `XDG_STATE_HOME`. Config and state live under `factory-xdg/` in the
+worktree's git directory (`git rev-parse --absolute-git-dir`), which git
+status never shows and worktree removal deletes. The runtime directory is
+`$XDG_RUNTIME_DIR/tuicraft-factory-<hash>`, keyed by the first 12 hex
+digits of the git directory's SHA-256, because sockets such as
+`systemd/private` must fit in 108 bytes and a git directory path grows
+with the worktree name. It holds a `.factory-gitdir` link to its git
+directory, and each launch deletes the `tuicraft-factory-*` directories
+whose git directory is gone. A launch from an already isolated shell
+reuses the same directories. Each links every entry of the real directory
+except `tuicraft` and the other `tuicraft-factory-*` directories, so `gh`,
+git, `mise` and `systemctl --user` find their usual config, state and
+sockets, while plain `bun src/main.ts` finds no config and cannot reach the
+default daemon socket. The main checkout and other repositories keep the
+default directories. Live characters come from
 `bun src/factory/main.ts soap create <preset>`, which also writes
 `tmp/tc-<ACCOUNT>`: it exports the account's own `XDG_*` directories under
 `tmp/factory-account-<ACCOUNT>/`, refuses to run when that account's config

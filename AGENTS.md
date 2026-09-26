@@ -153,11 +153,12 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   character, prints `tc-<ACCOUNT>: character <name>` on stderr and runs
   `bun src/main.ts "$@"`. `soap delete` removes it with the account's
   directories. `omp-factory` starts every omp in a tuicraft worktree other
-  than the main checkout with per-run `XDG_*` directories (`factory-xdg/`
-  in the worktree's git directory) that link everything in the real ones
-  except `tuicraft`, so plain `bun src/main.ts` there finds no config:
-  `status` says the daemon is not running, and `start` or any daemon
-  command fails with "No config found" after 30 seconds.
+  than the main checkout with per-run `XDG_*` directories (config and state
+  in `factory-xdg/` in the worktree's git directory, runtime in
+  `$XDG_RUNTIME_DIR/tuicraft-factory-<hash>`) that link everything in the
+  real ones except `tuicraft`, so plain `bun src/main.ts` there finds no
+  config: `status` says the daemon is not running, and `start` or any
+  daemon command fails with "No config found" after 30 seconds.
 - Tests are colocated: `foo.ts` → `foo.test.ts` in the same directory
 - Import from `bun:test`: `import { test, expect, describe } from "bun:test"`
 - Run with `mise test`

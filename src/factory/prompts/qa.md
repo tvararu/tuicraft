@@ -85,10 +85,10 @@ Presets: `fresh` (level 1), `eversong10` (level 10, Fairbreeze Village),
 tuicraft command for that character through it (`tmp/tc-<ACCOUNT> start`,
 `tmp/tc-<ACCOUNT> who`): it runs `bun src/main.ts` with the account's own
 config, socket and session log, names the character on stderr, and refuses
-to run if its daemon would log in anyone else. `omp-factory` gives this run XDG directories of its own
-without the default tuicraft config, so plain `bun src/main.ts` logs in
-nobody. Use `.claude/skills/tuicraft/SKILL.md` and `docs/manual.md` for
-commands. Run:
+to run if its daemon would log in anyone else. `omp-factory` gives this run
+XDG directories of its own without the default tuicraft config, so plain
+`bun src/main.ts` logs in nobody. Use `.claude/skills/tuicraft/SKILL.md`
+and `docs/manual.md` for commands. Run:
 
 - the core loop: start the daemon, log in, read events, `who`, say and
   whisper to your own character, nearby entities, stop the daemon;

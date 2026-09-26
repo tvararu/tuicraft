@@ -18,25 +18,41 @@ real_omp() {
 }
 
 mirror() {
-  local real=$1 dir=$2 entry
+  local real=$1 dir=$2 entry name
   mkdir -p "$dir"
   chmod 700 "$dir"
   [[ -n $real && -d $real && $real != "$dir" ]] || return 0
   for entry in "$real"/* "$real"/.[!.]* "$real"/..?*; do
     [[ -e $entry || -L $entry ]] || continue
-    [[ ${entry##*/} == tuicraft ]] && continue
-    [[ -e $dir/${entry##*/} || -L $dir/${entry##*/} ]] && continue
-    ln -sfn -- "$entry" "$dir/${entry##*/}"
+    name=${entry##*/}
+    [[ $name == tuicraft || $name == tuicraft-factory-* ]] && continue
+    [[ -e $dir/$name || -L $dir/$name ]] && continue
+    ln -sfn -- "$entry" "$dir/$name"
+  done
+}
+
+prune() {
+  local dir
+  for dir in "$1"/tuicraft-factory-*/; do
+    [[ -L ${dir}.factory-gitdir && ! -e ${dir}.factory-gitdir ]] || continue
+    rm -rf -- "$dir" || true
   done
 }
 
 isolate() {
-  local base=$1/factory-xdg
+  local git_dir=$1 base=$1/factory-xdg real=${XDG_RUNTIME_DIR:-} hash runtime
+  if [[ -L $real/.factory-gitdir ]]; then
+    real=${real%/*}
+  fi
+  hash=$(printf '%s' "$git_dir" | sha256sum)
+  runtime=${real:-${TMPDIR:-/tmp}}/tuicraft-factory-${hash:0:12}
+  prune "${runtime%/*}"
   mirror "${XDG_CONFIG_HOME:-$HOME/.config}" "$base/config"
-  mirror "${XDG_RUNTIME_DIR:-}" "$base/runtime"
+  mirror "$real" "$runtime"
   mirror "${XDG_STATE_HOME:-$HOME/.local/state}" "$base/state"
+  ln -sfn -- "$git_dir" "$runtime/.factory-gitdir"
   export XDG_CONFIG_HOME=$base/config
-  export XDG_RUNTIME_DIR=$base/runtime
+  export XDG_RUNTIME_DIR=$runtime
   export XDG_STATE_HOME=$base/state
 }
 
