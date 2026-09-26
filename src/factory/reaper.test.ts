@@ -70,10 +70,10 @@ describe("ownerOf", () => {
     });
   });
 
-  test("worktrees without cli provenance belong to theo", () => {
+  test("worktrees without cli provenance belong to the maintainer", () => {
     expect(ownerOf(wt({ parentWorktreeId: coord.id }), [coord])).toEqual({
       kind: "owner",
-      name: "theo",
+      name: "maintainer",
     });
   });
 

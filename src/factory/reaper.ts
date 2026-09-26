@@ -99,7 +99,7 @@ export function ownerOf(wt: Worktree, all: Worktree[]): Owner {
   const automation = wt.displayName.match(autoName)?.[1];
   if (automation)
     return { automation, kind: "reaper", role: roleOf(automation) };
-  if (!wt.cliProvenance) return { kind: "owner", name: "theo" };
+  if (!wt.cliProvenance) return { kind: "owner", name: "maintainer" };
   const parent = all.find((p) => p.id === wt.parentWorktreeId);
   return { kind: "owner", name: parent?.displayName ?? "unknown" };
 }

@@ -7,7 +7,7 @@ How the factory works now. History and rationale live in
 
 ```mermaid
 flowchart LR
-  T[Theo adds ready] --> W[Worker]
+  T[Maintainer adds ready] --> W[Worker]
   W -->|PR + proof| R[Reviewer]
   R -->|fail| W
   R -->|pass| M[Merger]
@@ -26,14 +26,14 @@ are in `src/factory/prompts/`. Every role starts with
 
 | Label | Meaning |
 |---|---|
-| `ready` | Theo wants it worked on. Only counts if Theo added it last |
+| `ready` | The maintainer wants it worked on. Only counts if the maintainer added it last |
 | `agent:working` | A worker owns it |
 | `agent:review` | PR waits for review |
 | `agent:reviewing` | A reviewer owns it |
 | `agent:rework` | Reviewer or merger wants changes |
 | `agent:merging` | Reviewed, waits for the merger |
 | `agent:landing` | The merger is landing it (one issue at a time) |
-| `needs:pm` | Theo must decide. `ready` from Theo overrides it |
+| `needs:pm` | The maintainer must decide. `ready` from the maintainer overrides it |
 | `qa:found` | Filed by QA |
 
 An issue with an open blocked-by issue is never picked up or landed.

@@ -86,7 +86,7 @@ describe("plan", () => {
     });
   });
 
-  test("never disables an automation Theo switched on", () => {
+  test("never disables an automation the maintainer switched on", () => {
     const current = recorded(worker, { enabled: true });
     expect(plan([worker], [current])[0]?.kind).toBe("ok");
   });

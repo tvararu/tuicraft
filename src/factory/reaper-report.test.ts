@@ -17,7 +17,7 @@ describe("planReport", () => {
     ageHours: 14,
     archive: "/x/alpha.patch",
     name: "alpha",
-    owner: "theo",
+    owner: "maintainer",
     reason: "dirty",
   };
   const b: Held = {
