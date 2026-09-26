@@ -163,7 +163,7 @@ retargets the child to `main` and the merger runs
 
 ## Pace
 
-`mise factory:pace [default|max]` sets schedules and caps.
+`mise factory:pace [pause|default|max]` sets schedules and caps.
 
 | | default | max |
 |---|---|---|
@@ -171,5 +171,12 @@ retargets the child to `main` and the merger runs
 | Reviewer | every 3 min, 3 in flight | every min, 6 |
 | Merger | every 10 min | every 3 min |
 | QA | every 30 min | every 15 min |
+
+`pause` disables `work`, `review` and `merge` and leaves `qa` and the
+reaper timer running at their current schedules. `default` or `max` ends
+a pause: it re-enables the three and sets that level's schedules. While
+paused, `mise factory:pace` reports the three as `paused` rather than as
+drift, and a manual precheck or `setup automations` uses the `default`
+caps and schedules.
 
 Run caps: worker 3 h, QA 2 h, reviewer and merger 1 h.

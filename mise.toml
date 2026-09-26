@@ -119,9 +119,9 @@ description = "Check current docs for dated history and dead references"
 run = "bun src/tools/stale-docs.ts"
 
 [tasks."factory:pace"]
-description = "Show the factory pace, or set it to default or max"
+description = "Show the factory pace, or set it to pause, default or max"
 usage = '''
-arg "[level]" help="default or max; omit to show the live schedules"
+arg "[level]" help="pause, default or max; omit to show the live schedules"
 '''
 run = 'bun src/factory/main.ts pace ${usage_level:-}'
 

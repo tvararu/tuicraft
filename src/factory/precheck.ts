@@ -2,8 +2,8 @@ import { setStatus } from "factory/board";
 import { applyBounces, landableHead, movedHeads } from "factory/bounce";
 import {
   factoryStateDir,
+  levelOf,
   maintainerApproval,
-  paces,
   type Role,
   readPace,
   repoSlug,
@@ -153,11 +153,11 @@ const deciders: Record<Role, (dryRun: boolean) => Promise<Decision>> = {
   },
   qa,
   reviewer: async () => {
-    const { reviewing } = paces[await readPace()];
+    const { reviewing } = levelOf(await readPace());
     return decideReviewer(await fetchIssues(), reviewing, Date.now());
   },
   worker: async () => {
-    const { wip } = paces[await readPace()];
+    const { wip } = levelOf(await readPace());
     return decideWorker(await fetchIssues(), wip, Date.now());
   },
 };

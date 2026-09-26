@@ -53,10 +53,12 @@ Use `mise` to run tasks (not `bun` directly, not `mise run`):
   factory CLI (how it works: `docs/factory.md`).
   Automations and the reaper run it from the runner clone,
   `~/.local/share/tuicraft-factory/runner`, which follows `origin/main`
-- `mise factory:pace [default|max]` — show the factory pace and the live
-  schedules, or set it (automation schedules in place, worker and review
-  caps, reaper timer). Use `max` in quiet weeks with usage to spare and for
-  overnight pushes; the design doc's Pace section has the table
+- `mise factory:pace [pause|default|max]` — show the factory pace and the
+  live schedules, or set it (automation schedules in place, worker and
+  review caps, reaper timer). Use `max` in quiet weeks with usage to spare
+  and for overnight pushes. `pause` disables `work`, `review` and `merge`
+  and leaves QA and the reaper running; `default` or `max` ends it. The
+  design doc's Pace section has the table
 - `mise build` — compile single binary (`bun build --compile`)
 - `mise test:slowest` — show 10 slowest tests via junit XML
 - `orca-ide worktree create --name <name> --parent-worktree active --comment

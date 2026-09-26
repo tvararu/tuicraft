@@ -2,9 +2,9 @@ import { readlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import {
   automationNames,
+  levelOf,
   mainCheckout,
   type PaceLevel,
-  paces,
   type Role,
   readPace,
   runner,
@@ -193,7 +193,7 @@ async function setupAutomations(
   apply: boolean,
   enable: boolean,
 ): Promise<number> {
-  const level = paces[await readPace()];
+  const level = levelOf(await readPace());
   const steps = plan(
     desiredAutomations(enable, level),
     await existingAutomations(),

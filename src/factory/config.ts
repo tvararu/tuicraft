@@ -49,7 +49,11 @@ export const roleCapHours: Record<Role, number> = {
   worker: 3,
 };
 
-export type Pace = "default" | "max";
+export const paceNames = ["pause", "default", "max"] as const;
+
+export type Pace = (typeof paceNames)[number];
+
+export type Level = Exclude<Pace, "pause">;
 
 export type PaceLevel = {
   schedules: Record<Role, string>;
@@ -58,7 +62,7 @@ export type PaceLevel = {
   reaperMinutes: number;
 };
 
-export const paces: Record<Pace, PaceLevel> = {
+export const paces: Record<Level, PaceLevel> = {
   default: {
     reaperMinutes: 5,
     reviewing: 3,
@@ -83,8 +87,14 @@ export const paces: Record<Pace, PaceLevel> = {
   },
 };
 
+export const pausedRoles: readonly Role[] = ["worker", "reviewer", "merger"];
+
 export function isPace(value: string): value is Pace {
-  return Object.hasOwn(paces, value);
+  return paceNames.some((name) => name === value);
+}
+
+export function levelOf(pace: Pace): PaceLevel {
+  return paces[pace === "pause" ? "default" : pace];
 }
 
 export function paceFile(dir = factoryConfigDir()): string {
@@ -96,7 +106,9 @@ export async function readPace(file = paceFile()): Promise<Pace> {
   if (!(await handle.exists())) return "default";
   const value = (await handle.text()).trim();
   if (!isPace(value))
-    throw new Error(`${file}: unknown pace "${value}", expected default|max`);
+    throw new Error(
+      `${file}: unknown pace "${value}", expected ${paceNames.join("|")}`,
+    );
   return value;
 }
 
