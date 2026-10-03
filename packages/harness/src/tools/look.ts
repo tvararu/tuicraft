@@ -24,6 +24,7 @@ import {
 import { findUnits, kindOf, rememberedRows } from "#harness/tools/look-find";
 import { movementWords, withMovement } from "#harness/tools/look-movement";
 import {
+  grayLine,
   headerLine,
   moreLine,
   nearestLine,
@@ -104,6 +105,7 @@ function lookBody(
           headerLine(after),
           ...after.rows.map((unit) => rowLine(unit, after.self.level)),
           ...moreLine(after),
+          ...grayLine(after),
           ...after.remembered.map((unit) => rowLine(unit, after.self.level)),
           nearestLine(after),
         ];

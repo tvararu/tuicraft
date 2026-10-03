@@ -2,6 +2,7 @@ import type { LookAfter, LookFilter } from "#harness/contract/details";
 import type { NearestKind, QuestMark, UnitView } from "#harness/contract/views";
 import { grayLevel } from "#harness/loops/combat-actions-credit";
 import { LOOK_DEFAULT_YD } from "#harness/ops/range";
+import { LEVEL_CAP_ABOVE } from "#harness/tools/engage-choose";
 import { kindOf } from "#harness/tools/look-find";
 import { movementWords } from "#harness/tools/look-movement";
 import { MORE_NAMES } from "#harness/tools/look-rank";
@@ -40,6 +41,22 @@ export function headerLine({
   if (rows.length === 0) return `No ${nounOf(filter)} within ${range} yd.`;
   const order = more.length > 0 ? "most relevant first" : "nearest first";
   return `${rows.length} of ${matched} ${nounOf(filter)} within ${range} yd, ${order}:`;
+}
+
+export function grayLine({ filter, rows, self }: LookAfter): string[] {
+  if (rows.length === 0) return [];
+  if (filter !== "any" && filter !== "hostile" && filter !== "attackable")
+    return [];
+  const seen = rows.filter((unit) => unit.inView);
+  const hostiles = seen.filter(
+    (unit) => unit.relation === "hostile" && unit.kind === "creature",
+  );
+  if (hostiles.length === 0) return [];
+  const gray = grayLevel(self.level);
+  if (hostiles.some((unit) => unit.level > gray)) return [];
+  return [
+    `All ${hostiles.length === 1 ? "hostile" : "hostiles"} in view are gray and give no XP. Fight L${gray + 1}-${self.level + LEVEL_CAP_ABOVE} instead; ${nextCall("travel", { to: "explore" })} walks outward looking for one.`,
+  ];
 }
 
 export function moreLine({ more, within }: LookAfter): string[] {

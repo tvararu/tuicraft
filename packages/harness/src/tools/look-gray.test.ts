@@ -33,4 +33,21 @@ describe("look gray marker", () => {
     expect(text).toContain("Springpaw Lynx");
     expect(text).not.toContain("gray");
   });
+
+  test("only gray hostiles in view point at explore and the XP level range", async () => {
+    const { handle, tool } = await world();
+    const gray = grayLevel(SELF_LEVEL);
+    place(handle, eversong([hostile(20, 0x26n, gray, "Starving Ghostclaw")]));
+    const text = (await runTool(tool, { find: "hostile", within: 100 })).text;
+    expect(text).toContain(`L${gray + 1}-`);
+    expect(text).toContain('travel(to: "explore")');
+  });
+
+  test("a non-gray hostile in view does not point at explore", async () => {
+    const { handle, tool } = await world();
+    const fresh = grayLevel(SELF_LEVEL) + 1;
+    place(handle, eversong([hostile(20, 0x26n, fresh, "Springpaw Lynx")]));
+    const text = (await runTool(tool, { find: "hostile", within: 100 })).text;
+    expect(text).not.toContain('travel(to: "explore")');
+  });
 });
