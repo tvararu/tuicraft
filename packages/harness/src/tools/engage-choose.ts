@@ -3,6 +3,7 @@ import type { ToolResult } from "#harness/contract/result";
 import type { RunControl } from "#harness/contract/runs";
 import type { OpsCtx, ToolCtx, ViewCtx } from "#harness/contract/services";
 import type { UnitView } from "#harness/contract/views";
+import { grayLevel } from "#harness/loops/combat-actions-credit";
 import { MIN_HP_PCT, MIN_MANA_PCT } from "#harness/loops/cycle-gate";
 import { dangerView, type InterruptCause } from "#harness/ops/danger";
 import { compassWord, explore } from "#harness/ops/explore";
@@ -133,12 +134,14 @@ async function findUnnamed(ops: OpsCtx): Promise<UnitView> {
   const passed = hostiles(ops)
     .filter((unit) => !critter(unit))
     .map((unit) => `${unit.name} ${unit.ref} L${unit.level}`);
-  if (passed.length > 0)
+  if (passed.length > 0) {
+    const floor = grayLevel(level) + 1;
     throw new Refusal({
-      detail: `only gray units in view (${passed.join(", ")}); they give no XP or kill credit.`,
+      detail: `only gray units in view (${passed.join(", ")}); they give no XP or kill credit. Fight L${floor}-${level + LEVEL_CAP_ABOVE} instead.`,
       next: nextCall("travel", { to: "explore" }),
       reason: "not_seen",
     });
+  }
   throw new Refusal({
     detail: `no hostile unit you can attack came into view after ${EXPLORE_TRIES} explore walks.`,
     next: askHuman("Where should I look for enemies?"),

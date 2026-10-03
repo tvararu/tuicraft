@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { EngageAfter } from "#harness/contract/details";
+import { grayLevel } from "#harness/loops/combat-actions-credit";
 import { createSightings } from "#harness/ops/sightings";
 import { unitViews } from "#harness/ops/views";
 import {
   checkHelper,
   chooseTarget,
   guardPull,
+  LEVEL_CAP_ABOVE,
   parseQuest,
 } from "#harness/tools/engage-choose";
 import {
@@ -172,12 +174,12 @@ describe("chooseTarget", () => {
     driveGoto(t.handle, [{ arrive: { x: 0, y: 0 } }]);
     const refused = chooseTarget(toolCtx<EngageAfter>(t), {});
     await expect(refused).rejects.toMatchObject({ reason: "not_seen" });
-    await expect(refused).rejects.toHaveProperty(
-      "detail",
-      expect.stringMatching(
-        /^only gray units in view \(Mistbat u\d+ L9\); they give no XP or kill credit\.$/,
-      ),
+    const detail = await refused.catch(
+      (error: { detail: string }) => error.detail,
     );
+    expect(detail).toContain("Mistbat");
+    expect(detail).toContain("no XP");
+    expect(detail).toContain(`${grayLevel(20) + 1}-${20 + LEVEL_CAP_ABOVE}`);
     await expect(refused).rejects.toHaveProperty(
       "next",
       'travel(to: "explore")',
