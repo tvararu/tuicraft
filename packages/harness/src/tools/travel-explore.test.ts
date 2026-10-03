@@ -336,4 +336,22 @@ describe("travel explore", () => {
       status: "FAILED",
     });
   });
+
+  test("a gray-only explore result keeps walking the same way toward XP levels", async () => {
+    const t = await world();
+    driveGoto(t.handle, [
+      { arrive: { x: 20, y: 0 } },
+      { arrive: { x: 40, y: 0 } },
+      { arrive: { x: 60, y: 0 } },
+      { arrive: { x: 80, y: 0 } },
+      { arrive: { x: 100, y: 0 } },
+    ]);
+    const res = await travelSpec.run(
+      { to: "explore north" },
+      toolCtx<TravelAfter>(t),
+    );
+    expect(res.next).toBe('travel(to: "explore north")');
+    expect(res.detail).toContain("give no XP");
+    expect(res.detail).toContain("L");
+  });
 });

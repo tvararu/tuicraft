@@ -3,12 +3,14 @@ import type { TravelAfter, TravelGoalView } from "#harness/contract/details";
 import type { ToolResult } from "#harness/contract/result";
 import type { OpsCtx, ViewCtx } from "#harness/contract/services";
 import type { Compass, UnitView } from "#harness/contract/views";
+import { grayLevel } from "#harness/loops/combat-actions-credit";
 import type { InterruptCause } from "#harness/ops/danger";
 import { type ExploreResult, SIDE_REASONS } from "#harness/ops/explore";
 import type { LegResult } from "#harness/ops/travel-leg";
 import { structuralAsk, structuralReach } from "#harness/ops/unreached";
 import { manaText, poseView, vitalsView } from "#harness/ops/views";
 import { result } from "#harness/tools/define";
+import { LEVEL_CAP_ABOVE } from "#harness/tools/engage-choose";
 import { askHuman, nextCall } from "#harness/tools/next-call";
 import {
   arrivedNext,
@@ -407,9 +409,27 @@ function obstructedReport(found: Found, after: TravelAfter): Report {
   });
 }
 
-export function exploreReport(found: Found, after: TravelAfter): Report {
+export function exploreReport(
+  found: Found,
+  after: TravelAfter,
+  init: { selfLevel?: number; seeksHostile?: boolean } = {},
+): Report {
   const where = `${yd(found.walkedYd)} yd ${WORD[found.direction]}`;
   const seen = seenText(found);
+  if (
+    init.seeksHostile === true &&
+    init.selfLevel !== undefined &&
+    found.stoppedBy === "distance"
+  ) {
+    const gray = grayLevel(init.selfLevel);
+    const range = `L${gray + 1}-${init.selfLevel + LEVEL_CAP_ABOVE}`;
+    const more = ` Nothing ${range} came into view; only gray units give no XP. ${nextCall("travel", { to: `explore ${WORD[found.direction]}` })} keeps walking the same way.`;
+    return result("DONE", {
+      after,
+      detail: `explored ${where}. ${seen}${more}`,
+      next: nextCall("travel", { to: `explore ${WORD[found.direction]}` }),
+    });
+  }
   if (found.stoppedBy === "obstructed") return obstructedReport(found, after);
   if (found.stoppedBy === "explored")
     return result("DONE", {
