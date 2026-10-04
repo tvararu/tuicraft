@@ -6,6 +6,14 @@ export const ITEM_FLAGS_FILE = "item-flags.json";
 export type ItemFlags = Record<string, number>;
 
 const PROBE_TIMEOUT_MS = 120_000;
+const MAX_BATCH = 40;
+const PARTNER_FILES = [
+  "partner",
+  "partner1",
+  "partner2",
+  "partner3",
+  "partner4",
+] as const;
 
 function vanishedOf(baseline: unknown, final: unknown): number[] {
   if (!(isRecord(baseline) && Array.isArray(baseline["inventory"]))) return [];
@@ -89,6 +97,21 @@ export async function readItemFlags(runDir: string): Promise<ItemFlags> {
   if (!isRecord(parsed)) return {};
   return flagsOf({ flags: parsed });
 }
+async function vanishedIn(runDir: string): Promise<number[]> {
+  const missing: number[] = [];
+  const agent = await truthOf(runDir, "baseline.json");
+  const rest = await truthOf(runDir, "final.json");
+  for (const id of vanishedOf(agent, rest))
+    if (!missing.includes(id)) missing.push(id);
+  for (const who of PARTNER_FILES) {
+    const baseline = await truthOf(runDir, `${who}-baseline.json`);
+    if (baseline === null) continue;
+    const final = await truthOf(runDir, `${who}-final.json`);
+    for (const id of vanishedOf(baseline, final))
+      if (!missing.includes(id)) missing.push(id);
+  }
+  return missing;
+}
 
 export async function recordItemFlags({
   account,
@@ -99,21 +122,22 @@ export async function recordItemFlags({
   exec: Exec;
   runDir: string;
 }): Promise<void> {
-  const missing: number[] = [];
-  const agent = await truthOf(runDir, "baseline.json");
-  const rest = await truthOf(runDir, "final.json");
-  for (const id of vanishedOf(agent, rest))
-    if (!missing.includes(id)) missing.push(id);
-  for (const who of ["partner1", "partner2", "partner3"]) {
-    const baseline = await truthOf(runDir, `${who}-baseline.json`);
-    if (baseline === null) continue;
-    const final = await truthOf(runDir, `${who}-final.json`);
-    for (const id of vanishedOf(baseline, final))
-      if (!missing.includes(id)) missing.push(id);
-  }
+  const missing = await vanishedIn(runDir);
   if (missing.length === 0) return;
-  const flags = await query(exec, account, missing, runDir);
+  const merged: ItemFlags = {};
+  for (let at = 0; at < missing.length; at += MAX_BATCH) {
+    const flags = await query(
+      exec,
+      account,
+      missing.slice(at, at + MAX_BATCH),
+      runDir,
+    );
+    for (const [raw, value] of Object.entries(flags)) merged[raw] = value;
+  }
   const file = Bun.file(`${runDir}/${ITEM_FLAGS_FILE}`);
   if (await file.exists()) return;
-  await writeFile(`${runDir}/${ITEM_FLAGS_FILE}`, `${JSON.stringify(flags)}\n`);
+  await writeFile(
+    `${runDir}/${ITEM_FLAGS_FILE}`,
+    `${JSON.stringify(merged)}\n`,
+  );
 }

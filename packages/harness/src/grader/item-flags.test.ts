@@ -65,6 +65,39 @@ describe("recordItemFlags", () => {
     expect(calls[0]?.argv).toContain("items=1113");
   });
 
+  test.each(["partner", "partner1", "partner2", "partner3", "partner4"])(
+    "covers items that vanish only from %s",
+    async (role) => {
+      const dir = await runDir({
+        ...sides([2092], [2092]),
+        ...sides([1113], [], `${role}-`),
+      });
+      const { calls, exec } = fakeExec(() => report({ 1113: 2_097_154 }));
+      await recordItemFlags({ account: "FAC0000000001", exec, runDir: dir });
+      expect(calls[0]?.argv).toContain("items=1113");
+      expect(await readItemFlags(dir)).toEqual({ 1113: 2_097_154 });
+    },
+  );
+
+  test("splits more than 40 vanished entries into batches the probe accepts", async () => {
+    const ids = Array.from({ length: 45 }, (_, index) => 1000 + index);
+    const dir = await runDir(sides(ids, []));
+    const { calls, exec } = fakeExec((argv) => {
+      const arg = argv.find((part) => part.startsWith("items=")) ?? "items=";
+      const flags: Record<string, number> = {};
+      for (const id of arg.slice(6).split(","))
+        flags[id] = id === "1044" ? 2_097_154 : 0;
+      return report(flags);
+    });
+    await recordItemFlags({ account: "FAC0000000001", exec, runDir: dir });
+    expect(calls.length).toBe(2);
+    for (const { argv } of calls) {
+      const arg = argv.find((part) => part.startsWith("items=")) ?? "items=";
+      expect(arg.slice(6).split(",").length).toBeLessThanOrEqual(40);
+    }
+    expect((await readItemFlags(dir))["1044"]).toBe(2_097_154);
+  });
+
   test("makes no probe call when nothing vanished", async () => {
     const dir = await runDir(sides([2092], [2092, 5349]));
     const { calls, exec } = fakeExec(() => report({}));
