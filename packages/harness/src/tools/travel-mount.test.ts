@@ -1,8 +1,9 @@
 import { describe, expect, jest, test } from "bun:test";
 import type { SpellDefinition } from "@peon/core";
 import type { TravelAfter } from "#harness/contract/details";
-import { MOUNT_HINT_YD } from "#harness/tools/travel-mount";
+import { createRefTable } from "#harness/ops/refs";
 import { travelSpec } from "#harness/tools/travel";
+import { MOUNT_HINT_YD } from "#harness/tools/travel-mount";
 import {
   driveGoto,
   setSelf,
@@ -11,12 +12,14 @@ import {
   unitRow,
 } from "#test-support/ops-fixtures";
 import {
+  createTestRuntime,
+  type TestRuntime,
+} from "#test-support/runtime-fixture";
+import {
   definition,
   installSpells,
   type SpellInit,
 } from "#test-support/spell-tool-fixtures";
-import { createTestRuntime, type TestRuntime } from "#test-support/runtime-fixture";
-import { createRefTable } from "#harness/ops/refs";
 
 const MOUNTED_AURA = 78;
 const FLIGHT_AURA = 207;
@@ -66,11 +69,16 @@ async function world(init: Init = {}): Promise<TestRuntime> {
     const pose = control.pose;
     if (!pose) throw new Error("no pose");
     const poseAt = { ...pose, mapId: init.mapId };
-    t.handle.getControlState = () => ({ ...control, pose: poseAt, serverPose: poseAt });
+    t.handle.getControlState = () => ({
+      ...control,
+      pose: poseAt,
+      serverPose: poseAt,
+    });
   }
-  jest
-    .spyOn(t.handle.selfstate, "state")
-    .mockReturnValue({ ...t.handle.selfstate.state(), mounted: init.mounted ?? false });
+  jest.spyOn(t.handle.selfstate, "state").mockReturnValue({
+    ...t.handle.selfstate.state(),
+    mounted: init.mounted ?? false,
+  });
   driveGoto(t.handle, [{ arrive: { x: distance - 1, y: 0 } }]);
   return t;
 }
