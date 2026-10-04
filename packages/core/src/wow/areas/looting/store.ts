@@ -138,5 +138,6 @@ export class LootingStore {
     this.owners.clear();
     this.candidates.clear();
     this.pending = [];
+    this.pendingFor = undefined;
   }
 }
