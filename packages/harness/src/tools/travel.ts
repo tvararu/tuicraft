@@ -416,6 +416,17 @@ function refuseUnderAttack(ctx: ToolCtx<TravelAfter>): void {
   });
 }
 
+function startHint(
+  ctx: ToolCtx<TravelAfter>,
+  goal: Goal,
+): Promise<string | undefined> {
+  return (
+    goal.kind === "unit" || goal.kind === "point"
+      ? mountHint(ctx, goal)
+      : Promise.resolve(undefined)
+  ).catch(() => undefined);
+}
+
 async function runTravel(
   args: TravelArgs,
   ctx: ToolCtx<TravelAfter>,
@@ -423,10 +434,7 @@ async function runTravel(
   const goal = parseGoal(ctx, args.to);
   refuseUnderAttack(ctx);
   noteTravel(ctx, args.to);
-  const hintPromise =
-    goal.kind === "unit" || goal.kind === "point"
-      ? mountHint(ctx, goal)
-      : Promise.resolve(undefined);
+  const hintPromise = startHint(ctx, goal);
   if (goal.kind === "corpse" && selfView(ctx).life === "alive")
     throw new Refusal({
       detail: "you are alive; there is no corpse to reach.",
@@ -469,7 +477,7 @@ async function runTravel(
   });
   runId = run.id;
   const waited = await awaitRun({ rt: ctx.rt, run });
-  const hint = await hintPromise.catch(() => undefined);
+  const hint = await hintPromise;
   if (waited.kind === "ended")
     return withMountHint({ ...waited.end.value, runId }, hint);
   return withMountHint(

@@ -1,5 +1,7 @@
 import { describe, expect, jest, test } from "bun:test";
 import type { SpellDefinition } from "@peon/core";
+import { dbcFiles, packDbc } from "@peon/core/test-support/dbc";
+import { flushMicrotasks } from "@peon/core/test-support/microtasks";
 import type { TravelAfter } from "#harness/contract/details";
 import { createRefTable } from "#harness/ops/refs";
 import { travelSpec } from "#harness/tools/travel";
@@ -23,7 +25,14 @@ import {
 
 const MOUNTED_AURA = 78;
 const FLIGHT_AURA = 207;
-const HORSE = definition({ aura: MOUNTED_AURA, id: 458, name: "Brown Horse" });
+const OUTDOORS = 0x80_00;
+const FORCE_INTERIOR = 4602;
+const HORSE = definition({
+  aura: MOUNTED_AURA,
+  id: 458,
+  name: "Brown Horse",
+  raw: OUTDOORS,
+});
 const FIREBALL = definition({ id: 133, name: "Fireball" });
 
 function flying(init: SpellInit) {
@@ -36,14 +45,29 @@ function flying(init: SpellInit) {
   };
 }
 
-const GRYPHON = flying({ aura: MOUNTED_AURA, id: 461, name: "Gryphon" });
+const GRYPHON = flying({
+  aura: MOUNTED_AURA,
+  id: 461,
+  name: "Gryphon",
+  raw: OUTDOORS,
+});
+
+function areaSource(flags: number) {
+  const cell = new Array<number>(36).fill(0);
+  cell[0] = FORCE_INTERIOR;
+  cell[4] = flags;
+  return dbcFiles(new Map([["AreaTable.dbc", packDbc(36, [cell])]]));
+}
 
 type Init = {
+  areaFlags?: number;
+  areaId?: number;
   book?: SpellDefinition[];
-  learned?: number[];
-  mounted?: boolean;
-  mapId?: number;
   distance?: number;
+  learned?: number[];
+  mapId?: number;
+  mounted?: boolean;
+  spellbookFailure?: string;
 };
 
 async function world(init: Init = {}): Promise<TestRuntime> {
@@ -53,6 +77,10 @@ async function world(init: Init = {}): Promise<TestRuntime> {
     book: init.book ?? [HORSE, FIREBALL],
     ...(init.learned === undefined ? {} : { learned: init.learned }),
   });
+  if (init.spellbookFailure !== undefined) {
+    const failure = init.spellbookFailure;
+    t.handle.getSpellbook = () => Promise.reject(new Error(failure));
+  }
   setSelf(t.handle, { x: 0, y: 0 });
   setUnits(t.handle, [
     unitRow({
@@ -74,6 +102,14 @@ async function world(init: Init = {}): Promise<TestRuntime> {
       pose: poseAt,
       serverPose: poseAt,
     });
+  }
+  if (init.areaId !== undefined) {
+    const areaId = init.areaId;
+    const place = t.handle.getPlaceState();
+    t.handle.getPlaceState = () => ({ ...place, areaId });
+  }
+  if (init.areaFlags !== undefined) {
+    t.rt.profile.client.dbc = areaSource(init.areaFlags);
   }
   jest.spyOn(t.handle.selfstate, "state").mockReturnValue({
     ...t.handle.selfstate.state(),
@@ -113,6 +149,69 @@ describe("travel mount hint", () => {
   test("an instance map gets no hint", async () => {
     const t = await world({ mapId: 36 });
     expect(await travelText(t, "Far Innkeeper")).not.toContain("mount");
+  });
+
+  test("an inside-flagged area on an open-world map gets no hint", async () => {
+    const t = await world({
+      areaFlags: 0x02_00_00_00,
+      areaId: FORCE_INTERIOR,
+      mapId: 571,
+    });
+    expect(await travelText(t, "Far Innkeeper")).not.toContain("mount");
+  });
+
+  test("a corrupted area table keeps the outdoor hint", async () => {
+    const t = await world({ areaId: 1, mapId: 571 });
+    t.rt.profile.client.dbc = async () => new Uint8Array([1, 2, 3]);
+    expect(await travelText(t, "Far Innkeeper")).toContain("mount");
+  });
+
+  test("a failing spellbook lookup while the walk runs leaks no rejection", async () => {
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", listener);
+    try {
+      const t = await world({ spellbookFailure: "missing Spell.dbc" });
+      driveGoto(t.handle, [{ hold: true }]);
+      const pending = travelSpec.run(
+        { to: "Far Innkeeper" },
+        toolCtx<TravelAfter>(t),
+      );
+      await flushMicrotasks();
+      expect(unhandled).toEqual([]);
+      t.rt.yields.trigger();
+      const res = await pending;
+      expect((res.body ?? []).join("\n")).not.toContain("mount");
+      const id = res.runId ?? "";
+      t.rt.runs.cancel(id, "tool");
+    } finally {
+      process.off("unhandledRejection", listener);
+    }
+  });
+
+  test("a refused run start still settles the failing lookup", async () => {
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", listener);
+    try {
+      const t = await world({ spellbookFailure: "missing Spell.dbc" });
+      driveGoto(t.handle, [{ hold: true }]);
+      const started = t.rt.runs.start({
+        args: {},
+        kind: "travel",
+        launch: () => new Promise<never>(() => {}),
+        toolCallId: "call-busy",
+      });
+      t.rt.runs.release(started.id);
+      await expect(
+        travelSpec.run({ to: "Far Innkeeper" }, toolCtx<TravelAfter>(t)),
+      ).rejects.toMatchObject({ reason: "busy" });
+      await flushMicrotasks();
+      expect(unhandled).toEqual([]);
+      t.rt.runs.cancel(started.id, "tool");
+    } finally {
+      process.off("unhandledRejection", listener);
+    }
   });
 
   test("a mounted character gets no hint", async () => {

@@ -191,6 +191,8 @@ base, the mesh corner there is 14.93 while the column holds 16.68 and
 `path_corner_disagrees` is correct. The explore fallback blocks that
 bearing.
 
+A walk longer than 100 yd on foot names the ground-mount `spell` call that mounts when the character knows an outdoor-only ground mount: the hint fires for unmounted point and unit starts on maps 0, 1, 530 and 571, and stays silent indoors. Indoors follows the server's `IsOutdoors` area test: the hint reads the current area's `AreaTable.dbc` flags through the client DBC data the harness already reads, and an area flagged inside (without outside) gets no hint, the same no-hint as a missing area id, missing DBC data or an unreadable table (`Entities/Object/Object.cpp:3196-3201`, `Maps/Map.cpp:1486-1489`, `Spells/Spell.cpp:5911-5913`).
+
 ## Capabilities row
 
 `t8-travel-bind-inn`: make an inn its home. `t8-travel-hearth-home`:
