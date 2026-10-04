@@ -50,7 +50,12 @@ empty answers and emits `ready_check_started`; a confirm records
 `ready`, `not_ready` or `offline` (state 0 for a member whose roster
 status is offline) and emits `ready_check_answer`; a finish stamps
 `finishedAt` and emits `ready_check_finished` with the ready count, the
-names not ready, the offline count and the pending count. Confirms with
+names not ready, the offline count and the pending count. `group do=ready_check`
+waits for that finish, which the server sends once every online member answered
+or after the runtime's own 30 s finish, and its `DONE` detail names who was
+ready, not ready, offline or silent; `group status` appends one line naming the
+open check's waiting and answered members, or the last check's outcome.
+Confirms with
 no open check, from a guid outside the roster, or after the finish are
 ignored. Every act names another member: a name outside the roster throws
 `not in your party`, and the caller's own name throws too because the

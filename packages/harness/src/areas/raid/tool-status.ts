@@ -1,4 +1,5 @@
 import type { PartyMember } from "@peon/core";
+import { readyCheckLine } from "#harness/areas/raid/tool-ready-outcome";
 import {
   ASSISTANT_FLAG,
   DEAD_STATUS,
@@ -149,6 +150,9 @@ export function statusTool(
   const rows = party.members
     .filter((member) => names.has(member.name))
     .map((member) => memberRow(member, { now, stats: snapshots }));
+  const check = raid.readyCheck;
+  if (check && group && args.to === undefined)
+    rows.push(readyCheckLine(group, check));
   return Promise.resolve(
     result("DONE", {
       after: { ...emptyGroup(), do: "status" as GroupDo },
