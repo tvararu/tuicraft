@@ -145,8 +145,15 @@ async function openCorpse(ctx: GroupCtx, guid: bigint): Promise<NamedOpen> {
   return window;
 }
 
-function itemLabelOf(item: NamedOpen["items"][number]): string {
-  return item.name ?? `item ${item.itemId}`;
+async function nameOf(
+  ctx: GroupCtx,
+  item: NamedOpen["items"][number],
+): Promise<string> {
+  if (item.name) return item.name;
+  const template = await ctx.handle
+    .getItemTemplate(item.itemId)
+    .catch(() => undefined);
+  return template?.name ?? `item ${item.itemId}`;
 }
 
 function itemMatches(
@@ -162,14 +169,20 @@ function itemMatches(
   return undefined;
 }
 
-function itemSlot(
+async function itemSlot(
+  ctx: GroupCtx,
   window: NamedOpen,
   what: string,
-): { label: string; slot: number } {
+): Promise<{ label: string; slot: number }> {
   const wanted = what.trim().toLowerCase();
-  const labels = window.items.map((item) => itemLabelOf(item));
-  const hits = window.items.flatMap((item) => {
-    const hit = itemMatches(item, wanted);
+  const labeled = await Promise.all(
+    window.items.map(async (item) => ({
+      item,
+      label: await nameOf(ctx, item),
+    })),
+  );
+  const hits = labeled.flatMap(({ item, label }) => {
+    const hit = itemMatches({ ...item, name: label }, wanted);
     return hit ? [{ exact: hit.exact, slot: item.slot }] : [];
   });
   const exact = hits
@@ -184,10 +197,10 @@ function itemSlot(
   if (slot === undefined)
     refuse(
       "not_offered",
-      `the corpse holds no ${what.trim()}. It holds: ${labels.join(", ") || "nothing"}.`,
+      `the corpse holds no ${what.trim()}. It holds: ${labeled.map(({ label }) => label).join(", ") || "nothing"}.`,
     );
-  const named = window.items.find((item) => item.slot === slot);
-  return { label: named ? itemLabelOf(named) : "item 0", slot };
+  const named = labeled.find(({ item }) => item.slot === slot);
+  return { label: named ? named.label : "item 0", slot };
 }
 
 function candidateOf(ctx: GroupCtx, name: string): bigint {
@@ -235,7 +248,7 @@ export async function giveTool(
   const window = await openCorpse(ctx, corpse.guid);
   let found: { label: string; slot: number };
   try {
-    found = itemSlot(window, what);
+    found = await itemSlot(ctx, window, what);
   } catch (error) {
     await releaseCorpse(ctx);
     throw error;

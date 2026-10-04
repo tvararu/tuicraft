@@ -1,219 +1,20 @@
-import type { Mock } from "bun:test";
 import { describe, expect, jest, test } from "bun:test";
-import type { AreaState, NamedRewardsState, PartyMember } from "@peon/core";
 import { elapse, withFakeTimers } from "@peon/core/test-support/fake-time";
-import {
-  partyMember,
-  partyState,
-} from "@peon/core/test-support/party-fixtures";
-import { groupTool } from "#harness/areas/raid/tool";
-import { setSelf, setUnits, unitRow } from "#test-support/ops-fixtures";
-import { createTestRuntime } from "#test-support/runtime-fixture";
 import { runTool } from "#test-support/tool-harness";
-
-type RaidState = AreaState<"raid">;
-type RaidGroup = NonNullable<RaidState["group"]>;
-
-const SELF = 0x0764n;
-const TOM = 0x100n;
-const CORPSE = 0x20n;
-const ROLL_GUID = 0x30n;
-const MASTER_LOOT = 2;
-const ROUND_ROBIN = 1;
-const OPEN_MS = 5000;
-
-const FANG = { itemId: 7073, name: "Broken Fang", slot: 0 };
-const LINEN = { itemId: 2589, name: "Linen Cloth", slot: 1 };
-const LINEN_TWO = { itemId: 2589, name: "Linen Cloth", slot: 2 };
-
-type Offered = { itemId: number; name: string | undefined; slot: number };
-
-function tom(): PartyMember {
-  return partyMember({ guid: TOM, name: "Tom" });
-}
-
-function raidGroup(over: Partial<RaidGroup> = {}): RaidGroup {
-  return {
-    battleground: false,
-    counter: 1,
-    difficulty: undefined,
-    dungeonFinder: undefined,
-    groupGuid: 1n,
-    kind: "party",
-    leader: SELF,
-    loot: { master: SELF, method: MASTER_LOOT, threshold: 2 },
-    members: [],
-    self: { flags: 0, roles: 0, subgroup: 0 },
-    ...over,
-  };
-}
-
-function lootState(items: readonly Offered[]): NamedRewardsState {
-  return {
-    loot: {
-      guid: CORPSE,
-      invalidatedReason: undefined,
-      items: items.map((item) => ({
-        count: 1,
-        displayId: 0,
-        itemId: item.itemId,
-        name: item.name,
-        quality: 1,
-        randomPropertyId: 0,
-        randomSuffix: 0,
-        slot: item.slot,
-        slotType: 0,
-      })),
-      lootType: 1,
-      money: 0,
-      openedAt: 0,
-      phase: "open",
-    },
-  } as unknown as NamedRewardsState;
-}
-
-type Roll = {
-  allowed: ("pass" | "need" | "greed")[];
-  choice: "pass" | "need" | "greed" | undefined;
-  corpseGuid: bigint | undefined;
-  count: number;
-  countdownMs: number;
-  expiresAt: number;
-  guid: bigint;
-  itemId: number;
-  mapId: number;
-  randomPropertyId: number;
-  randomSuffix: number;
-  remainingMs: number;
-  slot: number;
-  startedAt: number;
-  votes: never[];
-};
-function roll(over: Partial<Roll> = {}): Roll {
-  return {
-    allowed: ["pass", "need", "greed"],
-    choice: undefined,
-    corpseGuid: CORPSE,
-    count: 1,
-    countdownMs: 60_000,
-    expiresAt: 60_000,
-    guid: ROLL_GUID,
-    itemId: LINEN.itemId,
-    mapId: 0,
-    randomPropertyId: 0,
-    randomSuffix: 0,
-    remainingMs: 50_000,
-    slot: 1,
-    startedAt: 0,
-    votes: [],
-    ...over,
-  };
-}
-
-type Setup = {
-  candidates?: readonly bigint[];
-  closedLoot?: boolean;
-  corpseDistance?: number;
-  group?: Partial<RaidGroup>;
-  inGroup?: boolean;
-  items?: readonly Offered[];
-  opens?: boolean;
-  rolls?: readonly Roll[];
-};
-
-async function world(setup: Setup = {}) {
-  const t = await createTestRuntime();
-  const control = t.handle.getControlState();
-  (t.handle.getControlState as Mock<() => typeof control>).mockReturnValue({
-    ...control,
-    selfGuid: SELF,
-  });
-  const inGroup = setup.inGroup ?? true;
-  const party = inGroup
-    ? partyState({ inGroup: true, leader: "Tom", members: [tom()] })
-    : partyState();
-  (t.handle.getPartyState as Mock<() => typeof party>).mockReturnValue(party);
-  const group: RaidState = {
-    group: inGroup ? raidGroup(setup.group) : undefined,
-    marks: Array.from({ length: 8 }, () => 0n),
-    stats: new Map(),
-  };
-  jest.spyOn(t.handle.raid, "state").mockReturnValue(group);
-  setSelf(t.handle);
-  setUnits(t.handle, [
-    unitRow({
-      distance: setup.corpseDistance ?? 2,
-      guid: CORPSE,
-      hp: 0,
-      level: 7,
-      lootable: true,
-      name: "Springpaw Lynx",
-      x: setup.corpseDistance ?? 2,
-      y: 0,
-    }),
-  ]);
-  const items = setup.items ?? [FANG, LINEN];
-  const open = lootState(items);
-  const base = t.handle.getRewardsState();
-  const rolls: typeof base.rolls = {
-    last: undefined,
-    pending: [...(setup.rolls ?? [])],
-  };
-  const rewards = { ...base, rolls };
-  let startLoot = rewards;
-  if (setup.closedLoot)
-    startLoot = { ...rewards, loot: { phase: "closed" as const } };
-  else if (setup.rolls) startLoot = { ...rewards, ...open };
-  (t.handle.getRewardsState as Mock<() => typeof base>).mockImplementation(
-    () => startLoot,
-  );
-  const names: Record<number, string> = {
-    [FANG.itemId]: FANG.name,
-    [LINEN.itemId]: LINEN.name,
-  };
-  (
-    t.handle.itemLabel as Mock<
-      (entry: number) => { name: string | null; quality: number | null }
-    >
-  ).mockImplementation((entry) => ({
-    name: names[entry] ?? null,
-    quality: 1,
-  }));
-  jest.spyOn(t.handle, "openLoot").mockImplementation(() => {
-    if (setup.opens === false) return;
-    queueMicrotask(() => {
-      (t.handle.getRewardsState as Mock<() => typeof base>).mockImplementation(
-        () => ({ ...base, ...open, rolls }),
-      );
-      t.handle.triggerRewardsEvent({
-        at: 0,
-        state: { ...base, ...open, rolls },
-        type: "loot_opened",
-      });
-    });
-  });
-  const release = jest.spyOn(t.handle, "releaseLoot").mockReturnValue();
-  jest.spyOn(t.handle.looting, "state").mockReturnValue({
-    masterCandidates: new Map([[CORPSE, setup.candidates ?? [SELF, TOM]]]),
-    owners: new Map(),
-    passOnLoot: false,
-  });
-  const give = jest
-    .spyOn(t.handle.looting.act, "giveMasterLoot")
-    .mockImplementation(async (_guid, slot) => ({ slot, status: "given" }));
-  const pass = jest
-    .spyOn(t.handle.looting.act, "setPassOnLoot")
-    .mockReturnValue();
-  const rollLoot = jest.spyOn(t.handle, "rollLoot").mockReturnValue();
-  return {
-    ...t,
-    give,
-    pass,
-    release,
-    rollLoot,
-    tool: groupTool.definition(t.rt),
-  };
-}
+import {
+  CORPSE,
+  FANG,
+  LINEN,
+  LINEN_TWO,
+  MASTER_LOOT,
+  OPEN_MS,
+  ROLL_GUID,
+  ROUND_ROBIN,
+  giveRoll as roll,
+  SELF,
+  TOM,
+  world,
+} from "#test-support/tool-loot-world";
 
 describe("group tool give", () => {
   test("refuses out of a group, without master loot and as a non-master", async () => {
@@ -322,12 +123,11 @@ describe("group tool give", () => {
   });
 
   test("does not match an id fragment of another item", async () => {
-    const unnamed = { itemId: 27_668, name: undefined, slot: 0 };
-    const t = await world({ items: [unnamed] });
+    const t = await world();
     const out = await runTool(t.tool, {
       do: "give",
       to: "Tom",
-      what: "7668",
+      what: "589",
     });
     expect(out.text).toContain("REFUSED not_offered");
     expect(t.give).not.toHaveBeenCalled();
@@ -346,13 +146,31 @@ describe("group tool give", () => {
     expect(t.release).toHaveBeenCalledTimes(1);
   });
 
+  test("uses the resolved name when the template arrives after open", async () => {
+    const unnamed = { itemId: 20_772, name: undefined, slot: 0 };
+    const t = await world({ items: [unnamed] });
+    jest
+      .spyOn(t.handle, "getItemTemplate")
+      .mockImplementation(async (entry: number) =>
+        entry === 20_772 ? ({ name: "Springpaw Pelt" } as never) : undefined,
+      );
+    const out = await runTool(t.tool, {
+      do: "give",
+      to: "Tom",
+      what: "item 20772",
+    });
+    expect(out.text).toContain("DONE");
+    expect(out.text).toContain("gave Springpaw Pelt to Tom");
+    expect(t.give).toHaveBeenCalledWith(CORPSE, 0, "Tom");
+  });
+
   test("names an unnamed item the same way in every refusal", async () => {
     const unnamed = { itemId: 20_772, name: undefined, slot: 0 };
     const t = await world({ items: [unnamed] });
     const first = await runTool(t.tool, {
       do: "give",
       to: "Tom",
-      what: "item",
+      what: "Thunderfury",
     });
     expect(first.text).toContain("REFUSED not_offered");
     expect(first.text).toContain("item 20772");
