@@ -9,7 +9,7 @@ export type LootMine = "yes" | "no" | "unknown";
 export type LootOwner = { master: bigint; looter: bigint; mine: LootMine };
 export type LootingState = {
   owners: ReadonlyMap<bigint, LootOwner>;
-  masterCandidates: readonly bigint[];
+  masterCandidates: ReadonlyMap<bigint, readonly bigint[]>;
   passOnLoot: boolean;
 };
 export type LootingEvent =
@@ -33,7 +33,8 @@ function mineOf(packet: LootList, self: bigint): LootMine {
 export class LootingStore {
   private readonly events = new Emitter<[LootingEvent]>();
   private readonly owners = new Map<bigint, LootOwner>();
-  private candidates: readonly bigint[] = [];
+  private readonly candidates = new Map<bigint, readonly bigint[]>();
+  private pending: readonly bigint[] = [];
   private readonly selfGuid: () => bigint;
   private passOnLoot = false;
 
@@ -46,7 +47,9 @@ export class LootingStore {
       owners: new Map(
         [...this.owners].map(([creature, owner]) => [creature, { ...owner }]),
       ),
-      masterCandidates: [...this.candidates],
+      masterCandidates: new Map(
+        [...this.candidates].map(([creature, guids]) => [creature, [...guids]]),
+      ),
       passOnLoot: this.passOnLoot,
     };
   }
@@ -75,11 +78,27 @@ export class LootingStore {
   }
 
   receiveMasterList(packet: LootMasterList): void {
-    this.candidates = [...packet.candidates];
+    this.pending = [...packet.candidates];
     this.events.emit({
       type: "master_loot_candidates",
       candidates: [...packet.candidates],
     });
+  }
+
+  receiveLooted(response: LootResponse): void {
+    if (response.kind !== "loot") return;
+    if (this.pending.length === 0) return;
+    this.candidates.delete(response.guid);
+    this.candidates.set(response.guid, [...this.pending]);
+    this.pending = [];
+    for (const oldest of this.candidates.keys()) {
+      if (this.candidates.size <= LOOT_OWNER_LIMIT) break;
+      this.candidates.delete(oldest);
+    }
+  }
+
+  candidatesFor(creature: bigint): readonly bigint[] {
+    return this.candidates.get(creature) ?? [];
   }
 
   receiveLootRemoved(packet: LootRemoved): void {
@@ -95,12 +114,9 @@ export class LootingStore {
     });
   }
 
-  clearMasterCandidates(): void {
-    this.candidates = [];
-  }
-
   forget(creature: bigint): void {
     this.owners.delete(creature);
+    this.candidates.delete(creature);
   }
 
   setPassOnLoot(pass: boolean): void {
@@ -110,6 +126,7 @@ export class LootingStore {
   dispose(): void {
     this.events.clear();
     this.owners.clear();
-    this.candidates = [];
+    this.candidates.clear();
+    this.pending = [];
   }
 }

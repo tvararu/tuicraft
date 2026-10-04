@@ -4,7 +4,7 @@ The `looting` area keeps who may loot each corpse and the character's
 request to pass on group loot rolls. World-service code reads it through
 `session.areas.looting.state()`: `owners` maps each creature guid to its
 master looter, its group looter and `mine` (`yes`, `no` or `unknown`),
-for the 64 newest kills; `masterCandidates` holds the guids from the last `SMSG_LOOT_MASTER_LIST`, cleared when the loot is released; `passOnLoot` is
+for the 64 newest kills; `masterCandidates` maps each opened corpse guid to the candidate guids from its `SMSG_LOOT_MASTER_LIST`, kept across loot window close and re-open until the creature disappears; `passOnLoot` is
 the last requested pass flag. The area emits one `loot_owner` event per
 `SMSG_LOOT_LIST`, one `master_loot_candidates` event per
 `SMSG_LOOT_MASTER_LIST`, one `loot_removed` event per peeked
@@ -58,8 +58,8 @@ AzerothCore and wow_messages agree on the five bodies
   (`Handlers/GroupHandler.cpp:1143-1152`).
 - `SMSG_LOOT_MASTER_LIST` is `uint8` count then that many full `uint64`
   guids of the group members in loot range (`Groups/Group.cpp:1482-1492`).
-  The server sends it to every candidate when the first player opens a
-  master-looted corpse when the first player opens it (`Groups/Group.cpp:1442-1444`), whatever
+  The server sends it from `Group::MasterLoot` (`Groups/Group.cpp:1442`),
+  called for a creature only when the corpse is first opened (`loot->loot_type == LOOT_NONE`, `Entities/Player/Player.cpp:8271-8290`), then answers the open with `SMSG_LOOT_RESPONSE` (`Entities/Player/Player.cpp:8373-8386`); a re-open sees the same `loot_type` and no new list, so the client keeps the candidates per corpse. It is sent whatever
   the item quality (`Groups/Group.cpp:1482-1491`).
 - `CMSG_LOOT_MASTER_GIVE` is the full `uint64` loot guid, then `uint8`
   slot, then the full `uint64` target guid

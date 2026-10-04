@@ -117,10 +117,10 @@ export function lootingRuntime(
     if (name === SELF_MASTER) return ctx.selfGuid();
     return partyGuid(name, false);
   }
-  function candidateGuid(name: string): bigint {
+  function candidateGuid(lootGuid: bigint, name: string): bigint {
     const target =
       name === SELF_MASTER ? ctx.selfGuid() : partyGuid(name, true);
-    if (!store.snapshot().masterCandidates.includes(target))
+    if (!store.candidatesFor(lootGuid).includes(target))
       throw new Error(`${name} is not a candidate`);
     return target;
   }
@@ -129,7 +129,7 @@ export function lootingRuntime(
     slot: number,
     name: string,
   ): Promise<MasterLootResult> {
-    return runGive(ctx, lootGuid, slot, candidateGuid(name));
+    return runGive(ctx, lootGuid, slot, candidateGuid(lootGuid, name));
   }
   function setLootMethod(choice: LootMethodChoice): void {
     const method = LOOT_METHOD_NAMES.indexOf(choice.method);

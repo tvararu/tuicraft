@@ -87,7 +87,7 @@ function withOwners(
     looting: {
       ...handle.looting,
       state: () => ({
-        masterCandidates: [],
+        masterCandidates: new Map(),
         owners: owners(),
         passOnLoot: false,
       }),

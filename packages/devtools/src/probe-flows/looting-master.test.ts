@@ -105,7 +105,7 @@ function scenario(): FlowContext & { handle: MockHandle; opened: bigint[] } {
         giveMasterLoot: async () => ({ slot: 0, status: "given" }),
       },
       state: () => ({
-        masterCandidates: candidates,
+        masterCandidates: new Map([[SECOND, candidates]]),
         owners: new Map(),
         passOnLoot: false,
       }),

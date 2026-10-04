@@ -194,7 +194,7 @@ async function world(setup: Setup = {}) {
   });
   const release = jest.spyOn(t.handle, "releaseLoot").mockReturnValue();
   jest.spyOn(t.handle.looting, "state").mockReturnValue({
-    masterCandidates: setup.candidates ?? [SELF, TOM],
+    masterCandidates: new Map([[CORPSE, setup.candidates ?? [SELF, TOM]]]),
     owners: new Map(),
     passOnLoot: false,
   });
@@ -344,6 +344,25 @@ describe("group tool give", () => {
     expect(out.text).toContain("Broken Fang");
     expect(t.give).not.toHaveBeenCalled();
     expect(t.release).toHaveBeenCalledTimes(1);
+  });
+
+  test("names an unnamed item the same way in every refusal", async () => {
+    const unnamed = { itemId: 20_772, name: undefined, slot: 0 };
+    const t = await world({ items: [unnamed] });
+    const first = await runTool(t.tool, {
+      do: "give",
+      to: "Tom",
+      what: "item",
+    });
+    expect(first.text).toContain("REFUSED not_offered");
+    expect(first.text).toContain("item 20772");
+    const second = await runTool(t.tool, {
+      do: "give",
+      to: "Tom",
+      what: "item 20772",
+    });
+    expect(second.text).toContain("DONE");
+    expect(t.give).toHaveBeenCalledWith(CORPSE, 0, "Tom");
   });
 
   test("refuses a member the server does not list as a candidate", async () => {

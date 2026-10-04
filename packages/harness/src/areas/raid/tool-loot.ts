@@ -145,6 +145,10 @@ async function openCorpse(ctx: GroupCtx, guid: bigint): Promise<NamedOpen> {
   return window;
 }
 
+function itemLabelOf(item: NamedOpen["items"][number]): string {
+  return item.name ?? `item ${item.itemId}`;
+}
+
 function itemMatches(
   item: NamedOpen["items"][number],
   wanted: string,
@@ -163,7 +167,7 @@ function itemSlot(
   what: string,
 ): { label: string; slot: number } {
   const wanted = what.trim().toLowerCase();
-  const labels = window.items.map((item) => item.name ?? `item ${item.itemId}`);
+  const labels = window.items.map((item) => itemLabelOf(item));
   const hits = window.items.flatMap((item) => {
     const hit = itemMatches(item, wanted);
     return hit ? [{ exact: hit.exact, slot: item.slot }] : [];
@@ -183,7 +187,7 @@ function itemSlot(
       `the corpse holds no ${what.trim()}. It holds: ${labels.join(", ") || "nothing"}.`,
     );
   const named = window.items.find((item) => item.slot === slot);
-  return { label: named?.name ?? `item ${named?.itemId}`, slot };
+  return { label: named ? itemLabelOf(named) : "item 0", slot };
 }
 
 function candidateOf(ctx: GroupCtx, name: string): bigint {
@@ -197,12 +201,9 @@ function candidateOf(ctx: GroupCtx, name: string): bigint {
   );
 }
 
-function needCandidate(ctx: GroupCtx, name: string): void {
-  if (
-    !ctx.handle.looting
-      .state()
-      .masterCandidates.includes(candidateOf(ctx, name))
-  )
+function needCandidate(ctx: GroupCtx, guid: bigint, name: string): void {
+  const held = ctx.handle.looting.state().masterCandidates.get(guid) ?? [];
+  if (!held.includes(candidateOf(ctx, name)))
     refuse(
       "not_candidate",
       `${name} is not a master loot candidate for this corpse.`,
@@ -241,7 +242,7 @@ export async function giveTool(
   }
   const { label, slot } = found;
   try {
-    needCandidate(ctx, to);
+    needCandidate(ctx, corpse.guid, to);
   } catch (error) {
     await releaseCorpse(ctx);
     throw error;

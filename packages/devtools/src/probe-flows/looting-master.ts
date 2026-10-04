@@ -88,11 +88,14 @@ async function kill(
   return false;
 }
 
-async function candidatesOf(handle: WorldHandle): Promise<readonly bigint[]> {
+async function candidatesOf(
+  handle: WorldHandle,
+  creature: bigint,
+): Promise<readonly bigint[]> {
   const deadline = Date.now() + OWNER_WAIT_MS;
   for (;;) {
-    const { masterCandidates } = handle.looting.state();
-    if (masterCandidates.length > 0) return masterCandidates;
+    const held = handle.looting.state().masterCandidates.get(creature) ?? [];
+    if (held.length > 0) return held;
     if (Date.now() >= deadline) return [];
     await Bun.sleep(POLL_MS);
   }
@@ -129,7 +132,9 @@ async function releaseAndWait(handle: WorldHandle): Promise<void> {
 function lootingJson(handle: WorldHandle, creature: bigint | undefined): Json {
   const state = handle.looting.state();
   return {
-    candidates: state.masterCandidates.map(hex),
+    candidates: [...(state.masterCandidates.get(creature ?? 0n) ?? [])].map(
+      hex,
+    ),
     creature: creature === undefined ? null : hex(creature),
     mine:
       creature === undefined
@@ -149,7 +154,7 @@ async function run({ handle, args, settle }: FlowContext): Promise<Json> {
     const dead = await kill(handle, creature, seconds);
     if (!dead) continue;
     handle.openLoot(creature);
-    const candidates = await candidatesOf(handle);
+    const candidates = await candidatesOf(handle, creature);
     if (candidates.length === 0) {
       await releaseAndWait(handle);
       continue;

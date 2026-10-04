@@ -6,11 +6,7 @@ import {
 } from "#wow/areas/looting/protocol";
 import { lootingRuntime } from "#wow/areas/looting/runtime";
 import { LootingStore } from "#wow/areas/looting/store";
-import {
-  parseLootReleaseResponse,
-  parseLootRemoved,
-  parseLootResponse,
-} from "#wow/protocol/loot";
+import { parseLootRemoved, parseLootResponse } from "#wow/protocol/loot";
 import { GameOpcode } from "#wow/protocol/opcodes";
 
 export const lootingArea = defineArea({
@@ -33,12 +29,10 @@ export const lootingArea = defineArea({
     wire.peek(GameOpcode.SMSG_LOOT_REMOVED, (r) =>
       store.receiveLootRemoved(parseLootRemoved(r)),
     );
-    wire.peek(GameOpcode.SMSG_LOOT_RESPONSE, (r) =>
-      store.receiveLootError(parseLootResponse(r)),
-    );
-    wire.peek(GameOpcode.SMSG_LOOT_RELEASE_RESPONSE, (r) => {
-      parseLootReleaseResponse(r);
-      store.clearMasterCandidates();
+    wire.peek(GameOpcode.SMSG_LOOT_RESPONSE, (r) => {
+      const response = parseLootResponse(r);
+      store.receiveLooted(response);
+      store.receiveLootError(response);
     });
   },
   runtime: lootingRuntime,

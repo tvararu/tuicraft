@@ -212,8 +212,8 @@ s.`; the name falls back to the unit lookup, then `Someone`) and one
   loot error, and the server removes the slot before it sends the new
   item (`Handlers/LootHandler.cpp:483-500`).
 - The master list reaches the master when the first player opens a
-  master-looted corpse (`Groups/Group.cpp:1444,1482-1492`); the tool
-  reads the candidates from that reply and refuses a name outside it.
+  master-looted corpse (`Groups/Group.cpp:1442`, `Entities/Player/Player.cpp:8271-8290`); the tool
+  reads that corpse's candidates from the store and refuses a name outside it.
 - `pass_loot` sets the opt-out flag and gets no reply
   (`Handlers/GroupHandler.cpp:1143-1152`).
 - `roll` answers only the roll the agent names or the single open roll;

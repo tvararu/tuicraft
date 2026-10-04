@@ -49,3 +49,24 @@ export function lootingLootReleaseBody(
   w.uint8(status);
   return w.finish();
 }
+
+export function lootingLootOpenBody(
+  guid: bigint,
+  items: readonly { slot: number; itemId: number }[],
+): Uint8Array {
+  const w = new PacketWriter();
+  w.uint64LE(guid);
+  w.uint8(1);
+  w.uint32LE(0);
+  w.uint8(items.length);
+  for (const item of items) {
+    w.uint8(item.slot);
+    w.uint32LE(item.itemId);
+    w.uint32LE(1);
+    w.uint32LE(0);
+    w.uint32LE(0);
+    w.uint32LE(0x80_00_00_00);
+    w.uint8(0);
+  }
+  return w.finish();
+}

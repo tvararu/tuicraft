@@ -4,6 +4,7 @@ import {
   lootingLootErrorBody,
   lootingLootListBody,
   lootingLootMasterListBody,
+  lootingLootOpenBody,
   lootingLootRemovedBody,
 } from "#test-support/areas/looting";
 import { elapse, withFakeTimers } from "#test-support/fake-time";
@@ -214,6 +215,10 @@ describe("looting runtime", () => {
         GameOpcode.SMSG_LOOT_MASTER_LIST,
         lootingLootMasterListBody([ME, PARTNER]),
       );
+      party.rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
       const done = party.act.giveMasterLoot(CREATURE, 0, "@self");
       expect(party.sent).toEqual([
         {
@@ -240,6 +245,10 @@ describe("looting runtime", () => {
       party.rig.inject(
         GameOpcode.SMSG_LOOT_MASTER_LIST,
         lootingLootMasterListBody([PARTNER]),
+      );
+      party.rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
       );
       let done = false;
       const pending = party.act
@@ -282,6 +291,10 @@ describe("looting runtime", () => {
         GameOpcode.SMSG_LOOT_MASTER_LIST,
         lootingLootMasterListBody([PARTNER]),
       );
+      party.rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
       const done = party.act.giveMasterLoot(CREATURE, 0, "Partner");
       void done.catch(() => undefined);
       party.rig.inject(
@@ -303,6 +316,10 @@ describe("looting runtime", () => {
         party.rig.inject(
           GameOpcode.SMSG_LOOT_MASTER_LIST,
           lootingLootMasterListBody([PARTNER]),
+        );
+        party.rig.inject(
+          GameOpcode.SMSG_LOOT_RESPONSE,
+          lootingLootOpenBody(CREATURE, []),
         );
         const pending = party.act.giveMasterLoot(CREATURE, 0, "Partner");
         const assertion = pending.then(
