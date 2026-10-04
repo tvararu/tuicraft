@@ -142,12 +142,21 @@
                     "items": { "type": "string" },
                     "type": "array"
                   },
+                  "after": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "data": { "type": "object" },
+                      "event": { "type": "string" }
+                    },
+                    "required": ["event"],
+                    "type": "object"
+                  },
                   "forMs": { "minimum": 0, "type": "number" },
                   "max": { "minimum": 0, "type": "integer" },
                   "steer": { "minimum": 0, "type": "integer" },
                   "untilSteer": { "minimum": 0, "type": "integer" }
                 },
-                "required": ["steer"],
+                "anyOf": [{ "required": ["steer"] }, { "required": ["after"] }],
                 "type": "object"
               }
             },

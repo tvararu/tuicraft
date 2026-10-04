@@ -9,20 +9,16 @@
     {
       "evidence": {
         "events": ["lfg/queued"],
-        "window": {
-          "steer": 0
-        }
+        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
       },
-      "expect": "GL has an lfg/queued row for the run party queue",
+      "expect": "GL has an lfg/queued row for the party queue after the agent became leader",
       "id": "queued",
       "source": "game_log"
     },
     {
       "evidence": {
         "events": ["lfg/proposal"],
-        "window": {
-          "steer": 0
-        }
+        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
       },
       "expect": "GL has an lfg/proposal row for the dungeon group proposal",
       "id": "proposal",
@@ -31,9 +27,7 @@
     {
       "evidence": {
         "events": ["lfg/role_chosen"],
-        "window": {
-          "steer": 0
-        }
+        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
       },
       "expect": "GL has lfg/role_chosen rows for every party member answering the role check",
       "id": "roles-answered",
@@ -42,9 +36,7 @@
     {
       "evidence": {
         "events": ["lfg/offer_continue"],
-        "window": {
-          "steer": 0
-        }
+        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
       },
       "expect": "GL has an lfg/offer_continue row after a partner leaves the finished group",
       "id": "offer-continue",

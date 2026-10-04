@@ -24,14 +24,33 @@ export function steerRow(
   );
 }
 
+function anchorRow(
+  rows: readonly GameLogRow[],
+  anchor: { event: string; data?: Record<string, unknown> } | undefined,
+): GameLogRow | undefined {
+  if (anchor === undefined) return undefined;
+  return rows.find(
+    (row) =>
+      row.event === anchor.event &&
+      Object.entries(anchor.data ?? {}).every(
+        ([key, value]) => field(row, key) === value,
+      ),
+  );
+}
+
 export function windowOf(
   rows: readonly GameLogRow[],
   window: CheckWindow,
   context: MeasureContext,
 ): WindowBound | undefined {
-  const start = steerRow(rows, context.steers, window.steer);
+  const anchored = window.steer === undefined && window.after !== undefined;
+  const start = anchored
+    ? anchorRow(rows, window.after)
+    : steerRow(rows, context.steers, window.steer);
   if (start === undefined) return undefined;
-  const from = timeOf(start) + (window.afterMs ?? 0);
+  const from = anchored
+    ? timeOf(start) + 1
+    : timeOf(start) + (window.afterMs ?? 0);
   const endRow = steerRow(rows, context.steers, window.untilSteer);
   let end: number | undefined;
   if (endRow !== undefined) end = timeOf(endRow);

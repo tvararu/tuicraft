@@ -83,8 +83,14 @@ export type ConsoleVerb =
 
 export type ConsoleRead = { read: ConsoleVerb; arg?: string; match: string };
 
+export type CheckWindowAnchor = {
+  event: string;
+  data?: Record<string, unknown>;
+};
+
 export type CheckWindow = {
-  steer: number;
+  steer?: number;
+  after?: CheckWindowAnchor;
   afterMs?: number;
   untilSteer?: number;
   forMs?: number;
@@ -247,6 +253,17 @@ function regexError(match: string): string | undefined {
 
 const ARG_READS: ReadonlySet<ConsoleVerb> = new Set(["arena", "guild"]);
 
+function anchorErrors(at: string, window: CheckWindow): string[] {
+  return [
+    ...(window.steer === undefined && window.after === undefined
+      ? [`${at}.evidence.window: needs steer or after`]
+      : []),
+    ...(window.steer !== undefined && window.after !== undefined
+      ? [`${at}.evidence.window: use steer or after, not both`]
+      : []),
+  ];
+}
+
 function windowErrors({ checks, steers }: Scenario): string[] {
   return checks.flatMap(({ evidence }, index) => {
     const at = `$.checks[${index}]`;
@@ -256,6 +273,7 @@ function windowErrors({ checks, steers }: Scenario): string[] {
     const bad = (slot: number | undefined) =>
       slot !== undefined && (slot < 0 || slot > last);
     return [
+      ...anchorErrors(at, window),
       ...(bad(window.steer)
         ? [`${at}.evidence.window.steer: no steer ${window.steer}`]
         : []),
@@ -263,6 +281,7 @@ function windowErrors({ checks, steers }: Scenario): string[] {
         ? [`${at}.evidence.window.untilSteer: no steer ${window.untilSteer}`]
         : []),
       ...(window.untilSteer !== undefined &&
+      window.steer !== undefined &&
       window.untilSteer <= window.steer &&
       !bad(window.untilSteer)
         ? [`${at}.evidence.window.untilSteer: after steer ${window.steer}`]
