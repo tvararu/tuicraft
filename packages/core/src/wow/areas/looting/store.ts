@@ -1,6 +1,7 @@
 import { Emitter, type Unsubscribe } from "#lib/emitter";
 import type { LootList, LootMasterList } from "#wow/areas/looting/protocol";
 import type { LootRemoved, LootResponse } from "#wow/protocol/loot";
+import type { RewardsStore } from "#wow/rewards-store";
 import type { CoreStores, SessionDeps } from "#wow/session-stores";
 
 export const LOOT_OWNER_LIMIT = 64;
@@ -34,11 +35,14 @@ export class LootingStore {
   private readonly events = new Emitter<[LootingEvent]>();
   private readonly owners = new Map<bigint, LootOwner>();
   private readonly candidates = new Map<bigint, readonly bigint[]>();
+  private readonly rewards: RewardsStore;
   private pending: readonly bigint[] = [];
+  private pendingFor: bigint | undefined;
   private readonly selfGuid: () => bigint;
   private passOnLoot = false;
 
-  constructor(deps: SessionDeps, _core: CoreStores) {
+  constructor(deps: SessionDeps, core: CoreStores) {
+    this.rewards = core.rewards;
     this.selfGuid = deps.selfGuid;
   }
 
@@ -78,6 +82,8 @@ export class LootingStore {
   }
 
   receiveMasterList(packet: LootMasterList): void {
+    const loot = this.rewards.loot;
+    if (loot.phase === "opening") this.pendingFor = loot.guid;
     this.pending = [...packet.candidates];
     this.events.emit({
       type: "master_loot_candidates",
@@ -88,9 +94,14 @@ export class LootingStore {
   receiveLooted(response: LootResponse): void {
     if (response.kind !== "loot") return;
     if (this.pending.length === 0) return;
-    this.candidates.delete(response.guid);
-    this.candidates.set(response.guid, [...this.pending]);
+    const creature =
+      this.pendingFor === undefined || this.pendingFor === response.guid
+        ? response.guid
+        : this.pendingFor;
+    this.candidates.delete(creature);
+    this.candidates.set(creature, [...this.pending]);
     this.pending = [];
+    this.pendingFor = undefined;
     for (const oldest of this.candidates.keys()) {
       if (this.candidates.size <= LOOT_OWNER_LIMIT) break;
       this.candidates.delete(oldest);
@@ -116,7 +127,6 @@ export class LootingStore {
 
   forget(creature: bigint): void {
     this.owners.delete(creature);
-    this.candidates.delete(creature);
   }
 
   setPassOnLoot(pass: boolean): void {

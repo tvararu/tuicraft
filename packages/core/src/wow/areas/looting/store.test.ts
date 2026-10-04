@@ -215,7 +215,74 @@ describe("LootingStore", () => {
       rig.dispose();
     }
   });
+  test("another member opening a different corpse keeps the first corpse's list", () => {
+    const { rig } = setup();
+    try {
+      rig.stores.rewards.requestOpen(CREATURE);
+      rig.inject(
+        GameOpcode.SMSG_LOOT_MASTER_LIST,
+        lootingLootMasterListBody([ME, PARTNER]),
+      );
+      rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
+      rig.stores.rewards.requestClose(
+        rig.stores.rewards.snapshot().loot as never,
+      );
+      rig.inject(
+        GameOpcode.SMSG_LOOT_MASTER_LIST,
+        lootingLootMasterListBody([PARTNER]),
+      );
+      expect(rig.handle.state().masterCandidates.get(CREATURE)).toEqual([
+        ME,
+        PARTNER,
+      ]);
+      expect(rig.handle.state().masterCandidates.get(OTHER)).toBeUndefined();
+      rig.stores.rewards.requestOpen(CREATURE);
+      rig.inject(
+        GameOpcode.SMSG_LOOT_MASTER_LIST,
+        lootingLootMasterListBody([ME, PARTNER]),
+      );
+      rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
+      expect(rig.handle.state().masterCandidates.get(CREATURE)).toEqual([
+        ME,
+        PARTNER,
+      ]);
+    } finally {
+      rig.dispose();
+    }
+  });
 
+  test("leaving view keeps the bound list for the return and the re-open", () => {
+    const { rig } = setup();
+    try {
+      rig.stores.rewards.requestOpen(CREATURE);
+      rig.inject(
+        GameOpcode.SMSG_LOOT_MASTER_LIST,
+        lootingLootMasterListBody([ME, PARTNER]),
+      );
+      rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
+      rig.events.entity.emit({ guid: CREATURE, type: "disappear" });
+      rig.stores.rewards.requestOpen(CREATURE);
+      rig.inject(
+        GameOpcode.SMSG_LOOT_RESPONSE,
+        lootingLootOpenBody(CREATURE, []),
+      );
+      expect(rig.handle.state().masterCandidates.get(CREATURE)).toEqual([
+        ME,
+        PARTNER,
+      ]);
+    } finally {
+      rig.dispose();
+    }
+  });
   test("duplicate items with the same label settle only their own give", () => {
     const { rig } = setup();
     try {
