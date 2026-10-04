@@ -1,5 +1,8 @@
 import { describe, expect, jest, test } from "bun:test";
 import { elapse, withFakeTimers } from "@peon/core/test-support/fake-time";
+import { groupSpec } from "#harness/areas/raid/tool";
+import type { GroupAfter } from "#harness/areas/raid/tool-shared";
+import { toolCtx } from "#test-support/ops-fixtures";
 import { runTool } from "#test-support/tool-harness";
 import {
   CORPSE,
@@ -182,7 +185,37 @@ describe("group tool give", () => {
     expect(second.text).toContain("DONE");
     expect(t.give).toHaveBeenCalledWith(CORPSE, 0, "Tom");
   });
-
+  test("a cancel while the item template is pending gives nothing and releases", async () => {
+    const unnamed = { itemId: 20_772, name: undefined, slot: 0 };
+    const t = await world({ items: [unnamed], rolls: [] });
+    let resolveTemplate!: (value: { name: string }) => void;
+    const template = new Promise<{ name: string }>((resolve) => {
+      resolveTemplate = resolve;
+    });
+    const templateOf = jest
+      .spyOn(t.handle, "getItemTemplate")
+      .mockReturnValue(template as never);
+    const controller = new AbortController();
+    const run = groupSpec.run(
+      { do: "give", to: "Tom", what: "item 20772" },
+      toolCtx<GroupAfter>(t, controller.signal),
+    );
+    for (
+      let round = 0;
+      round < 100 && templateOf.mock.calls.length === 0;
+      round += 1
+    )
+      await Promise.resolve();
+    controller.abort(new Error("cancelled"));
+    resolveTemplate({ name: "Springpaw Pelt" });
+    const outcome = await run.then(
+      () => "resolved",
+      (error: unknown) => (error instanceof Error ? error.message : "?"),
+    );
+    expect(outcome).toBe("cancelled");
+    expect(t.give).not.toHaveBeenCalled();
+    expect(t.release).toHaveBeenCalled();
+  });
   test("refuses a member the server does not list as a candidate", async () => {
     const t = await world({ candidates: [SELF] });
     const out = await runTool(t.tool, { do: "give", to: "Tom", what: "Linen" });

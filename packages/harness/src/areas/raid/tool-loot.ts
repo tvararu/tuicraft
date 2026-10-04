@@ -1,5 +1,6 @@
 import type { RewardsEvent, RollVote } from "@peon/core";
 import { ROLL_VOTES } from "@peon/core";
+import { abortable } from "@peon/core/lib/abort";
 import { needGroup, resolveMember } from "#harness/areas/raid/tool-settle";
 import {
   emptyGroup,
@@ -150,10 +151,15 @@ async function nameOf(
   item: NamedOpen["items"][number],
 ): Promise<string> {
   if (item.name) return item.name;
-  const template = await ctx.handle
-    .getItemTemplate(item.itemId)
-    .catch(() => undefined);
-  return template?.name ?? `item ${item.itemId}`;
+  const pending = ctx.handle.getItemTemplate(item.itemId);
+  pending.catch(() => undefined);
+  try {
+    const template = await abortable(pending, ctx.signal);
+    return template?.name ?? `item ${item.itemId}`;
+  } catch (error) {
+    if (ctx.signal.aborted) throw ctx.signal.reason ?? error;
+    return `item ${item.itemId}`;
+  }
 }
 
 function itemMatches(
@@ -246,9 +252,11 @@ export async function giveTool(
   if ((corpse.unit.distance ?? 0) > LOOT_APPROACH_YD)
     await approach(ctx, corpse.guid, corpse.unit.name);
   const window = await openCorpse(ctx, corpse.guid);
+  ctx.signal.throwIfAborted();
   let found: { label: string; slot: number };
   try {
     found = await itemSlot(ctx, window, what);
+    ctx.signal.throwIfAborted();
   } catch (error) {
     await releaseCorpse(ctx);
     throw error;
@@ -260,9 +268,12 @@ export async function giveTool(
     await releaseCorpse(ctx);
     throw error;
   }
+  ctx.signal.throwIfAborted();
   try {
     await ctx.handle.looting.act.giveMasterLoot(corpse.guid, slot, to);
   } catch (error) {
+    await releaseCorpse(ctx);
+    if (ctx.signal.aborted) throw ctx.signal.reason ?? error;
     const detail = error instanceof Error ? error.message : String(error);
     return result("FAILED", {
       after: lootAfter("give", to),
@@ -270,9 +281,8 @@ export async function giveTool(
       next: LOOK_LOOTABLE,
       reason: "give_failed",
     });
-  } finally {
-    await releaseCorpse(ctx);
   }
+  await releaseCorpse(ctx);
   return result("DONE", {
     after: { ...lootAfter("give", to), confirmed: true },
     detail: `gave ${label} to ${to}.`,
