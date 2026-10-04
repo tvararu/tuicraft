@@ -164,6 +164,50 @@ describe("group tool", () => {
       expect(out.text).not.toContain("no answer");
     });
 
+    test("an ordinary member sees peers as unknown, not silent", async () => {
+      const t = await world({
+        group: { leader: TOM },
+        members: [tom(), ann()],
+        readyCheck: {
+          answers: new Map(),
+          finishedAt: 2,
+          id: 1,
+          initiator: TOM,
+          names: new Map(),
+          ownAnswer: "ready",
+          silent: undefined,
+          startedAt: 1,
+        },
+      });
+      const out = await runTool(t.tool, { do: "status" });
+      expect(out.text).toContain("Last ready check");
+      expect(out.text).not.toContain("no answer");
+      expect(out.text).not.toContain("ready: none");
+      expect(out.text).toContain("unknown (answers go to the leader): Ann");
+      expect(out.text).toContain("you: ready");
+    });
+
+    test("an ordinary member sees no waiting names on an open check", async () => {
+      const t = await world({
+        group: { leader: TOM },
+        members: [tom(), ann()],
+        readyCheck: {
+          answers: new Map(),
+          finishedAt: undefined,
+          id: 1,
+          initiator: TOM,
+          names: new Map(),
+          ownAnswer: "ready",
+          silent: undefined,
+          startedAt: 1,
+        },
+      });
+      const out = await runTool(t.tool, { do: "status" });
+      expect(out.text).toContain("Open ready check");
+      expect(out.text).toContain("Ann (unknown to you)");
+      expect(out.text).toContain("you: ready");
+    });
+
     test("a full raid still shows an open and a finished check", async () => {
       const crowd = Array.from({ length: 30 }, (_, index) =>
         partyMember({ guid: BigInt(0x10_00 + index), name: `Bot${index}` }),

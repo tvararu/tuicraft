@@ -50,12 +50,19 @@ empty answers and emits `ready_check_started`; a confirm records
 `ready`, `not_ready` or `offline` (state 0 for a member whose roster
 status is offline) and emits `ready_check_answer`; a finish stamps
 `finishedAt` and emits `ready_check_finished` with the ready count, the
-names not ready, the offline count and the pending count. `group do=ready_check`
 waits for that finish, which the server sends once every online member answered
 or after the runtime's own 30 s finish, and its `DONE` detail names who was
 ready, not ready, offline or silent; `group status` puts one line before the
 member rows naming the open check's waiting and answered members, or the last
-check's outcome. Each check carries an `id`, the member names seen while it ran
+check's outcome. The server builds each answer as `MSG_RAID_READY_CHECK_CONFIRM`
+and sends it only to the leader and the assistants
+(`Handlers/GroupHandler.cpp:796-800`, `Groups/Group.cpp:1993-2006`), then
+broadcasts the `MSG_RAID_READY_CHECK_FINISHED` finish to the whole group
+(`Handlers/GroupHandler.cpp:810-814`), so an ordinary member
+never learns peers' answers: the outcome names those peers as unknown, not
+silent, hides the answers it never received from the open check's waiting and
+answered names, and still shows the member's own locally recorded answer. Each
+check carries an `id`, the member names seen while it ran
 (`names`) and, once finished, the names that never answered (`silent`), so a
 later join or departure never changes a finished outcome. The server accepts a
 start from any leader or assistant without looking for an open check
