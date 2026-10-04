@@ -36,6 +36,7 @@ describe("createHarnessRuntime", () => {
       humanWaiting: false,
       lastNow: undefined,
       lastToolCallAt: undefined,
+      replyStarted: false,
       tool: undefined,
       turnStartSeq: 0,
       turnToolCalls: 0,

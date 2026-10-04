@@ -59,9 +59,13 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
       turnToolCalls: 0,
     });
   });
-  pi.on("turn_start", () => {
-    session.humanWaiting = false;
-    session.humanTexts = [];
+  pi.on("message_start", (event) => {
+    if (
+      "role" in event.message &&
+      event.message.role === "assistant" &&
+      session.humanWaiting
+    )
+      session.replyStarted = true;
   });
   pi.on("tool_execution_start", (event) => {
     Object.assign(session, {
@@ -74,7 +78,13 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
     Object.assign(session, { agent: "streaming", tool: undefined });
   });
   pi.on("agent_end", () => {
-    Object.assign(session, { agent: "idle", tool: undefined });
+    Object.assign(session, {
+      agent: "idle",
+      humanTexts: [],
+      humanWaiting: false,
+      replyStarted: false,
+      tool: undefined,
+    });
     handToLoop(rt);
   });
   pi.on("message_end", (event) => noteAssistant(rt, event.message));
@@ -123,6 +133,7 @@ function onInput(rt: HarnessRuntime, event: InputEvent): InputEventResult {
   if (rt.session.agent !== "idle") {
     rt.session.humanWaiting = true;
     rt.session.humanTexts = [...rt.session.humanTexts, event.text];
+    rt.session.replyStarted = false;
     rt.yields.trigger();
   }
   return { action: "continue" };
@@ -144,6 +155,11 @@ function noteAssistant(rt: HarnessRuntime, message: AgentMessage): void {
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("");
   if (text.trim().length === 0) return;
+  if (rt.session.replyStarted) {
+    rt.session.humanWaiting = false;
+    rt.session.humanTexts = [];
+    rt.session.replyStarted = false;
+  }
   rt.log.append({
     class: "log",
     data: { text },
