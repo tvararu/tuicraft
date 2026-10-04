@@ -61,7 +61,10 @@ describe("event-anchored windows", () => {
       [row(1, "lfg/queued", { updateType: 5 }, 1000)],
       {
         ...anchored,
-        window: { ...anchored.window!, max: 5 },
+        window: {
+          after: { data: { change: "leader" }, event: "raid/roster" },
+          max: 5,
+        },
       },
     );
     expect(filled?.met).toBe(false);
