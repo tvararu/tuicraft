@@ -60,10 +60,36 @@ function currentCheck(
   return { check, group };
 }
 
+function superseded(): ToolResult<GroupAfter> {
+  return result("UNCONFIRMED", {
+    after: after("ready_check", false),
+    detail:
+      "another leader or assistant started a new ready check, so the outcome of yours is unknown.",
+    next: "check group status for the latest ready check.",
+    reason: "superseded",
+  });
+}
+
+function finishedOutcome(
+  ctx: GroupCtx,
+  id: number | undefined,
+): ToolResult<GroupAfter> | undefined {
+  const current = currentCheck(ctx);
+  if (current === undefined) return undefined;
+  if (id !== undefined && current.check.id !== id) return superseded();
+  if (current.check.finishedAt === undefined) return undefined;
+  return result("DONE", {
+    after: after("ready_check", true),
+    detail: `The ready check finished: ${readyOutcome(current.group, current.check)}.`,
+  });
+}
+
 async function waitReadyDone(ctx: GroupCtx): Promise<void> {
   await settle<Answer>({
     match: (answer) =>
-      answer?.kind === "raid" && answer.event.type === "ready_check_finished",
+      answer?.kind === "raid" &&
+      (answer.event.type === "ready_check_finished" ||
+        answer.event.type === "ready_check_started"),
     signal: ctx.signal,
     subscribe: (cb) =>
       ctx.handle.raid.onEvent((event) => cb({ event, kind: "raid" })),
@@ -82,11 +108,30 @@ function after(doing: GroupDo, confirmed: boolean): GroupAfter {
 }
 
 export async function readyCheckTool(
-  _args: GroupArgs,
+  args: GroupArgs,
   ctx: GroupCtx,
 ): Promise<ToolResult<GroupAfter>> {
   const { group } = needGroup(ctx);
   readyCheck(group, ctx);
+  const self = ctx.handle.getControlState().selfGuid;
+  let startedId: number | undefined;
+  const stop = ctx.handle.raid.onEvent((event) => {
+    if (event.type !== "ready_check_started" || event.initiator !== self)
+      return;
+    startedId = ctx.handle.raid.state().readyCheck?.id;
+  });
+  try {
+    return await startAndAwait(args, ctx, () => startedId);
+  } finally {
+    stop();
+  }
+}
+
+async function startAndAwait(
+  _args: GroupArgs,
+  ctx: GroupCtx,
+  startedId: () => number | undefined,
+): Promise<ToolResult<GroupAfter>> {
   const self = ctx.handle.getControlState().selfGuid;
   const started = await runRaidSettled(
     ctx,
@@ -109,19 +154,11 @@ export async function readyCheckTool(
     },
   );
   if (started.status !== "DONE") return started;
-  const finished = currentCheck(ctx);
-  if (finished?.check.finishedAt !== undefined)
-    return result("DONE", {
-      after: after("ready_check", true),
-      detail: `The ready check finished: ${readyOutcome(finished.group, finished.check)}.`,
-    });
+  const early = finishedOutcome(ctx, startedId());
+  if (early) return early;
   await waitReadyDone(ctx);
-  const outcome = currentCheck(ctx);
-  if (outcome?.check.finishedAt !== undefined)
-    return result("DONE", {
-      after: after("ready_check", true),
-      detail: `The ready check finished: ${readyOutcome(outcome.group, outcome.check)}.`,
-    });
+  const late = finishedOutcome(ctx, startedId());
+  if (late) return late;
   const partial = currentCheck(ctx);
   if (!partial)
     return result("UNCONFIRMED", {

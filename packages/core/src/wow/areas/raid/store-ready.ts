@@ -3,6 +3,9 @@ import type { RaidGroup } from "#wow/areas/raid/protocol";
 export type ReadyAnswer = "ready" | "not_ready" | "offline";
 
 export type ReadyCheck = {
+  id: number;
+  names: ReadonlyMap<bigint, string>;
+  silent: readonly string[] | undefined;
   initiator: bigint;
   startedAt: number;
   answers: ReadonlyMap<bigint, ReadyAnswer>;
@@ -79,6 +82,7 @@ function answerFor(ready: boolean, status: number): ReadyAnswer {
 
 export class ReadyStore {
   private check: ReadyCheck | undefined;
+  private lastId = 0;
 
   current(): ReadyCheck | undefined {
     return this.check;
@@ -89,11 +93,17 @@ export class ReadyStore {
     initiator: bigint,
     now: number,
   ): ReadyEvent {
+    this.lastId += 1;
     this.check = {
       answers: new Map(),
       finishedAt: undefined,
+      id: this.lastId,
       initiator,
+      names: new Map(
+        (group?.members ?? []).map((member) => [member.guid, member.name]),
+      ),
       ownAnswer: undefined,
+      silent: undefined,
       startedAt: now,
     };
     return {
@@ -115,6 +125,7 @@ export class ReadyStore {
     this.check = {
       ...check,
       answers: new Map(check.answers).set(guid, answer),
+      names: new Map(check.names).set(guid, member.name),
     };
     return { answer, guid, name: member.name, type: "ready_check_answer" };
   }
@@ -128,7 +139,10 @@ export class ReadyStore {
   finish(group: RaidGroup | undefined, now: number): ReadyEvent | undefined {
     const check = this.check;
     if (!check || check.finishedAt !== undefined) return undefined;
-    this.check = { ...check, finishedAt: now };
+    const silent = pendingGuids(group, check).map((guid) =>
+      nameOf(group, guid),
+    );
+    this.check = { ...check, finishedAt: now, silent };
     return summary(group, this.check);
   }
 

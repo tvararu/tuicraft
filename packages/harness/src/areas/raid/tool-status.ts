@@ -151,8 +151,8 @@ export function statusTool(
     .filter((member) => names.has(member.name))
     .map((member) => memberRow(member, { now, stats: snapshots }));
   const check = raid.readyCheck;
-  if (check && group && args.to === undefined)
-    rows.push(readyCheckLine(group, check));
+  if (check && args.to === undefined)
+    rows.unshift(readyCheckLine(group, check));
   return Promise.resolve(
     result("DONE", {
       after: { ...emptyGroup(), do: "status" as GroupDo },

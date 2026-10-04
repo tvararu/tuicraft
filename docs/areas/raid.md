@@ -53,8 +53,15 @@ status is offline) and emits `ready_check_answer`; a finish stamps
 names not ready, the offline count and the pending count. `group do=ready_check`
 waits for that finish, which the server sends once every online member answered
 or after the runtime's own 30 s finish, and its `DONE` detail names who was
-ready, not ready, offline or silent; `group status` appends one line naming the
-open check's waiting and answered members, or the last check's outcome.
+ready, not ready, offline or silent; `group status` puts one line before the
+member rows naming the open check's waiting and answered members, or the last
+check's outcome. Each check carries an `id`, the member names seen while it ran
+(`names`) and, once finished, the names that never answered (`silent`), so a
+later join or departure never changes a finished outcome. The server accepts a
+start from any leader or assistant without looking for an open check
+(`Handlers/GroupHandler.cpp:783-787`, `MSG_RAID_READY_CHECK`), so a second
+start replaces the check; `group do=ready_check` then returns `UNCONFIRMED`
+with reason `superseded` instead of reporting the replacement's outcome.
 Confirms with
 no open check, from a guid outside the roster, or after the finish are
 ignored. Every act names another member: a name outside the roster throws

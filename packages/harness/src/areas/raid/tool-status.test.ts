@@ -105,8 +105,11 @@ describe("group tool", () => {
         readyCheck: {
           answers: new Map([[TOM, "ready"]]),
           finishedAt: undefined,
+          id: 1,
           initiator: SELF,
+          names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          silent: undefined,
           startedAt: 1,
         },
       });
@@ -122,8 +125,11 @@ describe("group tool", () => {
         readyCheck: {
           answers: new Map([[TOM, "ready"]]),
           finishedAt: 2,
+          id: 1,
           initiator: SELF,
+          names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          silent: ["Ann"],
           startedAt: 1,
         },
       });
@@ -133,14 +139,69 @@ describe("group tool", () => {
       expect(out.text).toContain("no answer: Ann");
     });
 
+    test("a finished outcome ignores later joins and departures", async () => {
+      const t = await world({
+        members: [tom(), ann({ guid: 0x300n, name: "Late" })],
+        readyCheck: {
+          answers: new Map([
+            [TOM, "ready"],
+            [ANN, "ready"],
+          ]),
+          finishedAt: 2,
+          id: 1,
+          initiator: SELF,
+          names: new Map([
+            [TOM, "Tom"],
+            [ANN, "Ann"],
+          ]),
+          ownAnswer: undefined,
+          silent: [],
+          startedAt: 1,
+        },
+      });
+      const out = await runTool(t.tool, { do: "status" });
+      expect(out.text).toContain("ready: Tom, Ann");
+      expect(out.text).not.toContain("no answer");
+    });
+
+    test("a full raid still shows an open and a finished check", async () => {
+      const crowd = Array.from({ length: 30 }, (_, index) =>
+        partyMember({ guid: BigInt(0x10_00 + index), name: `Bot${index}` }),
+      );
+      const base = {
+        answers: new Map(),
+        id: 1,
+        initiator: SELF,
+        names: new Map(),
+        ownAnswer: undefined,
+        startedAt: 1,
+      };
+      const open = await world({
+        members: crowd,
+        readyCheck: { ...base, finishedAt: undefined, silent: undefined },
+      });
+      const opened = await runTool(open.tool, { do: "status" });
+      expect(opened.text).toContain("Open ready check");
+      const done = await world({
+        members: crowd,
+        readyCheck: { ...base, finishedAt: 2, silent: ["Bot3"] },
+      });
+      const finished = await runTool(done.tool, { do: "status" });
+      expect(finished.text).toContain("Last ready check");
+      expect(finished.text).toContain("no answer: Bot3");
+    });
+
     test("a named status shows no ready-check line", async () => {
       const t = await world({
         members: [tom(), ann()],
         readyCheck: {
           answers: new Map(),
           finishedAt: undefined,
+          id: 1,
           initiator: SELF,
+          names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          silent: undefined,
           startedAt: 1,
         },
       });

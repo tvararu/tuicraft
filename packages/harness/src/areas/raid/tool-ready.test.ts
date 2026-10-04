@@ -51,8 +51,14 @@ function openCheck(over: Partial<ReadyCheck> = {}): ReadyCheck {
   return {
     answers: new Map(),
     finishedAt: undefined,
+    id: 1,
     initiator: TOM,
+    names: new Map([
+      [TOM, "Tom"],
+      [ANN, "Ann"],
+    ]),
     ownAnswer: undefined,
+    silent: undefined,
     startedAt: 1,
     ...over,
   };
@@ -266,6 +272,57 @@ describe("group tool ready_check", () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
     abort.abort(new Error("cancelled"));
     await expect(outcome).resolves.toMatchObject({ message: "cancelled" });
+  });
+
+  test("a replacement check finishing is not this call's outcome", async () => {
+    const t = await world();
+    t.start.mockImplementation(() => t.begin(openCheck({ initiator: SELF })));
+    const promise = runTool(t.tool, { do: "ready_check" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    t.begin(openCheck({ id: 2, initiator: TOM }));
+    t.finish(
+      openCheck({
+        answers: new Map([[ANN, "ready"]]),
+        finishedAt: 3,
+        id: 2,
+        initiator: TOM,
+      }),
+      {
+        notReady: [],
+        offline: 0,
+        pending: 0,
+        ready: 1,
+        type: "ready_check_finished",
+      },
+    );
+    const out = await promise;
+    expect(out.text).toContain("UNCONFIRMED");
+    expect(out.text).not.toContain("ready: Ann");
+  });
+
+  test("a replacement during the start window is not this call's outcome", async () => {
+    const t = await world();
+    t.start.mockImplementation(() => {
+      t.begin(openCheck({ initiator: SELF }));
+      t.finish(
+        openCheck({
+          answers: new Map([[ANN, "ready"]]),
+          finishedAt: 3,
+          id: 2,
+          initiator: TOM,
+        }),
+        {
+          notReady: [],
+          offline: 0,
+          pending: 0,
+          ready: 1,
+          type: "ready_check_finished",
+        },
+      );
+    });
+    const out = await runTool(t.tool, { do: "ready_check" });
+    expect(out.text).toContain("UNCONFIRMED");
+    expect(out.text).not.toContain("ready: Ann");
   });
 
   test("an assistant may start a check", async () => {

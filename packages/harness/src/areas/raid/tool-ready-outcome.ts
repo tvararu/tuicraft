@@ -4,11 +4,15 @@ export type ReadyCheck = NonNullable<RaidState["readyCheck"]>;
 
 const ONLINE_STATUS = 0x01;
 
-function memberName(group: RaidGroup, guid: bigint): string {
-  return group.members.find((member) => member.guid === guid)?.name ?? "";
+function answeredNames(check: ReadyCheck, wanted: string): string[] {
+  return [...check.answers]
+    .filter(([, answer]) => answer === wanted)
+    .map(([guid]) => check.names.get(guid) ?? "")
+    .filter((name) => name !== "");
 }
 
 export function silentNames(group: RaidGroup, check: ReadyCheck): string[] {
+  if (check.silent !== undefined) return [...check.silent];
   return group.members
     .filter(
       (member) =>
@@ -20,15 +24,9 @@ export function silentNames(group: RaidGroup, check: ReadyCheck): string[] {
 }
 
 export function readyOutcome(group: RaidGroup, check: ReadyCheck): string {
-  const ready = [...check.answers]
-    .filter(([, answer]) => answer === "ready")
-    .map(([guid]) => memberName(group, guid));
-  const notReady = [...check.answers]
-    .filter(([, answer]) => answer === "not_ready")
-    .map(([guid]) => memberName(group, guid));
-  const offline = [...check.answers]
-    .filter(([, answer]) => answer === "offline")
-    .map(([guid]) => memberName(group, guid));
+  const ready = answeredNames(check, "ready");
+  const notReady = answeredNames(check, "not_ready");
+  const offline = answeredNames(check, "offline");
   const silent = silentNames(group, check);
   const parts = [`ready: ${ready.length === 0 ? "none" : ready.join(", ")}`];
   if (notReady.length > 0) parts.push(`not ready: ${notReady.join(", ")}`);
@@ -42,7 +40,7 @@ export function readyCheckLine(group: RaidGroup, check: ReadyCheck): string {
     return `Last ready check: ${readyOutcome(group, check)}.`;
   const pending = silentNames(group, check);
   const answered = [...check.answers]
-    .map(([guid]) => memberName(group, guid))
+    .map(([guid]) => check.names.get(guid) ?? "")
     .filter((name) => name !== "");
   const bits = [
     `waiting on ${pending.length === 0 ? "no one" : pending.join(", ")}`,

@@ -61,7 +61,7 @@ describe("ready check store", () => {
       expect(events).toEqual([
         { initiator: TOM, name: "Tom", type: "ready_check_started" },
       ]);
-      expect(rig.handle.state().readyCheck).toEqual({
+      expect(rig.handle.state().readyCheck).toMatchObject({
         answers: new Map(),
         finishedAt: undefined,
         initiator: TOM,
@@ -183,6 +183,48 @@ describe("ready check store", () => {
       start(rig);
       rig.inject(GameOpcode.SMSG_GROUP_LIST, raidGroupLeftBody(2));
       expect(rig.handle.state().readyCheck).toBeUndefined();
+    } finally {
+      rig.dispose();
+    }
+  });
+
+  test("a finished check keeps its roster across later group updates", () => {
+    const { rig } = rigWithGroup();
+    try {
+      start(rig, PEON);
+      confirm(rig, ANN, 1);
+      rig.inject(GameOpcode.MSG_RAID_READY_CHECK_FINISHED, new Uint8Array(0));
+      const finished = rig.handle.state().readyCheck;
+      rig.inject(
+        GameOpcode.SMSG_GROUP_LIST,
+        raidGroupListBody({
+          counter: 2,
+          leader: TOM,
+          members: [
+            { guid: PEON, name: "Peon" },
+            { guid: TOM, name: "Tom" },
+            { guid: 0x50n, name: "Late" },
+          ],
+          type: 0,
+        }),
+      );
+      const after = rig.handle.state().readyCheck;
+      expect(after?.names.get(ANN)).toBe("Ann");
+      expect(after?.names.has(0x50n)).toBe(false);
+      expect(after?.silent).toEqual(["Tom"]);
+      expect(after?.id).toBe(finished?.id);
+    } finally {
+      rig.dispose();
+    }
+  });
+
+  test("each start gets a new check id", () => {
+    const { rig } = rigWithGroup();
+    try {
+      start(rig, PEON);
+      const first = rig.handle.state().readyCheck?.id;
+      start(rig, TOM);
+      expect(rig.handle.state().readyCheck?.id).not.toBe(first);
     } finally {
       rig.dispose();
     }
