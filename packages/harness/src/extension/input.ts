@@ -60,12 +60,10 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
     });
   });
   pi.on("message_start", (event) => {
-    if (
-      "role" in event.message &&
-      event.message.role === "assistant" &&
-      session.humanWaiting
-    )
-      session.replyStarted = true;
+    if (!session.humanWaiting) return;
+    const text = userText(event.message);
+    if (text === undefined || !session.humanTexts.includes(text)) return;
+    session.replyStarted = true;
   });
   pi.on("tool_execution_start", (event) => {
     Object.assign(session, {
@@ -80,8 +78,6 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
   pi.on("agent_end", () => {
     Object.assign(session, {
       agent: "idle",
-      humanTexts: [],
-      humanWaiting: false,
       replyStarted: false,
       tool: undefined,
     });
@@ -147,6 +143,18 @@ function appendHuman(rt: HarnessRuntime, row: HumanRow): void {
     event: "human/input",
     text: `Human: ${row.text}`,
   });
+}
+
+function userText(message: AgentMessage): string | undefined {
+  if (!("role" in message) || message.role !== "user") return undefined;
+  const content = message.content;
+  const text =
+    typeof content === "string"
+      ? content
+      : content
+          .flatMap((part) => (part.type === "text" ? [part.text] : []))
+          .join("");
+  return text.length === 0 ? undefined : text;
 }
 
 function noteAssistant(rt: HarnessRuntime, message: AgentMessage): void {
