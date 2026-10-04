@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { scratchDir } from "@peon/core/test-support/scratch";
-import { observedChecks, truthSummary } from "#harness/grader/draft-fill";
+import {
+  observedChecks,
+  observeTruth,
+  truthSummary,
+} from "#harness/grader/draft-fill";
 import type { CheckEvidence, ScenarioCheck } from "#harness/grader/scenarios";
 import type { Truth } from "#harness/grader/truth";
 import { totalXp } from "#harness/grader/xp-table";
@@ -406,5 +410,56 @@ describe("observedChecks on truth", () => {
       baseline: truthSummary(truth()),
       final: truthSummary(truth({ money: 50_030 })),
     });
+  });
+});
+
+describe("observeTruth with server-removed conjured items", () => {
+  const row = (item: number, name: string, slot: number, count = 20) => ({
+    bag: 255,
+    count,
+    item,
+    name,
+    slot,
+  });
+  const dagger = row(2092, "Worn Dagger", 15, 1);
+  const muffin = row(5349, "Conjured Muffin", 28);
+  const water = row(5350, "Conjured Water", 29);
+  const of = (...inventory: ReturnType<typeof row>[]) => truth({ inventory });
+  const evidence = { truth: ["inventory" as const] };
+  const inventoryOf = (side: unknown) =>
+    (side as { inventory: { item: number }[] }).inventory.map((r) => r.item);
+
+  test("drops baseline conjured rows the final inventory no longer holds", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin, water), final: of(dagger) },
+      evidence,
+    ) as { baseline: unknown; final: unknown };
+    expect(inventoryOf(seen.baseline)).toEqual([2092]);
+    expect(inventoryOf(seen.final)).toEqual([2092]);
+  });
+
+  test("keeps conjured rows the final inventory still holds", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin), final: of(dagger, muffin) },
+      evidence,
+    ) as { baseline: unknown };
+    expect(inventoryOf(seen.baseline)).toEqual([2092, 5349]);
+  });
+
+  test("still reports a vanished item that is not conjured", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin), final: of(muffin) },
+      evidence,
+    ) as { baseline: unknown };
+    expect(inventoryOf(seen.baseline)).toEqual([2092, 5349]);
+  });
+
+  test("leaves item deltas free of the removed conjured items", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin, water), final: of(dagger) },
+      { items: [5349] },
+    ) as { items: Record<string, { delta: number }> };
+    expect(Object.keys(seen.items)).toEqual(["5349"]);
+    expect(seen.items["5349"]?.delta).toBe(0);
   });
 });

@@ -1,3 +1,4 @@
+import { withoutRemovedConjured } from "#harness/grader/conjured";
 import { fillConsole, readConsoleLog } from "#harness/grader/draft-console";
 import { observeGameLog, parseGameLog } from "#harness/grader/draft-gamelog";
 import { measureGameLog } from "#harness/grader/draft-measure";
@@ -198,9 +199,10 @@ function positionObserved(pair: Pair, point: { x: number; y: number }): Picked {
 }
 
 export function observeTruth(
-  pair: Pair,
+  recorded: Pair,
   evidence: CheckEvidence = {},
 ): unknown {
+  const pair = withoutRemovedConjured(recorded);
   if (pair.baseline === null && pair.final === null) return null;
   if (evidence.point !== undefined)
     return positionObserved(pair, evidence.point);

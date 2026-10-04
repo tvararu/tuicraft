@@ -165,8 +165,13 @@ on-use spells it read before.
   random per character, so the check compares the money delta to the
   loot window), and `t8-items-read` reads A Dusty Unsent Letter (its
   page text is empty on this server). The server deletes conjured
-  food and water at login, which shows as missing rows in the unequip
-  and open baselines.
+  items (`ITEM_FLAG_CONJURED`, `Entities/Item/ItemTemplate.h:148`)
+  from a character that was logged out for more than 15 minutes, when
+  it loads the inventory (`Entities/Player/PlayerStorage.cpp:6139`).
+  The eversong10 conjured food and water (5349, 5350, 43518) therefore
+  vanish between the offline baseline truth and the final truth, and
+  the grader drops a baseline conjured row when the final inventory
+  holds none of that item.
 - `t8-items-ammo` (round 21) loads 200 Rough Arrow (2512) added by the
   setup. The `eversong10-hunter` preset already has 1000 Sharp Arrow
   (2515) loaded, so the task names the Rough Arrows; with "the new
