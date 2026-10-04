@@ -217,6 +217,34 @@ describe("ready check store", () => {
       rig.dispose();
     }
   });
+  test("a finished check stays unheard after a later promotion", () => {
+    const { rig } = rigWithGroup();
+    try {
+      start(rig);
+      rig.inject(GameOpcode.MSG_RAID_READY_CHECK_FINISHED, new Uint8Array(0));
+      expect(rig.handle.state().readyCheck?.seen).toBe(false);
+      rig.inject(
+        GameOpcode.SMSG_GROUP_LIST,
+        raidGroupListBody({
+          counter: 2,
+          leader: PEON,
+          members: [
+            { guid: PEON, name: "Peon" },
+            { guid: TOM, name: "Tom" },
+            { guid: ANN, name: "Ann" },
+            { guid: BOB, name: "Bob", status: 0 },
+          ],
+          type: 0,
+        }),
+      );
+      const after = rig.handle.state().readyCheck;
+      expect(after?.seen).toBe(false);
+      expect(after?.finishedAt).not.toBeUndefined();
+      expect(after?.silent).toEqual(["Peon", "Ann"]);
+    } finally {
+      rig.dispose();
+    }
+  });
 
   test("each start gets a new check id", () => {
     const { rig } = rigWithGroup();

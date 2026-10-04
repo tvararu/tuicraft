@@ -178,12 +178,18 @@ function flagChanges(
 export class RaidStore {
   private readonly events = new Emitter<[RaidEvent]>();
   private group: RaidGroup | undefined;
-  private readonly stats = new Map<bigint, MemberStats>();
-  private readonly ready = new ReadyStore();
+  private readonly ready: ReadyStore;
   private readonly markStore = new MarkStore();
   private readonly summons = new SummonStore();
+  private readonly selfGuid: () => bigint;
+  private readonly stats = new Map<bigint, MemberStats>();
   private zones: ZoneNames | undefined;
   private counter = 0;
+
+  constructor(selfGuid: () => bigint = () => 0n) {
+    this.ready = new ReadyStore();
+    this.selfGuid = selfGuid;
+  }
 
   snapshot(): RaidState {
     return {
@@ -242,7 +248,9 @@ export class RaidStore {
   }
 
   receiveReadyStart(initiator: bigint, now: number): void {
-    this.events.emit(this.ready.start(this.group, initiator, now));
+    this.events.emit(
+      this.ready.start(this.group, initiator, now, this.selfGuid()),
+    );
   }
 
   receiveReadyConfirm(guid: bigint, ready: boolean): void {

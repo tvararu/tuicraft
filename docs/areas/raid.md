@@ -63,8 +63,11 @@ never learns peers' answers: the outcome names those peers as unknown, not
 silent, hides the answers it never received from the open check's waiting and
 answered names, and still shows the member's own locally recorded answer. Each
 check carries an `id`, the member names seen while it ran
-(`names`) and, once finished, the names that never answered (`silent`), so a
-later join or departure never changes a finished outcome. The server accepts a
+(`names`), whether the member saw answers when the check started (`seen`), and,
+once finished, the names that never answered (`silent`), so a
+later join, departure or promotion never changes a finished outcome. A later
+promotion sends a group roster update (`Groups/Group.cpp:1901`, `SMSG_GROUP_LIST`),
+not past confirmations. The server accepts a
 start from any leader or assistant without looking for an open check
 (`Handlers/GroupHandler.cpp:783-787`, `MSG_RAID_READY_CHECK`), so a second
 start replaces the check; `group do=ready_check` then returns `UNCONFIRMED`

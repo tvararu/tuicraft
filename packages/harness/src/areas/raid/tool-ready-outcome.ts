@@ -22,6 +22,7 @@ export function seesAnswers(
   check: ReadyCheck,
   ctx: GroupCtx,
 ): boolean {
+  if (check.finishedAt !== undefined) return check.seen;
   const self = ctx.handle.getControlState().selfGuid;
   if (check.initiator === self) return true;
   return isLeader(group, ctx) || isAssistant(group, ctx);

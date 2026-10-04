@@ -11,6 +11,7 @@ export type ReadyCheck = {
   answers: ReadonlyMap<bigint, ReadyAnswer>;
   ownAnswer: ReadyAnswer | undefined;
   finishedAt: number | undefined;
+  seen: boolean;
 };
 
 export type ReadyEvent =
@@ -29,6 +30,7 @@ export type ReadyEvent =
       pending: number;
     };
 
+const ASSISTANT_FLAG = 0x01;
 const STATUS_ONLINE = 0x01;
 
 function nameOf(group: RaidGroup | undefined, guid: bigint): string {
@@ -37,6 +39,18 @@ function nameOf(group: RaidGroup | undefined, guid: bigint): string {
 
 export function isOnline(status: number): boolean {
   return (status & STATUS_ONLINE) !== 0;
+}
+
+export function seesAnswers(
+  group: RaidGroup | undefined,
+  check: Pick<ReadyCheck, "initiator">,
+  selfGuid: bigint,
+): boolean {
+  if (check.initiator === selfGuid) return true;
+  if (group?.leader === selfGuid) return true;
+  const me = group?.members.find((member) => member.guid === selfGuid);
+  const flags = me ? me.flags : (group?.self.flags ?? 0);
+  return Math.floor(flags / ASSISTANT_FLAG) % 2 === 1;
 }
 
 export function pendingGuids(
@@ -92,8 +106,10 @@ export class ReadyStore {
     group: RaidGroup | undefined,
     initiator: bigint,
     now: number,
+    selfGuid: bigint,
   ): ReadyEvent {
     this.lastId += 1;
+    const draft = { initiator };
     this.check = {
       answers: new Map(),
       finishedAt: undefined,
@@ -103,6 +119,7 @@ export class ReadyStore {
         (group?.members ?? []).map((member) => [member.guid, member.name]),
       ),
       ownAnswer: undefined,
+      seen: seesAnswers(group, draft, selfGuid),
       silent: undefined,
       startedAt: now,
     };

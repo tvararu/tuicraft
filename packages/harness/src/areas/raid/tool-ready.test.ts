@@ -58,6 +58,7 @@ function openCheck(over: Partial<ReadyCheck> = {}): ReadyCheck {
       [ANN, "Ann"],
     ]),
     ownAnswer: undefined,
+    seen: true,
     silent: undefined,
     startedAt: 1,
     ...over,

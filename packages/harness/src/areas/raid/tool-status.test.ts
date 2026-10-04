@@ -109,6 +109,7 @@ describe("group tool", () => {
           initiator: SELF,
           names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          seen: true,
           silent: undefined,
           startedAt: 1,
         },
@@ -129,6 +130,7 @@ describe("group tool", () => {
           initiator: SELF,
           names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          seen: true,
           silent: ["Ann"],
           startedAt: 1,
         },
@@ -155,6 +157,7 @@ describe("group tool", () => {
             [ANN, "Ann"],
           ]),
           ownAnswer: undefined,
+          seen: true,
           silent: [],
           startedAt: 1,
         },
@@ -175,6 +178,7 @@ describe("group tool", () => {
           initiator: TOM,
           names: new Map(),
           ownAnswer: "ready",
+          seen: false,
           silent: undefined,
           startedAt: 1,
         },
@@ -185,6 +189,28 @@ describe("group tool", () => {
       expect(out.text).not.toContain("ready: none");
       expect(out.text).toContain("unknown (answers go to the leader): Ann");
       expect(out.text).toContain("you: ready");
+    });
+
+    test("a promotion after a finished check keeps answers unknown", async () => {
+      const t = await world({
+        group: { leader: SELF },
+        members: [tom(), ann()],
+        readyCheck: {
+          answers: new Map([[ANN, "ready"]]),
+          finishedAt: 2,
+          id: 1,
+          initiator: TOM,
+          names: new Map([[ANN, "Ann"]]),
+          ownAnswer: "ready",
+          seen: false,
+          silent: ["Tom"],
+          startedAt: 1,
+        },
+      });
+      const out = await runTool(t.tool, { do: "status" });
+      expect(out.text).not.toContain("no answer");
+      expect(out.text).not.toContain("ready: none");
+      expect(out.text).toContain("unknown (answers go to the leader): Tom");
     });
 
     test("an ordinary member sees no waiting names on an open check", async () => {
@@ -198,6 +224,7 @@ describe("group tool", () => {
           initiator: TOM,
           names: new Map(),
           ownAnswer: "ready",
+          seen: true,
           silent: undefined,
           startedAt: 1,
         },
@@ -218,6 +245,7 @@ describe("group tool", () => {
         initiator: SELF,
         names: new Map(),
         ownAnswer: undefined,
+        seen: true,
         startedAt: 1,
       };
       const open = await world({
@@ -245,6 +273,7 @@ describe("group tool", () => {
           initiator: SELF,
           names: new Map([[TOM, "Tom"]]),
           ownAnswer: undefined,
+          seen: true,
           silent: undefined,
           startedAt: 1,
         },

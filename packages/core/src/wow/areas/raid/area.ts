@@ -55,7 +55,7 @@ export const raidArea = defineArea({
     "summon_requested",
     "summon_expired",
   ],
-  store: (deps) => new RaidAreaStore(deps.now),
+  store: (deps) => new RaidAreaStore(deps.now, deps.selfGuid),
   register: (wire, store) => {
     wire.peek(GameOpcode.SMSG_GROUP_LIST, (r) =>
       receiveList(store, parseGroupList(r)),

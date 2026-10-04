@@ -13,10 +13,14 @@ import type { PartyCommandResult } from "#wow/protocol/group";
 import type { PartyMemberStats } from "#wow/protocol/group-stats";
 
 export class RaidAreaStore {
-  private readonly inner = new RaidStore();
+  private readonly inner: RaidStore;
   private readonly now: () => number;
 
-  constructor(now: () => number = () => Date.now()) {
+  constructor(
+    now: () => number = () => Date.now(),
+    selfGuid: () => bigint = () => 0n,
+  ) {
+    this.inner = new RaidStore(selfGuid);
     this.now = now;
   }
 
