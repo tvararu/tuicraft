@@ -7,7 +7,7 @@ import {
   truthSummary,
 } from "#harness/grader/draft-fill";
 import type { CheckEvidence, ScenarioCheck } from "#harness/grader/scenarios";
-import type { Truth } from "#harness/grader/truth";
+import type { Truth, TruthItem } from "#harness/grader/truth";
 import { totalXp } from "#harness/grader/xp-table";
 
 const truth = (overrides: Partial<Truth> = {}): Truth => ({
@@ -414,25 +414,36 @@ describe("observedChecks on truth", () => {
 });
 
 describe("observeTruth with server-removed conjured items", () => {
-  const row = (item: number, name: string, slot: number, count = 20) => ({
-    bag: 255,
-    count,
-    item,
-    name,
-    slot,
-  });
+  type TestRow = Pick<TruthItem, "bag" | "count" | "item" | "name" | "slot">;
+  type InventorySide = { inventory: TruthItem[] };
+  const isInventorySide = (side: unknown): side is InventorySide =>
+    typeof side === "object" &&
+    side !== null &&
+    "inventory" in side &&
+    Array.isArray(side.inventory);
+  const row = (
+    item: number,
+    name: string,
+    slot: number,
+    count = 20,
+  ): TestRow => ({ bag: 255, count, item, name, slot });
   const dagger = row(2092, "Worn Dagger", 15, 1);
   const muffin = row(5349, "Conjured Muffin", 28);
-  const water = row(5350, "Conjured Water", 29);
-  const of = (...inventory: ReturnType<typeof row>[]) => truth({ inventory });
+  const bread = row(1113, "Conjured Bread", 29);
+  const of = (...inventory: TestRow[]) => truth({ inventory });
   const evidence = { truth: ["inventory" as const] };
-  const inventoryOf = (side: unknown) =>
-    (side as { inventory: { item: number }[] }).inventory.map((r) => r.item);
+  const flags = { 1113: 2_097_154, 2092: 0, 5349: 2_097_154 };
+  const inventoryOf = (side: unknown): number[] => {
+    if (!isInventorySide(side))
+      throw new Error("observed side has no inventory");
+    return side.inventory.map((entry) => entry.item);
+  };
 
-  test("drops baseline conjured rows the final inventory no longer holds", () => {
+  test("drops baseline rows whose template carries the conjured flag and the final inventory lacks", () => {
     const seen = observeTruth(
-      { baseline: of(dagger, muffin, water), final: of(dagger) },
+      { baseline: of(dagger, muffin, bread), final: of(dagger) },
       evidence,
+      flags,
     ) as { baseline: unknown; final: unknown };
     expect(inventoryOf(seen.baseline)).toEqual([2092]);
     expect(inventoryOf(seen.final)).toEqual([2092]);
@@ -442,24 +453,45 @@ describe("observeTruth with server-removed conjured items", () => {
     const seen = observeTruth(
       { baseline: of(dagger, muffin), final: of(dagger, muffin) },
       evidence,
+      flags,
     ) as { baseline: unknown };
     expect(inventoryOf(seen.baseline)).toEqual([2092, 5349]);
   });
 
-  test("still reports a vanished item that is not conjured", () => {
+  test("still reports a vanished item whose template is not conjured", () => {
     const seen = observeTruth(
       { baseline: of(dagger, muffin), final: of(muffin) },
       evidence,
+      flags,
     ) as { baseline: unknown };
     expect(inventoryOf(seen.baseline)).toEqual([2092, 5349]);
+  });
+
+  test("keeps a vanished row whose template flags are unknown", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin), final: of(dagger) },
+      evidence,
+      {},
+    ) as { baseline: unknown };
+    expect(inventoryOf(seen.baseline)).toEqual([2092, 5349]);
+  });
+
+  test("keeps the whole baseline when the final truth is missing", () => {
+    const seen = observeTruth(
+      { baseline: of(dagger, muffin, bread), final: null },
+      evidence,
+      flags,
+    ) as { baseline: unknown };
+    expect(inventoryOf(seen.baseline)).toEqual([2092, 5349, 1113]);
   });
 
   test("leaves item deltas free of the removed conjured items", () => {
     const seen = observeTruth(
-      { baseline: of(dagger, muffin, water), final: of(dagger) },
-      { items: [5349] },
+      { baseline: of(dagger, muffin, bread), final: of(dagger) },
+      { items: [1113] },
+      flags,
     ) as { items: Record<string, { delta: number }> };
-    expect(Object.keys(seen.items)).toEqual(["5349"]);
-    expect(seen.items["5349"]?.delta).toBe(0);
+    expect(Object.keys(seen.items)).toEqual(["1113"]);
+    expect(seen.items["1113"]?.delta).toBe(0);
   });
 });

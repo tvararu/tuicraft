@@ -168,10 +168,17 @@ on-use spells it read before.
   items (`ITEM_FLAG_CONJURED`, `Entities/Item/ItemTemplate.h:148`)
   from a character that was logged out for more than 15 minutes, when
   it loads the inventory (`Entities/Player/PlayerStorage.cpp:6139`).
-  The eversong10 conjured food and water (5349, 5350, 43518) therefore
-  vanish between the offline baseline truth and the final truth, and
-  the grader drops a baseline conjured row when the final inventory
-  holds none of that item.
+  Any conjured item therefore vanishes between the offline baseline
+  truth and the final truth, and the grader drops a baseline row when
+  the final inventory holds none of that item and its live template
+  carries the conjured flag. After the final truth lands,
+  `recordItemFlags` queries every baseline-only entry through the
+  `item-flags` probe flow, records the flags in `item-flags.json`, and
+  `withoutRemovedConjured` matches them against `ITEM_FLAG_CONJURED`
+  from the client item data (`packages/core/src/wow/protocol/item.ts`).
+  Rows the final bags still hold, rows with unknown flags, and
+  non-conjured rows are untouched, and a missing final truth keeps the
+  whole baseline.
 - `t8-items-ammo` (round 21) loads 200 Rough Arrow (2512) added by the
   setup. The `eversong10-hunter` preset already has 1000 Sharp Arrow
   (2515) loaded, so the task names the Rough Arrows; with "the new

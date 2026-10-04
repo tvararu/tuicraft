@@ -255,3 +255,27 @@ describe("talk flow", () => {
     await expect(word).rejects.toThrow("entry=");
   });
 });
+
+describe("item-flags flow", () => {
+  test("reports each template's flags, null for unknown entries", async () => {
+    const ctx = context({ items: "5349,5349,1113" });
+    ctx.handle.getItemTemplate = (async (entry: number) =>
+      entry === 5349
+        ? { flags: 2_097_154 }
+        : undefined) as typeof ctx.handle.getItemTemplate;
+    expect(await flow("item-flags").run(ctx)).toEqual({
+      flags: { 1113: null, 5349: 2_097_154 },
+    });
+  });
+
+  test("refuses bad input and too many ids", async () => {
+    const missing = flow("item-flags").run(context());
+    const word = flow("item-flags").run(context({ items: "x" }));
+    const many = flow("item-flags").run(
+      context({ items: Array.from({ length: 41 }, () => "1").join(",") }),
+    );
+    await expect(missing).rejects.toThrow("items=");
+    await expect(word).rejects.toThrow("items=");
+    await expect(many).rejects.toThrow("at most 40");
+  });
+});

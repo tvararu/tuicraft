@@ -56,6 +56,8 @@ function router(opts: { savedAt?: string; listed?: string[] } = {}): Router {
   const exec: Exec = async (argv, execOpts) => {
     calls.push([...argv]);
     if (argv[0] === "rg") return bunExec(argv, execOpts);
+    if (argv[0] === "bun" && argv[1] === "packages/devtools/src/probe.ts")
+      return ok(JSON.stringify({ flows: [{ result: { flags: {} } }] }));
     if (argv[3] === "truth")
       return ok(truth(opts.savedAt ?? new Date(NOW).toISOString()));
     if (argv[3] === "gm")

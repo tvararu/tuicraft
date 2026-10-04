@@ -15,6 +15,7 @@ import { observedChecks } from "#harness/grader/draft-fill";
 import { parseGameLog } from "#harness/grader/draft-gamelog";
 import { efficiency, readSessionUsage } from "#harness/grader/efficiency";
 import type { Exec } from "#harness/grader/exec";
+import { recordItemFlags } from "#harness/grader/item-flags";
 import type { Pane } from "#harness/grader/pane";
 import type { Partner } from "#harness/grader/partner";
 import {
@@ -199,6 +200,14 @@ export async function stopHarness(st: RunState): Promise<void> {
   for (const [index, partner] of partners.entries())
     await attempt(st, `${partner.role} final truth`, () =>
       partnerFinal(st, partner, stops[index] ?? st.clock.now()),
+    );
+  if (agent !== undefined)
+    await attempt(st, "item flags", () =>
+      recordItemFlags({
+        account: agent.account,
+        exec: st.exec,
+        runDir: st.runDir,
+      }),
     );
   await attempt(st, "console reads", () =>
     readConsole({
