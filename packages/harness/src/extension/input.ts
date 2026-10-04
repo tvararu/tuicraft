@@ -63,7 +63,9 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
     if (!session.humanWaiting) return;
     const text = userText(event.message);
     if (text === undefined || !session.humanTexts.includes(text)) return;
-    const delivered = session.deliveredTexts.filter((seen) => seen === text).length;
+    const delivered = session.deliveredTexts.filter(
+      (seen) => seen === text,
+    ).length;
     const pending = session.humanTexts.filter((seen) => seen === text).length;
     if (delivered >= pending) return;
     session.deliveredTexts = [...session.deliveredTexts, text];
@@ -172,7 +174,9 @@ function noteAssistant(rt: HarnessRuntime, message: AgentMessage): void {
       outstanding.splice(at, 1);
       return false;
     });
-    rt.session.deliveredTexts = outstanding.filter((item) => rt.session.humanTexts.includes(item));
+    rt.session.deliveredTexts = outstanding.filter((item) =>
+      rt.session.humanTexts.includes(item),
+    );
     if (rt.session.humanTexts.length === 0) rt.session.humanWaiting = false;
   }
   rt.log.append({
