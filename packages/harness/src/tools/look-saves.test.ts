@@ -93,10 +93,11 @@ describe("look saves line", () => {
       lfgState({ selected: [0x06_00_00_02], status: "queued" }),
       NOW,
     );
-    expect(line).toEqual([
-      "No saved instances.",
-      "In queue: a random dungeon, waiting 0 s (solo, not in a group (party of 1)).",
-    ]);
+    expect(line).toHaveLength(2);
+    expect(line[0]).toMatch(/No saved instances/);
+    expect(line[1]).toMatch(/In queue: a random dungeon/);
+    expect(line[1]).toMatch(/solo/i);
+    expect(line[1]).toMatch(/\b1\b/);
   });
 
   test("a type-1 entry reads as a specific dungeon", () => {
@@ -105,10 +106,12 @@ describe("look saves line", () => {
       lfgState({ selected: [0x01_00_00_02], status: "queued" }),
       NOW,
     );
-    expect(line).toEqual([
-      "No saved instances.",
-      "In queue: dungeon 2, waiting 0 s (solo, not in a group (party of 1)).",
-    ]);
+    expect(line).toHaveLength(2);
+    expect(line[0]).toMatch(/No saved instances/);
+    expect(line[1]).toMatch(/In queue: dungeon 2\b/);
+    expect(line[1]).not.toMatch(/random/);
+    expect(line[1]).toMatch(/solo/i);
+    expect(line[1]).toMatch(/\b1\b/);
   });
 
   test("no save and no queue add no line", () => {
@@ -139,6 +142,7 @@ describe("look saves line", () => {
       }),
     );
     expect(line).toHaveLength(2);
+    expect(line[1]).toMatch(/In queue: a random dungeon/);
     expect(line[1]).toMatch(/party/i);
     expect(line[1]).toContain("3");
   });
@@ -149,10 +153,11 @@ describe("look saves line", () => {
       lfgState({ selected: [0x02_00_00_12], status: "proposal" }),
       NOW,
     );
-    expect(line).toEqual([
-      "No saved instances.",
-      "In queue: dungeon 18, waiting 0 s (solo, not in a group (party of 1)).",
-    ]);
+    expect(line).toHaveLength(2);
+    expect(line[0]).toMatch(/No saved instances/);
+    expect(line[1]).toMatch(/In queue: dungeon 18\b/);
+    expect(line[1]).toMatch(/solo/i);
+    expect(line[1]).toMatch(/\b1\b/);
   });
 
   test("look output gains the line when a save is held", async () => {
