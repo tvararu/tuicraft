@@ -469,7 +469,7 @@ async function runTravel(
   });
   runId = run.id;
   const waited = await awaitRun({ rt: ctx.rt, run });
-  const hint = await hintPromise;
+  const hint = await hintPromise.catch(() => undefined);
   if (waited.kind === "ended")
     return withMountHint({ ...waited.end.value, runId }, hint);
   return withMountHint(
