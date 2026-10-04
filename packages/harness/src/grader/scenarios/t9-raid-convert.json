@@ -9,7 +9,9 @@
     {
       "evidence": {
         "events": ["raid/roster"],
-        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
+        "window": {
+          "after": { "data": { "change": "leader" }, "event": "raid/roster" }
+        }
       },
       "expect": "GL has a raid/roster row for the group changing shape (converted to a raid)",
       "id": "converted",
@@ -18,7 +20,9 @@
     {
       "evidence": {
         "events": ["raid/roster"],
-        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
+        "window": {
+          "after": { "data": { "change": "leader" }, "event": "raid/roster" }
+        }
       },
       "expect": "GL has a raid/roster row for the partner moving to group 2",
       "id": "moved",
@@ -27,7 +31,9 @@
     {
       "evidence": {
         "events": ["raid/roster"],
-        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
+        "window": {
+          "after": { "data": { "change": "leader" }, "event": "raid/roster" }
+        }
       },
       "expect": "GL has a raid/roster row for the partner gaining the assistant flag",
       "id": "assistant",
@@ -36,7 +42,9 @@
     {
       "evidence": {
         "events": ["raid/roster"],
-        "window": {"after": {"data": {"change": "leader"}, "event": "raid/roster"}}
+        "window": {
+          "after": { "data": { "change": "leader" }, "event": "raid/roster" }
+        }
       },
       "expect": "GL has a raid/roster row for the partner gaining main tank",
       "id": "main-tank",
