@@ -1,3 +1,5 @@
+import { emptyParty, type PartyState } from "@peon/core";
+import { queueScope } from "#harness/areas/instances/tool-lfg-base";
 import {
   type InstancesSnapshot,
   type LfgSnapshot,
@@ -13,16 +15,17 @@ function queueName(lfg: LfgSnapshot): string {
   return `dungeon ${unsigned % 2 ** 24}`;
 }
 
-function queueLine(lfg: LfgSnapshot): string {
+function queueLine(lfg: LfgSnapshot, party: PartyState): string {
   const waited = Math.max(0, lfg.queue?.queuedTime ?? 0);
   const wait = waited >= 60 ? `${Math.round(waited / 60)} min` : `${waited} s`;
-  return `In queue: ${queueName(lfg)}, waiting ${wait}.`;
+  return `In queue: ${queueName(lfg)}, waiting ${wait} (${queueScope(party)}).`;
 }
 
 export function savesLine(
   instances: InstancesSnapshot,
   lfg: LfgSnapshot,
   now: number,
+  party?: PartyState,
 ): string[] {
   const saves = liveSaves(instances, now);
   const queued = lfg.status === "queued" || lfg.status === "proposal";
@@ -32,6 +35,6 @@ export function savesLine(
       ? `Saved: ${saves.map(saveLine).join("; ")}.`
       : "No saved instances.",
   ];
-  if (queued) out.push(queueLine(lfg));
+  if (queued) out.push(queueLine(lfg, party ?? emptyParty()));
   return out;
 }

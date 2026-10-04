@@ -1,5 +1,5 @@
-import { jest } from "bun:test";
-import type { AreaState } from "@peon/core";
+import { jest, type Mock } from "bun:test";
+import { type AreaState, emptyParty, type PartyState } from "@peon/core";
 import { dungeonSpec } from "#harness/areas/instances/tool";
 import type { DungeonArgs } from "#harness/areas/instances/tool-params";
 import { Refusal } from "#harness/ops/refusal";
@@ -56,8 +56,48 @@ export function lfg(over: Partial<LfgState> = {}): LfgState {
   };
 }
 
+export type PartySetup = {
+  inGroup?: boolean;
+  leader?: string | null;
+  names?: readonly string[];
+};
+
+export function partyGroup(over: PartySetup = {}): PartyState {
+  return {
+    ...emptyParty(),
+    inGroup: over.inGroup ?? false,
+    leader: over.leader ?? null,
+    members: (over.names ?? []).map((name, index) => ({
+      auras: [],
+      flags: 0,
+      guid: BigInt(index + 1),
+      health: null,
+      level: null,
+      maxHealth: null,
+      maxPower: null,
+      name,
+      online: true,
+      pet: null,
+      position: null,
+      power: null,
+      powerType: null,
+      roles: 0,
+      source: null,
+      statsAt: null,
+      status: 1,
+      subgroup: 0,
+      vehicleSeat: null,
+      zone: null,
+    })),
+  };
+}
+
 export async function world(
-  over: { instances?: Partial<InstancesState>; lfg?: Partial<LfgState> } = {},
+  over: {
+    instances?: Partial<InstancesState>;
+    lfg?: Partial<LfgState>;
+    party?: PartySetup;
+  } = {},
 ) {
   const t = await createTestRuntime({});
   t.clock.set(NOW);
@@ -65,6 +105,10 @@ export async function world(
     .spyOn(t.handle.instances, "state")
     .mockImplementation(() => instances(over.instances));
   jest.spyOn(t.handle.lfg, "state").mockImplementation(() => lfg(over.lfg));
+  if (over.party !== undefined) {
+    const party = partyGroup(over.party);
+    (t.handle.getPartyState as Mock<() => PartyState>).mockReturnValue(party);
+  }
   return t;
 }
 

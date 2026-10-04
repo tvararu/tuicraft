@@ -30,6 +30,41 @@ describe("dungeon lfg queue", () => {
     expect(settled.detail.toLowerCase()).toContain("queued");
   });
 
+  test("queue alone says solo with the party size", async () => {
+    const t = await world({ lfg: queueAvailable() });
+    jest.spyOn(t.handle.lfg.act, "join").mockResolvedValue({
+      queued: [0x06_00_00_0c],
+      roleCheck: false,
+      status: "ok",
+    });
+    const { settled } = await attempt(t, {
+      do: "queue",
+      roles: ["damage"],
+    });
+    expect(settled).toMatchObject({ status: "DONE" });
+    expect(settled.detail).toMatch(/solo/i);
+    expect(settled.detail).toContain("1");
+  });
+
+  test("queue in a group says party with the party size", async () => {
+    const t = await world({
+      lfg: queueAvailable(),
+      party: { inGroup: true, leader: null, names: ["Ann", "Tom", "Lee"] },
+    });
+    jest.spyOn(t.handle.lfg.act, "join").mockResolvedValue({
+      queued: [0x06_00_00_0c],
+      roleCheck: false,
+      status: "ok",
+    });
+    const { settled } = await attempt(t, {
+      do: "queue",
+      roles: ["damage"],
+    });
+    expect(settled).toMatchObject({ status: "DONE" });
+    expect(settled.detail).toMatch(/party/i);
+    expect(settled.detail).toContain("4");
+  });
+
   test("queue requests the dungeon list first when the list is empty", async () => {
     const t = await world();
     const dungeons = jest
@@ -113,6 +148,16 @@ describe("dungeon lfg queue", () => {
       reason: "no_random_dungeon",
       status: "REFUSED",
     });
+  });
+
+  test("status while queued says party with the party size", async () => {
+    const t = await world({
+      lfg: { ...queueAvailable(), status: "queued" },
+      party: { inGroup: true, leader: null, names: ["Ann", "Tom"] },
+    });
+    const { text } = await attempt(t, { do: "status" });
+    expect(text).toMatch(/party/i);
+    expect(text).toContain("3");
   });
 
   test("queue while already queued is refused", async () => {

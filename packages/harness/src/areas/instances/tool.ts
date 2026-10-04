@@ -1,3 +1,4 @@
+import type { PartyState } from "@peon/core";
 import { isLfgDo, runLfg } from "#harness/areas/instances/tool-lfg";
 import {
   type DungeonAfter,
@@ -45,12 +46,17 @@ export type DungeonDo =
   | "teleport"
   | "kick_vote";
 
-type Snapshots = { instances: InstancesSnapshot; lfg: LfgSnapshot };
+type Snapshots = {
+  instances: InstancesSnapshot;
+  lfg: LfgSnapshot;
+  party: PartyState;
+};
 
 function snapshotsOf(ctx: DungeonCtx): Snapshots {
   return {
     instances: ctx.handle.instances.state(),
     lfg: ctx.handle.lfg.state(),
+    party: ctx.handle.getPartyState(),
   };
 }
 
@@ -93,7 +99,12 @@ function statusAfter(
   const now = ctx.rt.clock.now();
   const lines = difficultyLines(snapshots.instances, now);
   if (!refreshed) lines.push("The save list did not refresh.");
-  const saves = savesLine(snapshots.instances, snapshots.lfg, now);
+  const saves = savesLine(
+    snapshots.instances,
+    snapshots.lfg,
+    now,
+    snapshots.party,
+  );
   const detailLine =
     lines.find((line) => line.startsWith("Here:")) ??
     lines[0] ??
@@ -118,9 +129,10 @@ async function runStatus(ctx: DungeonCtx): Promise<ToolResult<DungeonAfter>> {
   const refreshed = await ctx.rt.mutex.run(() =>
     refreshSaves(ctx, snapshotsOf(ctx).instances),
   );
+  const second = snapshotsOf(ctx);
   return statusAfter(
     ctx,
-    { instances: refreshed.instances, lfg: snapshotsOf(ctx).lfg },
+    { instances: refreshed.instances, lfg: second.lfg, party: second.party },
     refreshed.refreshed,
   );
 }

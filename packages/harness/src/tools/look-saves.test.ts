@@ -1,5 +1,9 @@
 import { describe, expect, jest, test } from "bun:test";
 import type { AreaState } from "@peon/core";
+import {
+  partyMember,
+  partyState,
+} from "@peon/core/test-support/party-fixtures";
 import { lookTool } from "#harness/tools/look";
 import { savesLine } from "#harness/tools/look-saves";
 import { createTestRuntime } from "#test-support/runtime-fixture";
@@ -79,6 +83,8 @@ describe("look saves line", () => {
     expect(line).toHaveLength(2);
     expect(line[0]).toMatch(/Saved: map 36[^\n]*2 d left/);
     expect(line[1]).toMatch(/In queue: a random dungeon/);
+    expect(line[1]).toMatch(/solo/i);
+    expect(line[1]).toContain("1");
   });
 
   test("a type-6 entry reads as a random dungeon", () => {
@@ -89,7 +95,7 @@ describe("look saves line", () => {
     );
     expect(line).toEqual([
       "No saved instances.",
-      "In queue: a random dungeon, waiting 0 s.",
+      "In queue: a random dungeon, waiting 0 s (solo, not in a group (party of 1)).",
     ]);
   });
 
@@ -101,7 +107,7 @@ describe("look saves line", () => {
     );
     expect(line).toEqual([
       "No saved instances.",
-      "In queue: dungeon 2, waiting 0 s.",
+      "In queue: dungeon 2, waiting 0 s (solo, not in a group (party of 1)).",
     ]);
   });
 
@@ -121,6 +127,22 @@ describe("look saves line", () => {
     expect(line).toEqual([]);
   });
 
+  test("a queued party line names the party size", () => {
+    const line = savesLine(
+      instancesState(),
+      lfgState({ selected: [0x06_00_00_02], status: "queued" }),
+      NOW,
+      partyState({
+        inGroup: true,
+        leader: null,
+        members: [partyMember({ name: "Ann" }), partyMember({ name: "Tom" })],
+      }),
+    );
+    expect(line).toHaveLength(2);
+    expect(line[1]).toMatch(/party/i);
+    expect(line[1]).toContain("3");
+  });
+
   test("a proposal shows the queue line", () => {
     const line = savesLine(
       instancesState(),
@@ -129,7 +151,7 @@ describe("look saves line", () => {
     );
     expect(line).toEqual([
       "No saved instances.",
-      "In queue: dungeon 18, waiting 0 s.",
+      "In queue: dungeon 18, waiting 0 s (solo, not in a group (party of 1)).",
     ]);
   });
 

@@ -77,6 +77,7 @@ function lookSaves(ctx: ToolCtx<LookAfter>): string[] {
       ctx.handle.instances.state(),
       ctx.handle.lfg.state(),
       ctx.rt.clock.now(),
+      ctx.handle.getPartyState(),
     );
   } catch {
     return [];

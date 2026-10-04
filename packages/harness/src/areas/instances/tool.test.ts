@@ -184,6 +184,7 @@ describe("dungeon tool verbs", () => {
     expect(text).toMatch(/533[^\n]*5 h[^\n]*extended/);
     expect(text).toMatch(/36[^\n]*2 d/);
     expect(text).toMatch(/random dungeon/);
+    expect(text).toMatch(/solo/i);
   });
 
   test("status subtracts the time since the list arrived", async () => {

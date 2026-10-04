@@ -10,6 +10,7 @@ import {
   entryType,
   hasRole,
   type LfgState,
+  queueScope,
   RANDOM_DUNGEON_TYPE,
   refusedOutcome,
   roleNames,
@@ -106,11 +107,12 @@ function queueResultText(
   entry: number,
   roles: number,
   roleCheck: boolean,
+  scope: string,
 ): string {
   const answered = roleCheck
     ? ' A role check opened with it; answer with dungeon(do: "roles").'
     : "";
-  return `Queued${dungeonLabel(entry)} as ${roleNames(roles)}.${answered}`;
+  return `Queued ${scope}${dungeonLabel(entry)} as ${roleNames(roles)}.${answered}`;
 }
 
 function playable(roles: number): boolean {
@@ -161,7 +163,8 @@ async function runQueue(
     );
   }
   if (outcome.roleCheck) answerOpenRoleCheck(ctx);
-  const text = queueResultText(entry, roles, outcome.roleCheck);
+  const scope = queueScope(ctx.handle.getPartyState());
+  const text = queueResultText(entry, roles, outcome.roleCheck, scope);
   return {
     after: {
       detail: text,

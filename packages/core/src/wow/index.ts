@@ -120,11 +120,12 @@ export {
 } from "#wow/item-labels";
 export type { NearbyQuery, NearbyRow, NearbyUnits } from "#wow/nearby";
 export { type NpcRole, npcRoles } from "#wow/npc-roles";
-export type {
-  PartyChange,
-  PartyLoot,
-  PartyMember,
-  PartyState,
+export {
+  emptyParty,
+  type PartyChange,
+  type PartyLoot,
+  type PartyMember,
+  type PartyState,
 } from "#wow/party-store";
 export type { PlayerLife } from "#wow/player-state";
 export type {

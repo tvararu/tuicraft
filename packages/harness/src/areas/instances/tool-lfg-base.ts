@@ -1,4 +1,4 @@
-import type { AreaEventOf, AreaState } from "@peon/core";
+import type { AreaEventOf, AreaState, PartyState } from "@peon/core";
 import type { ToolCtx } from "#harness/contract/services";
 import { Refusal } from "#harness/ops/refusal";
 import { nextCall } from "#harness/tools/next-call";
@@ -72,6 +72,11 @@ export function roleNames(bits: number): string {
 export function entryType(entry: number): number {
   const unsigned = entry < 0 ? entry + 2 ** 32 : entry;
   return Math.floor(unsigned / 2 ** 24) % 256;
+}
+
+export function queueScope(party: PartyState): string {
+  if (!party.inGroup) return "solo, not in a group (party of 1)";
+  return `for your party of ${party.members.length + 1}`;
 }
 
 export function entryName(entry: number): string {
