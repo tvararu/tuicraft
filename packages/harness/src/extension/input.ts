@@ -63,7 +63,10 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
     if (!session.humanWaiting) return;
     const text = userText(event.message);
     if (text === undefined || !session.humanTexts.includes(text)) return;
-    session.replyStarted = true;
+    const delivered = session.deliveredTexts.filter((seen) => seen === text).length;
+    const pending = session.humanTexts.filter((seen) => seen === text).length;
+    if (delivered >= pending) return;
+    session.deliveredTexts = [...session.deliveredTexts, text];
   });
   pi.on("tool_execution_start", (event) => {
     Object.assign(session, {
@@ -78,7 +81,6 @@ export function installInput(pi: ExtensionAPI, rt: HarnessRuntime): void {
   pi.on("agent_end", () => {
     Object.assign(session, {
       agent: "idle",
-      replyStarted: false,
       tool: undefined,
     });
     handToLoop(rt);
@@ -129,7 +131,6 @@ function onInput(rt: HarnessRuntime, event: InputEvent): InputEventResult {
   if (rt.session.agent !== "idle") {
     rt.session.humanWaiting = true;
     rt.session.humanTexts = [...rt.session.humanTexts, event.text];
-    rt.session.replyStarted = false;
     rt.yields.trigger();
   }
   return { action: "continue" };
@@ -163,10 +164,16 @@ function noteAssistant(rt: HarnessRuntime, message: AgentMessage): void {
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("");
   if (text.trim().length === 0) return;
-  if (rt.session.replyStarted) {
-    rt.session.humanWaiting = false;
-    rt.session.humanTexts = [];
-    rt.session.replyStarted = false;
+  if (rt.session.deliveredTexts.length > 0) {
+    const outstanding = [...rt.session.deliveredTexts];
+    rt.session.humanTexts = rt.session.humanTexts.filter((item) => {
+      const at = outstanding.indexOf(item);
+      if (at === -1) return true;
+      outstanding.splice(at, 1);
+      return false;
+    });
+    rt.session.deliveredTexts = outstanding.filter((item) => rt.session.humanTexts.includes(item));
+    if (rt.session.humanTexts.length === 0) rt.session.humanWaiting = false;
   }
   rt.log.append({
     class: "log",

@@ -181,7 +181,7 @@ export type SessionFlags = {
   agentGrant: Grant | undefined;
   humanWaiting: boolean;
   humanTexts: readonly string[];
-  replyStarted: boolean;
+  deliveredTexts: readonly string[];
   agent: AgentState;
   turnToolCalls: number;
   tool: string | undefined;

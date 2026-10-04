@@ -227,9 +227,22 @@ describe("installInput", () => {
       });
       await fake.emit({ type: "agent_start" });
       expect(() => admitAgent(rt, "engage")).toThrow("human_waiting");
+      await fake.emit(started);
+      await fake.emit(said("I have 80% health."));
+      expect(() => admitAgent(rt, "engage")).not.toThrow();
+    });
+
+    test("a reply covers only the human messages that reached it", async () => {
+      const { fake, rt } = await pending();
+      await fake.emit(human("and your mana?"));
       await fake.emit(delivered("how much health do you have?"));
       await fake.emit(started);
       await fake.emit(said("I have 80% health."));
+      expect(rt.session.humanTexts).toEqual(["and your mana?"]);
+      expect(() => admitAgent(rt, "engage")).toThrow("human_waiting");
+      await fake.emit(delivered("and your mana?"));
+      await fake.emit(started);
+      await fake.emit(said("I have 40% mana."));
       expect(() => admitAgent(rt, "engage")).not.toThrow();
     });
   });

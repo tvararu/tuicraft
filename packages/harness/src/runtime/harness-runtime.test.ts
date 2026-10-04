@@ -32,11 +32,11 @@ describe("createHarnessRuntime", () => {
     expect(rt.session).toEqual({
       agent: "idle",
       agentGrant: undefined,
+      deliveredTexts: [],
       humanTexts: [],
       humanWaiting: false,
       lastNow: undefined,
       lastToolCallAt: undefined,
-      replyStarted: false,
       tool: undefined,
       turnStartSeq: 0,
       turnToolCalls: 0,
