@@ -210,7 +210,9 @@ s.`; the name falls back to the unit lookup, then `Someone`) and one
   makes: the sender is the master looter, the corpse is open, and the
   target is in the candidate list; a bad slot or a full bag answers a
   loot error, and the server removes the slot before it sends the new
-  item (`Handlers/LootHandler.cpp:483-500`).
+  item (`Handlers/LootHandler.cpp:483-500`). It waits for the item
+  template when the loot window has no name yet, so every refusal and
+  result names the item the same way and the name is accepted back.
 - The master list reaches the master when the first player opens a
   master-looted corpse (`Groups/Group.cpp:1442`, `Entities/Player/Player.cpp:8271-8290`); the tool
   reads that corpse's candidates from the store and refuses a name outside it.
